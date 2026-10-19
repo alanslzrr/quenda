@@ -7,11 +7,15 @@ import {
   publicUnitCalendar,
   publicUnits,
 } from "./public.ts";
+import { publicRateLimit } from "./public-limit.ts";
 
 const uuid = { type: "string", format: "uuid" };
 const text = { type: "string" };
 const errors = Object.fromEntries(
-  [400, 404, 500, 503].map((status) => [status, { $ref: "ErrorResponse#" }]),
+  [400, 404, 429, 500, 503].map((status) => [
+    status,
+    { $ref: "ErrorResponse#" },
+  ]),
 );
 const query = {
   type: "object",
@@ -53,10 +57,16 @@ const instant = {
     timeZone: text,
   },
 };
-export async function registerPublicCatalog(app: FastifyInstance, pool: Pool) {
+export async function registerPublicCatalog(
+  app: FastifyInstance,
+  pool: Pool,
+  secret: string,
+) {
+  const limit = publicRateLimit(pool, secret);
   app.get<{ Params: { tenantId: string }; Querystring: { after?: string } }>(
     "/api/public/municipalities/:tenantId/facilities",
     {
+      onRequest: limit,
       schema: {
         operationId: "publicFacilities",
         tags: ["Public catalog"],
@@ -79,6 +89,7 @@ export async function registerPublicCatalog(app: FastifyInstance, pool: Pool) {
   }>(
     "/api/public/municipalities/:tenantId/facilities/:facilityId/units",
     {
+      onRequest: limit,
       schema: {
         operationId: "publicUnits",
         tags: ["Public catalog"],
@@ -102,6 +113,7 @@ export async function registerPublicCatalog(app: FastifyInstance, pool: Pool) {
   app.get<{ Params: { tenantId: string; unitId: string } }>(
     "/api/public/municipalities/:tenantId/units/:unitId",
     {
+      onRequest: limit,
       schema: {
         operationId: "publicUnitCalendar",
         tags: ["Public catalog"],
@@ -178,6 +190,7 @@ export async function registerPublicCatalog(app: FastifyInstance, pool: Pool) {
   }>(
     "/api/public/municipalities/:tenantId/units/:unitId/availability",
     {
+      onRequest: limit,
       schema: {
         operationId: "publicAvailability",
         tags: ["Public catalog"],

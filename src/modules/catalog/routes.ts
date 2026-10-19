@@ -37,7 +37,7 @@ export async function registerCatalog(
 ) {
   const actor = createRequestActor(pool, auth, config);
   await registerCalendarRoutes(app, pool, auth, config);
-  await registerPublicCatalog(app, pool);
+  await registerPublicCatalog(app, pool, config.secret);
   app.post<{ Params: { tenantId: string }; Body: { name: string } }>(
     "/api/municipalities/:tenantId/facilities",
     {
