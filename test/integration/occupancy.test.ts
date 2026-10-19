@@ -8,7 +8,9 @@ import { appendReservationEvent } from "../../src/modules/reservations/events.ts
 import { withDatabase } from "../helpers/postgres.ts";
 
 test("database occupancy invariants cover reservations, blocks and concurrent overlap", {
-  timeout: 60000,
+  // Raw exclusion inserts may form successive deadlocks under contention.
+  // This tests integrity, not the API latency gate or command retry policy.
+  timeout: 180000,
 }, async (t) => {
   await withDatabase(async ({ domain, auth, migration }) => {
     for (const id of ["citizen", "other"])
@@ -101,7 +103,7 @@ test("database occupancy invariants cover reservations, blocks and concurrent ov
             .every(
               (o) =>
                 o.status === "rejected" &&
-                ["23P01", "40001"].includes(o.reason.code),
+                ["23P01", "40001", "40P01"].includes(o.reason.code),
             ),
         );
         assert.equal(
