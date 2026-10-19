@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import type { PoolClient } from "pg";
+import { idempotentCommand } from "../../src/database/idempotency.ts";
 import { transaction } from "../../src/database/transaction.ts";
+import { appendReservationEvent } from "../../src/modules/reservations/events.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
 test("database occupancy invariants cover reservations, blocks and concurrent overlap", {
@@ -286,6 +288,184 @@ test("database occupancy invariants cover reservations, blocks and concurrent ov
         await assert.rejects(book("2030-01-03T10:00Z", "2030-01-03T11:00Z"), {
           code: "23P01",
         });
+      },
+    );
+    await t.test(
+      "events and both notices commit with idempotent reservation changes",
+      async () => {
+        const correlation = randomUUID();
+        const options = {
+          operation: "reservation.create",
+          key: "event-create",
+          input: { start: "2030-02-01T10:00Z", end: "2030-02-01T11:00Z" },
+          retentionSeconds: 3600,
+          authorize: async () => {},
+          execute: async (c: PoolClient) => {
+            const id = await reservation(
+              c,
+              "2030-02-01T10:00Z",
+              "2030-02-01T11:00Z",
+            );
+            await occupy(c, id, "2030-02-01T10:00Z", "2030-02-01T11:00Z");
+            const eventId = await appendReservationEvent(c, id, correlation);
+            return { id, eventId };
+          },
+        };
+        const initial = await idempotentCommand(domain, context, options);
+        const replay = await idempotentCommand(domain, context, options);
+        assert.equal(replay.replayed, true);
+        assert.deepEqual(replay.result, initial.result);
+        const id = initial.result.id;
+        const counts = async () =>
+          (
+            await migration.query(`SELECT
+        (SELECT count(*)::int FROM domain.reservation_event) AS events,
+        (SELECT count(*)::int FROM domain.reservation_notice) AS notices,
+        (SELECT count(*)::int FROM domain.reservation_email) AS emails`)
+          ).rows[0];
+        assert.deepEqual(await counts(), { events: 1, notices: 1, emails: 1 });
+        await assert.rejects(
+          transaction(
+            domain,
+            (c) => appendReservationEvent(c, id, correlation),
+            context,
+          ),
+          { code: "23514" },
+        );
+        await assert.rejects(
+          transaction(
+            domain,
+            (c) =>
+              c.query(
+                "UPDATE domain.reservation SET cancellation_minutes=5 WHERE tenant_id=$1 AND id=$2",
+                [tenant, id],
+              ),
+            context,
+          ),
+          { code: "23514" },
+        );
+        const change = async (c: PoolClient) => {
+          await c.query(
+            "UPDATE domain.occupancy SET released_at=now() WHERE tenant_id=$1 AND reservation_id=$2 AND released_at IS NULL",
+            [tenant, id],
+          );
+          await c.query(
+            "UPDATE domain.reservation SET starts_at='2030-02-01T12:00Z',ends_at='2030-02-01T13:00Z',revision=revision+1 WHERE tenant_id=$1 AND id=$2",
+            [tenant, id],
+          );
+          await occupy(c, id, "2030-02-01T12:00Z", "2030-02-01T13:00Z");
+          await appendReservationEvent(c, id, correlation);
+        };
+        await assert.rejects(
+          transaction(
+            domain,
+            async (c) => {
+              await change(c);
+              throw new Error("Abort after outbox");
+            },
+            context,
+          ),
+          /Abort after outbox/,
+        );
+        assert.deepEqual(await counts(), { events: 1, notices: 1, emails: 1 });
+        await transaction(domain, change, context);
+        await transaction(
+          domain,
+          async (c) => {
+            await c.query(
+              "UPDATE domain.reservation SET status='CANCELADA',revision=revision+1 WHERE tenant_id=$1 AND id=$2",
+              [tenant, id],
+            );
+            await c.query(
+              "UPDATE domain.occupancy SET released_at=now() WHERE tenant_id=$1 AND reservation_id=$2 AND released_at IS NULL",
+              [tenant, id],
+            );
+            await appendReservationEvent(c, id, correlation);
+          },
+          context,
+        );
+        const events = (
+          await migration.query(
+            "SELECT * FROM domain.reservation_event WHERE reservation_id=$1 ORDER BY revision",
+            [id],
+          )
+        ).rows;
+        assert.deepEqual(
+          events.map((e) => e.kind),
+          ["CONFIRMADA", "MODIFICADA", "CANCELADA"],
+        );
+        assert.equal(events[0].before_state, null);
+        assert.deepEqual(events[1].before_state, events[0].after_state);
+        assert.deepEqual(events[2].before_state, events[1].after_state);
+        assert.ok(
+          events.every(
+            (e) => e.actor_id === "citizen" && e.correlation_id === correlation,
+          ),
+        );
+        assert.deepEqual(await counts(), { events: 3, notices: 3, emails: 3 });
+        await transaction(
+          domain,
+          async (c) => {
+            assert.equal(
+              (await c.query("SELECT * FROM domain.reservation_event"))
+                .rowCount,
+              0,
+            );
+            assert.equal(
+              (await c.query("SELECT * FROM domain.reservation_notice"))
+                .rowCount,
+              0,
+            );
+          },
+          { accountId: "other", tenantId: tenant },
+        );
+        await assert.rejects(
+          transaction(
+            domain,
+            (c) => appendReservationEvent(c, id, correlation),
+            { accountId: "other", tenantId: tenant },
+          ),
+          { code: "42501" },
+        );
+        await assert.rejects(
+          transaction(
+            domain,
+            (c) => appendReservationEvent(c, id, correlation),
+            { accountId: "citizen", tenantId: foreignTenant },
+          ),
+          { code: "42501" },
+        );
+        for (const table of [
+          "reservation_event",
+          "reservation_notice",
+          "reservation_email",
+        ]) {
+          await assert.rejects(
+            transaction(
+              domain,
+              (c) => c.query(`DELETE FROM domain.${table}`),
+              context,
+            ),
+            { code: "42501" },
+          );
+        }
+        await assert.rejects(
+          transaction(
+            domain,
+            (c) =>
+              c.query("UPDATE domain.reservation_event SET reason='tampered'"),
+            context,
+          ),
+          { code: "42501" },
+        );
+        await assert.rejects(
+          transaction(
+            domain,
+            (c) => c.query("SELECT * FROM domain.reservation_email"),
+            context,
+          ),
+          { code: "42501" },
+        );
       },
     );
     await t.test(
