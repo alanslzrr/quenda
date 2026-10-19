@@ -260,6 +260,24 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         "idempotency-key": "after-cancel",
       });
       assert.equal(second.statusCode, 201, second.body);
+      const own = await client.request("/api/me/reservations");
+      assert.equal(own.statusCode, 200, own.body);
+      assert.equal(own.headers["cache-control"], "no-store");
+      assert.ok(
+        own
+          .json()
+          .items.some((r: { id: string }) => r.id === created.json().id),
+      );
+      assert.equal(
+        (await app.inject({ url: "/api/me/reservations" })).statusCode,
+        401,
+      );
+      assert.equal(
+        (await client.request("/api/me/reservations?accountId=other"))
+          .statusCode,
+        400,
+      );
+      assert.equal((await client.request(url)).statusCode, 403);
       const blockUrl = `/api/municipalities/${tenant}/blocks`;
       const blockBody = {
         unitId: unit,
@@ -296,6 +314,13 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       await migration.query(
         "INSERT INTO domain.municipal_administrator(tenant_id,account_id,invitation_id) VALUES($1,$2,$3)",
         [tenant, accountId, invitation],
+      );
+      const managed = await client.request(url);
+      assert.equal(managed.statusCode, 200, managed.body);
+      assert.ok(
+        managed
+          .json()
+          .items.every((r: { accountId: string }) => r.accountId === accountId),
       );
       const blocked = await client.request(blockUrl, blockBody, {
         "idempotency-key": "http-block",

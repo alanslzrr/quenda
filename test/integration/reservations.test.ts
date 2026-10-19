@@ -7,9 +7,16 @@ import {
   saveUnitCalendar,
 } from "../../src/modules/catalog/index.ts";
 import {
+  acceptManager,
+  inviteManager,
+  revokeManager,
+} from "../../src/modules/identity/index.ts";
+import {
   cancelReservation,
   createBlock,
   createReservation,
+  listMunicipalReservations,
+  listOwnReservations,
   modifyReservation,
   releaseBlock,
 } from "../../src/modules/reservations/index.ts";
@@ -920,6 +927,192 @@ test("reservation confirmation validates real calendars and commits every effect
             ),
           },
         });
+      },
+    );
+    await t.test(
+      "own history crosses municipalities without exposing another account and municipal lists keep permission scope",
+      async () => {
+        for (let i = 0; i < 22; i++) {
+          const start = new Date(
+            `2030-01-${14 + Math.floor(i / 16)}T08:00:00Z`,
+          );
+          start.setUTCMinutes(start.getUTCMinutes() + (i % 16) * 30);
+          await create(`history-${i}`, {
+            unitId: unit,
+            startsAt: start.toISOString(),
+            endsAt: new Date(start.getTime() + 1800000).toISOString(),
+          });
+        }
+        const otherTenant = randomUUID(),
+          otherFacility = randomUUID(),
+          otherUnit = randomUUID();
+        await migration.query(
+          "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Second municipality','Europe/Madrid')",
+          [otherTenant],
+        );
+        await migration.query(
+          "INSERT INTO domain.facility(tenant_id,id,name,published_at) VALUES($1,$2,'Second facility',now())",
+          [otherTenant, otherFacility],
+        );
+        await migration.query(
+          "INSERT INTO domain.reservable_unit(tenant_id,id,facility_id,name) VALUES($1,$2,$3,'Second unit')",
+          [otherTenant, otherUnit, otherFacility],
+        );
+        await migration.query(
+          "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason) VALUES($1,$2,1,30,120,30,$3,'[]','citizen','Fixture')",
+          [otherTenant, otherUnit, JSON.stringify(weekly)],
+        );
+        await migration.query(
+          "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
+          [otherTenant, otherUnit],
+        );
+        const cross = await createReservation(
+          domain,
+          actor,
+          otherTenant,
+          "other-municipality",
+          {
+            unitId: otherUnit,
+            startsAt: "2030-01-14T10:00:00Z",
+            endsAt: "2030-01-14T11:00:00Z",
+          },
+          randomUUID(),
+          3600,
+          clock,
+        );
+        await migration.query(
+          "UPDATE domain.reservable_unit SET withdrawn_at=now() WHERE tenant_id=$1 AND id=$2",
+          [otherTenant, otherUnit],
+        );
+        const all = [];
+        let after: string | null = null;
+        do {
+          const page = await listOwnReservations(domain, actor, after, {
+            now: () => new Date("2031-01-01T00:00:00Z"),
+          });
+          assert.ok(page.items.length <= 20);
+          all.push(...page.items);
+          after = page.nextCursor;
+        } while (after);
+        const expected = (
+          await migration.query(
+            "SELECT count(*)::int AS n FROM domain.reservation WHERE account_id='citizen'",
+          )
+        ).rows[0].n;
+        assert.equal(all.length, expected);
+        assert.equal(
+          new Set(all.map((r) => `${r.tenantId}:${r.id}`)).size,
+          expected,
+        );
+        assert.ok(
+          all.some(
+            (r) =>
+              r.id === cross.result.id &&
+              r.municipality === "Second municipality",
+          ),
+        );
+        assert.ok(all.some((r) => r.status === "FINALIZADA"));
+        assert.ok(all.some((r) => r.status === "CANCELADA"));
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.reservation WHERE status='FINALIZADA'",
+            )
+          ).rows[0].n,
+          0,
+        );
+        const newcomer = { ...actor, accountId: "newcomer" };
+        const own = await listOwnReservations(domain, newcomer);
+        const ids = new Set(
+          (
+            await migration.query(
+              "SELECT id FROM domain.reservation WHERE account_id='newcomer'",
+            )
+          ).rows.map((r) => r.id),
+        );
+        assert.ok(own.items.every((r) => ids.has(r.id)));
+        assert.ok(own.items.length > 0);
+        const exactEnd = own.items[0]?.endsAt;
+        assert.ok(exactEnd);
+        const completed = await listOwnReservations(domain, newcomer, null, {
+          now: () => new Date(exactEnd),
+        });
+        assert.equal(completed.items[0]?.status, "FINALIZADA");
+        assert.ok(own.items.every((r) => !("accountId" in r)));
+        await assert.rejects(
+          listOwnReservations(domain, actor, "invalid-cursor"),
+          { code: "INVALID_INPUT" },
+        );
+        assert.equal(
+          (
+            await domain.query(
+              "SELECT * FROM domain.own_reservations(NULL,NULL)",
+            )
+          ).rowCount,
+          0,
+        );
+        await assert.rejects(listMunicipalReservations(domain, actor, tenant), {
+          code: "FORBIDDEN",
+        });
+        assert.deepEqual(
+          (
+            await listMunicipalReservations(
+              domain,
+              { ...newcomer, mfaVerifiedAt: new Date() },
+              tenant,
+            )
+          ).items,
+          [],
+        );
+        const admin = { ...actor, mfaVerifiedAt: new Date() };
+        const page = await listMunicipalReservations(domain, admin, tenant);
+        assert.equal(page.items.length, 20);
+        assert.ok(page.nextCursor);
+        assert.ok(page.items.every((r) => r.tenantId === tenant));
+        assert.deepEqual(
+          (await listMunicipalReservations(domain, admin, otherTenant)).items,
+          [],
+        );
+        const scoped = { ...newcomer, mfaVerifiedAt: new Date() };
+        const invitation = await inviteManager(domain, admin, tenant, {
+          accountId: newcomer.accountId,
+          expiresAt: new Date(Date.now() + 3600000).toISOString(),
+          permissions: [{ operation: "RESERVATION_READ", unitId: draft }],
+        });
+        await acceptManager(domain, scoped, tenant, invitation.invitationId);
+        const scopedPage = await listMunicipalReservations(
+          domain,
+          scoped,
+          tenant,
+        );
+        assert.ok(scopedPage.items.length > 0);
+        assert.ok(scopedPage.items.every((r) => r.unitId === draft));
+        assert.deepEqual(
+          (
+            await listMunicipalReservations(domain, scoped, tenant, {
+              unitId: unit,
+            })
+          ).items,
+          [],
+        );
+        await revokeManager(
+          domain,
+          admin,
+          tenant,
+          invitation.invitationId,
+          "Remove access",
+        );
+        assert.deepEqual(
+          (await listMunicipalReservations(domain, scoped, tenant)).items,
+          [],
+        );
+        const filtered = await listMunicipalReservations(
+          domain,
+          admin,
+          tenant,
+          { unitId: draft },
+        );
+        assert.ok(filtered.items.every((r) => r.unitId === draft));
       },
     );
     await t.test(

@@ -11,7 +11,7 @@ export interface Reservation {
   cancellation_minutes: number;
   timezone: string;
 }
-export const present = (row: Reservation) => ({
+export const present = (row: Omit<Reservation, "account_id">) => ({
   id: row.id,
   tenantId: row.tenant_id,
   unitId: row.unit_id,
