@@ -1,4 +1,4 @@
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { HttpError } from "../../http/errors.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
 import type { UnitCalendarInput } from "./calendar.ts";
@@ -43,7 +43,7 @@ export async function publicUnits(
   };
 }
 export async function publicUnitCalendar(
-  pool: Pool,
+  pool: Pool | PoolClient,
   tenantId: string,
   unitId: string,
 ) {

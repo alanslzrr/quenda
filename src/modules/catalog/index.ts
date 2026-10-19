@@ -17,5 +17,6 @@ export {
 } from "./public.ts";
 export { publishCatalogResource } from "./publication.ts";
 export { listCatalogResources } from "./queries.ts";
+export { validateReservableInterval } from "./reservation-rules.ts";
 export { registerCatalog } from "./routes.ts";
 export { withdrawCatalogResource } from "./withdrawal.ts";
