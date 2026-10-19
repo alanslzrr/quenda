@@ -1,7 +1,8 @@
 export const moduleDefinition = {
   name: "communications",
-  dependencies: ["identity"],
+  dependencies: ["identity", "catalog"],
 } as const;
+export { municipalIndicators } from "./indicators.ts";
 export { listOwnNotices } from "./notices.ts";
 export type { ReservationMailEvent } from "./reservation-mail.ts";
 export { reservationMail } from "./reservation-mail.ts";

@@ -3,12 +3,14 @@ export const moduleDefinition = {
   dependencies: ["identity"],
 } as const;
 
+export type { UnitCalendarInput } from "./calendar.ts";
 export { readUnitCalendar, saveUnitCalendar } from "./calendar-store.ts";
 export { createFacility, createReservableUnit } from "./drafts.ts";
 export {
   inspectCatalogResource,
   renameCatalogResource,
 } from "./maintenance.ts";
+export { utcOpeningIntervals } from "./opening.ts";
 export {
   publicAvailability,
   publicFacilities,
