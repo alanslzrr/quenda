@@ -207,7 +207,7 @@ Las respuestas incluyen las cabeceras de idempotencia y `Cache-Control: no-store
 
 ### Acreditaciones
 
-- `POST /api/municipalities/{tenantId}/credentials`: recibe `agreementId`, `version`, `accountId`, `startsAt`, `endsAt` y `verificationReference`. Exige administrador con MFA reciente, municipio emisor habilitado, cuenta vinculada a ese municipio y versión activa dentro de su vigencia en modo `acreditacion_vigente`. Devuelve `201` con el identificador y `revoked: false`; no afirma elegibilidad para una reserva.
+- `POST /api/municipalities/{tenantId}/credentials`: recibe `agreementId`, `version`, `accountId`, `startsAt`, `endsAt` y `verificationReference`. Exige administrador con MFA reciente, municipio emisor habilitado, cuenta vinculada a ese municipio y versión activa dentro de su vigencia efectiva en modo `acreditacion_vigente`. Devuelve `201` con el identificador y `revoked: false`; no afirma elegibilidad para una reserva.
 - `POST /api/municipalities/{tenantId}/credentials/{credentialId}/revoke`: recibe `reason`; exige administrador del municipio emisor con MFA reciente y devuelve `200` con `revoked: true`. Permite revocar aunque el convenio esté suspendido y conserva el primer motivo y la evidencia de emisión.
 
 Ambos comandos requieren `Origin` autorizado e `Idempotency-Key`, devuelven cabeceras de idempotencia y `Cache-Control: no-store`, y revalidan permisos antes del replay. No existe un listado general ni una consulta libre de elegibilidad.

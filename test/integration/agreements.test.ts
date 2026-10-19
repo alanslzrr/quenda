@@ -4,6 +4,7 @@ import test from "node:test";
 import { transaction } from "../../src/database/transaction.ts";
 import {
   type AgreementDraftInput,
+  activateAgreement,
   approveAgreement,
   createAgreementDraft,
   createAgreementVersion,
@@ -847,10 +848,51 @@ test("agreement drafts preserve participant ownership and do not activate capabi
         );
         await approve(0, "credential-approve-a", id);
         await approve(1, "credential-approve-b", id);
-        // Lifecycle fixture only: the activation command and reconciliation are not implemented yet.
+        await activateAgreement(
+          domain,
+          actor(0),
+          tenant,
+          id,
+          "credential-activation",
+          {
+            version: 1,
+            legalReviewReference: "Synthetic reviewed agreement",
+            reportReviewReference: null,
+          },
+          randomUUID(),
+          3600,
+        );
+        const originalPeriod = (
+          await migration.query(
+            "SELECT effective_period::text AS period FROM domain.agreement_activation WHERE agreement_id=$1",
+            [id],
+          )
+        ).rows[0].period;
+        for (const period of [
+          "empty",
+          "[2020-01-01T00:00:00Z,2021-01-01T00:00:00Z)",
+          "[2035-01-01T00:00:00Z,2036-01-01T00:00:00Z)",
+        ]) {
+          await migration.query(
+            "UPDATE domain.agreement_activation SET effective_period=$2::tstzrange WHERE agreement_id=$1",
+            [id, period],
+          );
+          await assert.rejects(issue(0, "outside-effective-period"), {
+            code: "CONFLICT",
+          });
+        }
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_credential WHERE agreement_id=$1",
+              [id],
+            )
+          ).rows[0].n,
+          0,
+        );
         await migration.query(
-          "UPDATE domain.agreement_version SET status='ACTIVADO' WHERE agreement_id=$1",
-          [id],
+          "UPDATE domain.agreement_activation SET effective_period=$2::tstzrange WHERE agreement_id=$1",
+          [id, originalPeriod],
         );
         await assert.rejects(issue(1, "foreign-account"), {
           code: "NOT_FOUND",
@@ -922,9 +964,15 @@ test("agreement drafts preserve participant ownership and do not activate capabi
           ),
           { code: "NOT_FOUND" },
         );
-        await migration.query(
-          "UPDATE domain.agreement_version SET status='SUSPENDIDO' WHERE agreement_id=$1",
-          [id],
+        await suspendAgreement(
+          domain,
+          actor(0),
+          tenant,
+          id,
+          "credential-suspension",
+          { version: 1, reason: "Synthetic review" },
+          randomUUID(),
+          3600,
         );
         await assert.rejects(issue(0, "suspended-issue"), { code: "CONFLICT" });
         const revoked = await revokeAgreementCredential(
@@ -1003,7 +1051,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
           [id],
         );
         await migration.query(
-          "INSERT INTO domain.unit_agreement_gate SELECT tenant_id,unit_id,agreement_id,version FROM domain.agreement_unit WHERE agreement_id=$1",
+          "INSERT INTO domain.unit_agreement_gate SELECT tenant_id,unit_id,agreement_id,version FROM domain.agreement_unit WHERE agreement_id=$1 ON CONFLICT(tenant_id,unit_id) DO UPDATE SET agreement_id=EXCLUDED.agreement_id,version=EXCLUDED.version",
           [id],
         );
         await assert.rejects(
