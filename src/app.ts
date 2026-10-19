@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import swagger from "@fastify/swagger";
 import Fastify, { LogController } from "fastify";
 import type { Pool } from "pg";
-import type { Config } from "./config.ts";
+import { type Config, defaultIdempotencyRetentionSeconds } from "./config.ts";
 import type { DatabaseHealth } from "./database/pools.ts";
 import { HttpError, registerErrors } from "./http/errors.ts";
 import { registerCatalog } from "./modules/catalog/index.ts";
@@ -16,6 +16,8 @@ import {
   registerMunicipalIdentity,
 } from "./modules/identity/index.ts";
 
+import { registerReservations } from "./modules/reservations/index.ts";
+
 const healthSchema = {
   type: "object",
   additionalProperties: false,
@@ -25,6 +27,7 @@ const healthSchema = {
 
 export async function buildApp(options: {
   database: DatabaseHealth;
+  idempotencyRetentionSeconds?: number;
   domain?: Pool;
   logLevel?: Config["logLevel"];
   identity?: { authentication: Authentication; config: AuthConfiguration };
@@ -88,6 +91,14 @@ export async function buildApp(options: {
       options.identity.config,
     );
     if (options.domain) {
+      await registerReservations(
+        app,
+        options.domain,
+        options.identity.authentication,
+        options.identity.config,
+        options.idempotencyRetentionSeconds ??
+          defaultIdempotencyRetentionSeconds,
+      );
       await registerCatalog(
         app,
         options.domain,

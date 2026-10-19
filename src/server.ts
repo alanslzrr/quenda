@@ -19,6 +19,7 @@ async function start(): Promise<void> {
   const app = await buildApp({
     database,
     domain: database.domain,
+    idempotencyRetentionSeconds: config.idempotencyRetentionSeconds,
     logLevel: config.logLevel,
     identity: { authentication, config: identityConfig },
   });

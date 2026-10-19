@@ -110,13 +110,21 @@ Sin sesión, bajo `/api/public/municipalities/{tenantId}`:
 
 Estas consultas no crean cuentas ni perfiles. Los recursos no publicados o retirados no aparecen; el detalle responde `404`. La disponibilidad calcula horarios y reglas, pero todavía no descuenta ocupaciones: esa integración pertenece al módulo de reservas y bloqueos. Consultar no garantiza ni confirma una reserva. Las cuatro rutas comparten un límite de 60 peticiones por 60 segundos y dirección reconocida por Fastify, incluso entre réplicas. Al superarlo devuelven `429 RATE_LIMITED` y `Retry-After`, antes de validar parámetros o calcular franjas. No confían en cabeceras de proxy enviadas por el cliente. PostgreSQL conserva una huella HMAC con clave compartida, no la IP en claro; cada petición elimina hasta 100 contadores cuya ventana tiene más de diez minutos. Sin tráfico, la limpieza se reanuda en la próxima petición; no constituye una garantía de borrado exactamente a los diez minutos. Las réplicas deben compartir `AUTH_SECRET`; rotarlo también reinicia la identidad de estos contadores.
 
+## Confirmación de reservas
+
+`POST /api/municipalities/{tenantId}/reservations` requiere sesión verificada, `Origin` autorizado y cabecera `Idempotency-Key` (1–200 caracteres alfanuméricos, `.`, `_`, `:`, `-`). El cuerpo contiene `unitId`, `startsAt` y `endsAt` como instantes ISO con zona; el titular siempre es el usuario autenticado.
+
+La respuesta `201` contiene la reserva y sus condiciones aceptadas. Repetir la misma clave y contenido devuelve el resultado original, también con `201`; cambiar el contenido devuelve `409`. Las cabeceras `Idempotency-Replayed` e `Idempotency-Expires-At` indican recuperación y vencimiento. `Idempotency-Retention-Seconds` publica la configuración para comandos nuevos: `IDEMPOTENCY_RETENTION_SECONDS`, 86.400 segundos por defecto. El vencimiento ya guardado no cambia al repetir una petición ni al cambiar esa configuración. Una clave caducada puede ejecutar un comando nuevo; no debe reutilizarse para recuperar resultados fuera de su ventana.
+
+La creación valida las reglas vigentes y confirma reserva, ocupación, evento, avisos y resultado idempotente en una sola transacción. Un conflicto no deja cambios parciales. El correo queda pendiente; todavía no hay worker de entrega. La disponibilidad pública aún no descuenta estas ocupaciones y no garantiza que una franja siga libre al reservar.
+
 ## Integridad de reservas y bloqueos
 
 PostgreSQL mantiene una ocupación activa por reserva confirmada o bloqueo vigente. Una exclusión temporal compartida impide solapes en la misma unidad y municipio; los intervalos son semiabiertos `[inicio, fin)`, por lo que admiten reservas consecutivas. Las claves compuestas impiden referencias entre municipios.
 
 Las restricciones diferidas comprueban al confirmar la transacción que la unidad y el intervalo de la ocupación coinciden con su origen. Cancelar una reserva o liberar un bloqueo exige liberar su ocupación en la misma transacción. Cambiar una reserva sustituye la ocupación sin borrar la anterior; un conflicto revierte todos los cambios. Los permisos SQL y RLS restringen la lectura y modificación al contexto autorizado.
 
-Estas garantías están implementadas en la base de datos. Todavía no hay comandos HTTP de reservas ni integración de ocupaciones en la disponibilidad pública.
+La confirmación HTTP utiliza estas garantías. Las rutas de modificación, cancelación y bloqueos, y la integración de ocupaciones en la disponibilidad pública, siguen pendientes.
 
 ## Primer operador
 

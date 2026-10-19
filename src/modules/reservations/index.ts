@@ -3,3 +3,4 @@ export const moduleDefinition = {
   dependencies: ["identity", "catalog", "collaboration"],
 } as const;
 export { createReservation } from "./create.ts";
+export { registerReservations } from "./routes.ts";

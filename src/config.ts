@@ -1,6 +1,9 @@
 import { resolve } from "node:path";
 
+export const defaultIdempotencyRetentionSeconds = 86400;
+
 export interface Config {
+  idempotencyRetentionSeconds: number;
   host: string;
   port: number;
   logLevel: "silent" | "error" | "warn" | "info" | "debug";
@@ -95,6 +98,13 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
       "MAIL_TRANSPORT: local mail is development-only",
     );
   return {
+    idempotencyRetentionSeconds: integer(
+      env.IDEMPOTENCY_RETENTION_SECONDS ??
+        String(defaultIdempotencyRetentionSeconds),
+      "IDEMPOTENCY_RETENTION_SECONDS",
+      1,
+      2147483647,
+    ),
     host,
     port: integer(env.PORT ?? "3000", "PORT", 1, 65535),
     databasePoolMax: integer(

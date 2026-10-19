@@ -13,7 +13,16 @@ const env = {
 
 test("configuration has safe defaults and rejects invalid values without secrets", () => {
   assert.equal(readConfig(env).host, "127.0.0.1");
+  assert.equal(readConfig(env).idempotencyRetentionSeconds, 86400);
+  assert.equal(
+    readConfig({ ...env, IDEMPOTENCY_RETENTION_SECONDS: "3600" })
+      .idempotencyRetentionSeconds,
+    3600,
+  );
   for (const override of [
+    { IDEMPOTENCY_RETENTION_SECONDS: "0" },
+    { IDEMPOTENCY_RETENTION_SECONDS: "1.5" },
+    { IDEMPOTENCY_RETENTION_SECONDS: "2147483648" },
     { PORT: "0" },
     { PORT: "3.5" },
     { PORT: "65536" },
