@@ -5,6 +5,7 @@ import { HttpError } from "../../http/errors.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
 import {
   inviteAdministrator,
+  revokeAdministrator,
   revokeAdministratorInvitation,
 } from "./invitations.ts";
 import {
@@ -212,6 +213,55 @@ export async function registerMunicipalIdentity(
         await actor(request, reply),
         request.params.tenantId,
         request.params.invitationId,
+      ),
+  );
+  app.post<{
+    Params: { tenantId: string; accountId: string };
+    Body: { reason: string };
+  }>(
+    "/api/municipalities/:tenantId/administrators/:accountId/revoke",
+    {
+      schema: {
+        operationId: "revokeAdministrator",
+        tags: ["Identity"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Administrador con MFA reciente: revoca un rol de su municipio con motivo e invalida las invitaciones pendientes emitidas por ese rol.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId", "accountId"],
+          properties: {
+            tenantId: uuid,
+            accountId: { type: "string", minLength: 1, maxLength: 128 },
+          },
+        },
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["reason"],
+          properties: {
+            reason: { type: "string", minLength: 1, maxLength: 500 },
+          },
+        },
+        response: {
+          ...errors,
+          200: {
+            type: "object",
+            additionalProperties: false,
+            required: ["tenantId", "accountId"],
+            properties: { tenantId: uuid, accountId: { type: "string" } },
+          },
+        },
+      },
+    },
+    async (request, reply) =>
+      revokeAdministrator(
+        pool,
+        await actor(request, reply),
+        request.params.tenantId,
+        request.params.accountId,
+        request.body.reason,
       ),
   );
 }

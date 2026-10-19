@@ -12,6 +12,7 @@ export type {
 export { authOptions, createAuthentication } from "./auth.ts";
 export {
   inviteAdministrator,
+  revokeAdministrator,
   revokeAdministratorInvitation,
 } from "./invitations.ts";
 export { registerMunicipalIdentity } from "./municipal-routes.ts";

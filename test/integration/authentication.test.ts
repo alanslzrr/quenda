@@ -469,6 +469,21 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           const revokePath = `/api/municipalities/${tenantId}/administrator-invitations/${delegated.json().invitationId}/revoke`;
           assert.equal((await client.request(revokePath, {})).statusCode, 200);
           assert.equal((await client.request(revokePath, {})).statusCode, 404);
+          const removed = await client.request(
+            `/api/municipalities/${tenantId}/administrators/${accountId}/revoke`,
+            { reason: "Fin de función de prueba" },
+          );
+          assert.equal(removed.statusCode, 200, removed.body);
+          assert.equal(
+            (
+              await client.request(
+                `/api/municipalities/${tenantId}/administrator-invitations`,
+                { accountId, expiresAt: input.invitationExpiresAt },
+              )
+            ).statusCode,
+            403,
+          );
+          assert.equal((await client.request("/api/me")).statusCode, 200);
           for (let i = 0; i < 60; i++)
             await consumeAdministrativeAttempt(domain, accountId);
           const throttled = await replica.inject({

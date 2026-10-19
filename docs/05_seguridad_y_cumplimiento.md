@@ -22,6 +22,8 @@ El sistema deniega por defecto y comprueba en servidor cuenta, objeto, acción, 
 | Operador de plataforma | Permiso operativo | Alta de municipios y operación de la instancia. |
 | Worker | Tarea y contexto autorizados | Datos necesarios para ejecutar esa tarea. |
 
+La revocación de un administrador conserva su perfil y las evidencias, pero invalida sus invitaciones pendientes. Recuperar el rol exige aceptar una nueva invitación emitida después de la revocación; no reactiva las anteriores.
+
 Los permisos operativos no incluyen lectura general de reservas personales. Un acceso de soporte requiere autorización, caducidad y auditoría.
 
 **Justificación:** la combinación de rol, objeto y contexto limita el acceso que un rol genérico no puede expresar. [NIST ABAC](https://csrc.nist.gov/pubs/sp/800/162/upd2/final), [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html).

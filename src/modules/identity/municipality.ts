@@ -110,15 +110,11 @@ export async function acceptAdministratorInvitation(
         "INSERT INTO domain.municipal_profile (tenant_id, account_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
         [tenantId, actor.accountId],
       );
-      const existing = await client.query(
-        "SELECT 1 FROM domain.municipal_administrator WHERE tenant_id = $1 AND account_id = $2",
-        [tenantId, actor.accountId],
+      const activated = await client.query<{ allowed: boolean }>(
+        "SELECT domain.activate_administrator($1) AS allowed",
+        [invitationId],
       );
-      if (existing.rowCount) throw new HttpError("CONFLICT");
-      await client.query(
-        "INSERT INTO domain.municipal_administrator (tenant_id, account_id) VALUES ($1, $2)",
-        [tenantId, actor.accountId],
-      );
+      if (!activated.rows[0]?.allowed) throw new HttpError("CONFLICT");
       await client.query(
         "UPDATE domain.administrator_invitation SET accepted_at = now() WHERE tenant_id = $1 AND id = $2",
         [tenantId, invitationId],

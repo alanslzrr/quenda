@@ -7,6 +7,7 @@ import {
   acceptAdministratorInvitation,
   createMunicipality,
   inviteAdministrator,
+  revokeAdministrator,
   revokeAdministratorInvitation,
 } from "../../src/modules/identity/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
@@ -359,10 +360,41 @@ test("municipal creation and first administrator acceptance are atomic and isola
           a.tenantId,
           { ...input, accountId: "admin-b" },
         );
-        await migration.query(
-          "UPDATE domain.municipal_administrator SET revoked_at = now() WHERE tenant_id = $1 AND account_id = 'other'",
-          [a.tenantId],
+        await assert.rejects(
+          revokeAdministrator(
+            domain,
+            account("admin-b"),
+            a.tenantId,
+            "other",
+            "Cambio de funciones",
+          ),
+          { code: "FORBIDDEN" },
         );
+        await revokeAdministrator(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          "other",
+          "Cambio de funciones",
+        );
+        await assert.rejects(
+          inviteAdministrator(domain, account("other"), a.tenantId, input),
+          { code: "FORBIDDEN" },
+        );
+        const restored = await inviteAdministrator(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          input,
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("other"),
+          a.tenantId,
+          restored.invitationId,
+        );
+        // A restored issuer must not resurrect a previously invalidated invite.
+
         await assert.rejects(
           acceptAdministratorInvitation(
             domain,
@@ -389,13 +421,24 @@ test("municipal creation and first administrator acceptance are atomic and isola
           ),
           { code: "42501" },
         );
+        const evidence = await migration.query(
+          "SELECT reason FROM domain.identity_event WHERE operation = 'REVOKE_ADMINISTRATOR'",
+        );
+        assert.equal(evidence.rowCount, 1);
+        assert.equal(evidence.rows[0].reason, "Cambio de funciones");
+        const grant = await migration.query(
+          "SELECT invitation_id, revoked_at FROM domain.municipal_administrator WHERE tenant_id = $1 AND account_id = 'other'",
+          [a.tenantId],
+        );
+        assert.equal(grant.rows[0].invitation_id, restored.invitationId);
+        assert.equal(grant.rows[0].revoked_at, null);
         assert.equal(
           (
             await migration.query(
               "SELECT * FROM domain.identity_event WHERE operation = 'REVOKE_INVITATION'",
             )
           ).rowCount,
-          1,
+          2,
         );
       },
     );

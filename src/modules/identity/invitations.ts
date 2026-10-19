@@ -80,3 +80,28 @@ export async function revokeAdministratorInvitation(
     },
   );
 }
+
+export async function revokeAdministrator(
+  pool: Pool,
+  actor: AuthenticatedAccount,
+  tenantId: string,
+  accountId: string,
+  reason: string,
+) {
+  const rationale = reason.trim();
+  if (!rationale || rationale.length > 500)
+    throw new HttpError("INVALID_INPUT");
+  return command(
+    pool,
+    { accountId: actor.accountId, tenantId },
+    async (client) => {
+      await requireAdministrator(client, actor);
+      const result = await client.query<{ invitation: string | null }>(
+        "SELECT domain.revoke_administrator($1,$2) AS invitation",
+        [accountId, rationale],
+      );
+      if (!result.rows[0]?.invitation) throw new HttpError("NOT_FOUND");
+      return { tenantId, accountId };
+    },
+  );
+}
