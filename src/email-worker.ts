@@ -65,12 +65,33 @@ async function run() {
     )
       throw new Error("Invalid worker role");
     process.stdout.write('{"event":"EMAIL_WORKER_READY"}\n');
+    let lastHealthCheck = 0;
+    let lastExhausted: string | null = null;
     do {
       const outcome = await processReservationEmail(pool, transport, options);
       if (outcome !== "IDLE")
         process.stdout.write(
           `${JSON.stringify({ event: "EMAIL_ATTEMPT", outcome })}\n`,
         );
+      if (Date.now() - lastHealthCheck >= 60000 || outcome === "EXHAUSTED") {
+        const health = (
+          await pool.query<{
+            pending: string;
+            leased: string;
+            exhausted: string;
+          }>("SELECT * FROM domain.reservation_email_health()")
+        ).rows[0];
+        if (!health) throw new Error("Missing queue health");
+        process.stdout.write(
+          `${JSON.stringify({ event: "EMAIL_QUEUE_HEALTH", ...health })}\n`,
+        );
+        if (health.exhausted !== "0" && health.exhausted !== lastExhausted)
+          process.stderr.write(
+            `${JSON.stringify({ event: "EMAIL_QUEUE_ATTENTION", exhausted: health.exhausted })}\n`,
+          );
+        lastExhausted = health.exhausted;
+        lastHealthCheck = Date.now();
+      }
       if (process.argv.includes("--once") || shutdown.signal.aborted) break;
       if (outcome === "IDLE") {
         try {

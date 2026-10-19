@@ -1430,6 +1430,10 @@ test("reservation confirmation validates real calendars and commits every effect
           ).rows[0].saved;
         for (const pool of [domain, auth]) {
           await assert.rejects(
+            pool.query("SELECT * FROM domain.reservation_email_health()"),
+            { code: "42501" },
+          );
+          await assert.rejects(
             pool.query("SELECT * FROM domain.claim_reservation_email(30,3)"),
             { code: "42501" },
           );
@@ -1632,7 +1636,20 @@ test("reservation confirmation validates real calendars and commits every effect
         );
         assert.match(execution.stdout, /EMAIL_WORKER_READY/);
         assert.match(execution.stdout, /ACCEPTED/);
-        assert.equal(execution.stderr, "");
+        assert.match(execution.stdout, /EMAIL_QUEUE_HEALTH/);
+        assert.deepEqual(JSON.parse(execution.stderr), {
+          event: "EMAIL_QUEUE_ATTENTION",
+          exhausted: "2",
+        });
+        assert.deepEqual(
+          (
+            await worker.query(
+              "SELECT * FROM domain.reservation_email_health()",
+            )
+          ).rows[0],
+          { pending: "0", leased: "0", exhausted: "2" },
+        );
+        assert.ok(!execution.stderr.includes("@example.test"));
         assert.ok(!execution.stdout.includes("@example.test"));
         const files = await readdir(mailDir);
         assert.equal(files.length, 1);
@@ -1641,6 +1658,120 @@ test("reservation confirmation validates real calendars and commits every effect
         );
         assert.match(message.text, /Data do evento/);
         assert.match(message.to, /@example.test$/);
+        await migration.query(
+          "UPDATE domain.reservation_email SET accepted_at=NULL,next_attempt_at=now()-interval '1 second' WHERE tenant_id=$1 AND event_id=$2",
+          [queued.tenant_id, queued.event_id],
+        );
+        await migration.query(`CREATE FUNCTION domain.test_lost_email_ack() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.outcome='ACCEPTED' THEN RAISE EXCEPTION 'Synthetic lost acknowledgement'; END IF; RETURN NEW; END $$;
+          CREATE TRIGGER test_lost_email_ack BEFORE UPDATE ON domain.reservation_email_attempt FOR EACH ROW EXECUTE FUNCTION domain.test_lost_email_ack()`);
+        const deliveries: string[] = [];
+        const acceptedTransport = {
+          send: async (mail: { text: string }) => {
+            deliveries.push(mail.text);
+          },
+        };
+        const recoveryOptions = { ...workerOptions, maxAttempts: 10 };
+        try {
+          await assert.rejects(
+            processReservationEmail(worker, acceptedTransport, recoveryOptions),
+            { code: "P0001" },
+          );
+          assert.equal(deliveries.length, 1);
+          const unacknowledged = (
+            await migration.query(
+              "SELECT accepted_at,lease_token FROM domain.reservation_email WHERE tenant_id=$1 AND event_id=$2",
+              [queued.tenant_id, queued.event_id],
+            )
+          ).rows[0];
+          assert.equal(unacknowledged.accepted_at, null);
+          assert.ok(unacknowledged.lease_token);
+          await migration.query(
+            "UPDATE domain.reservation_email SET lease_until=now()-interval '1 second' WHERE tenant_id=$1 AND event_id=$2",
+            [queued.tenant_id, queued.event_id],
+          );
+        } finally {
+          await migration.query(
+            "DROP TRIGGER test_lost_email_ack ON domain.reservation_email_attempt; DROP FUNCTION domain.test_lost_email_ack()",
+          );
+        }
+        assert.equal(
+          await processReservationEmail(
+            worker,
+            acceptedTransport,
+            recoveryOptions,
+          ),
+          "ACCEPTED",
+        );
+        assert.equal(deliveries.length, 2);
+        assert.equal(deliveries[0], deliveries[1]);
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT outcome FROM domain.reservation_email_attempt WHERE tenant_id=$1 AND event_id=$2 ORDER BY attempt DESC LIMIT 2",
+              [queued.tenant_id, queued.event_id],
+            )
+          ).rows.map((r) => r.outcome),
+          ["ACCEPTED", "EXPIRED"],
+        );
+        const { spawn } = await import("node:child_process");
+        for (const signal of ["SIGINT", "SIGTERM"] as const) {
+          const child = spawn(process.execPath, ["dist/email-worker.js"], {
+            env: {
+              ...process.env,
+              NODE_ENV: "test",
+              WORKER_DATABASE_URL: worker.options.connectionString,
+              AUTH_ORIGIN: "https://quenda.test",
+              LOCAL_MAIL_DIR: mailDir,
+              EMAIL_LOCALE: "es",
+              EMAIL_POLL_MS: "60000",
+            },
+            stdio: ["ignore", "pipe", "pipe"],
+          });
+          let output = "",
+            errorOutput = "",
+            sent = false;
+          await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(() => {
+              child.kill("SIGKILL");
+              reject(new Error("Worker shutdown timed out"));
+            }, 15000);
+            child.once("error", (error) => {
+              clearTimeout(timer);
+              reject(error);
+            });
+            child.stdout.on("data", (chunk) => {
+              output += chunk.toString();
+              if (!sent && output.includes("EMAIL_WORKER_READY")) {
+                sent = true;
+                child.kill(signal);
+              }
+            });
+            child.stderr.on("data", (chunk) => {
+              errorOutput += chunk.toString();
+            });
+            child.once("close", (code, termination) => {
+              clearTimeout(timer);
+              try {
+                assert.ok(sent);
+                assert.equal(code, 0);
+                assert.equal(termination, null);
+                if (errorOutput)
+                  assert.match(errorOutput, /EMAIL_QUEUE_ATTENTION/);
+                resolve();
+              } catch (error) {
+                reject(error);
+              }
+            });
+          });
+          assert.equal(
+            (
+              await migration.query(
+                "SELECT count(*)::int AS n FROM pg_stat_activity WHERE application_name='quenda-email-worker'",
+              )
+            ).rows[0].n,
+            0,
+          );
+        }
 
         assert.equal(
           (
