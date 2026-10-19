@@ -5,7 +5,11 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
-import { listMunicipalReservations, listOwnReservations } from "./queries.ts";
+import {
+  listMunicipalReservations,
+  listOwnReservations,
+  readReservation,
+} from "./queries.ts";
 
 export async function registerReservationQueries(
   app: FastifyInstance,
@@ -16,6 +20,75 @@ export async function registerReservationQueries(
   const actor = createRequestActor(pool, auth, config);
   const uuid = { type: "string", format: "uuid" },
     instant = { type: "string", format: "date-time" };
+  app.get<{ Params: { tenantId: string; reservationId: string } }>(
+    "/api/municipalities/:tenantId/reservations/:reservationId",
+    {
+      schema: {
+        operationId: "readReservation",
+        tags: ["Reservations"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Estado actual de una reserva, independiente de resultados idempotentes anteriores. Acceso del titular o personal con RESERVATION_READ/MANAGE sobre la unidad y MFA. Conserva acceso a reservas de recursos retirados.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId", "reservationId"],
+          properties: { tenantId: uuid, reservationId: uuid },
+        },
+        response: {
+          ...Object.fromEntries(
+            [400, 401, 403, 404, 429, 500, 503].map((status) => [
+              status,
+              { $ref: "ErrorResponse#" },
+            ]),
+          ),
+          200: {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "id",
+              "tenantId",
+              "accountId",
+              "unitId",
+              "startsAt",
+              "endsAt",
+              "status",
+              "revision",
+              "calendarVersion",
+              "cancellationMinutes",
+              "timeZone",
+            ],
+            properties: {
+              id: uuid,
+              tenantId: uuid,
+              accountId: { type: "string" },
+              unitId: uuid,
+              startsAt: instant,
+              endsAt: instant,
+              status: {
+                type: "string",
+                enum: ["CONFIRMADA", "CANCELADA", "FINALIZADA"],
+              },
+              revision: { type: "integer" },
+              calendarVersion: { type: "integer" },
+              cancellationMinutes: { type: "integer" },
+              timeZone: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const account = await actor(request, reply);
+      reply.header("cache-control", "no-store");
+      return readReservation(
+        pool,
+        account,
+        request.params.tenantId,
+        request.params.reservationId,
+      );
+    },
+  );
   for (const own of [true, false]) {
     const extra = own
       ? { municipality: { type: "string" }, unitName: { type: "string" } }

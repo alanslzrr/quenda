@@ -18,6 +18,7 @@ import {
   listMunicipalReservations,
   listOwnReservations,
   modifyReservation,
+  readReservation,
   releaseBlock,
 } from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
@@ -984,6 +985,36 @@ test("reservation confirmation validates real calendars and commits every effect
           "UPDATE domain.reservable_unit SET withdrawn_at=now() WHERE tenant_id=$1 AND id=$2",
           [otherTenant, otherUnit],
         );
+        const detail = await readReservation(
+          domain,
+          actor,
+          otherTenant,
+          cross.result.id,
+          clock,
+        );
+        assert.equal(detail.status, "CONFIRMADA");
+        assert.equal(detail.accountId, actor.accountId);
+        await assert.rejects(
+          readReservation(
+            domain,
+            { ...actor, accountId: "newcomer" },
+            otherTenant,
+            cross.result.id,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await assert.rejects(
+          readReservation(domain, actor, tenant, cross.result.id),
+          { code: "NOT_FOUND" },
+        );
+        assert.equal(
+          (
+            await readReservation(domain, actor, otherTenant, cross.result.id, {
+              now: () => new Date(detail.endsAt),
+            })
+          ).status,
+          "FINALIZADA",
+        );
         const all = [];
         let after: string | null = null;
         do {
@@ -1095,6 +1126,21 @@ test("reservation confirmation validates real calendars and commits every effect
           ).items,
           [],
         );
+        const scopedId = scopedPage.items[0]?.id;
+        assert.ok(scopedId);
+        assert.equal(
+          (await readReservation(domain, scoped, tenant, scopedId)).unitId,
+          draft,
+        );
+        await assert.rejects(
+          readReservation(
+            domain,
+            { ...scoped, mfaVerifiedAt: null },
+            tenant,
+            scopedId,
+          ),
+          { code: "FORBIDDEN" },
+        );
         await revokeManager(
           domain,
           admin,
@@ -1105,6 +1151,10 @@ test("reservation confirmation validates real calendars and commits every effect
         assert.deepEqual(
           (await listMunicipalReservations(domain, scoped, tenant)).items,
           [],
+        );
+        await assert.rejects(
+          readReservation(domain, scoped, tenant, scopedId),
+          { code: "NOT_FOUND" },
         );
         const filtered = await listMunicipalReservations(
           domain,

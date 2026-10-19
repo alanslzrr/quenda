@@ -112,10 +112,13 @@ Estas consultas no crean cuentas ni perfiles. Los recursos no publicados o retir
 
 ## Consulta de reservas
 
+- `GET /api/municipalities/{tenantId}/reservations/{reservationId}`: estado actual de una reserva. Admite al titular sin MFA y al personal con permisos vigentes sobre la unidad y MFA. Un identificador de otro municipio o fuera del ámbito autorizado no revela la reserva.
 - `GET /api/me/reservations`: historial del usuario autenticado entre municipios de la instancia, incluidas reservas de unidades retiradas. Devuelve nombre municipal y de unidad, sin aceptar un identificador de otro usuario.
 - `GET /api/municipalities/{tenantId}/reservations`: requiere MFA y devuelve únicamente reservas cubiertas por `RESERVATION_READ` o `RESERVATION_MANAGE`. `?unitId=UUID` filtra sin ampliar permisos. Ser titular de una reserva no concede acceso al listado de gestión.
 
-Ambas rutas devuelven `{ items, nextCursor }`, con hasta 20 elementos y `Cache-Control: no-store`. `?after=nextCursor` continúa el listado. El orden por identificadores es estable, no cronológico; el cursor propio combina reserva y municipio, y el municipal contiene el identificador de reserva. Los permisos se vuelven a comprobar en cada página.
+Los listados devuelven `{ items, nextCursor }`, con hasta 20 elementos y `Cache-Control: no-store`. `?after=nextCursor` continúa el listado. El orden por identificadores es estable, no cronológico; el cursor propio combina reserva y municipio, y el municipal contiene el identificador de reserva. Los permisos se vuelven a comprobar en cada página.
+
+El detalle no devuelve el resultado histórico de un comando: tras cancelar, muestra `CANCELADA` y la nueva revisión, aunque repetir la clave de creación siga recuperando la confirmación original.
 
 Las consultas muestran `FINALIZADA` cuando el fin de una reserva confirmada es anterior o igual al instante de consulta. No modifican el estado almacenado ni ejecutan tareas programadas; una reserva cancelada sigue mostrando `CANCELADA`.
 

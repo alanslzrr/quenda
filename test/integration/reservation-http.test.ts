@@ -242,6 +242,19 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(cancelled.statusCode, 200, cancelled.body);
       assert.equal(cancelled.json().status, "CANCELADA");
       assert.equal(cancelled.json().revision, 3);
+      const detail = await client.request(`${url}/${created.json().id}`);
+      assert.equal(detail.statusCode, 200, detail.body);
+      assert.equal(detail.json().status, "CANCELADA");
+      assert.equal(detail.json().revision, 3);
+      assert.equal(detail.headers["cache-control"], "no-store");
+      const originalReplay = await client.request(url, body, headers);
+      assert.equal(originalReplay.statusCode, 201, originalReplay.body);
+      assert.equal(originalReplay.json().status, "CONFIRMADA");
+      assert.equal(originalReplay.json().revision, 1);
+      assert.equal(
+        (await app.inject({ url: `${url}/${created.json().id}` })).statusCode,
+        401,
+      );
       assert.ok((await available()).includes(changedBody.startsAt));
       const cancelReplay = await replica.inject({
         method: "POST",
