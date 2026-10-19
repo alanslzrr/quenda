@@ -75,8 +75,8 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       const input = {
         name: "Joint programme",
         timeZone: "Europe/Madrid",
-        startsAt: "2030-01-01T00:00:00Z",
-        endsAt: "2031-01-01T00:00:00Z",
+        startsAt: "2020-01-01T00:00:00Z",
+        endsAt: "2040-01-01T00:00:00Z",
         purpose: "Shared access",
         legalBasis: "Synthetic reference",
         responsibilities: "Municipal management",
@@ -171,7 +171,15 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       assert.equal(approved.statusCode, 200, approved.body);
       assert.equal(approved.json().status, "APROBADO");
       const { name: _name, timeZone: _zone, ...configuration } = input;
-      const revised = { ...configuration, expectedVersion: 1, weeklyLimit: 2 };
+      const revised = {
+        ...configuration,
+        expectedVersion: 1,
+        weeklyLimit: 2,
+        eligibility: "acreditacion_vigente",
+        participants: [
+          { tenantId: tenant, accreditationIssuer: true, unitIds: [unit] },
+        ],
+      };
       assert.equal(
         (
           await client.request(
@@ -243,7 +251,7 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       assert.equal(detail.json().status, "APROBADO");
       assert.equal(detail.json().weeklyLimit, 2);
       assert.equal(detail.json().approvals.length, 1);
-      assert.deepEqual(detail.json().participants, input.participants);
+      assert.deepEqual(detail.json().participants, revised.participants);
       const listing = await client.request(url);
       assert.equal(listing.statusCode, 200, listing.body);
       assert.deepEqual(
@@ -276,26 +284,55 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       assert.equal(
         (await client.request(credentialUrl, credentialBody, credentialHeaders))
           .statusCode,
-        404,
-      );
-      await migration.query(
-        "UPDATE domain.agreement_participant SET accreditation_issuer=true WHERE agreement_id=$1 AND version=2 AND tenant_id=$2",
-        [id, tenant],
-      );
-      assert.equal(
-        (await client.request(credentialUrl, credentialBody, credentialHeaders))
-          .statusCode,
         409,
       );
-      // Activation remains a lifecycle fixture until its reconciliation command is available.
-      await migration.query(
-        "UPDATE domain.agreement_version SET status='ACTIVADO',eligibility='acreditacion_vigente',starts_at='2020-01-01',ends_at='2040-01-01' WHERE agreement_id=$1 AND version=2",
-        [id],
+      const activateUrl = `${url}/${id}/activate`;
+      const activateBody = {
+        version: 2,
+        legalReviewReference: "Synthetic legal review",
+        reportReviewReference: null,
+      };
+      const activateHeaders = { "idempotency-key": "http-activate" };
+      assert.equal(
+        (
+          await client.request(
+            activateUrl,
+            { ...activateBody, legalReviewReference: " " },
+            activateHeaders,
+          )
+        ).statusCode,
+        400,
       );
-      await migration.query(
-        "UPDATE domain.agreement_participant SET accreditation_issuer=true WHERE agreement_id=$1 AND version=2 AND tenant_id=$2",
-        [id, tenant],
+      const activated = await client.request(
+        activateUrl,
+        activateBody,
+        activateHeaders,
       );
+      assert.equal(activated.statusCode, 200, activated.body);
+      assert.equal(activated.json().status, "ACTIVADO");
+      assert.equal(activated.headers["cache-control"], "no-store");
+      const activationReplay = await replica.inject({
+        method: "POST",
+        url: activateUrl,
+        payload: activateBody,
+        headers: {
+          ...activateHeaders,
+          origin: config.origin,
+          cookie: client.cookie(),
+        },
+      });
+      assert.equal(activationReplay.statusCode, 200, activationReplay.body);
+      assert.equal(activationReplay.headers["idempotency-replayed"], "true");
+      assert.deepEqual(activationReplay.json(), activated.json());
+      assert.equal(
+        (
+          await client.request(activateUrl, activateBody, {
+            "idempotency-key": "another-activation",
+          })
+        ).statusCode,
+        409,
+      );
+      assert.equal((await client.request(detailUrl)).json().status, "ACTIVADO");
       assert.equal(
         (
           await client.request(
@@ -437,6 +474,11 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
           .statusCode,
         403,
       );
+      assert.equal(
+        (await client.request(activateUrl, activateBody, activateHeaders))
+          .statusCode,
+        403,
+      );
       assert.equal((await client.request(detailUrl)).statusCode, 403);
       assert.equal((await client.request(url)).statusCode, 403);
       assert.equal(
@@ -451,6 +493,7 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         "/api/municipalities/{tenantId}/agreements/{agreementId}/versions",
         "/api/municipalities/{tenantId}/agreements/{agreementId}/approve",
         "/api/municipalities/{tenantId}/agreements/{agreementId}/suspend",
+        "/api/municipalities/{tenantId}/agreements/{agreementId}/activate",
         "/api/municipalities/{tenantId}/credentials",
         "/api/municipalities/{tenantId}/credentials/{credentialId}/revoke",
       ])

@@ -5,6 +5,10 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
+import {
+  type ActivateAgreementInput,
+  activateAgreement,
+} from "./activation.ts";
 import { type AgreementApprovalInput, approveAgreement } from "./approvals.ts";
 import { registerCredentialRoutes } from "./credential-routes.ts";
 import {
@@ -58,7 +62,13 @@ export async function registerCollaboration(
   const actor = createRequestActor(pool, auth, config);
   await registerAgreementQueries(app, pool, auth, config);
   await registerCredentialRoutes(app, pool, auth, config, retentionSeconds);
-  for (const action of ["create", "version", "approve", "suspend"] as const) {
+  for (const action of [
+    "create",
+    "version",
+    "approve",
+    "suspend",
+    "activate",
+  ] as const) {
     const properties =
       action === "create"
         ? {
@@ -68,22 +78,38 @@ export async function registerCollaboration(
           }
         : action === "version"
           ? { ...configuration, expectedVersion: integer }
-          : action === "suspend"
+          : action === "activate"
             ? {
                 version: integer,
-                reason: { type: "string", minLength: 1, maxLength: 500 },
+                legalReviewReference: {
+                  type: "string",
+                  minLength: 1,
+                  maxLength: 500,
+                },
+                reportReviewReference: {
+                  type: "string",
+                  minLength: 1,
+                  maxLength: 500,
+                  nullable: true,
+                },
               }
-            : {
-                version: integer,
-                unitIds: { type: "array", uniqueItems: true, items: uuid },
-              };
-    const success = action === "approve" || action === "suspend" ? 200 : 201;
+            : action === "suspend"
+              ? {
+                  version: integer,
+                  reason: { type: "string", minLength: 1, maxLength: 500 },
+                }
+              : {
+                  version: integer,
+                  unitIds: { type: "array", uniqueItems: true, items: uuid },
+                };
+    const success = action === "create" || action === "version" ? 201 : 200;
     app.post<{
       Params: { tenantId: string; agreementId?: string };
       Headers: { "idempotency-key": string };
       Body: AgreementDraftInput &
         AgreementVersionInput &
-        AgreementApprovalInput & { expectedVersion: number; reason: string };
+        AgreementApprovalInput &
+        ActivateAgreementInput & { expectedVersion: number; reason: string };
     }>(
       action === "create"
         ? "/api/municipalities/:tenantId/agreements"
@@ -97,10 +123,12 @@ export async function registerCollaboration(
                 ? "createAgreementVersion"
                 : action === "suspend"
                   ? "suspendAgreement"
-                  : "approveAgreement",
+                  : action === "activate"
+                    ? "activateAgreement"
+                    : "approveAgreement",
           tags: ["Collaboration"],
           security: [{ quendaSession: [] }],
-          description: `${action === "create" ? "Crea un convenio en BORRADOR sin activar capacidades." : action === "version" ? "Crea una nueva versión BORRADOR sin heredar aprobaciones; exige expectedVersion vigente y conserva la zona del convenio." : action === "suspend" ? "Suspende el convenio con motivo, cierra vigencias efectivas y conserva reservas y vinculaciones de unidades." : "Aprueba la versión y el conjunto exacto de unidades del municipio; todas las aprobaciones producen APROBADO, nunca ACTIVADO."} Exige administrador participante, MFA reciente y Origin autorizado. Retención idempotente: ${retentionSeconds} segundos.`,
+          description: `${action === "create" ? "Crea un convenio en BORRADOR sin activar capacidades." : action === "version" ? "Crea una nueva versión BORRADOR sin heredar aprobaciones; exige expectedVersion vigente y conserva la zona del convenio." : action === "suspend" ? "Suspende el convenio con motivo, cierra vigencias efectivas y conserva reservas y vinculaciones de unidades." : action === "activate" ? "Realiza la primera activación del convenio y concilia reservas existentes con aprobaciones y revisiones registradas. La sustitución o reactivación no está habilitada." : "Aprueba la versión y el conjunto exacto de unidades del municipio; todas las aprobaciones producen APROBADO, nunca ACTIVADO."} Exige administrador participante, MFA reciente y Origin autorizado. Retención idempotente: ${retentionSeconds} segundos.`,
           params: {
             type: "object",
             additionalProperties: false,
@@ -146,7 +174,9 @@ export async function registerCollaboration(
                   enum:
                     action === "suspend"
                       ? ["SUSPENDIDO"]
-                      : ["BORRADOR", "APROBADO"],
+                      : action === "activate"
+                        ? ["ACTIVADO"]
+                        : ["BORRADOR", "APROBADO"],
                 },
               },
               headers: {
@@ -187,7 +217,9 @@ export async function registerCollaboration(
                 )
               : await (action === "suspend"
                   ? suspendAgreement
-                  : approveAgreement)(
+                  : action === "activate"
+                    ? activateAgreement
+                    : approveAgreement)(
                   pool,
                   account,
                   request.params.tenantId,
