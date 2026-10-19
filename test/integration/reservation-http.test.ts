@@ -611,6 +611,127 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         { code: "42501" },
       );
 
+      const municipalUrl = `/api/municipalities/${tenant}/indicators?from=2030-01-01&to=2030-01-02`;
+      const otherUnit = randomUUID();
+      await migration.query(
+        "INSERT INTO domain.reservable_unit(tenant_id,id,facility_id,name) VALUES($1,$2,$3,'Second historical unit')",
+        [tenant, otherUnit, facility],
+      );
+      await migration.query(
+        "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason,created_at) SELECT tenant_id,$3,1,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,'Fixture','2029-12-01T00:00:00Z' FROM domain.unit_calendar_version WHERE tenant_id=$1 AND unit_id=$2 AND version=1",
+        [tenant, unit, otherUnit],
+      );
+      await migration.query(
+        "INSERT INTO domain.catalog_event(tenant_id,id,actor_id,facility_id,unit_id,operation,occurred_at,reason,calendar_version,independence_confirmed) VALUES($1,gen_random_uuid(),$2,$3,$4,'PUBLISH_UNIT','2029-12-31T23:00:00Z','Fixture',1,true)",
+        [tenant, accountId, facility, otherUnit],
+      );
+      await migration.query(
+        "WITH booking AS (INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,cancellation_minutes,timezone) VALUES($1,gen_random_uuid(),$2,$3,1,'2030-01-01T00:00:00Z','2030-01-01T01:00:00Z',60,'Europe/Madrid') RETURNING *) INSERT INTO domain.occupancy(tenant_id,id,unit_id,reservation_id,period) SELECT tenant_id,gen_random_uuid(),unit_id,id,tstzrange(starts_at,ends_at,'[)') FROM booking",
+        [tenant, accountId, otherUnit],
+      );
+      await migration.query(
+        "INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,status,cancellation_minutes,timezone) VALUES($1,gen_random_uuid(),$2,$3,1,'2030-01-01T02:00:00Z','2030-01-01T03:00:00Z','CANCELADA',60,'Europe/Madrid')",
+        [tenant, accountId, otherUnit],
+      );
+      const total = await client.request(municipalUrl);
+      assert.equal(total.statusCode, 200, total.body);
+      assert.equal(total.headers["cache-control"], "no-store");
+      assert.equal(total.json().offeredMinutes, 1380);
+      assert.equal(total.json().reservedMinutes, 60);
+      assert.ok(
+        Math.abs(total.json().occupancyPercent - (60 / 1380) * 100) < 1e-9,
+      );
+      assert.deepEqual(total.json().reservations, {
+        CONFIRMADA: 1,
+        CANCELADA: 1,
+        FINALIZADA: 0,
+      });
+      assert.equal(total.json().unitId, undefined);
+      assert.equal((await app.inject({ url: municipalUrl })).statusCode, 401);
+      assert.equal(
+        (await client.request(municipalUrl.replace(tenant, randomUUID())))
+          .statusCode,
+        403,
+      );
+      assert.ok(
+        (app.swagger() as { paths: Record<string, unknown> }).paths[
+          "/api/municipalities/{tenantId}/indicators"
+        ],
+      );
+      await assert.rejects(
+        domain.query(
+          "SELECT domain.municipal_indicator_source('2030-01-01','2030-01-02')",
+        ),
+        { code: "42501" },
+      );
+      const emptyTenant = randomUUID(),
+        emptyInvitation = randomUUID();
+      await migration.query(
+        "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Empty','Europe/Madrid')",
+        [emptyTenant],
+      );
+      await migration.query(
+        "INSERT INTO domain.municipal_profile(tenant_id,account_id) VALUES($1,$2)",
+        [emptyTenant, accountId],
+      );
+      await migration.query(
+        "INSERT INTO domain.administrator_invitation(tenant_id,id,account_id,invited_by,expires_at,accepted_at) VALUES($1,$2,$3,$3,now()+interval '1 day',now())",
+        [emptyTenant, emptyInvitation, accountId],
+      );
+      await migration.query(
+        "INSERT INTO domain.municipal_administrator(tenant_id,account_id,invitation_id) VALUES($1,$2,$3)",
+        [emptyTenant, accountId, emptyInvitation],
+      );
+      const empty = await client.request(
+        municipalUrl.replace(tenant, emptyTenant),
+      );
+      assert.equal(empty.statusCode, 200, empty.body);
+      assert.equal(empty.json().offeredMinutes, 0);
+      assert.equal(empty.json().reservedMinutes, 0);
+      assert.equal(empty.json().occupancyPercent, null);
+      assert.deepEqual(empty.json().reservations, {
+        CONFIRMADA: 0,
+        CANCELADA: 0,
+        FINALIZADA: 0,
+      });
+      const managerInvitation = randomUUID();
+      await migration.query(
+        "INSERT INTO domain.manager_invitation(tenant_id,id,account_id,invited_by,issuer_invitation_id,expires_at,accepted_at) VALUES($1,$2,$3,$3,$4,now()+interval '1 day',now())",
+        [tenant, managerInvitation, accountId, invitation],
+      );
+      await migration.query(
+        "INSERT INTO domain.manager_grant(tenant_id,invitation_id,account_id) VALUES($1,$2,$3)",
+        [tenant, managerInvitation, accountId],
+      );
+      await migration.query(
+        "INSERT INTO domain.manager_permission(tenant_id,invitation_id,operation,unit_id) VALUES($1,$2,'REPORT_READ',$3)",
+        [tenant, managerInvitation, unit],
+      );
+      await migration.query(
+        "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1 AND account_id=$2",
+        [tenant, accountId],
+      );
+      assert.equal((await client.request(indicatorUrl)).statusCode, 200);
+      assert.equal(
+        (await client.request(indicatorUrl.replace(unit, otherUnit)))
+          .statusCode,
+        403,
+      );
+      assert.equal((await client.request(municipalUrl)).statusCode, 403);
+      await migration.query(
+        "INSERT INTO domain.manager_permission(tenant_id,invitation_id,operation,unit_id) VALUES($1,$2,'REPORT_READ',NULL)",
+        [tenant, managerInvitation],
+      );
+      const managerTotal = await client.request(municipalUrl);
+      assert.equal(managerTotal.statusCode, 200, managerTotal.body);
+      assert.equal(managerTotal.json().offeredMinutes, 1380);
+      await migration.query(
+        "UPDATE domain.manager_grant SET revoked_at=now() WHERE tenant_id=$1 AND invitation_id=$2",
+        [tenant, managerInvitation],
+      );
+      assert.equal((await client.request(indicatorUrl)).statusCode, 403);
+      assert.equal((await client.request(municipalUrl)).statusCode, 403);
+
       const cookie = client.cookie();
       assert.equal(
         (await client.request("/api/auth/sign-out", {})).statusCode,

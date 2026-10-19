@@ -257,8 +257,10 @@ SMTP requiere `SMTP_HOST` y `SMTP_FROM` (una dirección). `SMTP_TLS=starttls` ex
 
 Nodemailer 10.1.7 está fijado en el lockfile e incluye tipos TypeScript y licencia MIT-0. Se utiliza sin pool SMTP, sin logs de protocolo y sin acceso a archivos/URLs desde el contenido del mensaje. Los errores del proveedor se sustituyen por un error genérico. Las pruebas usan servidores SMTP temporales locales con TLS, STARTTLS, autenticación y rechazos; no envían mensajes externos. Configuración basada en la [documentación oficial de Nodemailer](https://nodemailer.com/smtp).
 
-### Indicadores por unidad
+### Indicadores municipales y por unidad
 
 `GET /api/municipalities/{tenantId}/units/{unitId}/indicators?from=2030-01-01&to=2030-02-01` exige `REPORT_READ` sobre la unidad y MFA. El periodo usa fechas locales `[from,to)`, con un máximo de 366 días. Devuelve conteos por estado, minutos reservados, minutos ofertados y porcentaje de ocupación (`null` cuando la oferta es cero), con zona e instante de consulta.
+
+`GET /api/municipalities/{tenantId}/indicators` acepta el mismo periodo y exige `REPORT_READ` municipal y MFA. Incluye todas las unidades, aunque estén retiradas, en una misma transacción y con un único instante de consulta. Suma minutos antes de calcular el porcentaje; no promedia porcentajes por unidad. Un municipio sin unidades devuelve conteos y minutos cero, y porcentaje `null`. Los permisos limitados a unidades no habilitan este total municipal.
 
 La oferta utiliza versiones de calendario y eventos históricos de publicación/retirada de instalación y unidad. Los cierres se recortan a su vigencia efectiva. Dos transiciones contradictorias de publicación con el mismo instante devuelven `409` en vez de inventar un orden. No se devuelven titulares, motivos ni eventos de auditoría. Las respuestas usan `Cache-Control: no-store`.

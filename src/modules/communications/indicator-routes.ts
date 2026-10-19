@@ -5,7 +5,10 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
-import { readUnitIndicators } from "./indicator-query.ts";
+import {
+  readMunicipalIndicators,
+  readUnitIndicators,
+} from "./indicator-query.ts";
 export async function registerIndicatorRoutes(
   app: FastifyInstance,
   pool: Pool,
@@ -83,6 +86,62 @@ export async function registerIndicatorRoutes(
             account,
             request.params.tenantId,
             request.params.unitId,
+            request.query.from,
+            request.query.to,
+          ),
+        );
+    },
+  );
+  const { unitId: _unitId, ...municipalProperties } = properties;
+  app.get<{
+    Params: { tenantId: string };
+    Querystring: { from: string; to: string };
+  }>(
+    "/api/municipalities/:tenantId/indicators",
+    {
+      schema: {
+        operationId: "municipalIndicators",
+        tags: ["Communications"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Indicadores de todas las unidades del municipio, incluidas las retiradas. REPORT_READ municipal y MFA; no admite permisos limitados a unidades. Periodo local [from,to), máximo 366 días. Porcentaje calculado sobre los minutos totales, null sin oferta; no mide asistencia. Mismos límites históricos por unidad que unitIndicators.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId"],
+          properties: { tenantId: uuid },
+        },
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          required: ["from", "to"],
+          properties: { from: date, to: date },
+        },
+        response: {
+          ...Object.fromEntries(
+            [400, 401, 403, 404, 409, 429, 500, 503].map((status) => [
+              status,
+              { $ref: "ErrorResponse#" },
+            ]),
+          ),
+          200: {
+            type: "object",
+            additionalProperties: false,
+            required: Object.keys(municipalProperties),
+            properties: municipalProperties,
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const account = await actor(request, reply);
+      return reply
+        .header("cache-control", "no-store")
+        .send(
+          await readMunicipalIndicators(
+            pool,
+            account,
+            request.params.tenantId,
             request.query.from,
             request.query.to,
           ),
