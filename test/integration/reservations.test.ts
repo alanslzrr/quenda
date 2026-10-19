@@ -30,7 +30,7 @@ import { withDatabase } from "../helpers/postgres.ts";
 test("reservation confirmation validates real calendars and commits every effect once", {
   timeout: 60000,
 }, async (t) => {
-  await withDatabase(async ({ domain, auth, migration, worker }) => {
+  await withDatabase(async ({ domain, auth, migration, worker, root }) => {
     for (const id of ["citizen", "newcomer"])
       await auth.query(
         `INSERT INTO auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,$1,$2,true,now(),now())`,
@@ -1537,6 +1537,38 @@ test("reservation confirmation validates real calendars and commits every effect
         await migration.query(
           "UPDATE domain.reservation_email SET next_attempt_at=now()-interval '1 second' WHERE accepted_at IS NULL AND exhausted_at IS NULL",
         );
+        const limited = (
+          await migration.query(
+            "SELECT q.tenant_id,q.event_id,e.reservation_id,e.revision FROM domain.reservation_email q JOIN domain.reservation_event e ON (e.tenant_id,e.id)=(q.tenant_id,q.event_id) WHERE q.attempts=1 AND q.accepted_at IS NULL AND q.exhausted_at IS NULL AND q.lease_token IS NULL",
+          )
+        ).rows;
+        assert.equal(limited.length, 1);
+        await migration.query(
+          "UPDATE domain.reservation_email SET next_attempt_at=now()+interval '1 day' WHERE accepted_at IS NULL AND exhausted_at IS NULL",
+        );
+        assert.equal(
+          (
+            await worker.query(
+              "SELECT * FROM domain.claim_reservation_email(30,1)",
+            )
+          ).rowCount,
+          0,
+        );
+        const terminal = (
+          await migration.query(
+            "SELECT attempts,exhausted_at IS NOT NULL AS exhausted,accepted_at IS NULL AS unaccepted FROM domain.reservation_email WHERE tenant_id=$1 AND event_id=$2",
+            [limited[0].tenant_id, limited[0].event_id],
+          )
+        ).rows[0];
+        assert.deepEqual(terminal, {
+          attempts: 1,
+          exhausted: true,
+          unaccepted: true,
+        });
+        revisions.set(limited[0].reservation_id, limited[0].revision);
+        await migration.query(
+          "UPDATE domain.reservation_email SET next_attempt_at=now()-interval '1 second' WHERE accepted_at IS NULL AND exhausted_at IS NULL",
+        );
         let processed = 0;
         while (true) {
           const outcome = await processReservationEmail(
@@ -1569,6 +1601,47 @@ test("reservation confirmation validates real calendars and commits every effect
           assert.ok(++processed < 300);
         }
         assert.ok(processed > 0);
+        const queued = (
+          await migration.query(
+            "SELECT tenant_id,event_id FROM domain.reservation_email WHERE accepted_at IS NOT NULL ORDER BY created_at LIMIT 1",
+          )
+        ).rows[0];
+        await migration.query(
+          "UPDATE domain.reservation_email SET accepted_at=NULL,next_attempt_at=now()-interval '1 second' WHERE tenant_id=$1 AND event_id=$2",
+          [queued.tenant_id, queued.event_id],
+        );
+        const { execFile } = await import("node:child_process");
+        const { promisify } = await import("node:util");
+        const { readdir, readFile } = await import("node:fs/promises");
+        const { join } = await import("node:path");
+        const mailDir = join(root, "worker-mail");
+        const execution = await promisify(execFile)(
+          process.execPath,
+          ["dist/email-worker.js", "--once"],
+          {
+            env: {
+              ...process.env,
+              NODE_ENV: "test",
+              WORKER_DATABASE_URL: worker.options.connectionString,
+              AUTH_ORIGIN: "https://quenda.test",
+              LOCAL_MAIL_DIR: mailDir,
+              EMAIL_LOCALE: "gl",
+            },
+            timeout: 15000,
+          },
+        );
+        assert.match(execution.stdout, /EMAIL_WORKER_READY/);
+        assert.match(execution.stdout, /ACCEPTED/);
+        assert.equal(execution.stderr, "");
+        assert.ok(!execution.stdout.includes("@example.test"));
+        const files = await readdir(mailDir);
+        assert.equal(files.length, 1);
+        const message = JSON.parse(
+          await readFile(join(mailDir, files[0] as string), "utf8"),
+        );
+        assert.match(message.text, /Data do evento/);
+        assert.match(message.to, /@example.test$/);
+
         assert.equal(
           (
             await migration.query(

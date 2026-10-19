@@ -23,7 +23,9 @@
     "openapi": "node scripts/openapi.ts",
     "db:bootstrap": "node --env-file=.env.bootstrap.local scripts/bootstrap.ts",
     "db:local:config": "node scripts/local-config.ts",
-    "operator:initialize": "node --env-file=.env.migration.local scripts/initialize-operator.ts"
+    "operator:initialize": "node --env-file=.env.migration.local scripts/initialize-operator.ts",
+    "worker:local": "node --env-file=.env.worker.local src/email-worker.ts",
+    "worker:start": "node dist/email-worker.js"
   },
   "dependencies": {
     "@fastify/swagger": "9.9.2",
