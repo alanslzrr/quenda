@@ -5,6 +5,7 @@ import { PostgresDialect } from "kysely";
 import type { Pool } from "pg";
 import { language } from "../../http/errors.ts";
 import type { MailTransport } from "../../shared/mail.ts";
+import { normalizedAccountName } from "./account-profile.ts";
 
 export interface AuthConfiguration {
   origin: string;
@@ -93,6 +94,15 @@ export function authOptions(
     ],
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path === "/update-user") {
+          const name = normalizedAccountName(ctx.body);
+          if (name === null)
+            throw new APIError("BAD_REQUEST", {
+              code: "INVALID_INPUT",
+              message: "Invalid profile fields",
+            });
+          ctx.body.name = name;
+        }
         if (ctx.body?.trustDevice === true) {
           throw new APIError("BAD_REQUEST", {
             message: "Trusted devices are not enabled",

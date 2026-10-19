@@ -1,6 +1,7 @@
 import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyInstance } from "fastify";
 import { HttpError, language } from "../../http/errors.ts";
+import { accountProfileSchema } from "./account-profile.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
 
 const paths = {
@@ -19,6 +20,7 @@ const paths = {
     "/request-password-reset",
     "/reset-password",
     "/change-password",
+    "/update-user",
     "/revoke-session",
     "/revoke-sessions",
     "/revoke-other-sessions",
@@ -74,6 +76,16 @@ export async function authenticationSchema(auth: Authentication) {
               method,
               {
                 ...operation,
+                ...(path === "/update-user"
+                  ? {
+                      requestBody: {
+                        required: true,
+                        content: {
+                          "application/json": { schema: accountProfileSchema },
+                        },
+                      },
+                    }
+                  : {}),
                 security: publicPaths.has(path)
                   ? []
                   : challenge
@@ -81,6 +93,22 @@ export async function authenticationSchema(auth: Authentication) {
                     : [{ quendaSession: [] }],
                 responses: {
                   ...operation.responses,
+                  ...(path === "/update-user"
+                    ? {
+                        "200": {
+                          description: "Nombre actualizado",
+                          content: {
+                            "application/json": {
+                              schema: {
+                                type: "object",
+                                required: ["status"],
+                                properties: { status: { type: "boolean" } },
+                              },
+                            },
+                          },
+                        },
+                      }
+                    : {}),
                   ...Object.fromEntries(
                     [400, 401, 403, 404, 409, 413, 415, 429, 500].map(
                       (status) => [

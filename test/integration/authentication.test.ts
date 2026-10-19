@@ -108,6 +108,13 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           assert.ok(schema.paths["/sign-in/email"]);
           assert.ok(schema.paths["/reset-password/{token}"]);
           assert.equal(schema.paths["/delete-user"], undefined);
+          const profileSchema =
+            schema.paths["/update-user"].post.requestBody.content[
+              "application/json"
+            ].schema;
+          assert.deepEqual(Object.keys(profileSchema.properties), ["name"]);
+          assert.equal(profileSchema.additionalProperties, false);
+          assert.deepEqual(profileSchema.required, ["name"]);
           assert.equal(schema.components.securitySchemes.bearerAuth, undefined);
           assert.deepEqual(schema.paths["/sign-in/email"].post.security, []);
           assert.ok(
@@ -163,6 +170,49 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             email,
             mfaVerified: false,
           });
+          for (const body of [
+            { name: "" },
+            { name: "   " },
+            { name: "x".repeat(201) },
+            { name: "valid", email: "other@example.test" },
+            { name: "valid", id: "other" },
+            { name: "valid", twoFactorEnabled: true },
+            { name: "valid", image: "https://example.test/image" },
+          ])
+            assert.equal(
+              (await client.request("/api/auth/update-user", body)).statusCode,
+              400,
+            );
+          assert.equal(
+            (
+              await client.request(
+                "/api/auth/update-user",
+                { name: "Changed" },
+                { origin: "https://evil.test" },
+              )
+            ).statusCode,
+            403,
+          );
+          const changed = await client.request("/api/auth/update-user", {
+            name: "  Nome actualizado  ",
+          });
+          assert.equal(changed.statusCode, 200, changed.body);
+          assert.equal(changed.json().status, true);
+          const onReplica = await replica.inject({
+            url: "/api/auth/get-session",
+            headers: { cookie: client.cookie() },
+          });
+          assert.equal(onReplica.json().user.name, "Nome actualizado");
+          const currentUser = (
+            await auth.query(
+              'SELECT name,email,"emailVerified","twoFactorEnabled" FROM auth."user" WHERE id=$1',
+              [id],
+            )
+          ).rows[0];
+          assert.equal(currentUser.name, "Nome actualizado");
+          assert.equal(currentUser.email, email);
+          assert.equal(currentUser.emailVerified, true);
+          assert.notEqual(currentUser.twoFactorEnabled, true);
           const saved = client.cookie();
           assert.equal(
             (
@@ -185,6 +235,18 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
               })
             ).statusCode,
             401,
+          );
+          const revokedUpdate = await replica.inject({
+            method: "POST",
+            url: "/api/auth/update-user",
+            headers: { cookie: saved, origin: config.origin },
+            payload: { name: "Not allowed" },
+          });
+          assert.equal(revokedUpdate.statusCode, 401, revokedUpdate.body);
+          assert.equal(
+            (await auth.query('SELECT name FROM auth."user" WHERE id=$1', [id]))
+              .rows[0].name,
+            "Nome actualizado",
           );
           const persisted = await auth.query(
             'SELECT "twoFactorEnabled" FROM auth."user" WHERE id = $1',
