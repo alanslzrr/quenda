@@ -5,8 +5,10 @@ import { transaction } from "../../src/database/transaction.ts";
 import { publicAvailability } from "../../src/modules/catalog/index.ts";
 import {
   cancelReservation,
+  createBlock,
   createReservation,
   modifyReservation,
+  releaseBlock,
 } from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
@@ -527,6 +529,107 @@ test("reservation confirmation validates real calendars and commits every effect
           [tenant],
         );
         await assert.rejects(cancel("admin-cancel"), { code: "NOT_FOUND" });
+      },
+    );
+    await t.test(
+      "block commands reject unresolved bookings and preserve audit on release and replay",
+      async () => {
+        const invitation = randomUUID();
+        await migration.query(
+          "INSERT INTO domain.administrator_invitation(tenant_id,id,account_id,invited_by,expires_at,accepted_at) VALUES($1,$2,'citizen','citizen',now()+interval '1 day',now())",
+          [tenant, invitation],
+        );
+        await migration.query(
+          "INSERT INTO domain.municipal_administrator(tenant_id,account_id,invitation_id) VALUES($1,'citizen',$2)",
+          [tenant, invitation],
+        );
+        const admin = { ...actor, mfaVerifiedAt: new Date() };
+        const data = {
+          unitId: unit,
+          startsAt: "2030-01-11T10:00:00Z",
+          endsAt: "2030-01-11T11:00:00Z",
+          reason: "Maintenance",
+        };
+        const block = (
+          key: string,
+          who: import("../../src/modules/identity/index.ts").AuthenticatedAccount = admin,
+        ) => createBlock(domain, who, tenant, key, data, randomUUID(), 3600);
+        await assert.rejects(block("no-mfa", actor), { code: "FORBIDDEN" });
+        const booking = await create("block-conflict", data);
+        await assert.rejects(block("over-booking"), { code: "CONFLICT" });
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.schedule_block",
+            )
+          ).rows[0].n,
+          0,
+        );
+        await cancelReservation(
+          domain,
+          actor,
+          tenant,
+          booking.result.id,
+          "resolve-block-conflict",
+          { expectedRevision: 1 },
+          randomUUID(),
+          3600,
+          clock,
+        );
+        const saved = await block("block");
+        assert.equal(saved.result.releasedAt, null);
+        assert.deepEqual((await block("block")).result, saved.result);
+        await assert.rejects(block("over-block"), { code: "CONFLICT" });
+        await assert.rejects(create("booking-over-block", data), {
+          code: "CONFLICT",
+        });
+        const slots = await publicAvailability(
+          domain,
+          tenant,
+          unit,
+          "2030-01-11",
+          60,
+          clock,
+        );
+        assert.ok(
+          !slots.slots.some((s) => s.start.utc === "2030-01-11T10:00:00.000Z"),
+        );
+        const release = (key: string) =>
+          releaseBlock(
+            domain,
+            admin,
+            tenant,
+            saved.result.id,
+            key,
+            { reason: "Maintenance completed" },
+            randomUUID(),
+            3600,
+          );
+        const freed = await release("release");
+        assert.ok(freed.result.releasedAt);
+        assert.equal(freed.result.reason, "Maintenance");
+        assert.deepEqual((await release("release")).result, freed.result);
+        assert.deepEqual((await release("release-again")).result, freed.result);
+        const events = (
+          await migration.query(
+            "SELECT operation,reason FROM domain.block_event WHERE block_id=$1 ORDER BY occurred_at",
+            [saved.result.id],
+          )
+        ).rows;
+        assert.deepEqual(events, [
+          { operation: "CREATE", reason: "Maintenance" },
+          { operation: "RELEASE", reason: "Maintenance completed" },
+        ]);
+        assert.equal(
+          (await create("after-block-release", data)).result.status,
+          "CONFIRMADA",
+        );
+        await migration.query(
+          "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1 AND account_id='citizen'",
+          [tenant],
+        );
+        await assert.rejects(block("block"), { code: "FORBIDDEN" });
+        await assert.rejects(release("release"), { code: "NOT_FOUND" });
       },
     );
     await t.test(

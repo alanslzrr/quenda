@@ -4,7 +4,7 @@ import test from "node:test";
 import { buildApp } from "../../src/app.ts";
 import { createAuthentication } from "../../src/modules/identity/index.ts";
 import type { MailMessage } from "../../src/shared/mail.ts";
-import { browser } from "../helpers/auth-client.ts";
+import { browser, totp } from "../helpers/auth-client.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
 test("reservation HTTP uses verified sessions, origin checks and replay across replicas", {
@@ -260,6 +260,68 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         "idempotency-key": "after-cancel",
       });
       assert.equal(second.statusCode, 201, second.body);
+      const blockUrl = `/api/municipalities/${tenant}/blocks`;
+      const blockBody = {
+        unitId: unit,
+        startsAt: new Date(start.getTime() + 14400000).toISOString(),
+        endsAt: new Date(start.getTime() + 18000000).toISOString(),
+        reason: "Maintenance",
+      };
+      assert.equal(
+        (
+          await client.request(blockUrl, blockBody, {
+            "idempotency-key": "http-block",
+          })
+        ).statusCode,
+        403,
+      );
+      const enrolled = await client.request("/api/auth/two-factor/enable", {
+        password,
+      });
+      assert.equal(enrolled.statusCode, 200, enrolled.body);
+      const secret = new URL(enrolled.json().totpURI).searchParams.get(
+        "secret",
+      );
+      assert.ok(secret);
+      const verified = await client.request(
+        "/api/auth/two-factor/verify-totp",
+        { code: totp(secret) },
+      );
+      assert.equal(verified.statusCode, 200, verified.body);
+      const invitation = randomUUID();
+      await migration.query(
+        "INSERT INTO domain.administrator_invitation(tenant_id,id,account_id,invited_by,expires_at,accepted_at) VALUES($1,$2,$3,$3,now()+interval '1 day',now())",
+        [tenant, invitation, accountId],
+      );
+      await migration.query(
+        "INSERT INTO domain.municipal_administrator(tenant_id,account_id,invitation_id) VALUES($1,$2,$3)",
+        [tenant, accountId, invitation],
+      );
+      const blocked = await client.request(blockUrl, blockBody, {
+        "idempotency-key": "http-block",
+      });
+      assert.equal(blocked.statusCode, 201, blocked.body);
+      assert.ok(!(await available()).includes(blockBody.startsAt));
+      const blockReplay = await replica.inject({
+        method: "POST",
+        url: blockUrl,
+        payload: blockBody,
+        headers: {
+          origin: config.origin,
+          cookie: client.cookie(),
+          "idempotency-key": "http-block",
+        },
+      });
+      assert.equal(blockReplay.statusCode, 201, blockReplay.body);
+      assert.deepEqual(blockReplay.json(), blocked.json());
+      const released = await client.request(
+        `${blockUrl}/${blocked.json().id}/release`,
+        { reason: "Completed" },
+        { "idempotency-key": "http-release" },
+      );
+      assert.equal(released.statusCode, 200, released.body);
+      assert.ok(released.json().releasedAt);
+      assert.ok((await available()).includes(blockBody.startsAt));
       const cookie = client.cookie();
       assert.equal(
         (await client.request("/api/auth/sign-out", {})).statusCode,

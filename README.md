@@ -130,13 +130,19 @@ El sistema aplica el plazo aceptado de origen y las reglas vigentes del destino.
 
 El titular cancela antes de `inicio − plazo aceptado`; la igualdad con el límite ya queda fuera de plazo. `administrative: true` exige permiso `RESERVATION_MANAGE`, MFA reciente y `reason`; permite omitir el plazo del titular, pero nunca cancelar tras el inicio. Una versión obsoleta produce `409`. Reserva, liberación de ocupación, evento y avisos se confirman juntos. La autorización se comprueba también al recuperar un resultado idempotente.
 
+## Bloqueos de unidades
+
+`POST /api/municipalities/{tenantId}/blocks` recibe `unitId`, `startsAt`, `endsAt` y `reason`. Exige `UNIT_BLOCK` sobre la unidad, MFA reciente, origen autorizado e `Idempotency-Key`; devuelve `201`. Los intervalos deben ser finitos y ordenados, sin aplicar al mantenimiento las reglas de duración o antelación de una reserva. Un solape con una reserva o bloqueo no liberado produce `409` sin cambios parciales. Las reservas afectadas deben resolverse mediante operaciones explícitas.
+
+`POST /api/municipalities/{tenantId}/blocks/{blockId}/release` recibe un nuevo `reason` y devuelve `200`. Libera la ocupación y conserva el bloqueo y su motivo original; registra el motivo de retirada en un evento inmutable. Repetir la retirada no genera otro evento. Ambas operaciones son idempotentes y comprueban permisos antes de recuperar resultados. La disponibilidad pública refleja sus efectos tras el commit.
+
 ## Integridad de reservas y bloqueos
 
 PostgreSQL mantiene una ocupación activa por reserva confirmada o bloqueo vigente. Una exclusión temporal compartida impide solapes en la misma unidad y municipio; los intervalos son semiabiertos `[inicio, fin)`, por lo que admiten reservas consecutivas. Las claves compuestas impiden referencias entre municipios.
 
 Las restricciones diferidas comprueban al confirmar la transacción que la unidad y el intervalo de la ocupación coinciden con su origen. Cancelar una reserva o liberar un bloqueo exige liberar su ocupación en la misma transacción. Cambiar una reserva sustituye la ocupación sin borrar la anterior; un conflicto revierte todos los cambios. Los permisos SQL y RLS restringen la lectura y modificación al contexto autorizado.
 
-La confirmación HTTP utiliza estas garantías. Las rutas de gestión de bloqueos siguen pendientes.
+La confirmación HTTP utiliza estas garantías. La conciliación de cambios de calendario con reservas existentes sigue pendiente.
 
 ## Primer operador
 
