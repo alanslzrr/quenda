@@ -585,6 +585,24 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             201,
             managerInvitation.body,
           );
+          const managerial = await client.request(
+            `/api/municipalities/${tenantId}/manager-invitations`,
+          );
+          assert.equal(managerial.statusCode, 200, managerial.body);
+          assert.equal(managerial.json().items.length, 1);
+          assert.equal(
+            managerial.json().items[0].invitationId,
+            managerInvitation.json().invitationId,
+          );
+          assert.equal(managerial.json().items[0].acceptedAt, null);
+          assert.equal(
+            (
+              await client.request(
+                `/api/municipalities/${tenantId}/manager-invitations?accountId=other`,
+              )
+            ).statusCode,
+            400,
+          );
           const managerPath = `/api/municipalities/${tenantId}/manager-invitations/${managerInvitation.json().invitationId}`;
           assert.equal(
             (

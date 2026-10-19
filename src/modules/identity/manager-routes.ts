@@ -9,6 +9,7 @@ import {
   operations,
   revokeManager,
 } from "./manager.ts";
+import { listMunicipalManagerInvitations } from "./manager-query.ts";
 import { createRequestActor } from "./request-actor.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
@@ -244,6 +245,102 @@ export async function registerManagerRoutes(
       listOwnManagerInvitations(
         pool,
         await actor(request, reply),
+        request.query.after ?? null,
+      ),
+  );
+  app.get<{ Params: { tenantId: string }; Querystring: { after?: string } }>(
+    "/api/municipalities/:tenantId/manager-invitations",
+    {
+      schema: {
+        operationId: "listMunicipalManagerInvitations",
+        tags: ["Identity"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Administrador con MFA reciente: consulta las invitaciones y concesiones del municipio, incluidos sus ámbitos y fechas de aceptación, vencimiento y revocación. La consulta no concede autoridad; cada operación comprueba permisos vigentes.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId"],
+          properties: { tenantId: uuid },
+        },
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          properties: { after: uuid },
+        },
+        response: {
+          ...errors,
+          200: {
+            type: "object",
+            additionalProperties: false,
+            required: ["items", "nextCursor"],
+            properties: {
+              nextCursor: { ...uuid, nullable: true },
+              items: {
+                type: "array",
+                maxItems: 20,
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: [
+                    "invitationId",
+                    "accountId",
+                    "invitedBy",
+                    "expiresAt",
+                    "roleExpiresAt",
+                    "acceptedAt",
+                    "revokedAt",
+                    "replacesInvitationId",
+                    "permissions",
+                  ],
+                  properties: {
+                    invitationId: uuid,
+                    accountId: { type: "string" },
+                    invitedBy: { type: "string" },
+                    expiresAt: { type: "string", format: "date-time" },
+                    roleExpiresAt: {
+                      type: "string",
+                      format: "date-time",
+                      nullable: true,
+                    },
+                    acceptedAt: {
+                      type: "string",
+                      format: "date-time",
+                      nullable: true,
+                    },
+                    revokedAt: {
+                      type: "string",
+                      format: "date-time",
+                      nullable: true,
+                    },
+                    replacesInvitationId: { ...uuid, nullable: true },
+                    permissions: {
+                      type: "array",
+                      minItems: 1,
+                      maxItems: 50,
+                      items: {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["operation", "unitId"],
+                        properties: {
+                          operation: { type: "string", enum: [...operations] },
+                          unitId: { ...uuid, nullable: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) =>
+      listMunicipalManagerInvitations(
+        pool,
+        await actor(request, reply),
+        request.params.tenantId,
         request.query.after ?? null,
       ),
   );

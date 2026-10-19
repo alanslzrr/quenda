@@ -26,6 +26,7 @@ export {
   requirePermission,
   revokeManager,
 } from "./manager.ts";
+export { listMunicipalManagerInvitations } from "./manager-query.ts";
 export { registerMunicipalIdentity } from "./municipal-routes.ts";
 export {
   acceptAdministratorInvitation,

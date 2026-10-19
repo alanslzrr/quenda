@@ -16,6 +16,7 @@ import {
   createMunicipality,
   inviteAdministrator,
   inviteManager,
+  listMunicipalManagerInvitations,
   listMunicipalProfiles,
   listOwnAdministratorInvitations,
   listOwnManagerInvitations,
@@ -1181,6 +1182,48 @@ test("municipal creation and first administrator acceptance are atomic and isola
             account("admin-a"),
             tenant.tenantId,
             base,
+          );
+        const adminPage = await listMunicipalManagerInvitations(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+        );
+        assert.equal(adminPage.items.length, 20);
+        assert.ok(adminPage.nextCursor);
+        const adminNext = await listMunicipalManagerInvitations(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          adminPage.nextCursor,
+        );
+        assert.equal(adminNext.items.length, 4);
+        assert.equal(adminNext.nextCursor, null);
+        const all = [...adminPage.items, ...adminNext.items];
+        assert.equal(new Set(all.map((row) => row.invitationId)).size, 24);
+        assert.ok(
+          all.every(
+            (row) =>
+              row.accountId === "manager-other" && row.invitedBy === "admin-a",
+          ),
+        );
+        const old = all.find(
+          (row) => row.invitationId === original.invitationId,
+        );
+        assert.ok(old?.acceptedAt);
+        assert.ok(old?.revokedAt);
+        assert.deepEqual(old.permissions, base.permissions);
+        const active = all.filter((row) => row.acceptedAt && !row.revokedAt);
+        assert.equal(active.length, 1);
+        assert.equal(active[0]?.replacesInvitationId, original.invitationId);
+        assert.deepEqual(active[0]?.permissions, replacement.permissions);
+        for (const id of ["admin-b", "operator", "manager-other"])
+          await assert.rejects(
+            listMunicipalManagerInvitations(
+              domain,
+              account(id),
+              tenant.tenantId,
+            ),
+            { code: "FORBIDDEN" },
           );
         const pageOne = await listOwnManagerInvitations(
           domain,
