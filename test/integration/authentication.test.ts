@@ -539,6 +539,42 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           const revokePath = `/api/municipalities/${tenantId}/administrator-invitations/${delegated.json().invitationId}/revoke`;
           assert.equal((await client.request(revokePath, {})).statusCode, 200);
           assert.equal((await client.request(revokePath, {})).statusCode, 404);
+          const managerInvitation = await client.request(
+            `/api/municipalities/${tenantId}/manager-invitations`,
+            {
+              accountId,
+              expiresAt: input.invitationExpiresAt,
+              permissions: [
+                { operation: "UNIT_BLOCK", unitId: unit.json().unitId },
+              ],
+            },
+          );
+          assert.equal(
+            managerInvitation.statusCode,
+            201,
+            managerInvitation.body,
+          );
+          const managerPath = `/api/municipalities/${tenantId}/manager-invitations/${managerInvitation.json().invitationId}`;
+          assert.equal(
+            (
+              await client.request(`${managerPath}/accept`, {
+                permissions: [{ operation: "CATALOG_CREATE", unitId: null }],
+              })
+            ).statusCode,
+            400,
+          );
+          assert.equal(
+            (await client.request(`${managerPath}/accept`, {})).statusCode,
+            200,
+          );
+          assert.equal(
+            (
+              await client.request(`${managerPath}/revoke`, {
+                reason: "Fin de tarea",
+              })
+            ).statusCode,
+            200,
+          );
           const removed = await client.request(
             `/api/municipalities/${tenantId}/administrators/${accountId}/revoke`,
             { reason: "Fin de función de prueba" },

@@ -9,12 +9,16 @@ import {
 } from "../../src/modules/catalog/index.ts";
 import {
   acceptAdministratorInvitation,
+  acceptManager,
   createMunicipality,
   inviteAdministrator,
+  inviteManager,
   listOwnAdministratorInvitations,
   replaceInitialAdministratorInvitation,
+  requirePermission,
   revokeAdministrator,
   revokeAdministratorInvitation,
+  revokeManager,
 } from "../../src/modules/identity/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
@@ -28,7 +32,14 @@ test("municipal creation and first administrator acceptance are atomic and isola
   timeout: 60000,
 }, async (t) => {
   await withDatabase(async ({ domain, auth, migration }) => {
-    for (const id of ["operator", "admin-a", "admin-b", "other"]) {
+    for (const id of [
+      "operator",
+      "admin-a",
+      "admin-b",
+      "other",
+      "manager",
+      "manager-other",
+    ]) {
       await auth.query(
         'INSERT INTO auth."user" (id, name, email, "emailVerified", "createdAt", "updatedAt", "twoFactorEnabled") VALUES ($1, $1, $2, true, now(), now(), true)',
         [id, `${id}@example.test`],
@@ -846,6 +857,203 @@ test("municipal creation and first administrator acceptance are atomic and isola
         await assert.rejects(domain.query("DELETE FROM domain.catalog_event"), {
           code: "42501",
         });
+      },
+    );
+
+    await t.test(
+      "managers receive only accepted operations on authorized real units",
+      async () => {
+        const tenant = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          tenant.invitationId,
+        );
+        const facility = await createFacility(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          { name: "Centro" },
+        );
+        const one = await createReservableUnit(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          facility.facilityId,
+          { name: "Uno" },
+        );
+        const two = await createReservableUnit(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          facility.facilityId,
+          { name: "Dos" },
+        );
+        const payload = {
+          accountId: "manager",
+          expiresAt: new Date(Date.now() + 3600000).toISOString(),
+          roleExpiresAt: new Date(Date.now() + 7200000).toISOString(),
+          permissions: [
+            { operation: "RESERVATION_READ" as const, unitId: one.unitId },
+            { operation: "UNIT_BLOCK" as const, unitId: one.unitId },
+          ],
+        };
+        await assert.rejects(
+          inviteManager(domain, account("admin-b"), tenant.tenantId, payload),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          inviteManager(domain, account("admin-a"), tenant.tenantId, {
+            ...payload,
+            permissions: [{ operation: "UNIT_BLOCK", unitId: randomUUID() }],
+          }),
+          { code: "INVALID_INPUT" },
+        );
+        const foreignFacility = await createFacility(
+          domain,
+          account("admin-b"),
+          b.tenantId,
+          { name: "Centro B" },
+        );
+        const foreignUnit = await createReservableUnit(
+          domain,
+          account("admin-b"),
+          b.tenantId,
+          foreignFacility.facilityId,
+          { name: "Unidad B" },
+        );
+        await assert.rejects(
+          inviteManager(domain, account("admin-a"), tenant.tenantId, {
+            ...payload,
+            permissions: [
+              { operation: "UNIT_BLOCK", unitId: foreignUnit.unitId },
+            ],
+          }),
+          { code: "INVALID_INPUT" },
+        );
+        const grant = await inviteManager(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          payload,
+        );
+        const check = (
+          operation: Parameters<typeof requirePermission>[2],
+          unitId: string | null = one.unitId,
+        ) =>
+          transaction(
+            domain,
+            (c) => requirePermission(c, account("manager"), operation, unitId),
+            { accountId: "manager", tenantId: tenant.tenantId },
+          );
+        await assert.rejects(check("RESERVATION_READ"), { code: "FORBIDDEN" });
+        await assert.rejects(
+          acceptManager(
+            domain,
+            account("manager-other"),
+            tenant.tenantId,
+            grant.invitationId,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await assert.rejects(
+          acceptManager(
+            domain,
+            { ...account("manager"), mfaVerifiedAt: null },
+            tenant.tenantId,
+            grant.invitationId,
+          ),
+          { code: "FORBIDDEN" },
+        );
+        await acceptManager(
+          domain,
+          account("manager"),
+          tenant.tenantId,
+          grant.invitationId,
+        );
+        await check("RESERVATION_READ");
+        await check("UNIT_BLOCK");
+        await assert.rejects(check("RESERVATION_READ", two.unitId), {
+          code: "FORBIDDEN",
+        });
+        await assert.rejects(check("RESERVATION_MANAGE"), {
+          code: "FORBIDDEN",
+        });
+        await assert.rejects(check("RESERVATION_READ", null), {
+          code: "FORBIDDEN",
+        });
+        await assert.rejects(
+          transaction(
+            domain,
+            (c) =>
+              requirePermission(
+                c,
+                account("manager"),
+                "RESERVATION_READ",
+                one.unitId,
+              ),
+            { accountId: "manager", tenantId: b.tenantId },
+          ),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          inviteAdministrator(domain, account("manager"), tenant.tenantId, {
+            accountId: "manager-other",
+            expiresAt: payload.expiresAt,
+          }),
+          { code: "FORBIDDEN" },
+        );
+        const creator = await inviteManager(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          {
+            ...payload,
+            permissions: [{ operation: "CATALOG_CREATE", unitId: null }],
+          },
+        );
+        await acceptManager(
+          domain,
+          account("manager"),
+          tenant.tenantId,
+          creator.invitationId,
+        );
+        await createFacility(domain, account("manager"), tenant.tenantId, {
+          name: "Alta por gestor autorizado",
+        });
+        await revokeManager(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          creator.invitationId,
+          "Cambio de tareas",
+        );
+        await assert.rejects(
+          createFacility(domain, account("manager"), tenant.tenantId, {
+            name: "No autorizado",
+          }),
+          { code: "FORBIDDEN" },
+        );
+        await check("RESERVATION_READ");
+        await migration.query(
+          "UPDATE domain.manager_invitation SET created_at=now()-interval '2 hours',role_expires_at=now()-interval '1 hour' WHERE id=$1",
+          [grant.invitationId],
+        );
+        await assert.rejects(check("RESERVATION_READ"), { code: "FORBIDDEN" });
+        await assert.rejects(
+          domain.query("UPDATE domain.manager_grant SET revoked_at=NULL"),
+          { code: "42501" },
+        );
+        assert.equal(
+          (await domain.query("SELECT * FROM domain.manager_permission"))
+            .rowCount,
+          0,
+        );
       },
     );
   });

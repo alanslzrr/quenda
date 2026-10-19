@@ -16,6 +16,14 @@ export {
   revokeAdministrator,
   revokeAdministratorInvitation,
 } from "./invitations.ts";
+export type { ManagerInvitationInput, Operation } from "./manager.ts";
+export {
+  acceptManager,
+  inviteManager,
+  operations,
+  requirePermission,
+  revokeManager,
+} from "./manager.ts";
 export { registerMunicipalIdentity } from "./municipal-routes.ts";
 export {
   acceptAdministratorInvitation,

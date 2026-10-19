@@ -7,6 +7,7 @@ import {
   revokeAdministrator,
   revokeAdministratorInvitation,
 } from "./invitations.ts";
+import { registerManagerRoutes } from "./manager-routes.ts";
 import {
   acceptAdministratorInvitation,
   createMunicipality,
@@ -30,6 +31,7 @@ export async function registerMunicipalIdentity(
   config: AuthConfiguration,
 ) {
   const actor = createRequestActor(pool, auth, config);
+  await registerManagerRoutes(app, pool, auth, config);
   app.post<{ Body: MunicipalityInput }>(
     "/api/municipalities",
     {

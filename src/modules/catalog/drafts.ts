@@ -4,7 +4,7 @@ import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import {
   type AuthenticatedAccount,
-  requireAdministrator,
+  requirePermission,
 } from "../identity/index.ts";
 
 function name(value: string): string {
@@ -26,7 +26,7 @@ export async function createFacility(
     pool,
     { accountId: actor.accountId, tenantId },
     async (client) => {
-      await requireAdministrator(client, actor);
+      await requirePermission(client, actor, "CATALOG_CREATE");
       await client.query(
         "INSERT INTO domain.facility (tenant_id,id,name) VALUES ($1,$2,$3)",
         [tenantId, facilityId, title],
@@ -54,7 +54,7 @@ export async function createReservableUnit(
       pool,
       { accountId: actor.accountId, tenantId },
       async (client) => {
-        await requireAdministrator(client, actor);
+        await requirePermission(client, actor, "CATALOG_CREATE");
         await client.query(
           "INSERT INTO domain.reservable_unit (tenant_id,id,facility_id,name) VALUES ($1,$2,$3,$4)",
           [tenantId, unitId, facilityId, title],
