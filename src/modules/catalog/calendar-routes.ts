@@ -18,7 +18,7 @@ const interval = {
     endMinute: { ...integer, minimum: 1, maximum: 1440 },
   },
 } as const;
-const calendar = {
+export const calendarSchema = {
   type: "object",
   additionalProperties: false,
   required: [
@@ -99,7 +99,7 @@ export async function registerCalendarRoutes(
         actorId: { type: "string" },
         reason: { type: "string" },
         createdAt: { type: "string", format: "date-time" },
-        calendar,
+        calendar: calendarSchema,
       },
     },
   };
@@ -126,7 +126,7 @@ export async function registerCalendarRoutes(
           properties: {
             expectedVersion: { ...integer, minimum: 0, maximum: 2147483646 },
             reason: { type: "string", minLength: 1, maxLength: 500 },
-            calendar,
+            calendar: calendarSchema,
           },
         },
       },

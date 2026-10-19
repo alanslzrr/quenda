@@ -764,6 +764,24 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             ).json().items[0].publishedAt,
             publishedUnit.json().publishedAt,
           );
+          const publicUrl = `/api/public/municipalities/${tenantId}/units/${unit.json().unitId}`;
+          const publicDetail = await app.inject({ url: publicUrl });
+          assert.equal(publicDetail.statusCode, 200, publicDetail.body);
+          assert.equal(publicDetail.json().calendarVersion, 1);
+          assert.doesNotMatch(publicDetail.body, /actorId|reason|invitedBy/);
+          const publicSlots = await app.inject({
+            url: `${publicUrl}/availability?date=2026-10-19&durationMinutes=60`,
+          });
+          assert.equal(publicSlots.statusCode, 200, publicSlots.body);
+          assert.ok(Array.isArray(publicSlots.json().slots));
+          assert.equal(
+            (
+              await app.inject({
+                url: `${publicUrl}/availability?date=2026-10-19&durationMinutes=60&accountId=other`,
+              })
+            ).statusCode,
+            400,
+          );
           const withdrawal = await client.request(
             `/api/municipalities/${tenantId}/units/${unit.json().unitId}/withdraw`,
             { reason: "Retirada HTTP" },

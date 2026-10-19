@@ -11,6 +11,10 @@ import {
   createReservableUnit,
   inspectCatalogResource,
   listCatalogResources,
+  publicAvailability,
+  publicFacilities,
+  publicUnitCalendar,
+  publicUnits,
   publishCatalogResource,
   readUnitCalendar,
   renameCatalogResource,
@@ -2717,6 +2721,205 @@ test("municipal creation and first administrator acceptance are atomic and isola
               row.independence_confirmed === true &&
               row.actor_id === "manager",
           ),
+        );
+      },
+    );
+
+    await t.test(
+      "public catalog and availability expose only published projections without creating profiles",
+      async () => {
+        const tenant = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          tenant.invitationId,
+        );
+        const f = await createFacility(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          { name: "Público" },
+        );
+        const u = await createReservableUnit(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          f.facilityId,
+          { name: "Pista" },
+        );
+        assert.deepEqual(await publicFacilities(domain, tenant.tenantId), {
+          items: [],
+          nextCursor: null,
+        });
+        await assert.rejects(
+          publicUnitCalendar(domain, tenant.tenantId, u.unitId),
+          { code: "NOT_FOUND" },
+        );
+        await saveUnitCalendar(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          u.unitId,
+          {
+            expectedVersion: 0,
+            reason: "Motivo privado",
+            calendar: {
+              minimumMinutes: 30,
+              maximumMinutes: 120,
+              stepMinutes: 30,
+              advanceDays: null,
+              weekly: [{ day: 1, startMinute: 480, endMinute: 720 }],
+              exceptions: [],
+            },
+          },
+        );
+        await publishCatalogResource(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "facility",
+          f.facilityId,
+          { reason: "Publicar" },
+        );
+        assert.deepEqual(
+          (await publicUnits(domain, tenant.tenantId, f.facilityId)).items,
+          [],
+        );
+        await publishCatalogResource(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "unit",
+          u.unitId,
+          {
+            reason: "Publicar",
+            calendarVersion: 1,
+            independenceConfirmed: true,
+          },
+        );
+        const before = (
+          await migration.query("SELECT count(*) FROM domain.municipal_profile")
+        ).rows;
+        const metadata = await publicUnitCalendar(
+          domain,
+          tenant.tenantId,
+          u.unitId,
+        );
+        assert.equal(metadata.calendarVersion, 1);
+        assert.doesNotMatch(
+          JSON.stringify(metadata),
+          /actorId|reason|admin-a|Motivo privado/,
+        );
+        const availability = await publicAvailability(
+          domain,
+          tenant.tenantId,
+          u.unitId,
+          "2026-10-19",
+          60,
+          { now: () => new Date("2026-10-18T10:00:00Z") },
+        );
+        assert.equal(availability.slots.length, 7);
+        assert.equal(
+          availability.slots[0]?.start.utc,
+          "2026-10-19T06:00:00.000Z",
+        );
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT count(*) FROM domain.municipal_profile",
+            )
+          ).rows,
+          before,
+        );
+        assert.equal(
+          (await publicUnits(domain, tenant.tenantId, f.facilityId)).items[0]
+            ?.id,
+          u.unitId,
+        );
+        await assert.rejects(
+          publicUnitCalendar(domain, randomUUID(), u.unitId),
+          { code: "NOT_FOUND" },
+        );
+        assert.deepEqual(
+          (await publicUnits(domain, randomUUID(), f.facilityId)).items,
+          [],
+        );
+        for (let i = 0; i < 21; i++) {
+          const extra = await createFacility(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            { name: `Centro ${i}` },
+          );
+          await publishCatalogResource(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            "facility",
+            extra.facilityId,
+            { reason: "Publicar" },
+          );
+        }
+        const page = await publicFacilities(domain, tenant.tenantId);
+        assert.equal(page.items.length, 20);
+        assert.ok(page.nextCursor);
+        const tail = await publicFacilities(
+          domain,
+          tenant.tenantId,
+          page.nextCursor,
+        );
+        assert.equal(tail.items.length, 2);
+        assert.equal(tail.nextCursor, null);
+        assert.equal(
+          new Set([...page.items, ...tail.items].map((row) => row.id)).size,
+          22,
+        );
+        await withdrawCatalogResource(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "facility",
+          f.facilityId,
+          "Retirar padre",
+        );
+        assert.deepEqual(
+          (await publicUnits(domain, tenant.tenantId, f.facilityId)).items,
+          [],
+        );
+        await assert.rejects(
+          publicAvailability(
+            domain,
+            tenant.tenantId,
+            u.unitId,
+            "2026-10-19",
+            60,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await publishCatalogResource(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "facility",
+          f.facilityId,
+          { reason: "Reabrir" },
+        );
+        await withdrawCatalogResource(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "unit",
+          u.unitId,
+          "Retirar unidad",
+        );
+        await assert.rejects(
+          publicUnitCalendar(domain, tenant.tenantId, u.unitId),
+          { code: "NOT_FOUND" },
         );
       },
     );

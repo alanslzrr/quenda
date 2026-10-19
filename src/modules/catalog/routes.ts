@@ -11,6 +11,7 @@ import {
   inspectCatalogResource,
   renameCatalogResource,
 } from "./maintenance.ts";
+import { registerPublicCatalog } from "./public-routes.ts";
 import { publishCatalogResource } from "./publication.ts";
 import { listCatalogResources } from "./queries.ts";
 import { withdrawCatalogResource } from "./withdrawal.ts";
@@ -36,6 +37,7 @@ export async function registerCatalog(
 ) {
   const actor = createRequestActor(pool, auth, config);
   await registerCalendarRoutes(app, pool, auth, config);
+  await registerPublicCatalog(app, pool);
   app.post<{ Params: { tenantId: string }; Body: { name: string } }>(
     "/api/municipalities/:tenantId/facilities",
     {

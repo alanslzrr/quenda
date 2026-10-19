@@ -9,6 +9,12 @@ export {
   inspectCatalogResource,
   renameCatalogResource,
 } from "./maintenance.ts";
+export {
+  publicAvailability,
+  publicFacilities,
+  publicUnitCalendar,
+  publicUnits,
+} from "./public.ts";
 export { publishCatalogResource } from "./publication.ts";
 export { listCatalogResources } from "./queries.ts";
 export { registerCatalog } from "./routes.ts";

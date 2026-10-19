@@ -97,7 +97,18 @@ Publicar elimina la retirada del recurso indicado, sin borrar historial. Republi
 
 La conversión usa `@js-temporal/polyfill` 0.5.1: Node 24.21.0 no expone Temporal en el entorno verificado. La dependencia evita mantener reglas de conversión horaria propias. Los modos `earlier` y `later`, comprobados mediante conversión de vuelta a hora local, permiten descartar horas inexistentes y conservar ambas ocurrencias de una hora repetida. Cada instante conserva UTC, fecha/hora local, desplazamiento y zona. La antelación compara fechas locales, no bloques de 24 horas. [Modelo temporal y ambigüedad](https://tc39.es/proposal-temporal/docs/timezone.html), [polyfill](https://github.com/js-temporal/temporal-polyfill).
 
-Las pruebas incluyen Madrid, transiciones de media hora en Lord Howe y una fecha completa omitida en Apia. Los intervalos de apertura se intersectan con cada tramo de desplazamiento constante del día. Así, dos aperturas de una hora repetida permanecen separadas si existe un cierre real entre ellas; una jornada completa puede representar 23 o 25 horas reales. La generación de franjas aplica duración real, paso y antelación: los inicios se alinean con el comienzo de cada apertura civil continua y la duración se mide entre instantes UTC. Cada reserva candidata debe quedar íntegramente cubierta por apertura, incluso al cruzar medianoche. Una excepción del día siguiente puede impedir ese cruce. Falta exponer la API pública e incorporar las ocupaciones de reservas y bloqueos. La revisión completa de licencias y atribuciones sigue pendiente; el polyfill declara ISC y su dependencia JSBI, Apache-2.0.
+Las pruebas incluyen Madrid, transiciones de media hora en Lord Howe y una fecha completa omitida en Apia. Los intervalos de apertura se intersectan con cada tramo de desplazamiento constante del día. Así, dos aperturas de una hora repetida permanecen separadas si existe un cierre real entre ellas; una jornada completa puede representar 23 o 25 horas reales. La generación de franjas aplica duración real, paso y antelación: los inicios se alinean con el comienzo de cada apertura civil continua y la duración se mide entre instantes UTC. Cada reserva candidata debe quedar íntegramente cubierta por apertura, incluso al cruzar medianoche. Una excepción del día siguiente puede impedir ese cruce. La API pública expone estas franjas; falta incorporar las ocupaciones de reservas y bloqueos. La revisión completa de licencias y atribuciones sigue pendiente; el polyfill declara ISC y su dependencia JSBI, Apache-2.0.
+
+## Catálogo y disponibilidad públicos
+
+Sin sesión, bajo `/api/public/municipalities/{tenantId}`:
+
+- `GET /facilities`: instalaciones publicadas, hasta 20 por página; `?after=nextCursor` continúa el listado.
+- `GET /facilities/{facilityId}/units`: unidades publicadas de una instalación publicada y no retirada, con la misma paginación.
+- `GET /units/{unitId}`: nombre, instalación, zona, límites municipales y calendario vigente, sin autor ni motivo de auditoría.
+- `GET /units/{unitId}/availability?date=AAAA-MM-DD&durationMinutes=N`: franjas de calendario con UTC, hora local, desplazamientos, versión y momento de cálculo.
+
+Estas consultas no crean cuentas ni perfiles. Los recursos no publicados o retirados no aparecen; el detalle responde `404`. La disponibilidad calcula horarios y reglas, pero todavía no descuenta ocupaciones: esa integración pertenece al módulo de reservas y bloqueos. Consultar no garantiza ni confirma una reserva. Quedan pendientes los límites compartidos de acceso anónimo antes de habilitar un despliegue público.
 
 ## Primer operador
 
