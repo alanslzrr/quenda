@@ -6,6 +6,7 @@ import {
   createRequestActor,
 } from "../identity/index.ts";
 import { type AgreementApprovalInput, approveAgreement } from "./approvals.ts";
+import { registerCredentialRoutes } from "./credential-routes.ts";
 import {
   type AgreementDraftInput,
   type AgreementVersionInput,
@@ -55,6 +56,7 @@ export async function registerCollaboration(
 ) {
   const actor = createRequestActor(pool, auth, config);
   await registerAgreementQueries(app, pool, auth, config);
+  await registerCredentialRoutes(app, pool, auth, config, retentionSeconds);
   for (const action of ["create", "version", "approve"] as const) {
     const properties =
       action === "create"

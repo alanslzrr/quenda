@@ -263,6 +263,122 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         (await client.request(`${url}/${id}/versions/2147483648`)).statusCode,
         400,
       );
+      const credentialUrl = `/api/municipalities/${tenant}/credentials`;
+      const credentialBody = {
+        agreementId: id,
+        version: 2,
+        accountId,
+        startsAt: "2026-01-01T00:00:00Z",
+        endsAt: "2035-01-01T00:00:00Z",
+        verificationReference: "Synthetic verified reference",
+      };
+      const credentialHeaders = { "idempotency-key": "http-credential" };
+      assert.equal(
+        (await client.request(credentialUrl, credentialBody, credentialHeaders))
+          .statusCode,
+        404,
+      );
+      await migration.query(
+        "UPDATE domain.agreement_participant SET accreditation_issuer=true WHERE agreement_id=$1 AND version=2 AND tenant_id=$2",
+        [id, tenant],
+      );
+      assert.equal(
+        (await client.request(credentialUrl, credentialBody, credentialHeaders))
+          .statusCode,
+        409,
+      );
+      // Activation remains a lifecycle fixture until its reconciliation command is available.
+      await migration.query(
+        "UPDATE domain.agreement_version SET status='ACTIVADO',eligibility='acreditacion_vigente',starts_at='2020-01-01',ends_at='2040-01-01' WHERE agreement_id=$1 AND version=2",
+        [id],
+      );
+      await migration.query(
+        "UPDATE domain.agreement_participant SET accreditation_issuer=true WHERE agreement_id=$1 AND version=2 AND tenant_id=$2",
+        [id, tenant],
+      );
+      assert.equal(
+        (
+          await client.request(
+            credentialUrl,
+            { ...credentialBody, accountId: "foreign-account" },
+            credentialHeaders,
+          )
+        ).statusCode,
+        404,
+      );
+      assert.equal(
+        (
+          await client.request(
+            credentialUrl,
+            { ...credentialBody, subjectId: randomUUID() },
+            credentialHeaders,
+          )
+        ).statusCode,
+        400,
+      );
+      assert.equal(
+        (
+          await client.request(credentialUrl, credentialBody, {
+            ...credentialHeaders,
+            origin: "https://external.test",
+          })
+        ).statusCode,
+        403,
+      );
+      const issued = await client.request(
+        credentialUrl,
+        credentialBody,
+        credentialHeaders,
+      );
+      assert.equal(issued.statusCode, 201, issued.body);
+      assert.equal(issued.json().revoked, false);
+      assert.equal(issued.headers["cache-control"], "no-store");
+      const credentialReplay = await replica.inject({
+        method: "POST",
+        url: credentialUrl,
+        payload: credentialBody,
+        headers: {
+          ...credentialHeaders,
+          origin: config.origin,
+          cookie: client.cookie(),
+        },
+      });
+      assert.equal(credentialReplay.statusCode, 201, credentialReplay.body);
+      assert.equal(credentialReplay.headers["idempotency-replayed"], "true");
+      assert.deepEqual(credentialReplay.json(), issued.json());
+      const revokeUrl = `${credentialUrl}/${issued.json().id}/revoke`;
+      const revokeBody = { reason: "Verification withdrawn" },
+        revokeHeaders = { "idempotency-key": "http-revoke" };
+      assert.equal(
+        (await client.request(revokeUrl, { reason: " " }, revokeHeaders))
+          .statusCode,
+        400,
+      );
+      await migration.query(
+        "UPDATE domain.agreement_version SET status='SUSPENDIDO' WHERE agreement_id=$1 AND version=2",
+        [id],
+      );
+      const revoked = await client.request(
+        revokeUrl,
+        revokeBody,
+        revokeHeaders,
+      );
+      assert.equal(revoked.statusCode, 200, revoked.body);
+      assert.equal(revoked.json().revoked, true);
+      const revokedReplay = await replica.inject({
+        method: "POST",
+        url: revokeUrl,
+        payload: revokeBody,
+        headers: {
+          ...revokeHeaders,
+          origin: config.origin,
+          cookie: client.cookie(),
+        },
+      });
+      assert.equal(revokedReplay.statusCode, 200, revokedReplay.body);
+      assert.equal(revokedReplay.headers["idempotency-replayed"], "true");
+      assert.deepEqual(revokedReplay.json(), revoked.json());
+      assert.equal((await client.request(credentialUrl)).statusCode, 404);
       await migration.query(
         "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1 AND account_id=$2",
         [tenant, accountId],
@@ -278,6 +394,15 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         ).statusCode,
         403,
       );
+      assert.equal(
+        (await client.request(credentialUrl, credentialBody, credentialHeaders))
+          .statusCode,
+        403,
+      );
+      assert.equal(
+        (await client.request(revokeUrl, revokeBody, revokeHeaders)).statusCode,
+        403,
+      );
       assert.equal((await client.request(detailUrl)).statusCode, 403);
       assert.equal((await client.request(url)).statusCode, 403);
       assert.equal(
@@ -291,6 +416,8 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         "/api/municipalities/{tenantId}/agreements",
         "/api/municipalities/{tenantId}/agreements/{agreementId}/versions",
         "/api/municipalities/{tenantId}/agreements/{agreementId}/approve",
+        "/api/municipalities/{tenantId}/credentials",
+        "/api/municipalities/{tenantId}/credentials/{credentialId}/revoke",
       ])
         assert.ok(spec.paths[path]);
     } finally {
