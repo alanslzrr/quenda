@@ -9,5 +9,9 @@ export type {
   Authentication,
 } from "./auth.ts";
 export { authOptions, createAuthentication } from "./auth.ts";
+export {
+  acceptAdministratorInvitation,
+  createMunicipality,
+} from "./municipality.ts";
 export { requireOperator } from "./operator.ts";
 export { authenticationSchema, registerAuthentication } from "./routes.ts";
