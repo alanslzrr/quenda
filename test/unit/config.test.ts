@@ -7,6 +7,8 @@ import type { Clock } from "../../src/shared/clock.ts";
 const env = {
   DOMAIN_DATABASE_URL: "postgresql://domain:secret@localhost/quenda",
   AUTH_DATABASE_URL: "postgresql://auth:another@localhost/quenda",
+  AUTH_ORIGIN: "https://quenda.test",
+  AUTH_SECRET: "test-config-only-not-a-deployed-secret",
 };
 
 test("configuration has safe defaults and rejects invalid values without secrets", () => {
@@ -24,6 +26,10 @@ test("configuration has safe defaults and rejects invalid values without secrets
     { BOOTSTRAP_DATABASE_URL: "TOPSECRET" },
     { MIGRATION_DATABASE_PASSWORD: "TOPSECRET" },
     { BOOTSTRAP_DATABASE_PASSWORD: "TOPSECRET" },
+    { AUTH_ORIGIN: "http://quenda.example.org" },
+    { AUTH_ORIGIN: "https://quenda.example.org/redirect" },
+    { AUTH_SECRET: "short" },
+    { NODE_ENV: "production" },
   ]) {
     assert.throws(
       () => readConfig({ ...env, ...override }),

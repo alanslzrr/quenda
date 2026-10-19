@@ -248,6 +248,7 @@ test("isolated PostgreSQL: bootstrap, migrations, role separation, transactions 
       },
     );
 
+    await migrate(migration, path.resolve("db/migrations"));
     for (const entry of ["src/server.ts", "dist/server.js"]) {
       await t.test(
         `backend ${entry} starts with runtime credentials and exits cleanly on SIGTERM`,
@@ -258,6 +259,9 @@ test("isolated PostgreSQL: bootstrap, migrations, role separation, transactions 
               HOST: "127.0.0.1",
               PORT: String(httpPort),
               LOG_LEVEL: "silent",
+              AUTH_ORIGIN: `http://127.0.0.1:${httpPort}`,
+              AUTH_SECRET: randomBytes(32).toString("hex"),
+              LOCAL_MAIL_DIR: path.join(root, "mail"),
               DOMAIN_DATABASE_URL: url("quenda_domain", passwords.domain),
               AUTH_DATABASE_URL: url("quenda_auth", passwords.auth),
             },

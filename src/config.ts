@@ -1,3 +1,5 @@
+import { resolve } from "node:path";
+
 export interface Config {
   host: string;
   port: number;
@@ -5,6 +7,9 @@ export interface Config {
   domainDatabaseUrl: string;
   authDatabaseUrl: string;
   databasePoolMax: number;
+  authOrigin: string;
+  authSecret: string;
+  localMailDirectory: string;
 }
 
 export class ConfigurationError extends Error {
@@ -64,6 +69,31 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
   }
   const host = env.HOST ?? "127.0.0.1";
   if (!host || /\s/.test(host)) throw new ConfigurationError("HOST");
+  let origin: URL;
+  try {
+    origin = new URL(env.AUTH_ORIGIN ?? "");
+    if (
+      origin.username ||
+      origin.password ||
+      origin.pathname !== "/" ||
+      origin.search ||
+      origin.hash ||
+      !(
+        origin.protocol === "https:" ||
+        (origin.protocol === "http:" &&
+          ["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname))
+      )
+    )
+      throw new Error();
+  } catch {
+    throw new ConfigurationError("AUTH_ORIGIN");
+  }
+  if (!env.AUTH_SECRET || env.AUTH_SECRET.length < 32)
+    throw new ConfigurationError("AUTH_SECRET");
+  if (env.NODE_ENV === "production")
+    throw new ConfigurationError(
+      "MAIL_TRANSPORT: local mail is development-only",
+    );
   return {
     host,
     port: integer(env.PORT ?? "3000", "PORT", 1, 65535),
@@ -76,5 +106,8 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
     logLevel: level as Config["logLevel"],
     domainDatabaseUrl: domain.href,
     authDatabaseUrl: auth.href,
+    authOrigin: origin.origin,
+    authSecret: env.AUTH_SECRET,
+    localMailDirectory: resolve(env.LOCAL_MAIL_DIR ?? ".local/mail"),
   };
 }

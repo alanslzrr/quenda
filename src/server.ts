@@ -1,13 +1,29 @@
 import { buildApp } from "./app.ts";
 import { ConfigurationError, readConfig } from "./config.ts";
 import { createDatabases } from "./database/pools.ts";
+import { localMail } from "./mail/local.ts";
+import { createAuthentication } from "./modules/identity/index.ts";
 
 async function start(): Promise<void> {
   const config = readConfig(process.env);
   const database = createDatabases(config);
-  const app = await buildApp({ database, logLevel: config.logLevel });
+  const identityConfig = {
+    origin: config.authOrigin,
+    secret: config.authSecret,
+  };
+  const authentication = createAuthentication(
+    database.auth,
+    identityConfig,
+    localMail(config.localMailDirectory),
+  );
+  const app = await buildApp({
+    database,
+    logLevel: config.logLevel,
+    identity: { authentication, config: identityConfig },
+  });
   try {
     await database.check();
+    await database.auth.query('SELECT id FROM auth."user" LIMIT 0');
     await app.listen({ host: config.host, port: config.port });
   } catch (error) {
     await app.close();

@@ -4,6 +4,11 @@ import Fastify, { LogController } from "fastify";
 import type { Config } from "./config.ts";
 import type { DatabaseHealth } from "./database/pools.ts";
 import { HttpError, registerErrors } from "./http/errors.ts";
+import type {
+  AuthConfiguration,
+  Authentication,
+} from "./modules/identity/index.ts";
+import { registerAuthentication } from "./modules/identity/index.ts";
 
 const healthSchema = {
   type: "object",
@@ -15,6 +20,7 @@ const healthSchema = {
 export async function buildApp(options: {
   database: DatabaseHealth;
   logLevel?: Config["logLevel"];
+  identity?: { authentication: Authentication; config: AuthConfiguration };
 }) {
   const app = Fastify({
     logger: { level: options.logLevel ?? "info" },
@@ -46,6 +52,15 @@ export async function buildApp(options: {
   await app.register(swagger, {
     openapi: {
       openapi: "3.0.3",
+      components: {
+        securitySchemes: {
+          quendaSession: {
+            type: "apiKey",
+            in: "cookie",
+            name: "__Secure-quenda.session_token",
+          },
+        },
+      },
       info: {
         title: "Quenda API",
         version: "0.1.0",
@@ -56,6 +71,13 @@ export async function buildApp(options: {
       },
     },
   });
+  if (options.identity) {
+    await registerAuthentication(
+      app,
+      options.identity.authentication,
+      options.identity.config,
+    );
+  }
   app.get(
     "/health/live",
     {

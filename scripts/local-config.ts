@@ -22,7 +22,7 @@ const passwords = {
 const url = (role: string, password: string) =>
   `postgresql://${role}:${password}@127.0.0.1:55432/quenda`;
 const files = {
-  ".env.local": `HOST=127.0.0.1\nPORT=3000\nLOG_LEVEL=info\nDATABASE_POOL_MAX=5\nDOMAIN_DATABASE_URL=${url("quenda_domain", passwords.domain)}\nAUTH_DATABASE_URL=${url("quenda_auth", passwords.auth)}\n`,
+  ".env.local": `HOST=127.0.0.1\nPORT=3000\nLOG_LEVEL=info\nDATABASE_POOL_MAX=5\nAUTH_ORIGIN=http://localhost:3000\nAUTH_SECRET=${secret()}\nLOCAL_MAIL_DIR=.local/mail\nDOMAIN_DATABASE_URL=${url("quenda_domain", passwords.domain)}\nAUTH_DATABASE_URL=${url("quenda_auth", passwords.auth)}\n`,
   ".env.migration.local": `MIGRATION_DATABASE_URL=${url("quenda_migrator", passwords.migration)}\n`,
   ".env.bootstrap.local": `BOOTSTRAP_DATABASE_PASSWORD=${passwords.bootstrap}\nBOOTSTRAP_DATABASE_URL=${url("quenda_bootstrap", passwords.bootstrap)}\nMIGRATION_DATABASE_PASSWORD=${passwords.migration}\nDOMAIN_DATABASE_PASSWORD=${passwords.domain}\nAUTH_DATABASE_PASSWORD=${passwords.auth}\n`,
 };
