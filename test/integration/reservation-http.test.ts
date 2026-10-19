@@ -552,6 +552,30 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(report.statusCode, 200, report.body);
       assert.equal(report.headers["cache-control"], "no-store");
       assert.equal(report.json().offeredMinutes, 660);
+      await migration.query(
+        "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,advance_days,weekly,exceptions,actor_id,reason,created_at) SELECT tenant_id,unit_id,n,minimum_minutes,maximum_minutes,step_minutes,advance_days,weekly,exceptions,actor_id,'Older history',timestamptz '2028-01-01T00:00:00Z'+n*interval '1 minute' FROM domain.unit_calendar_version CROSS JOIN generate_series(3,1004) n WHERE tenant_id=$1 AND unit_id=$2 AND version=1",
+        [tenant, unit],
+      );
+      await migration.query(
+        "INSERT INTO domain.catalog_event(tenant_id,id,actor_id,facility_id,unit_id,operation,occurred_at,reason,calendar_version,independence_confirmed) SELECT $1,gen_random_uuid(),$2,$3,$4,CASE WHEN n%2=0 THEN 'PUBLISH_UNIT' ELSE 'WITHDRAW_UNIT' END,timestamptz '2028-01-01T00:00:00Z'+n*interval '1 minute','Older history',1,true FROM generate_series(1,2002) n",
+        [tenant, accountId, facility, unit],
+      );
+      const retainedHistory = await client.request(indicatorUrl);
+      assert.equal(retainedHistory.statusCode, 200, retainedHistory.body);
+      assert.equal(retainedHistory.json().offeredMinutes, 660);
+      const projectionSize = await transaction(
+        domain,
+        async (c) =>
+          (
+            await c.query(
+              "SELECT jsonb_array_length(source->'calendars') AS calendars,jsonb_array_length(source->'publications') AS publications FROM (SELECT domain.unit_indicator_source($1,'2030-01-01','2030-01-02') AS source) q",
+              [unit],
+            )
+          ).rows[0],
+        { accountId, tenantId: tenant },
+      );
+      assert.deepEqual(projectionSize, { calendars: 1, publications: 4 });
+
       assert.equal(report.json().reservedMinutes, 0);
       assert.equal(report.json().occupancyPercent, 0);
       assert.ok(!report.body.includes("accountId"));
