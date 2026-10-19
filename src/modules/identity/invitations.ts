@@ -9,7 +9,11 @@ export async function inviteAdministrator(
   pool: Pool,
   actor: AuthenticatedAccount,
   tenantId: string,
-  input: { accountId: string; expiresAt: string },
+  input: {
+    accountId: string;
+    expiresAt: string;
+    roleExpiresAt?: string | null;
+  },
 ) {
   const invitationId = randomUUID();
   try {
@@ -20,19 +24,25 @@ export async function inviteAdministrator(
         await requireAdministrator(client, actor);
         if (!Number.isFinite(Date.parse(input.expiresAt)))
           throw new HttpError("INVALID_INPUT");
+        if (
+          input.roleExpiresAt != null &&
+          !Number.isFinite(Date.parse(input.roleExpiresAt))
+        )
+          throw new HttpError("INVALID_INPUT");
         const future = await client.query<{ valid: boolean }>(
-          "SELECT $1::timestamptz > now() AS valid",
-          [input.expiresAt],
+          "SELECT $1::timestamptz > now() AND ($2::timestamptz IS NULL OR $2::timestamptz > now()) AS valid",
+          [input.expiresAt, input.roleExpiresAt ?? null],
         );
         if (!future.rows[0]?.valid) throw new HttpError("INVALID_INPUT");
         await client.query(
-          "INSERT INTO domain.administrator_invitation (tenant_id,id,account_id,invited_by,expires_at,grant_source) VALUES ($1,$2,$3,$4,$5,'MUNICIPAL')",
+          "INSERT INTO domain.administrator_invitation (tenant_id,id,account_id,invited_by,expires_at,grant_source,role_expires_at,issuer_invitation_id) VALUES ($1,$2,$3,$4,$5,'MUNICIPAL',$6,(SELECT invitation_id FROM domain.municipal_administrator WHERE tenant_id=$1 AND account_id=$4))",
           [
             tenantId,
             invitationId,
             input.accountId,
             actor.accountId,
             input.expiresAt,
+            input.roleExpiresAt ?? null,
           ],
         );
         await client.query(
@@ -120,6 +130,7 @@ export async function listOwnAdministratorInvitations(
         tenant_id: string;
         municipality: string;
         expires_at: Date;
+        role_expires_at: Date | null;
         status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
       }>("SELECT * FROM domain.own_administrator_invitations($1)", [after]);
       const page = result.rows.slice(0, 20);
@@ -129,6 +140,7 @@ export async function listOwnAdministratorInvitations(
           tenantId: row.tenant_id,
           municipality: row.municipality,
           expiresAt: row.expires_at.toISOString(),
+          roleExpiresAt: row.role_expires_at?.toISOString() ?? null,
           status: row.status,
         })),
         nextCursor: result.rows.length > 20 ? (page.at(-1)?.id ?? null) : null,

@@ -132,7 +132,11 @@ export async function registerMunicipalIdentity(
   );
   app.post<{
     Params: { tenantId: string };
-    Body: { accountId: string; expiresAt: string };
+    Body: {
+      accountId: string;
+      expiresAt: string;
+      roleExpiresAt?: string | null;
+    };
   }>(
     "/api/municipalities/:tenantId/administrator-invitations",
     {
@@ -155,6 +159,11 @@ export async function registerMunicipalIdentity(
           properties: {
             accountId: { type: "string", minLength: 1, maxLength: 128 },
             expiresAt: { type: "string", format: "date-time" },
+            roleExpiresAt: {
+              type: "string",
+              format: "date-time",
+              nullable: true,
+            },
           },
         },
         response: {
@@ -300,6 +309,7 @@ export async function registerMunicipalIdentity(
                     "tenantId",
                     "municipality",
                     "expiresAt",
+                    "roleExpiresAt",
                     "status",
                   ],
                   properties: {
@@ -307,6 +317,11 @@ export async function registerMunicipalIdentity(
                     tenantId: uuid,
                     municipality: { type: "string" },
                     expiresAt: { type: "string", format: "date-time" },
+                    roleExpiresAt: {
+                      type: "string",
+                      format: "date-time",
+                      nullable: true,
+                    },
                     status: {
                       type: "string",
                       enum: ["PENDING", "ACCEPTED", "REVOKED", "EXPIRED"],

@@ -22,6 +22,8 @@ El sistema deniega por defecto y comprueba en servidor cuenta, objeto, acción, 
 | Operador de plataforma | Permiso operativo | Alta de municipios y operación de la instancia. |
 | Worker | Tarea y contexto autorizados | Datos necesarios para ejecutar esa tarea. |
 
+El plazo de aceptación de una invitación es independiente de la vigencia del rol concedido. La caducidad del rol se comprueba en cada operación, sin esperar a un proceso programado. Una delegación queda vinculada a la concesión que autorizó su emisión; renovar al emisor no reactiva invitaciones de una concesión anterior.
+
 La revocación de un administrador conserva su perfil y las evidencias, pero invalida sus invitaciones pendientes. Recuperar el rol exige aceptar una nueva invitación emitida después de la revocación; no reactiva las anteriores.
 
 Los permisos operativos no incluyen lectura general de reservas personales. Un acceso de soporte requiere autorización, caducidad y auditoría.

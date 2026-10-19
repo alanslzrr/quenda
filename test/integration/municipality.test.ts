@@ -644,5 +644,113 @@ test("municipal creation and first administrator acceptance are atomic and isola
         );
       },
     );
+
+    await t.test(
+      "role validity is separate from invitation expiry and expires without a worker",
+      async () => {
+        const initial = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          initial.tenantId,
+          initial.invitationId,
+        );
+        const roleExpiresAt = new Date(Date.now() + 3600000).toISOString();
+        const temporary = await inviteAdministrator(
+          domain,
+          account("admin-a"),
+          initial.tenantId,
+          {
+            accountId: "other",
+            expiresAt: new Date(Date.now() + 7200000).toISOString(),
+            roleExpiresAt,
+          },
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("other"),
+          initial.tenantId,
+          temporary.invitationId,
+        );
+        const granted = await migration.query(
+          "SELECT expires_at FROM domain.municipal_administrator WHERE tenant_id=$1 AND account_id='other'",
+          [initial.tenantId],
+        );
+        assert.equal(granted.rows[0].expires_at.toISOString(), roleExpiresAt);
+        const delegated = await inviteAdministrator(
+          domain,
+          account("other"),
+          initial.tenantId,
+          {
+            accountId: "admin-b",
+            expiresAt: new Date(Date.now() + 7200000).toISOString(),
+          },
+        );
+        await migration.query(
+          "UPDATE domain.municipal_administrator SET granted_at=now()-interval '2 hours',expires_at=now()-interval '1 hour' WHERE tenant_id=$1 AND account_id='other'",
+          [initial.tenantId],
+        );
+        await assert.rejects(
+          inviteAdministrator(domain, account("other"), initial.tenantId, {
+            accountId: "admin-b",
+            expiresAt: roleExpiresAt,
+          }),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          acceptAdministratorInvitation(
+            domain,
+            account("admin-b"),
+            initial.tenantId,
+            delegated.invitationId,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        const renewed = await inviteAdministrator(
+          domain,
+          account("admin-a"),
+          initial.tenantId,
+          { accountId: "other", expiresAt: roleExpiresAt, roleExpiresAt },
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("other"),
+          initial.tenantId,
+          renewed.invitationId,
+        );
+        await assert.rejects(
+          acceptAdministratorInvitation(
+            domain,
+            account("admin-b"),
+            initial.tenantId,
+            delegated.invitationId,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        const expiredBeforeAcceptance = await inviteAdministrator(
+          domain,
+          account("admin-a"),
+          initial.tenantId,
+          { accountId: "admin-b", expiresAt: roleExpiresAt, roleExpiresAt },
+        );
+        await migration.query(
+          "UPDATE domain.administrator_invitation SET created_at=now()-interval '2 hours',role_expires_at=now()-interval '1 hour' WHERE id=$1",
+          [expiredBeforeAcceptance.invitationId],
+        );
+        await assert.rejects(
+          acceptAdministratorInvitation(
+            domain,
+            account("admin-b"),
+            initial.tenantId,
+            expiredBeforeAcceptance.invitationId,
+          ),
+          { code: "NOT_FOUND" },
+        );
+      },
+    );
   });
 });

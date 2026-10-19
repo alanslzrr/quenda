@@ -102,7 +102,7 @@ export async function acceptAdministratorInvitation(
       );
       if (!authority.rows[0]?.allowed) throw new HttpError("NOT_FOUND");
       const invitation = await client.query<{ valid: boolean }>(
-        "SELECT expires_at > now() AND accepted_at IS NULL AND revoked_at IS NULL AS valid FROM domain.administrator_invitation WHERE tenant_id = $1 AND id = $2 AND account_id = $3 FOR UPDATE",
+        "SELECT expires_at > now() AND (role_expires_at IS NULL OR role_expires_at > now()) AND accepted_at IS NULL AND revoked_at IS NULL AS valid FROM domain.administrator_invitation WHERE tenant_id = $1 AND id = $2 AND account_id = $3 FOR UPDATE",
         [tenantId, invitationId, actor.accountId],
       );
       if (!invitation.rows[0]?.valid) throw new HttpError("NOT_FOUND");
