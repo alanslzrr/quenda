@@ -7,6 +7,8 @@ import {
   approveAgreement,
   createAgreementDraft,
   createAgreementVersion,
+  readUnitAgreementRestriction,
+  releaseUnitAgreementRestriction,
   suspendAgreement,
 } from "../../src/modules/collaboration/index.ts";
 import {
@@ -1163,6 +1165,111 @@ test("real booking commands enforce shared eligibility and quota in one transact
           randomUUID(),
           3600,
           clock,
+        );
+        const binding = await readUnitAgreementRestriction(
+          domain,
+          admin,
+          tenant,
+          publicUnit,
+        );
+        assert.deepEqual(binding.restriction, {
+          agreementId: id,
+          version: 3,
+          hasRemainingAssignment: false,
+        });
+        const release = (unit: string, version: number, key: string) =>
+          releaseUnitAgreementRestriction(
+            domain,
+            admin,
+            tenant,
+            unit,
+            key,
+            {
+              expectedAgreementId: id,
+              expectedVersion: version,
+              reason: "Municipal public access",
+            },
+            randomUUID(),
+            3600,
+          );
+        await assert.rejects(
+          release(publicUnit, 4, "wrong-reopening-version"),
+          { code: "CONFLICT" },
+        );
+        await assert.rejects(release(replacementUnit, 4, "active-reopening"), {
+          code: "CONFLICT",
+        });
+        await assert.rejects(
+          readUnitAgreementRestriction(domain, actor, tenant, publicUnit),
+          { code: "FORBIDDEN" },
+        );
+        const preserved = async () =>
+          (
+            await migration.query(
+              "SELECT to_jsonb(u) AS unit FROM domain.reservable_unit u WHERE tenant_id=$1 AND id=$2",
+              [tenant, publicUnit],
+            )
+          ).rows;
+        const beforeUnit = await preserved(),
+          beforeCounts = await counts();
+        const reopened = await release(publicUnit, 3, "reopen-public");
+        assert.deepEqual(reopened.result, {
+          unitId: publicUnit,
+          removed: true,
+        });
+        assert.equal(
+          (await release(publicUnit, 3, "reopen-public")).replayed,
+          true,
+        );
+        assert.equal(
+          (await release(publicUnit, 3, "reopen-public-again")).result.removed,
+          false,
+        );
+        assert.equal(
+          (
+            await readUnitAgreementRestriction(
+              domain,
+              admin,
+              tenant,
+              publicUnit,
+            )
+          ).restriction,
+          null,
+        );
+        assert.deepEqual(await preserved(), beforeUnit);
+        assert.deepEqual(await counts(), beforeCounts);
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT agreement_id,version,reason FROM domain.unit_agreement_release_event WHERE tenant_id=$1 AND unit_id=$2",
+              [tenant, publicUnit],
+            )
+          ).rows,
+          [{ agreement_id: id, version: 3, reason: "Municipal public access" }],
+        );
+        await createReservation(
+          domain,
+          actor,
+          tenant,
+          "public-after-release",
+          { ...input(winner, 22), unitId: publicUnit },
+          randomUUID(),
+          3600,
+          clock,
+        );
+        assert.deepEqual(await counts(), beforeCounts);
+        await assert.rejects(
+          createReservation(
+            domain,
+            actor,
+            tenant,
+            "occupied-after-release",
+            { ...input(winner, 22), unitId: publicUnit },
+            randomUUID(),
+            3600,
+            clock,
+          ),
+          { code: "CONFLICT" },
         );
       },
     );

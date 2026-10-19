@@ -310,6 +310,62 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       );
       assert.equal(activated.statusCode, 200, activated.body);
       assert.equal(activated.json().status, "ACTIVADO");
+      const restrictionUrl = `/api/municipalities/${tenant}/units/${unit}/agreement-restriction`;
+      const releaseUrl = `${restrictionUrl}/release`;
+      const releaseBody = {
+        expectedAgreementId: id,
+        expectedVersion: 2,
+        reason: "Municipal access restored",
+      };
+      const releaseHeaders = { "idempotency-key": "http-release" };
+      const restricted = await client.request(restrictionUrl);
+      assert.equal(restricted.statusCode, 200, restricted.body);
+      assert.deepEqual(restricted.json().restriction, {
+        agreementId: id,
+        version: 2,
+        hasRemainingAssignment: true,
+      });
+      assert.equal(
+        (await client.request(releaseUrl, releaseBody, releaseHeaders))
+          .statusCode,
+        409,
+      );
+      assert.equal(
+        (
+          await client.request(
+            releaseUrl,
+            { ...releaseBody, reason: " " },
+            releaseHeaders,
+          )
+        ).statusCode,
+        400,
+      );
+      assert.equal(
+        (
+          await client.request(
+            releaseUrl,
+            { ...releaseBody, published: true },
+            releaseHeaders,
+          )
+        ).statusCode,
+        400,
+      );
+      assert.equal(
+        (
+          await app.inject({
+            method: "POST",
+            url: releaseUrl,
+            payload: releaseBody,
+            headers: {
+              ...releaseHeaders,
+              cookie: client.cookie(),
+              origin: "https://foreign.invalid",
+            },
+          })
+        ).statusCode,
+        403,
+      );
+
       assert.equal(activated.headers["cache-control"], "no-store");
       const activationReplay = await replica.inject({
         method: "POST",
@@ -445,6 +501,32 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       assert.equal(revokedReplay.headers["idempotency-replayed"], "true");
       assert.deepEqual(revokedReplay.json(), revoked.json());
       assert.equal((await client.request(credentialUrl)).statusCode, 404);
+      const released = await client.request(
+        releaseUrl,
+        releaseBody,
+        releaseHeaders,
+      );
+      assert.equal(released.statusCode, 200, released.body);
+      assert.deepEqual(released.json(), { unitId: unit, removed: true });
+      assert.equal(released.headers["cache-control"], "no-store");
+      const releaseReplay = await replica.inject({
+        method: "POST",
+        url: releaseUrl,
+        payload: releaseBody,
+        headers: {
+          ...releaseHeaders,
+          origin: config.origin,
+          cookie: client.cookie(),
+        },
+      });
+      assert.equal(releaseReplay.statusCode, 200, releaseReplay.body);
+      assert.equal(releaseReplay.headers["idempotency-replayed"], "true");
+      assert.deepEqual(releaseReplay.json(), released.json());
+      assert.equal(
+        (await client.request(restrictionUrl)).json().restriction,
+        null,
+      );
+
       await migration.query(
         "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1 AND account_id=$2",
         [tenant, accountId],
@@ -479,6 +561,12 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
           .statusCode,
         403,
       );
+      assert.equal(
+        (await client.request(releaseUrl, releaseBody, releaseHeaders))
+          .statusCode,
+        403,
+      );
+      assert.equal((await client.request(restrictionUrl)).statusCode, 403);
       assert.equal((await client.request(detailUrl)).statusCode, 403);
       assert.equal((await client.request(url)).statusCode, 403);
       assert.equal(
@@ -494,6 +582,8 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         "/api/municipalities/{tenantId}/agreements/{agreementId}/approve",
         "/api/municipalities/{tenantId}/agreements/{agreementId}/suspend",
         "/api/municipalities/{tenantId}/agreements/{agreementId}/activate",
+        "/api/municipalities/{tenantId}/units/{unitId}/agreement-restriction",
+        "/api/municipalities/{tenantId}/units/{unitId}/agreement-restriction/release",
         "/api/municipalities/{tenantId}/credentials",
         "/api/municipalities/{tenantId}/credentials/{credentialId}/revoke",
       ])

@@ -11,6 +11,8 @@ import {
   issueAgreementCredential,
   listAgreementVersions,
   readAgreementVersion,
+  readUnitAgreementRestriction,
+  releaseUnitAgreementRestriction,
   revokeAgreementCredential,
   suspendAgreement,
 } from "../../src/modules/collaboration/index.ts";
@@ -1053,6 +1055,47 @@ test("agreement drafts preserve participant ownership and do not activate capabi
         await migration.query(
           "INSERT INTO domain.unit_agreement_gate SELECT tenant_id,unit_id,agreement_id,version FROM domain.agreement_unit WHERE agreement_id=$1 ON CONFLICT(tenant_id,unit_id) DO UPDATE SET agreement_id=EXCLUDED.agreement_id,version=EXCLUDED.version",
           [id],
+        );
+        assert.equal(
+          (
+            await readUnitAgreementRestriction(
+              domain,
+              actor(0),
+              tenant,
+              units[0] as string,
+            )
+          ).restriction?.hasRemainingAssignment,
+          true,
+        );
+        await assert.rejects(
+          releaseUnitAgreementRestriction(
+            domain,
+            actor(0),
+            tenant,
+            units[0] as string,
+            "scheduled-release",
+            {
+              expectedAgreementId: id,
+              expectedVersion: 1,
+              reason: "Premature reopening",
+            },
+            randomUUID(),
+            3600,
+          ),
+          { code: "CONFLICT" },
+        );
+        await assert.rejects(
+          readUnitAgreementRestriction(
+            domain,
+            actor(2),
+            tenants[2] as string,
+            units[0] as string,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await assert.rejects(
+          domain.query("DELETE FROM domain.unit_agreement_release_event"),
+          { code: "42501" },
         );
         await assert.rejects(
           suspendAgreement(

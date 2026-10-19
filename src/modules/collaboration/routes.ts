@@ -17,6 +17,7 @@ import {
   createAgreementDraft,
 } from "./drafts.ts";
 import { registerAgreementQueries } from "./query-routes.ts";
+import { registerAgreementReopeningRoutes } from "./reopening-routes.ts";
 import { suspendAgreement } from "./suspension.ts";
 import { createAgreementVersion } from "./versions.ts";
 
@@ -61,6 +62,13 @@ export async function registerCollaboration(
 ) {
   const actor = createRequestActor(pool, auth, config);
   await registerAgreementQueries(app, pool, auth, config);
+  await registerAgreementReopeningRoutes(
+    app,
+    pool,
+    auth,
+    config,
+    retentionSeconds,
+  );
   await registerCredentialRoutes(app, pool, auth, config, retentionSeconds);
   for (const action of [
     "create",
