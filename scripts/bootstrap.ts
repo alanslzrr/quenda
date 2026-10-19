@@ -17,6 +17,7 @@ async function run() {
       migration: required("MIGRATION_DATABASE_PASSWORD"),
       domain: required("DOMAIN_DATABASE_PASSWORD"),
       auth: required("AUTH_DATABASE_PASSWORD"),
+      worker: required("WORKER_DATABASE_PASSWORD"),
     });
     process.stdout.write("Database roles and schemas created\n");
   } finally {

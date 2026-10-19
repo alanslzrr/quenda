@@ -6,7 +6,10 @@ import {
   publicAvailability,
   saveUnitCalendar,
 } from "../../src/modules/catalog/index.ts";
-import { listOwnNotices } from "../../src/modules/communications/index.ts";
+import {
+  listOwnNotices,
+  processReservationEmail,
+} from "../../src/modules/communications/index.ts";
 import {
   acceptManager,
   inviteManager,
@@ -27,7 +30,7 @@ import { withDatabase } from "../helpers/postgres.ts";
 test("reservation confirmation validates real calendars and commits every effect once", {
   timeout: 60000,
 }, async (t) => {
-  await withDatabase(async ({ domain, auth, migration }) => {
+  await withDatabase(async ({ domain, auth, migration, worker }) => {
     for (const id of ["citizen", "newcomer"])
       await auth.query(
         `INSERT INTO auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,$1,$2,true,now(),now())`,
@@ -1406,6 +1409,173 @@ test("reservation confirmation validates real calendars and commits every effect
             endsAt: "2030-01-05T12:00:00Z",
           }),
           { code: "NOT_FOUND" },
+        );
+      },
+    );
+    await t.test(
+      "outbox leases fence stale workers, preserve ordering and bound retries",
+      async () => {
+        const claim = async () =>
+          (
+            await worker.query(
+              "SELECT * FROM domain.claim_reservation_email(30,3)",
+            )
+          ).rows;
+        const finish = async (token: string, accepted: boolean) =>
+          (
+            await worker.query(
+              "SELECT domain.finish_reservation_email($1,$2,3,60) AS saved",
+              [token, accepted],
+            )
+          ).rows[0].saved;
+        for (const pool of [domain, auth]) {
+          await assert.rejects(
+            pool.query("SELECT * FROM domain.claim_reservation_email(30,3)"),
+            { code: "42501" },
+          );
+          await assert.rejects(
+            pool.query("SELECT domain.finish_reservation_email($1,true,3,60)", [
+              randomUUID(),
+            ]),
+            { code: "42501" },
+          );
+        }
+        for (const table of [
+          "reservation",
+          "reservation_email",
+          "reservation_email_attempt",
+        ])
+          await assert.rejects(worker.query(`SELECT * FROM domain.${table}`), {
+            code: "42501",
+          });
+        await assert.rejects(worker.query('SELECT * FROM auth."user"'), {
+          code: "42501",
+        });
+        await assert.rejects(
+          worker.query("SELECT * FROM domain.claim_reservation_email(0,3)"),
+          { code: "23514" },
+        );
+        const [one, two] = await Promise.all([claim(), claim()]);
+        const first = one[0],
+          second = two[0];
+        assert.ok(first && second);
+        assert.notEqual(first.event_id, second.event_id);
+        assert.notEqual(first.reservation_id, second.reservation_id);
+        assert.equal(first.attempt, 1);
+        assert.equal(first.revision, 1);
+        assert.match(first.recipient, /@example.test$/);
+        assert.equal(await finish(second.token, true), true);
+        assert.equal(await finish(second.token, true), false);
+        await migration.query(
+          "UPDATE domain.reservation_email SET next_attempt_at=now()+interval '1 day' WHERE accepted_at IS NULL",
+        );
+        assert.equal(await finish(first.token, false), true);
+        assert.equal((await claim()).length, 0);
+        await migration.query(
+          "UPDATE domain.reservation_email SET next_attempt_at=now()-interval '1 second' WHERE tenant_id=$1 AND event_id=$2",
+          [first.tenant_id, first.event_id],
+        );
+        const retried = (await claim())[0];
+        assert.equal(retried.event_id, first.event_id);
+        assert.equal(retried.attempt, 2);
+        assert.notEqual(retried.token, first.token);
+        await migration.query(
+          "UPDATE domain.reservation_email SET lease_until=now()-interval '1 second' WHERE tenant_id=$1 AND event_id=$2",
+          [first.tenant_id, first.event_id],
+        );
+        assert.equal(await finish(retried.token, true), false);
+        const recovered = (await claim())[0];
+        assert.equal(recovered.event_id, first.event_id);
+        assert.equal(recovered.attempt, 3);
+        assert.equal(await finish(retried.token, true), false);
+        assert.equal(await finish(recovered.token, false), true);
+        assert.equal((await claim()).length, 0);
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT outcome FROM domain.reservation_email_attempt WHERE tenant_id=$1 AND event_id=$2 ORDER BY attempt",
+              [first.tenant_id, first.event_id],
+            )
+          ).rows.map((r) => r.outcome),
+          ["FAILED", "EXPIRED", "FAILED"],
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT exhausted_at IS NOT NULL AS exhausted,accepted_at IS NULL AS unaccepted FROM domain.reservation_email WHERE tenant_id=$1 AND event_id=$2",
+              [first.tenant_id, first.event_id],
+            )
+          ).rows[0].exhausted,
+          true,
+        );
+        await migration.query(
+          "UPDATE domain.reservation_email SET next_attempt_at=now()-interval '1 second' WHERE accepted_at IS NULL AND exhausted_at IS NULL",
+        );
+        const revisions = new Map<string, number>([
+          [first.reservation_id, 1],
+          [second.reservation_id, 1],
+        ]);
+        const workerOptions = {
+          origin: "https://quenda.test",
+          locale: "es" as const,
+          leaseSeconds: 30,
+          maxAttempts: 3,
+          retrySeconds: 60,
+        };
+        assert.equal(
+          await processReservationEmail(
+            worker,
+            {
+              send: async () => {
+                throw new Error("Sensitive provider error");
+              },
+            },
+            workerOptions,
+          ),
+          "RETRY_SCHEDULED",
+        );
+        await migration.query(
+          "UPDATE domain.reservation_email SET next_attempt_at=now()-interval '1 second' WHERE accepted_at IS NULL AND exhausted_at IS NULL",
+        );
+        let processed = 0;
+        while (true) {
+          const outcome = await processReservationEmail(
+            worker,
+            {
+              send: async (message) => {
+                assert.equal(
+                  (
+                    await migration.query(
+                      "SELECT count(*)::int AS n FROM domain.reservation_email WHERE lease_token IS NOT NULL",
+                    )
+                  ).rows[0].n,
+                  1,
+                );
+                const reservation = /Reserva: ([0-9a-f-]+)/.exec(
+                  message.text,
+                )?.[1];
+                const revision = Number(
+                  /Revisión: (\d+)/.exec(message.text)?.[1],
+                );
+                assert.ok(reservation);
+                assert.equal(revision, (revisions.get(reservation) ?? 0) + 1);
+                revisions.set(reservation, revision);
+              },
+            },
+            workerOptions,
+          );
+          if (outcome === "IDLE") break;
+          assert.equal(outcome, "ACCEPTED");
+          assert.ok(++processed < 300);
+        }
+        assert.ok(processed > 0);
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.reservation_email WHERE accepted_at IS NULL AND exhausted_at IS NULL",
+            )
+          ).rows[0].n,
+          0,
         );
       },
     );

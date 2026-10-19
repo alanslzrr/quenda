@@ -228,3 +228,11 @@ Ambos endpoints exigen administrador municipal y MFA reciente. El comando exige 
 ### Avisos internos
 
 `GET /api/me/notices` devuelve los avisos del usuario autenticado entre municipios, con `Cache-Control: no-store`. Pagina de 20 en 20 por identificador de evento y municipio; `after` acepta el `nextCursor` anterior. Cada aviso contiene tipo, revisión, fecha del evento e intervalo histórico, junto con `reservationPath` para consultar el estado actual. No expone actores, motivos administrativos ni correlaciones, y no representa el estado de entrega del correo.
+
+### Procesamiento de correo
+
+`processReservationEmail` reclama un evento con el rol `quenda_worker`, confirma la concesión y envía mediante `MailTransport` fuera de la transacción. Registra aceptación, fallo o vencimiento del intento; los tokens vencidos no pueden confirmar resultados. Los eventos se procesan por reserva y revisión. Agotar los intentos conserva el evento y permite continuar con revisiones posteriores.
+
+El rol worker solo ejecuta las funciones de reclamar y finalizar; no puede consultar directamente reservas, cuentas o intentos. El bootstrap de bases nuevas lo crea con credenciales independientes; `db:local:config` las guarda en `.env.worker.local`, separado del entorno web. Una base creada con un bootstrap anterior requiere provisionar ese rol antes de aplicar la migración 0043; no se debe repetir el bootstrap sobre ella.
+
+La función recibe explícitamente origen, idioma, duración de concesión, máximo de intentos y espera de reintento. Sus resultados son `IDLE`, `ACCEPTED`, `RETRY_SCHEDULED`, `EXHAUSTED` y `LEASE_LOST`. `ACCEPTED` no garantiza recepción. Un envío aceptado cuyo resultado no llegue a registrarse puede repetirse tras vencer la concesión.

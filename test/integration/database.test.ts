@@ -54,6 +54,7 @@ test("isolated PostgreSQL: bootstrap, migrations, role separation, transactions 
     migration: randomBytes(24).toString("hex"),
     domain: randomBytes(24).toString("hex"),
     auth: randomBytes(24).toString("hex"),
+    worker: randomBytes(24).toString("hex"),
   };
   const port = await freePort();
   const url = (role: string, password: string, db = "quenda") =>

@@ -31,6 +31,7 @@ export async function withDatabase<T>(
     domain: Pool;
     auth: Pool;
     migration: Pool;
+    worker: Pool;
   }) => Promise<T>,
 ): Promise<T> {
   const bin = process.env.PG_BIN;
@@ -51,6 +52,7 @@ export async function withDatabase<T>(
     migration: password(),
     domain: password(),
     auth: password(),
+    worker: password(),
   };
   const port = await freePort();
   const url = (role: string, secret: string, db = "quenda") =>
@@ -107,6 +109,7 @@ export async function withDatabase<T>(
       root,
       domain: pool("quenda_domain", passwords.domain),
       auth: pool("quenda_auth", passwords.auth),
+      worker: pool("quenda_worker", passwords.worker),
       migration: pool("quenda_migrator", passwords.migration),
     });
   } finally {

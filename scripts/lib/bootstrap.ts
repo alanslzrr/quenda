@@ -4,6 +4,7 @@ export interface DatabasePasswords {
   migration: string;
   domain: string;
   auth: string;
+  worker: string;
 }
 
 // Run only against a new, dedicated database with an administrative connection.
@@ -14,7 +15,7 @@ export async function bootstrap(
 ): Promise<void> {
   if (Object.values(passwords).some((p) => p.length < 24))
     throw new Error("Passwords must have at least 24 characters");
-  if (new Set(Object.values(passwords)).size !== 3)
+  if (new Set(Object.values(passwords)).size !== 4)
     throw new Error("Passwords must differ");
   await client.query("BEGIN");
   try {
@@ -22,6 +23,7 @@ export async function bootstrap(
       ["quenda_migrator", passwords.migration],
       ["quenda_domain", passwords.domain],
       ["quenda_auth", passwords.auth],
+      ["quenda_worker", passwords.worker],
     ]) {
       const formatted = await client.query<{ sql: string }>(
         "SELECT format('CREATE ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD %L', $1::text, $2::text) AS sql",
@@ -35,7 +37,7 @@ export async function bootstrap(
       create: string;
     }>(`
       SELECT format('REVOKE ALL ON DATABASE %I FROM PUBLIC', current_database()) AS revoke,
-        format('GRANT CONNECT ON DATABASE %I TO quenda_domain, quenda_auth, quenda_migrator', current_database()) AS connect,
+        format('GRANT CONNECT ON DATABASE %I TO quenda_domain, quenda_auth, quenda_worker, quenda_migrator', current_database()) AS connect,
         format('GRANT CREATE ON DATABASE %I TO quenda_migrator', current_database()) AS create
     `);
     const row = commands.rows[0];
@@ -50,6 +52,8 @@ export async function bootstrap(
       CREATE SCHEMA extensions AUTHORIZATION quenda_migrator;
       CREATE SCHEMA quenda_meta AUTHORIZATION quenda_migrator;
       GRANT USAGE ON SCHEMA domain, extensions TO quenda_domain;
+      GRANT USAGE ON SCHEMA domain TO quenda_worker;
+      ALTER ROLE quenda_worker SET search_path = pg_catalog, domain;
       GRANT USAGE ON SCHEMA auth TO quenda_auth;
       ALTER ROLE quenda_domain SET search_path = pg_catalog, domain, extensions;
       ALTER ROLE quenda_auth SET search_path = pg_catalog, auth;
