@@ -1,4 +1,5 @@
-import type { Pool } from "pg";
+import { Temporal } from "@js-temporal/polyfill";
+import { DatabaseError, type Pool, type QueryResult } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import {
@@ -6,6 +7,7 @@ import {
   requirePermission,
 } from "../identity/index.ts";
 import { type UnitCalendarInput, validateUnitCalendar } from "./calendar.ts";
+import { openingCoverage } from "./coverage.ts";
 
 interface VersionRow {
   version: number;
@@ -66,10 +68,12 @@ export async function saveUnitCalendar(
         [tenantId, unitId],
       );
       if (!unit.rowCount) throw new HttpError("NOT_FOUND");
-      const municipality = await client.query<{ advance_days: number }>(
-        "SELECT advance_days FROM domain.municipality WHERE id=$1",
-        [tenantId],
-      );
+      const municipality = await client.query<{
+        advance_days: number;
+        timezone: string;
+      }>("SELECT advance_days,timezone FROM domain.municipality WHERE id=$1", [
+        tenantId,
+      ]);
       const limits = municipality.rows[0];
       if (!limits) throw new HttpError("NOT_FOUND");
       const calendar = validateUnitCalendar(
@@ -78,6 +82,31 @@ export async function saveUnitCalendar(
       );
       const version = unit.rows[0]?.calendar_version ?? 0;
       if (version !== input.expectedVersion) throw new HttpError("CONFLICT");
+      // Existing bookings retain their accepted duration/advance policy. A new
+      // opening must still cover their complete interval, including ongoing use.
+      const covered = openingCoverage(calendar, limits.timezone);
+      let afterStart: string | null = null;
+      for (;;) {
+        const intervals: QueryResult<{ starts_at: Date; ends_at: Date }> =
+          await client.query<{
+            starts_at: Date;
+            ends_at: Date;
+          }>("SELECT * FROM domain.calendar_reservation_intervals($1,$2)", [
+            unitId,
+            afterStart,
+          ]);
+        for (const interval of intervals.rows) {
+          if (
+            !covered(
+              Temporal.Instant.from(interval.starts_at.toISOString()),
+              Temporal.Instant.from(interval.ends_at.toISOString()),
+            )
+          )
+            throw new HttpError("CONFLICT");
+        }
+        if (intervals.rows.length < 100) break;
+        afterStart = intervals.rows.at(-1)?.starts_at.toISOString() ?? null;
+      }
       const saved = await client.query<VersionRow>(
         `INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,advance_days,weekly,exceptions,actor_id,reason)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
@@ -103,7 +132,14 @@ export async function saveUnitCalendar(
       );
       return output(tenantId, unitId, row);
     },
-  );
+  ).catch((error: unknown) => {
+    if (
+      error instanceof DatabaseError &&
+      ["40001", "40P01"].includes(error.code ?? "")
+    )
+      throw new HttpError("CONFLICT");
+    throw error;
+  });
 }
 export async function readUnitCalendar(
   pool: Pool,

@@ -85,7 +85,7 @@ Cada permiso se limita a una operación y unidad real del municipio; `unitId: nu
 
 `calendar` contiene `minimumMinutes`, `maximumMinutes`, `stepMinutes`, `advanceDays`, `weekly` y `exceptions`. Las duraciones son múltiplos positivos del paso. `advanceDays: null` hereda el límite municipal; un valor explícito solo puede reducirlo. Los horarios usan días ISO 1–7 y minutos locales desde medianoche: `{ day, startMinute, endMinute }`. El final puede ser 1440; un intervalo que cruza medianoche se divide entre dos días. Las excepciones `{ date, intervals }` sustituyen el horario semanal de esa fecha; `intervals: []` representa cierre. Se rechazan fechas inválidas, duplicados y solapes.
 
-`GET` sobre la misma ruta devuelve la versión actual; `?version=N` recupera una versión histórica. Guardar un calendario no publica la unidad. La comprobación de cambios incompatibles con reservas se integrará con el módulo de reservas.
+`GET` sobre la misma ruta devuelve la versión actual; `?version=N` recupera una versión histórica. Guardar un calendario no publica la unidad. El guardado rechaza horarios o excepciones que dejen sin cobertura una reserva confirmada pendiente de finalizar, incluidas las que están en curso. La comprobación y el cambio de versión comparten una transacción SERIALIZABLE. Las reservas conservan sus condiciones aceptadas de duración y antelación; las nuevas reglas no reescriben su historial.
 
 ## Publicación del catálogo
 
@@ -142,7 +142,7 @@ PostgreSQL mantiene una ocupación activa por reserva confirmada o bloqueo vigen
 
 Las restricciones diferidas comprueban al confirmar la transacción que la unidad y el intervalo de la ocupación coinciden con su origen. Cancelar una reserva o liberar un bloqueo exige liberar su ocupación en la misma transacción. Cambiar una reserva sustituye la ocupación sin borrar la anterior; un conflicto revierte todos los cambios. Los permisos SQL y RLS restringen la lectura y modificación al contexto autorizado.
 
-La confirmación HTTP utiliza estas garantías. La conciliación de cambios de calendario con reservas existentes sigue pendiente.
+La confirmación HTTP utiliza estas garantías. Los cambios de calendario incompatibles requieren resolver antes las reservas afectadas mediante operaciones explícitas.
 
 ## Primer operador
 

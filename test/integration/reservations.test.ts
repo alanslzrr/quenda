@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { transaction } from "../../src/database/transaction.ts";
-import { publicAvailability } from "../../src/modules/catalog/index.ts";
+import {
+  publicAvailability,
+  saveUnitCalendar,
+} from "../../src/modules/catalog/index.ts";
 import {
   cancelReservation,
   createBlock,
@@ -743,6 +746,180 @@ test("reservation confirmation validates real calendars and commits every effect
           [randomUUID(), unit, a, "2030-01-10T11:00:00Z"],
         );
         assert.equal(foreign.rowCount, 0);
+      },
+    );
+    await t.test(
+      "calendar edits reject incompatible confirmed reservations without changing accepted policy",
+      async () => {
+        const invitation = randomUUID();
+        await migration.query(
+          "INSERT INTO domain.administrator_invitation(tenant_id,id,account_id,invited_by,expires_at,accepted_at) VALUES($1,$2,'citizen','citizen',now()+interval '1 day',now())",
+          [tenant, invitation],
+        );
+        await migration.query(
+          "UPDATE domain.municipal_administrator SET revoked_at=NULL,granted_at=now(),invitation_id=$2 WHERE tenant_id=$1 AND account_id='citizen'",
+          [tenant, invitation],
+        );
+        const admin = { ...actor, mfaVerifiedAt: new Date() };
+        const data = {
+          ...input,
+          startsAt: "2030-01-12T10:00:00Z",
+          endsAt: "2030-01-12T11:00:00Z",
+        };
+        const booking = await create("calendar-protected", data);
+        const calendar = {
+          minimumMinutes: 30,
+          maximumMinutes: 120,
+          stepMinutes: 30,
+          advanceDays: null,
+          weekly,
+          exceptions: [{ date: "2030-01-03", intervals: [] }],
+        };
+        const closed = {
+          ...calendar,
+          exceptions: [
+            ...calendar.exceptions,
+            { date: "2030-01-12", intervals: [] },
+          ],
+        };
+        await assert.rejects(
+          saveUnitCalendar(domain, admin, tenant, unit, {
+            expectedVersion: 1,
+            reason: "Closure",
+            calendar: closed,
+          }),
+          { code: "CONFLICT" },
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT calendar_version FROM domain.reservable_unit WHERE id=$1",
+              [unit],
+            )
+          ).rows[0].calendar_version,
+          1,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.unit_calendar_version WHERE unit_id=$1",
+              [unit],
+            )
+          ).rows[0].n,
+          1,
+        );
+        const changedPolicy = await saveUnitCalendar(
+          domain,
+          admin,
+          tenant,
+          unit,
+          {
+            expectedVersion: 1,
+            reason: "Future duration policy",
+            calendar: { ...calendar, minimumMinutes: 120 },
+          },
+        );
+        assert.equal(changedPolicy.version, 2);
+        const existing = (
+          await migration.query(
+            "SELECT calendar_version,ends_at-starts_at AS duration FROM domain.reservation WHERE id=$1",
+            [booking.result.id],
+          )
+        ).rows[0];
+        assert.equal(existing.calendar_version, 1);
+        await assert.rejects(
+          saveUnitCalendar(domain, admin, tenant, unit, {
+            expectedVersion: 2,
+            reason: "Still occupied",
+            calendar: closed,
+          }),
+          { code: "CONFLICT" },
+        );
+        await cancelReservation(
+          domain,
+          actor,
+          tenant,
+          booking.result.id,
+          "resolve-calendar",
+          { expectedRevision: 1 },
+          randomUUID(),
+          3600,
+          clock,
+        );
+        const saved = await saveUnitCalendar(domain, admin, tenant, unit, {
+          expectedVersion: 2,
+          reason: "Resolved closure",
+          calendar: closed,
+        });
+        assert.equal(saved.version, 3);
+        assert.equal(
+          (
+            await publicAvailability(
+              domain,
+              tenant,
+              unit,
+              "2030-01-12",
+              60,
+              clock,
+            )
+          ).slots.length,
+          0,
+        );
+        await assert.rejects(create("closed-calendar", data), {
+          code: "CONFLICT",
+        });
+      },
+    );
+    await t.test(
+      "a concurrent closure and new reservation cannot both commit",
+      async () => {
+        const admin = { ...actor, mfaVerifiedAt: new Date() };
+        const calendar = {
+          minimumMinutes: 30,
+          maximumMinutes: 120,
+          stepMinutes: 30,
+          advanceDays: null,
+          weekly,
+          exceptions: [
+            { date: "2030-01-03", intervals: [] },
+            { date: "2030-01-12", intervals: [] },
+            { date: "2030-01-13", intervals: [] },
+          ],
+        };
+        const results = await Promise.allSettled([
+          create("calendar-race", {
+            ...input,
+            startsAt: "2030-01-13T10:00:00Z",
+            endsAt: "2030-01-13T11:00:00Z",
+          }),
+          saveUnitCalendar(domain, admin, tenant, unit, {
+            expectedVersion: 3,
+            reason: "Concurrent closure",
+            calendar,
+          }),
+        ]);
+        assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+        assert.ok(
+          results.some(
+            (r) => r.status === "rejected" && r.reason.code === "CONFLICT",
+          ),
+        );
+        const version = (
+          await migration.query(
+            "SELECT calendar_version FROM domain.reservable_unit WHERE id=$1",
+            [unit],
+          )
+        ).rows[0].calendar_version;
+        await saveUnitCalendar(domain, admin, tenant, unit, {
+          expectedVersion: version,
+          reason: "Restore opening",
+          calendar: {
+            ...calendar,
+            exceptions: calendar.exceptions.filter(
+              (e) => e.date !== "2030-01-13",
+            ),
+          },
+        });
       },
     );
     await t.test(

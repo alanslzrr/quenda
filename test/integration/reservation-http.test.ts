@@ -322,6 +322,42 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(released.statusCode, 200, released.body);
       assert.ok(released.json().releasedAt);
       assert.ok((await available()).includes(blockBody.startsAt));
+      const calendarUrl = `/api/municipalities/${tenant}/units/${unit}/calendar`;
+      const closure = {
+        expectedVersion: 1,
+        reason: "Closure",
+        calendar: {
+          minimumMinutes: 30,
+          maximumMinutes: 120,
+          stepMinutes: 30,
+          advanceDays: null,
+          weekly: Array.from({ length: 7 }, (_, i) => ({
+            day: i + 1,
+            startMinute: 0,
+            endMinute: 1440,
+          })),
+          exceptions: [{ date: body.startsAt.slice(0, 10), intervals: [] }],
+        },
+      };
+      const closeCalendar = () =>
+        app.inject({
+          method: "PUT",
+          url: calendarUrl,
+          payload: closure,
+          headers: { origin: config.origin, cookie: client.cookie() },
+        });
+      const incompatible = await closeCalendar();
+      assert.equal(incompatible.statusCode, 409, incompatible.body);
+      const resolved = await client.request(
+        `${url}/${second.json().id}/cancel`,
+        { expectedRevision: 1 },
+        { "idempotency-key": "resolve-closure" },
+      );
+      assert.equal(resolved.statusCode, 200, resolved.body);
+      const compatible = await closeCalendar();
+      assert.equal(compatible.statusCode, 200, compatible.body);
+      assert.equal(compatible.json().version, 2);
+      assert.deepEqual(await available(), []);
       const cookie = client.cookie();
       assert.equal(
         (await client.request("/api/auth/sign-out", {})).statusCode,
