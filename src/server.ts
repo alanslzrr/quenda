@@ -18,6 +18,7 @@ async function start(): Promise<void> {
   );
   const app = await buildApp({
     database,
+    domain: database.domain,
     logLevel: config.logLevel,
     identity: { authentication, config: identityConfig },
   });

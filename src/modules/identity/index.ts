@@ -9,6 +9,7 @@ export type {
   Authentication,
 } from "./auth.ts";
 export { authOptions, createAuthentication } from "./auth.ts";
+export { registerMunicipalIdentity } from "./municipal-routes.ts";
 export {
   acceptAdministratorInvitation,
   createMunicipality,

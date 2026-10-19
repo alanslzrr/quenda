@@ -4,6 +4,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { getMigrations } from "better-auth/db/migration";
+import { initializeOperator } from "../../scripts/lib/initialize-operator.ts";
 import { buildApp } from "../../src/app.ts";
 import { localMail } from "../../src/mail/local.ts";
 import {
@@ -34,11 +35,13 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
     };
     const app = await buildApp({
       database,
+      domain,
       logLevel: "silent",
       identity: { authentication: identity, config },
     });
     const replica = await buildApp({
       database,
+      domain,
       logLevel: "silent",
       identity: {
         authentication: createAuthentication(auth, config, mail),
@@ -357,6 +360,73 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           assert.equal(
             (await client.request("/api/me")).json().mfaVerified,
             true,
+          );
+          const accountId = (await client.request("/api/me")).json().accountId;
+          const maintenance = await migration.connect();
+          try {
+            await initializeOperator(maintenance, accountId);
+          } finally {
+            maintenance.release();
+          }
+          const input = {
+            name: "Municipio HTTP",
+            timezone: "Europe/Madrid",
+            administratorId: accountId,
+            invitationExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+          };
+          assert.equal(
+            (
+              await client.request("/api/municipalities", input, {
+                origin: "https://evil.test",
+              })
+            ).statusCode,
+            403,
+          );
+          assert.equal(
+            (
+              await app.inject({
+                method: "POST",
+                url: "/api/municipalities",
+                payload: input,
+                headers: { cookie: client.cookie() },
+              })
+            ).statusCode,
+            403,
+          );
+          assert.equal(
+            (await oldDevice.request("/api/municipalities", input)).statusCode,
+            403,
+          );
+          assert.equal(
+            (
+              await client.request("/api/municipalities", {
+                ...input,
+                role: "operator",
+              })
+            ).statusCode,
+            400,
+          );
+          const created = await client.request("/api/municipalities", input);
+          assert.equal(created.statusCode, 201, created.body);
+          const { tenantId, invitationId } = created.json();
+          const accept = `/api/municipalities/${tenantId}/administrator-invitations/${invitationId}/accept`;
+          assert.equal(
+            (await client.request(accept, { accountId: "another" })).statusCode,
+            400,
+          );
+          assert.equal((await client.request(accept, {})).statusCode, 200);
+          assert.equal((await client.request(accept, {})).statusCode, 404);
+          const contract = app.swagger();
+          assert.ok(contract.paths?.["/api/municipalities"]?.post);
+          assert.ok(contract.paths?.["/api/me"]?.get);
+          assert.equal(
+            (
+              await migration.query(
+                "SELECT * FROM domain.municipal_administrator WHERE tenant_id = $1 AND account_id = $2",
+                [tenantId, accountId],
+              )
+            ).rowCount,
+            1,
           );
           const recovery = browser(replica, "192.0.2.32");
           assert.equal(
