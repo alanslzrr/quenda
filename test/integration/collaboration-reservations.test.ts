@@ -1511,7 +1511,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
         );
 
         await scenario.test(
-          "reassignment reconciles a reservation without erasing its former agreement consumption",
+          "reassignment, quota toggles and concurrent lifecycle changes preserve consumptions",
           async () => {
             const successor = (
               await createAgreementDraft(
@@ -1626,6 +1626,222 @@ test("real booking commands enforce shared eligibility and quota in one transact
             await assert.rejects(
               domain.query("SELECT * FROM domain.agreement_consumption"),
               { code: "42501" },
+            );
+            const changeLimit = async (
+              expectedVersion: number,
+              weeklyLimit: number | null,
+            ) => {
+              const version = expectedVersion + 1;
+              await createAgreementVersion(
+                domain,
+                admin,
+                tenant,
+                successor,
+                `limit-version-${version}`,
+                {
+                  ...definition,
+                  expectedVersion,
+                  weeklyLimit,
+                  participants: [
+                    {
+                      tenantId: tenant,
+                      accreditationIssuer: false,
+                      unitIds: [publicUnit],
+                    },
+                  ],
+                },
+                randomUUID(),
+                3600,
+              );
+              await approveAgreement(
+                domain,
+                admin,
+                tenant,
+                successor,
+                `limit-approval-${version}`,
+                { version, unitIds: [publicUnit] },
+                randomUUID(),
+                3600,
+              );
+              await activateAgreement(
+                domain,
+                admin,
+                tenant,
+                successor,
+                `limit-activation-${version}`,
+                { ...evidence, version },
+                randomUUID(),
+                3600,
+              );
+            };
+            const activeConsumption = async () =>
+              (
+                await migration.query(
+                  "SELECT reservation_id,subject_id,starts_at,ends_at,week_start FROM domain.agreement_consumption WHERE agreement_id=$1 AND NOT released ORDER BY reservation_id",
+                  [successor],
+                )
+              ).rows;
+            const beforeDisable = await activeConsumption();
+            await changeLimit(1, null);
+            assert.deepEqual(await activeConsumption(), beforeDisable);
+            const extra = (
+              await createReservation(
+                domain,
+                actor,
+                tenant,
+                "quota-disabled-booking",
+                { ...input(winner, 21), unitId: publicUnit },
+                randomUUID(),
+                3600,
+                clock,
+              )
+            ).result;
+            const beforeEnable = await activeConsumption();
+            assert.equal(beforeEnable.length, beforeDisable.length + 1);
+            await changeLimit(2, 1);
+            assert.deepEqual(await activeConsumption(), beforeEnable);
+            await assert.rejects(
+              createReservation(
+                domain,
+                actor,
+                tenant,
+                "quota-restored-excess",
+                { ...input(winner, 18), unitId: publicUnit },
+                randomUUID(),
+                3600,
+                clock,
+              ),
+              { code: "CONFLICT" },
+            );
+            await cancelReservation(
+              domain,
+              actor,
+              tenant,
+              extra.id,
+              "cancel-unlimited-consumption",
+              { expectedRevision: 1 },
+              randomUUID(),
+              3600,
+              clock,
+            );
+            await assert.rejects(
+              createReservation(
+                domain,
+                actor,
+                tenant,
+                "quota-still-full",
+                { ...input(winner, 18), unitId: publicUnit },
+                randomUUID(),
+                3600,
+                clock,
+              ),
+              { code: "CONFLICT" },
+            );
+            assert.equal(
+              (await activeConsumption()).length,
+              beforeDisable.length,
+            );
+
+            await createAgreementVersion(
+              domain,
+              admin,
+              tenant,
+              successor,
+              "racing-version",
+              {
+                ...definition,
+                expectedVersion: 3,
+                weeklyLimit: 2,
+                participants: [
+                  {
+                    tenantId: tenant,
+                    accreditationIssuer: false,
+                    unitIds: [publicUnit],
+                  },
+                ],
+              },
+              randomUUID(),
+              3600,
+            );
+            await approveAgreement(
+              domain,
+              admin,
+              tenant,
+              successor,
+              "racing-approval",
+              { version: 4, unitIds: [publicUnit] },
+              randomUUID(),
+              3600,
+            );
+            const beforeRace = await activeConsumption();
+            const race = await Promise.all([
+              activateAgreement(
+                domain,
+                admin,
+                tenant,
+                successor,
+                "racing-activation",
+                { ...evidence, version: 4 },
+                randomUUID(),
+                3600,
+              ),
+              suspendAgreement(
+                domain,
+                admin,
+                tenant,
+                successor,
+                "racing-suspension",
+                { version: 3, reason: "Concurrent lifecycle review" },
+                randomUUID(),
+                3600,
+              ),
+            ]);
+            assert.equal(race[0].result.status, "ACTIVADO");
+            assert.equal(race[1].result.status, "SUSPENDIDO");
+            const state = (
+              await migration.query(
+                "SELECT v.status,a.effective_period @> clock_timestamp() AS effective FROM domain.agreement_version v JOIN domain.agreement_activation a USING(agreement_id,version) WHERE v.agreement_id=$1 AND v.version=4",
+                [successor],
+              )
+            ).rows[0];
+            assert.ok(["ACTIVADO", "SUSPENDIDO"].includes(state.status));
+            assert.equal(state.effective, state.status === "ACTIVADO");
+            assert.equal(
+              (
+                await migration.query(
+                  "SELECT count(*)::int AS n FROM domain.agreement_activation WHERE agreement_id=$1 AND effective_period @> clock_timestamp()",
+                  [successor],
+                )
+              ).rows[0].n,
+              state.effective ? 1 : 0,
+            );
+            assert.equal(
+              (
+                await migration.query(
+                  "SELECT count(*)::int AS n FROM domain.agreement_lifecycle_event WHERE agreement_id=$1 AND version=3 AND action='SUSPENDED'",
+                  [successor],
+                )
+              ).rows[0].n,
+              1,
+            );
+            assert.equal(
+              (
+                await migration.query(
+                  "SELECT count(*)::int AS n FROM domain.agreement_lifecycle_event WHERE agreement_id=$1 AND version=4 AND action='ACTIVATED'",
+                  [successor],
+                )
+              ).rows[0].n,
+              1,
+            );
+            assert.deepEqual(await activeConsumption(), beforeRace);
+            assert.equal(
+              (
+                await migration.query(
+                  "SELECT version FROM domain.unit_agreement_gate WHERE tenant_id=$1 AND unit_id=$2",
+                  [tenant, publicUnit],
+                )
+              ).rows[0].version,
+              4,
             );
           },
         );
