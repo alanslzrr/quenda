@@ -30,17 +30,19 @@ export async function inspectCatalogResource(
               id: string;
               name: string;
               withdrawn_at: Date | null;
+              published_at: Date | null;
             }>(
-              "SELECT id,name,withdrawn_at FROM domain.facility WHERE tenant_id=$1 AND id=$2",
+              "SELECT id,name,published_at,withdrawn_at FROM domain.facility WHERE tenant_id=$1 AND id=$2",
               [tenantId, id],
             )
           : await client.query<{
               id: string;
               name: string;
               withdrawn_at: Date | null;
+              published_at: Date | null;
               facility_id: string;
             }>(
-              "SELECT id,name,withdrawn_at,facility_id FROM domain.reservable_unit WHERE tenant_id=$1 AND id=$2",
+              "SELECT id,name,published_at,withdrawn_at,facility_id FROM domain.reservable_unit WHERE tenant_id=$1 AND id=$2",
               [tenantId, id],
             );
       const row = result.rows[0];
@@ -50,6 +52,7 @@ export async function inspectCatalogResource(
         id: row.id,
         name: row.name,
         withdrawnAt: row.withdrawn_at?.toISOString() ?? null,
+        publishedAt: row.published_at?.toISOString() ?? null,
       };
     },
   );

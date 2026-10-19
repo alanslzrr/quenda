@@ -11,6 +11,7 @@ import {
   createReservableUnit,
   inspectCatalogResource,
   listCatalogResources,
+  publishCatalogResource,
   readUnitCalendar,
   renameCatalogResource,
   saveUnitCalendar,
@@ -2452,6 +2453,270 @@ test("municipal creation and first administrator acceptance are atomic and isola
             )
           ).rows[0].n,
           3,
+        );
+      },
+    );
+
+    await t.test(
+      "publication requires parent, validated calendar and explicit physical independence",
+      async () => {
+        const tenant = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          tenant.invitationId,
+        );
+        const f = await createFacility(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          { name: "Publicación" },
+        );
+        const u = await createReservableUnit(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          f.facilityId,
+          { name: "Unidad" },
+        );
+        const declaration = {
+          reason: "Apertura",
+          calendarVersion: 1,
+          independenceConfirmed: true,
+        };
+        await assert.rejects(
+          publishCatalogResource(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            "unit",
+            u.unitId,
+            declaration,
+          ),
+          { code: "CONFLICT" },
+        );
+        await publishCatalogResource(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "facility",
+          f.facilityId,
+          { reason: "Apertura" },
+        );
+        await assert.rejects(
+          publishCatalogResource(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            "unit",
+            u.unitId,
+            declaration,
+          ),
+          { code: "CONFLICT" },
+        );
+        await saveUnitCalendar(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          u.unitId,
+          {
+            expectedVersion: 0,
+            reason: "Horario",
+            calendar: {
+              minimumMinutes: 30,
+              maximumMinutes: 60,
+              stepMinutes: 30,
+              advanceDays: 30,
+              weekly: [{ day: 1, startMinute: 480, endMinute: 720 }],
+              exceptions: [],
+            },
+          },
+        );
+        await assert.rejects(
+          publishCatalogResource(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            "unit",
+            u.unitId,
+            { ...declaration, independenceConfirmed: false },
+          ),
+          { code: "INVALID_INPUT" },
+        );
+        await assert.rejects(
+          publishCatalogResource(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            "unit",
+            u.unitId,
+            { ...declaration, calendarVersion: 2 },
+          ),
+          { code: "CONFLICT" },
+        );
+        await assert.rejects(
+          publishCatalogResource(
+            domain,
+            account("admin-b"),
+            tenant.tenantId,
+            "unit",
+            u.unitId,
+            declaration,
+          ),
+          { code: "FORBIDDEN" },
+        );
+        const manager = await inviteManager(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          {
+            accountId: "manager",
+            expiresAt: new Date(Date.now() + 3600000).toISOString(),
+            permissions: [{ operation: "CATALOG_MANAGE", unitId: u.unitId }],
+          },
+        );
+        await acceptManager(
+          domain,
+          account("manager"),
+          tenant.tenantId,
+          manager.invitationId,
+        );
+        const published = await publishCatalogResource(
+          domain,
+          account("manager"),
+          tenant.tenantId,
+          "unit",
+          u.unitId,
+          declaration,
+        );
+        assert.deepEqual(
+          await publishCatalogResource(
+            domain,
+            account("manager"),
+            tenant.tenantId,
+            "unit",
+            u.unitId,
+            declaration,
+          ),
+          published,
+        );
+        assert.equal(
+          (
+            await inspectCatalogResource(
+              domain,
+              account("manager"),
+              tenant.tenantId,
+              "unit",
+              u.unitId,
+            )
+          ).publishedAt,
+          published.publishedAt,
+        );
+        await withdrawCatalogResource(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "facility",
+          f.facilityId,
+          "Retirada",
+        );
+        await assert.rejects(
+          publishCatalogResource(
+            domain,
+            account("manager"),
+            tenant.tenantId,
+            "unit",
+            u.unitId,
+            declaration,
+          ),
+          { code: "CONFLICT" },
+        );
+        await publishCatalogResource(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "facility",
+          f.facilityId,
+          { reason: "Reapertura" },
+        );
+        await withdrawCatalogResource(
+          domain,
+          account("manager"),
+          tenant.tenantId,
+          "unit",
+          u.unitId,
+          "Retirada",
+        );
+        await migration.query(
+          "REVOKE INSERT ON domain.catalog_event FROM quenda_domain",
+        );
+        try {
+          await assert.rejects(
+            publishCatalogResource(
+              domain,
+              account("manager"),
+              tenant.tenantId,
+              "unit",
+              u.unitId,
+              declaration,
+            ),
+            { code: "42501" },
+          );
+        } finally {
+          await migration.query(
+            "GRANT INSERT ON domain.catalog_event TO quenda_domain",
+          );
+        }
+        assert.ok(
+          (
+            await inspectCatalogResource(
+              domain,
+              account("manager"),
+              tenant.tenantId,
+              "unit",
+              u.unitId,
+            )
+          ).withdrawnAt,
+        );
+        await publishCatalogResource(
+          domain,
+          account("manager"),
+          tenant.tenantId,
+          "unit",
+          u.unitId,
+          declaration,
+        );
+        assert.equal(
+          (
+            await inspectCatalogResource(
+              domain,
+              account("manager"),
+              tenant.tenantId,
+              "unit",
+              u.unitId,
+            )
+          ).withdrawnAt,
+          null,
+        );
+        const evidence = (
+          await migration.query(
+            "SELECT calendar_version,independence_confirmed,actor_id FROM domain.catalog_event WHERE tenant_id=$1 AND operation='PUBLISH_UNIT'",
+            [tenant.tenantId],
+          )
+        ).rows;
+        assert.equal(evidence.length, 2);
+        assert.ok(
+          evidence.every(
+            (row) =>
+              row.calendar_version === 1 &&
+              row.independence_confirmed === true &&
+              row.actor_id === "manager",
+          ),
         );
       },
     );

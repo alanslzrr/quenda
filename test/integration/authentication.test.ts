@@ -740,6 +740,30 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
               .statusCode,
             400,
           );
+          assert.equal(
+            (
+              await client.request(
+                `/api/municipalities/${tenantId}/facilities/${facility.json().facilityId}/publish`,
+                { reason: "Apertura HTTP" },
+              )
+            ).statusCode,
+            200,
+          );
+          const publishedUnit = await client.request(
+            `/api/municipalities/${tenantId}/units/${unit.json().unitId}/publish`,
+            {
+              reason: "Apertura HTTP",
+              calendarVersion: 1,
+              independenceConfirmed: true,
+            },
+          );
+          assert.equal(publishedUnit.statusCode, 200, publishedUnit.body);
+          assert.equal(
+            (
+              await client.request(`/api/municipalities/${tenantId}/units`)
+            ).json().items[0].publishedAt,
+            publishedUnit.json().publishedAt,
+          );
           const withdrawal = await client.request(
             `/api/municipalities/${tenantId}/units/${unit.json().unitId}/withdraw`,
             { reason: "Retirada HTTP" },

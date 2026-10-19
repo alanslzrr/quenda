@@ -11,6 +11,7 @@ import {
   inspectCatalogResource,
   renameCatalogResource,
 } from "./maintenance.ts";
+import { publishCatalogResource } from "./publication.ts";
 import { listCatalogResources } from "./queries.ts";
 import { withdrawCatalogResource } from "./withdrawal.ts";
 
@@ -168,6 +169,11 @@ export async function registerCatalog(
                       id: uuid,
                       name: { type: "string" },
                       facilityId: uuid,
+                      publishedAt: {
+                        type: "string",
+                        format: "date-time",
+                        nullable: true,
+                      },
                       withdrawnAt: {
                         type: "string",
                         format: "date-time",
@@ -206,6 +212,7 @@ export async function registerCatalog(
           tenantId: uuid,
           id: uuid,
           name: { type: "string" },
+          publishedAt: { type: "string", format: "date-time", nullable: true },
           withdrawnAt: { type: "string", format: "date-time", nullable: true },
         },
       },
@@ -273,6 +280,68 @@ export async function registerCatalog(
           kind,
           request.params.id,
           request.body.reason,
+        ),
+    );
+
+    app.post<{
+      Params: { tenantId: string; id: string };
+      Body: {
+        reason: string;
+        calendarVersion?: number;
+        independenceConfirmed?: boolean;
+      };
+    }>(
+      `/api/municipalities/:tenantId/${resource}/:id/publish`,
+      {
+        schema: {
+          operationId: `publish_${kind}`,
+          tags: ["Catalog"],
+          security: [{ quendaSession: [] }],
+          params,
+          body: {
+            type: "object",
+            additionalProperties: false,
+            required:
+              kind === "unit"
+                ? ["reason", "calendarVersion", "independenceConfirmed"]
+                : ["reason"],
+            properties: {
+              reason: { type: "string", minLength: 1, maxLength: 500 },
+              ...(kind === "unit"
+                ? {
+                    calendarVersion: {
+                      type: "integer",
+                      minimum: 1,
+                      maximum: 2147483647,
+                    },
+                    independenceConfirmed: { type: "boolean", const: true },
+                  }
+                : {}),
+            },
+          },
+          response: {
+            ...errors,
+            200: {
+              type: "object",
+              additionalProperties: false,
+              required: ["tenantId", "id", "publishedAt"],
+              properties: {
+                tenantId: uuid,
+                id: uuid,
+                publishedAt: { type: "string", format: "date-time" },
+              },
+            },
+          },
+        },
+      },
+      async (request, reply) =>
+        publishCatalogResource(
+          pool,
+          await actor(request, reply),
+          request.params.tenantId,
+          kind,
+          request.params.id,
+          request.body,
         ),
     );
     app.patch<{

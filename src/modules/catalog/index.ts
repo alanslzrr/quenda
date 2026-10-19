@@ -9,6 +9,7 @@ export {
   inspectCatalogResource,
   renameCatalogResource,
 } from "./maintenance.ts";
+export { publishCatalogResource } from "./publication.ts";
 export { listCatalogResources } from "./queries.ts";
 export { registerCatalog } from "./routes.ts";
 export { withdrawCatalogResource } from "./withdrawal.ts";

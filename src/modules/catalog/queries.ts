@@ -24,10 +24,11 @@ export async function listCatalogResources(
         name: string;
         facility_id: string;
         withdrawn_at: Date | null;
+        published_at: Date | null;
       }>(
         kind === "facility"
-          ? "SELECT id,name,withdrawn_at,id AS facility_id FROM domain.facility WHERE tenant_id=$1 AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT 21"
-          : "SELECT id,name,withdrawn_at,facility_id FROM domain.reservable_unit WHERE tenant_id=$1 AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT 21",
+          ? "SELECT id,name,published_at,withdrawn_at,id AS facility_id FROM domain.facility WHERE tenant_id=$1 AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT 21"
+          : "SELECT id,name,published_at,withdrawn_at,facility_id FROM domain.reservable_unit WHERE tenant_id=$1 AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT 21",
         [tenantId, after],
       );
       const page = result.rows.slice(0, 20);
@@ -37,6 +38,7 @@ export async function listCatalogResources(
           name: row.name,
           facilityId: row.facility_id,
           withdrawnAt: row.withdrawn_at?.toISOString() ?? null,
+          publishedAt: row.published_at?.toISOString() ?? null,
         })),
         nextCursor: result.rows.length > 20 ? (page.at(-1)?.id ?? null) : null,
       };
