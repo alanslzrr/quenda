@@ -7,6 +7,7 @@ import {
   acceptAdministratorInvitation,
   createMunicipality,
   inviteAdministrator,
+  listOwnAdministratorInvitations,
   revokeAdministrator,
   revokeAdministratorInvitation,
 } from "../../src/modules/identity/index.ts";
@@ -440,6 +441,54 @@ test("municipal creation and first administrator acceptance are atomic and isola
           ).rowCount,
           2,
         );
+      },
+    );
+
+    await t.test(
+      "own invitation projection crosses tenants without exposing other recipients and paginates",
+      async () => {
+        const empty = await listOwnAdministratorInvitations(
+          domain,
+          account("operator"),
+        );
+        assert.deepEqual(empty, { items: [], nextCursor: null });
+        const rows = await listOwnAdministratorInvitations(
+          domain,
+          account("admin-a"),
+        );
+        assert.equal(rows.items.length, 1);
+        assert.equal(rows.items[0]?.tenantId, a.tenantId);
+        assert.equal(rows.items[0]?.status, "ACCEPTED");
+        assert.equal(
+          (
+            await domain.query(
+              "SELECT * FROM domain.own_administrator_invitations(NULL)",
+            )
+          ).rowCount,
+          0,
+        );
+        for (let i = 0; i < 22; i++)
+          await inviteAdministrator(domain, account("admin-a"), a.tenantId, {
+            accountId: "admin-b",
+            expiresAt: new Date(Date.now() + 3600000).toISOString(),
+          });
+        const first = await listOwnAdministratorInvitations(
+          domain,
+          account("admin-b"),
+        );
+        assert.equal(first.items.length, 20);
+        assert.ok(first.nextCursor);
+        const second = await listOwnAdministratorInvitations(
+          domain,
+          account("admin-b"),
+          first.nextCursor,
+        );
+        assert.equal(second.nextCursor, null);
+        const all = [...first.items, ...second.items];
+        assert.equal(all.length, 24);
+        assert.equal(new Set(all.map((i) => i.invitationId)).size, 24);
+        assert.ok(all.some((i) => i.tenantId === a.tenantId));
+        assert.ok(all.some((i) => i.tenantId === b.tenantId));
       },
     );
   });

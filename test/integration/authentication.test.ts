@@ -437,6 +437,25 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           const created = await client.request("/api/municipalities", input);
           assert.equal(created.statusCode, 201, created.body);
           const { tenantId, invitationId } = created.json();
+          const own = await app.inject({
+            url: "/api/me/administrator-invitations",
+            headers: { cookie: client.cookie() },
+          });
+          assert.equal(own.statusCode, 200, own.body);
+          assert.equal(own.json().items[0].invitationId, invitationId);
+          assert.equal(
+            (
+              await client.request(
+                "/api/me/administrator-invitations?accountId=another",
+              )
+            ).statusCode,
+            400,
+          );
+          assert.equal(
+            (await app.inject({ url: "/api/me/administrator-invitations" }))
+              .statusCode,
+            401,
+          );
           const accept = `/api/municipalities/${tenantId}/administrator-invitations/${invitationId}/accept`;
           assert.equal(
             (await client.request(accept, { accountId: "another" })).statusCode,

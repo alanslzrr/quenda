@@ -12,6 +12,7 @@ export type {
 export { authOptions, createAuthentication } from "./auth.ts";
 export {
   inviteAdministrator,
+  listOwnAdministratorInvitations,
   revokeAdministrator,
   revokeAdministratorInvitation,
 } from "./invitations.ts";

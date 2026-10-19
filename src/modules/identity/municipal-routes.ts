@@ -5,6 +5,7 @@ import { HttpError } from "../../http/errors.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
 import {
   inviteAdministrator,
+  listOwnAdministratorInvitations,
   revokeAdministrator,
   revokeAdministratorInvitation,
 } from "./invitations.ts";
@@ -33,8 +34,9 @@ export async function registerMunicipalIdentity(
     // Cookie-based mutation requires the configured Origin, not Host or proxy
     // headers. Missing Origin is rejected too, including requests from scripts.
     if (
-      request.headers.origin !== config.origin ||
-      request.headers["sec-fetch-site"] === "cross-site"
+      request.method !== "GET" &&
+      (request.headers.origin !== config.origin ||
+        request.headers["sec-fetch-site"] === "cross-site")
     )
       throw new HttpError("FORBIDDEN");
     const account = await auth.authenticate(fromNodeHeaders(request.headers));
@@ -262,6 +264,65 @@ export async function registerMunicipalIdentity(
         request.params.tenantId,
         request.params.accountId,
         request.body.reason,
+      ),
+  );
+  app.get<{ Querystring: { after?: string } }>(
+    "/api/me/administrator-invitations",
+    {
+      schema: {
+        operationId: "listOwnAdministratorInvitations",
+        tags: ["Identity"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Invitaciones de la cuenta autenticada en cualquier municipio de esta instancia. Páginas de hasta 20 elementos; no permite consultar otro titular.",
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          properties: { after: uuid },
+        },
+        response: {
+          ...errors,
+          200: {
+            type: "object",
+            additionalProperties: false,
+            required: ["items", "nextCursor"],
+            properties: {
+              nextCursor: { type: "string", format: "uuid", nullable: true },
+              items: {
+                type: "array",
+                maxItems: 20,
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: [
+                    "invitationId",
+                    "tenantId",
+                    "municipality",
+                    "expiresAt",
+                    "status",
+                  ],
+                  properties: {
+                    invitationId: uuid,
+                    tenantId: uuid,
+                    municipality: { type: "string" },
+                    expiresAt: { type: "string", format: "date-time" },
+                    status: {
+                      type: "string",
+                      enum: ["PENDING", "ACCEPTED", "REVOKED", "EXPIRED"],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) =>
+      listOwnAdministratorInvitations(
+        pool,
+        await actor(request, reply),
+        request.query.after ?? null,
       ),
   );
 }

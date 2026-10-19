@@ -105,3 +105,34 @@ export async function revokeAdministrator(
     },
   );
 }
+
+export async function listOwnAdministratorInvitations(
+  pool: Pool,
+  actor: AuthenticatedAccount,
+  after: string | null = null,
+) {
+  return command(
+    pool,
+    { accountId: actor.accountId, tenantId: null },
+    async (client) => {
+      const result = await client.query<{
+        id: string;
+        tenant_id: string;
+        municipality: string;
+        expires_at: Date;
+        status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
+      }>("SELECT * FROM domain.own_administrator_invitations($1)", [after]);
+      const page = result.rows.slice(0, 20);
+      return {
+        items: page.map((row) => ({
+          invitationId: row.id,
+          tenantId: row.tenant_id,
+          municipality: row.municipality,
+          expiresAt: row.expires_at.toISOString(),
+          status: row.status,
+        })),
+        nextCursor: result.rows.length > 20 ? (page.at(-1)?.id ?? null) : null,
+      };
+    },
+  );
+}
