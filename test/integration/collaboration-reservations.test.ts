@@ -428,7 +428,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
     );
     await t.test(
       "activation, version changes and cross-agreement moves preserve quotas and atomicity",
-      async () => {
+      async (scenario) => {
         const tenant = tenants[winner] as string;
         const publicUnit = (
           await migration.query(
@@ -1270,6 +1270,244 @@ test("real booking commands enforce shared eligibility and quota in one transact
             clock,
           ),
           { code: "CONFLICT" },
+        );
+
+        await scenario.test(
+          "scheduled replacement rolls back conflicts and preserves prior consumption",
+          async () => {
+            const future = {
+              ...definition,
+              startsAt: "2035-01-01T00:00:00Z",
+              weeklyLimit: 1,
+              participants: [
+                {
+                  tenantId: tenant,
+                  accreditationIssuer: false,
+                  unitIds: [destinationUnit, replacementUnit],
+                },
+              ],
+            };
+            await createAgreementVersion(
+              domain,
+              admin,
+              tenant,
+              destination,
+              "conflicting-future-version",
+              { ...future, expectedVersion: 1 },
+              randomUUID(),
+              3600,
+            );
+            await approveAgreement(
+              domain,
+              admin,
+              tenant,
+              destination,
+              "conflicting-future-approval",
+              { version: 2, unitIds: future.participants[0]!.unitIds },
+              randomUUID(),
+              3600,
+            );
+            const snapshot = async () => {
+              const data: Record<string, unknown> = {};
+              for (const table of [
+                "agreement_activation",
+                "agreement_assignment",
+                "unit_agreement_gate",
+                "agreement_consumption",
+                "agreement_consumption_event",
+                "agreement_lifecycle_event",
+                "agreement_version",
+              ]) {
+                data[table] = (
+                  await migration.query(
+                    `SELECT to_jsonb(r) AS row FROM domain.${table} r WHERE agreement_id=ANY($1::uuid[]) ORDER BY to_jsonb(r)::text`,
+                    [[id, destination]],
+                  )
+                ).rows;
+              }
+              return data;
+            };
+            const beforeConflict = await snapshot();
+            await assert.rejects(
+              activateAgreement(
+                domain,
+                admin,
+                tenant,
+                destination,
+                "conflicting-future-activation",
+                { ...evidence, version: 2 },
+                randomUUID(),
+                3600,
+              ),
+              { code: "CONFLICT" },
+            );
+            assert.deepEqual(await snapshot(), beforeConflict);
+            assert.equal(
+              (
+                await migration.query(
+                  "SELECT count(*)::int AS n FROM domain.idempotent_command WHERE tenant_id=$1 AND operation='agreement.activate' AND key='conflicting-future-activation'",
+                  [tenant],
+                )
+              ).rows[0].n,
+              0,
+            );
+            const reservationsBefore = (
+              await migration.query(
+                "SELECT to_jsonb(r) AS row FROM domain.reservation r WHERE tenant_id=$1 ORDER BY id",
+                [tenant],
+              )
+            ).rows;
+            const consumptionsBefore = await counts();
+            const valid = {
+              ...future,
+              participants: [
+                {
+                  tenantId: tenant,
+                  accreditationIssuer: false,
+                  unitIds: [destinationUnit],
+                },
+              ],
+            };
+            await createAgreementVersion(
+              domain,
+              admin,
+              tenant,
+              destination,
+              "valid-future-version",
+              { ...valid, expectedVersion: 2 },
+              randomUUID(),
+              3600,
+            );
+            await approveAgreement(
+              domain,
+              admin,
+              tenant,
+              destination,
+              "valid-future-approval",
+              { version: 3, unitIds: [destinationUnit] },
+              randomUUID(),
+              3600,
+            );
+            const activateFuture = () =>
+              activateAgreement(
+                domain,
+                admin,
+                tenant,
+                destination,
+                "valid-future-activation",
+                { ...evidence, version: 3 },
+                randomUUID(),
+                3600,
+              );
+            await activateFuture();
+            assert.equal((await activateFuture()).replayed, true);
+            const periods = (
+              await migration.query(
+                "SELECT version,lower(effective_period) AS start,upper(effective_period) AS end FROM domain.agreement_activation WHERE agreement_id=$1 ORDER BY version",
+                [destination],
+              )
+            ).rows;
+            assert.deepEqual(
+              periods.map((r) => r.version),
+              [1, 3],
+            );
+            assert.equal(
+              periods[0].end.toISOString(),
+              valid.startsAt.replace("Z", ".000Z"),
+            );
+            assert.equal(
+              periods[1].start.toISOString(),
+              periods[0].end.toISOString(),
+            );
+            assert.equal(
+              periods[1].end.toISOString(),
+              "2040-01-01T00:00:00.000Z",
+            );
+            assert.deepEqual(await counts(), consumptionsBefore);
+            assert.deepEqual(
+              (
+                await migration.query(
+                  "SELECT to_jsonb(r) AS row FROM domain.reservation r WHERE tenant_id=$1 ORDER BY id",
+                  [tenant],
+                )
+              ).rows,
+              reservationsBefore,
+            );
+            assert.equal(
+              (
+                await migration.query(
+                  "SELECT count(*)::int AS n FROM domain.agreement_consumption WHERE agreement_id=$1 AND attribution_version=1 AND NOT released",
+                  [destination],
+                )
+              ).rows[0].n,
+              1,
+            );
+            await createAgreementVersion(
+              domain,
+              admin,
+              tenant,
+              destination,
+              "earlier-future-version",
+              {
+                ...valid,
+                startsAt: "2034-01-01T00:00:00Z",
+                expectedVersion: 3,
+              },
+              randomUUID(),
+              3600,
+            );
+            await approveAgreement(
+              domain,
+              admin,
+              tenant,
+              destination,
+              "earlier-future-approval",
+              { version: 4, unitIds: [destinationUnit] },
+              randomUUID(),
+              3600,
+            );
+            await activateAgreement(
+              domain,
+              admin,
+              tenant,
+              destination,
+              "earlier-future-activation",
+              { ...evidence, version: 4 },
+              randomUUID(),
+              3600,
+            );
+            const replaced = (
+              await migration.query(
+                "SELECT version,isempty(effective_period) AS empty,upper(effective_period) AS end FROM domain.agreement_activation WHERE agreement_id=$1 ORDER BY version",
+                [destination],
+              )
+            ).rows;
+            assert.equal(
+              replaced[0].end.toISOString(),
+              "2034-01-01T00:00:00.000Z",
+            );
+            assert.equal(replaced[1].empty, true);
+            assert.equal(replaced[2].empty, false);
+            assert.equal(
+              (
+                await migration.query(
+                  "SELECT isempty(effective_period) AS empty FROM domain.agreement_assignment WHERE agreement_id=$1 AND version=3",
+                  [destination],
+                )
+              ).rows[0].empty,
+              true,
+            );
+            assert.equal(
+              (
+                await migration.query(
+                  "SELECT version FROM domain.unit_agreement_gate WHERE tenant_id=$1 AND unit_id=$2",
+                  [tenant, destinationUnit],
+                )
+              ).rows[0].version,
+              4,
+            );
+            assert.deepEqual(await counts(), consumptionsBefore);
+          },
         );
       },
     );
