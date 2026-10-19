@@ -4,6 +4,11 @@ export const moduleDefinition = {
 } as const;
 export type { AgreementApprovalInput } from "./approvals.ts";
 export { approveAgreement } from "./approvals.ts";
+export type { IssueCredentialInput } from "./credentials.ts";
+export {
+  issueAgreementCredential,
+  revokeAgreementCredential,
+} from "./credentials.ts";
 export type { AgreementDraftInput, AgreementVersionInput } from "./drafts.ts";
 export { createAgreementDraft, normalizeAgreementDraft } from "./drafts.ts";
 export { listAgreementVersions, readAgreementVersion } from "./queries.ts";

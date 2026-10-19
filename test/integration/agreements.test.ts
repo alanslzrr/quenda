@@ -7,8 +7,10 @@ import {
   approveAgreement,
   createAgreementDraft,
   createAgreementVersion,
+  issueAgreementCredential,
   listAgreementVersions,
   readAgreementVersion,
+  revokeAgreementCredential,
 } from "../../src/modules/collaboration/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
@@ -774,6 +776,198 @@ test("agreement drafts preserve participant ownership and do not activate capabi
         assert.deepEqual(
           outsider.items.map((r) => [r.agreementId, r.version]),
           [[agreement, 2]],
+        );
+      },
+    );
+    await t.test(
+      "credentials require an active issuer and local account; revocation preserves evidence",
+      async () => {
+        const id = (
+          await create("credential-draft", {
+            ...input,
+            startsAt: "2020-01-01T00:00:00Z",
+            endsAt: "2040-01-01T00:00:00Z",
+          })
+        ).result.agreementId;
+        const credentialInput = {
+          agreementId: id,
+          version: 1,
+          accountId: actor(0).accountId,
+          startsAt: "2026-01-01T00:00:00Z",
+          endsAt: "2035-01-01T00:00:00Z",
+          verificationReference: "Synthetic verified evidence",
+        };
+        const issue = (i: number, key: string) =>
+          issueAgreementCredential(
+            domain,
+            actor(i),
+            tenants[i] as string,
+            key,
+            credentialInput,
+            randomUUID(),
+            3600,
+          );
+        await assert.rejects(issue(0, "inactive"), { code: "CONFLICT" });
+        await assert.rejects(
+          issueAgreementCredential(
+            domain,
+            actor(0),
+            tenant,
+            "invalid-credential",
+            { ...credentialInput, endsAt: credentialInput.startsAt },
+            randomUUID(),
+            3600,
+          ),
+          { code: "INVALID_INPUT" },
+        );
+        await assert.rejects(
+          issueAgreementCredential(
+            domain,
+            actor(0),
+            tenant,
+            "no-verification",
+            { ...credentialInput, verificationReference: " " },
+            randomUUID(),
+            3600,
+          ),
+          { code: "INVALID_INPUT" },
+        );
+        await assert.rejects(
+          issueAgreementCredential(
+            domain,
+            { ...actor(0), mfaVerifiedAt: null },
+            tenant,
+            "credential-no-mfa",
+            credentialInput,
+            randomUUID(),
+            3600,
+          ),
+          { code: "FORBIDDEN" },
+        );
+        await approve(0, "credential-approve-a", id);
+        await approve(1, "credential-approve-b", id);
+        // Lifecycle fixture only: the activation command and reconciliation are not implemented yet.
+        await migration.query(
+          "UPDATE domain.agreement_version SET status='ACTIVADO' WHERE agreement_id=$1",
+          [id],
+        );
+        await assert.rejects(issue(1, "foreign-account"), {
+          code: "NOT_FOUND",
+        });
+        await assert.rejects(issue(2, "non-participant"), {
+          code: "NOT_FOUND",
+        });
+        await migration.query(
+          "UPDATE domain.agreement_version SET eligibility='acceso_abierto' WHERE agreement_id=$1",
+          [id],
+        );
+        await assert.rejects(issue(0, "open-access-mode"), {
+          code: "CONFLICT",
+        });
+        await migration.query(
+          "UPDATE domain.agreement_version SET eligibility='acreditacion_vigente' WHERE agreement_id=$1",
+          [id],
+        );
+        await migration.query(
+          "UPDATE domain.agreement_participant SET accreditation_issuer=false WHERE agreement_id=$1 AND tenant_id=$2",
+          [id, tenant],
+        );
+        await assert.rejects(issue(0, "not-an-issuer"), { code: "NOT_FOUND" });
+        await migration.query(
+          "UPDATE domain.agreement_participant SET accreditation_issuer=true WHERE agreement_id=$1 AND tenant_id=$2",
+          [id, tenant],
+        );
+        const saved = await issue(0, "credential-one");
+        assert.equal(saved.result.revoked, false);
+        const replay = await issue(0, "credential-one");
+        assert.equal(replay.replayed, true);
+        assert.deepEqual(replay.result, saved.result);
+        await issue(0, "credential-two");
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_subject WHERE agreement_id=$1",
+              [id],
+            )
+          ).rows[0].n,
+          1,
+        );
+        const credential = saved.result.id;
+        const evidence = (
+          await migration.query(
+            "SELECT * FROM domain.agreement_credential WHERE id=$1",
+            [credential],
+          )
+        ).rows[0];
+        assert.equal(evidence.issued_by, actor(0).accountId);
+        assert.equal(
+          evidence.verification_reference,
+          credentialInput.verificationReference,
+        );
+        await assert.rejects(
+          domain.query("SELECT * FROM domain.agreement_credential"),
+          { code: "42501" },
+        );
+        await assert.rejects(
+          revokeAgreementCredential(
+            domain,
+            actor(1),
+            tenants[1] as string,
+            credential,
+            "foreign-revoke",
+            "Reason",
+            randomUUID(),
+            3600,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await migration.query(
+          "UPDATE domain.agreement_version SET status='SUSPENDIDO' WHERE agreement_id=$1",
+          [id],
+        );
+        await assert.rejects(issue(0, "suspended-issue"), { code: "CONFLICT" });
+        const revoked = await revokeAgreementCredential(
+          domain,
+          actor(0),
+          tenant,
+          credential,
+          "revoke",
+          "Verification withdrawn",
+          randomUUID(),
+          3600,
+        );
+        assert.equal(revoked.result.revoked, true);
+        const after = (
+          await migration.query(
+            "SELECT * FROM domain.agreement_credential WHERE id=$1",
+            [credential],
+          )
+        ).rows[0];
+        assert.ok(after.revoked_at);
+        assert.equal(after.revoked_by, actor(0).accountId);
+        assert.equal(
+          after.verification_reference,
+          evidence.verification_reference,
+        );
+        assert.equal(after.correlation_id, evidence.correlation_id);
+        await revokeAgreementCredential(
+          domain,
+          actor(0),
+          tenant,
+          credential,
+          "revoke-again",
+          "Another reason",
+          randomUUID(),
+          3600,
+        );
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT * FROM domain.agreement_credential WHERE id=$1",
+              [credential],
+            )
+          ).rows[0],
+          after,
         );
       },
     );
