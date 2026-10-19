@@ -436,7 +436,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             [tenant],
           )
         ).rows[0].id;
-        const prior = [];
+        const prior: { id: string }[] = [];
         for (const day of [18, 19])
           prior.push(
             (
@@ -1507,6 +1507,126 @@ test("real booking commands enforce shared eligibility and quota in one transact
               4,
             );
             assert.deepEqual(await counts(), consumptionsBefore);
+          },
+        );
+
+        await scenario.test(
+          "reassignment reconciles a reservation without erasing its former agreement consumption",
+          async () => {
+            const successor = (
+              await createAgreementDraft(
+                domain,
+                admin,
+                tenant,
+                "successor-agreement",
+                {
+                  ...definition,
+                  name: "Successor",
+                  timeZone: "Europe/Madrid",
+                  weeklyLimit: 1,
+                  participants: [
+                    {
+                      tenantId: tenant,
+                      accreditationIssuer: false,
+                      unitIds: [publicUnit],
+                    },
+                  ],
+                },
+                randomUUID(),
+                3600,
+              )
+            ).result.agreementId;
+            await approveAgreement(
+              domain,
+              admin,
+              tenant,
+              successor,
+              "successor-approval",
+              { version: 1, unitIds: [publicUnit] },
+              randomUUID(),
+              3600,
+            );
+            const formerCounts = await counts();
+            await activateAgreement(
+              domain,
+              admin,
+              tenant,
+              successor,
+              "successor-activation",
+              evidence,
+              randomUUID(),
+              3600,
+            );
+            assert.deepEqual(await counts(), formerCounts);
+            const retained = prior[1];
+            assert.ok(retained);
+            const attributions = async () =>
+              (
+                await migration.query(
+                  "SELECT agreement_id,released FROM domain.agreement_consumption WHERE tenant_id=$1 AND reservation_id=$2 ORDER BY agreement_id",
+                  [tenant, retained.id],
+                )
+              ).rows;
+            const expected = [id, successor]
+              .sort()
+              .map((agreement_id) => ({ agreement_id, released: false }));
+            assert.deepEqual(await attributions(), expected);
+            await modifyReservation(
+              domain,
+              actor,
+              tenant,
+              retained.id,
+              "retained-noop",
+              { ...input(winner, 19), unitId: publicUnit, expectedRevision: 1 },
+              randomUUID(),
+              3600,
+              clock,
+            );
+            assert.deepEqual(await attributions(), expected);
+            await assert.rejects(
+              createReservation(
+                domain,
+                actor,
+                tenant,
+                "successor-excess-quota",
+                { ...input(winner, 21), unitId: publicUnit },
+                randomUUID(),
+                3600,
+                clock,
+              ),
+              { code: "CONFLICT" },
+            );
+            const correlation = randomUUID();
+            await cancelReservation(
+              domain,
+              actor,
+              tenant,
+              retained.id,
+              "cancel-retained-consumptions",
+              { expectedRevision: 1 },
+              correlation,
+              3600,
+              clock,
+            );
+            assert.deepEqual(
+              await attributions(),
+              expected.map((row) => ({ ...row, released: true })),
+            );
+            assert.deepEqual(
+              (
+                await migration.query(
+                  "SELECT agreement_id,action FROM domain.agreement_consumption_event WHERE correlation_id=$1 ORDER BY agreement_id",
+                  [correlation],
+                )
+              ).rows,
+              [id, successor]
+                .sort()
+                .map((agreement_id) => ({ agreement_id, action: "RELEASED" })),
+            );
+            await assert.rejects(
+              domain.query("SELECT * FROM domain.agreement_consumption"),
+              { code: "42501" },
+            );
           },
         );
       },
