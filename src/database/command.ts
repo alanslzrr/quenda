@@ -8,7 +8,7 @@ import { transaction } from "./transaction.ts";
 // effects belong in the transactional outbox, not in this retried callback.
 export async function command<T>(
   pool: Pool,
-  context: TransactionContext,
+  context: TransactionContext | undefined,
   operation: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
   for (let attempt = 0; ; attempt++) {
