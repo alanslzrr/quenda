@@ -43,7 +43,7 @@ export async function registerMunicipalIdentity(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Operador con MFA: crea el municipio e invita a una cuenta existente como primer administrador. Origin debe coincidir con AUTH_ORIGIN.",
+          "Operador con MFA verificado en los últimos cinco minutos: crea el municipio e invita a una cuenta existente como primer administrador. Origin debe coincidir con AUTH_ORIGIN.",
         body: {
           type: "object",
           additionalProperties: false,
@@ -89,7 +89,7 @@ export async function registerMunicipalIdentity(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Acepta una invitación vigente de la cuenta autenticada con MFA. No admite una cuenta ni un rol alternativo en el cuerpo. Origin debe coincidir con AUTH_ORIGIN.",
+          "Acepta una invitación vigente de la cuenta autenticada con MFA verificado en los últimos cinco minutos. No admite una cuenta ni un rol alternativo en el cuerpo. Origin debe coincidir con AUTH_ORIGIN.",
         params: {
           type: "object",
           additionalProperties: false,

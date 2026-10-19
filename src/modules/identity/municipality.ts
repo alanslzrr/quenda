@@ -4,6 +4,7 @@ import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
 import { requireOperator } from "./operator.ts";
+import { requireRecentMfa } from "./reauthentication.ts";
 
 export interface MunicipalityInput {
   name: string;
@@ -90,11 +91,11 @@ export async function acceptAdministratorInvitation(
   tenantId: string,
   invitationId: string,
 ) {
-  if (!actor.mfaVerifiedAt) throw new HttpError("FORBIDDEN");
   return command(
     pool,
     { accountId: actor.accountId, tenantId },
     async (client) => {
+      requireRecentMfa(actor);
       const invitation = await client.query<{ valid: boolean }>(
         "SELECT expires_at > now() AND accepted_at IS NULL AND revoked_at IS NULL AS valid FROM domain.administrator_invitation WHERE tenant_id = $1 AND id = $2 AND account_id = $3 FOR UPDATE",
         [tenantId, invitationId, actor.accountId],

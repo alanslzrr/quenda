@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
+import { setTimeout } from "node:timers/promises";
 import { getMigrations } from "better-auth/db/migration";
 import { initializeOperator } from "../../scripts/lib/initialize-operator.ts";
 import { buildApp } from "../../src/app.ts";
@@ -406,6 +407,32 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             ).statusCode,
             400,
           );
+          await auth.query(
+            `UPDATE auth.session SET "mfaVerifiedAt" = now() - interval '6 minutes' WHERE "userId" = $1 AND "mfaVerifiedAt" IS NOT NULL`,
+            [accountId],
+          );
+          const stale = await client.request("/api/municipalities", input);
+          assert.equal(stale.statusCode, 403, stale.body);
+          assert.equal(stale.json().error.code, "REAUTHENTICATION_REQUIRED");
+          assert.equal((await client.request("/api/me")).statusCode, 200);
+          // Prior enrollment and login deliberately used this endpoint's real
+          // three-attempt window. Let it expire; never disable the limiter.
+          await setTimeout(11000);
+          const failedStepUp = await client.request(
+            "/api/auth/two-factor/verify-totp",
+            { code: wrong },
+          );
+          assert.equal(failedStepUp.statusCode, 401);
+          assert.equal(
+            (await client.request("/api/municipalities", input)).json().error
+              .code,
+            "REAUTHENTICATION_REQUIRED",
+          );
+          const renewed = await client.request(
+            "/api/auth/two-factor/verify-totp",
+            { code: totp(secret) },
+          );
+          assert.equal(renewed.statusCode, 200, renewed.body);
           const created = await client.request("/api/municipalities", input);
           assert.equal(created.statusCode, 201, created.body);
           const { tenantId, invitationId } = created.json();

@@ -39,7 +39,7 @@ Las credenciales de autenticación, dominio y migraciones tienen permisos separa
 - Las cookies de sesión utilizan `HttpOnly`, `Secure` y una política `SameSite` compatible con los flujos permitidos.
 - Los orígenes confiables y redirecciones están restringidos; las rutas propias aplican protección CSRF.
 - `cookieCache` permanece desactivado para comprobar la revocación en la siguiente petición. Las operaciones en curso respetan su orden transaccional.
-- El acceso administrativo exige MFA. La recuperación de acceso y las acciones sensibles requieren controles de reautenticación.
+- El acceso administrativo exige MFA. El alta de municipios y la aceptación de permisos administrativos exigen una verificación del segundo factor realizada hace menos de cinco minutos. Al caducar esta comprobación, la sesión continúa activa, pero la operación requiere verificar de nuevo el segundo factor. La recuperación de acceso no concede permisos adicionales.
 - Los permisos se consultan en cada operación. El limitador de peticiones comparte estado entre réplicas y solo confía en los proxies configurados.
 
 **Justificación:** evita prolongar sesiones o permisos revocados y mantiene los límites de acceso al distribuir peticiones entre réplicas. [Sesiones](https://better-auth.com/docs/concepts/session-management), [seguridad](https://better-auth.com/docs/reference/security), [límites](https://better-auth.com/docs/concepts/rate-limit).
