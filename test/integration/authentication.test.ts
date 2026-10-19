@@ -567,9 +567,48 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             (await client.request(`${managerPath}/accept`, {})).statusCode,
             200,
           );
+          const ownManager = await client.request(
+            "/api/me/manager-invitations",
+          );
+          assert.equal(ownManager.statusCode, 200, ownManager.body);
+          assert.equal(ownManager.json().items[0].status, "ACTIVE");
+          assert.equal(
+            (
+              await client.request(
+                "/api/me/manager-invitations?accountId=other",
+              )
+            ).statusCode,
+            400,
+          );
+
+          const updatedManager = await client.request(
+            `/api/municipalities/${tenantId}/manager-invitations`,
+            {
+              accountId,
+              expiresAt: input.invitationExpiresAt,
+              replacesInvitationId: managerInvitation.json().invitationId,
+              reason: "Nuevo ámbito",
+              permissions: [{ operation: "CATALOG_CREATE", unitId: null }],
+            },
+          );
+          assert.equal(updatedManager.statusCode, 201, updatedManager.body);
+          const updatedManagerPath = `/api/municipalities/${tenantId}/manager-invitations/${updatedManager.json().invitationId}`;
+          assert.equal(
+            (await client.request(`${updatedManagerPath}/accept`, {}))
+              .statusCode,
+            200,
+          );
           assert.equal(
             (
               await client.request(`${managerPath}/revoke`, {
+                reason: "Ya sustituida",
+              })
+            ).statusCode,
+            404,
+          );
+          assert.equal(
+            (
+              await client.request(`${updatedManagerPath}/revoke`, {
                 reason: "Fin de tarea",
               })
             ).statusCode,

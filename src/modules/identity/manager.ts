@@ -18,6 +18,8 @@ export const operations = [
 export type Operation = (typeof operations)[number];
 export interface ManagerInvitationInput {
   accountId: string;
+  replacesInvitationId?: string;
+  reason?: string;
   expiresAt: string;
   roleExpiresAt?: string | null;
   permissions: Array<{ operation: Operation; unitId: string | null }>;
@@ -52,6 +54,11 @@ export async function inviteManager(
       !Number.isFinite(Date.parse(input.roleExpiresAt)))
   )
     throw new HttpError("INVALID_INPUT");
+  if (
+    input.replacesInvitationId &&
+    (!input.reason?.trim() || input.reason.trim().length > 500)
+  )
+    throw new HttpError("INVALID_INPUT");
   const keys = new Set<string>();
   for (const permission of input.permissions) {
     if (
@@ -71,13 +78,15 @@ export async function inviteManager(
       async (client) => {
         await requireAdministrator(client, actor);
         const result = await client.query<{ allowed: boolean }>(
-          "SELECT domain.invite_manager($1,$2,$3,$4,$5) AS allowed",
+          "SELECT domain.invite_manager($1,$2,$3,$4,$5,$6,$7) AS allowed",
           [
             invitationId,
             input.accountId,
             input.expiresAt,
             input.roleExpiresAt ?? null,
             JSON.stringify(input.permissions),
+            input.replacesInvitationId ?? null,
+            input.reason?.trim() ?? null,
           ],
         );
         if (!result.rows[0]?.allowed) throw new HttpError("FORBIDDEN");
@@ -134,6 +143,43 @@ export async function revokeManager(
       );
       if (!result.rows[0]?.allowed) throw new HttpError("NOT_FOUND");
       return { tenantId, invitationId };
+    },
+  );
+}
+
+export async function listOwnManagerInvitations(
+  pool: Pool,
+  actor: AuthenticatedAccount,
+  after: string | null = null,
+) {
+  return command(
+    pool,
+    { accountId: actor.accountId, tenantId: null },
+    async (client) => {
+      const result = await client.query<{
+        id: string;
+        tenant_id: string;
+        municipality: string;
+        expires_at: Date;
+        role_expires_at: Date | null;
+        status: string;
+        permissions: ManagerInvitationInput["permissions"];
+        replaces_invitation_id: string | null;
+      }>("SELECT * FROM domain.own_manager_invitations($1)", [after]);
+      const page = result.rows.slice(0, 20);
+      return {
+        items: page.map((row) => ({
+          invitationId: row.id,
+          tenantId: row.tenant_id,
+          municipality: row.municipality,
+          expiresAt: row.expires_at.toISOString(),
+          roleExpiresAt: row.role_expires_at?.toISOString() ?? null,
+          status: row.status,
+          permissions: row.permissions,
+          replacesInvitationId: row.replaces_invitation_id,
+        })),
+        nextCursor: result.rows.length > 20 ? (page.at(-1)?.id ?? null) : null,
+      };
     },
   );
 }

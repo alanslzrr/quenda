@@ -4,6 +4,7 @@ import type { AuthConfiguration, Authentication } from "./auth.ts";
 import {
   acceptManager,
   inviteManager,
+  listOwnManagerInvitations,
   type ManagerInvitationInput,
   operations,
   revokeManager,
@@ -51,6 +52,8 @@ export async function registerManagerRoutes(
           required: ["accountId", "expiresAt", "permissions"],
           properties: {
             accountId: { type: "string", minLength: 1, maxLength: 128 },
+            replacesInvitationId: uuid,
+            reason: { type: "string", minLength: 1, maxLength: 500 },
             expiresAt: { type: "string", format: "date-time" },
             roleExpiresAt: {
               type: "string",
@@ -154,6 +157,94 @@ export async function registerManagerRoutes(
         request.params.tenantId,
         request.params.invitationId,
         request.body.reason,
+      ),
+  );
+  app.get<{ Querystring: { after?: string } }>(
+    "/api/me/manager-invitations",
+    {
+      schema: {
+        operationId: "listOwnManagerInvitations",
+        tags: ["Identity"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Invitaciones y concesiones del titular autenticado, con ámbitos y estado actual. Hasta veinte por página; no acepta otra cuenta como filtro.",
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          properties: { after: uuid },
+        },
+        response: {
+          ...errors,
+          200: {
+            type: "object",
+            additionalProperties: false,
+            required: ["items", "nextCursor"],
+            properties: {
+              nextCursor: { ...uuid, nullable: true },
+              items: {
+                type: "array",
+                maxItems: 20,
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: [
+                    "invitationId",
+                    "tenantId",
+                    "municipality",
+                    "expiresAt",
+                    "roleExpiresAt",
+                    "status",
+                    "permissions",
+                    "replacesInvitationId",
+                  ],
+                  properties: {
+                    invitationId: uuid,
+                    tenantId: uuid,
+                    municipality: { type: "string" },
+                    expiresAt: { type: "string", format: "date-time" },
+                    roleExpiresAt: {
+                      type: "string",
+                      format: "date-time",
+                      nullable: true,
+                    },
+                    replacesInvitationId: { ...uuid, nullable: true },
+                    status: {
+                      type: "string",
+                      enum: [
+                        "PENDING",
+                        "ACTIVE",
+                        "REVOKED",
+                        "EXPIRED",
+                        "INVALIDATED",
+                      ],
+                    },
+                    permissions: {
+                      type: "array",
+                      minItems: 1,
+                      maxItems: 50,
+                      items: {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["operation", "unitId"],
+                        properties: {
+                          operation: { type: "string", enum: [...operations] },
+                          unitId: { ...uuid, nullable: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) =>
+      listOwnManagerInvitations(
+        pool,
+        await actor(request, reply),
+        request.query.after ?? null,
       ),
   );
 }

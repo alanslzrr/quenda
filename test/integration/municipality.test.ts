@@ -14,6 +14,7 @@ import {
   inviteAdministrator,
   inviteManager,
   listOwnAdministratorInvitations,
+  listOwnManagerInvitations,
   replaceInitialAdministratorInvitation,
   requirePermission,
   revokeAdministrator,
@@ -1053,6 +1054,171 @@ test("municipal creation and first administrator acceptance are atomic and isola
           (await domain.query("SELECT * FROM domain.manager_permission"))
             .rowCount,
           0,
+        );
+      },
+    );
+
+    await t.test(
+      "manager scope replacement preserves old authority until atomic acceptance and exposes only own grants",
+      async () => {
+        const tenant = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          tenant.invitationId,
+        );
+        const facility = await createFacility(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          { name: "Cambio" },
+        );
+        const unit = await createReservableUnit(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          facility.facilityId,
+          { name: "Unidad" },
+        );
+        const base = {
+          accountId: "manager-other",
+          expiresAt: new Date(Date.now() + 3600000).toISOString(),
+          permissions: [
+            { operation: "RESERVATION_READ" as const, unitId: unit.unitId },
+          ],
+        };
+        const original = await inviteManager(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          base,
+        );
+        await acceptManager(
+          domain,
+          account("manager-other"),
+          tenant.tenantId,
+          original.invitationId,
+        );
+        const replacement = {
+          ...base,
+          replacesInvitationId: original.invitationId,
+          reason: "Cambio de tareas",
+          permissions: [
+            { operation: "UNIT_BLOCK" as const, unitId: unit.unitId },
+          ],
+        };
+        const next = await inviteManager(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          replacement,
+        );
+        const check = (operation: Parameters<typeof requirePermission>[2]) =>
+          transaction(
+            domain,
+            (c) =>
+              requirePermission(
+                c,
+                account("manager-other"),
+                operation,
+                unit.unitId,
+              ),
+            { accountId: "manager-other", tenantId: tenant.tenantId },
+          );
+        await check("RESERVATION_READ");
+        await assert.rejects(check("UNIT_BLOCK"), { code: "FORBIDDEN" });
+        const competitor = await inviteManager(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          replacement,
+        );
+        const outcomes = await Promise.allSettled(
+          [next, competitor].map((inv) =>
+            acceptManager(
+              domain,
+              account("manager-other"),
+              tenant.tenantId,
+              inv.invitationId,
+            ),
+          ),
+        );
+        assert.equal(
+          outcomes.filter((o) => o.status === "fulfilled").length,
+          1,
+        );
+        await check("UNIT_BLOCK");
+        await assert.rejects(check("RESERVATION_READ"), { code: "FORBIDDEN" });
+        const own = await listOwnManagerInvitations(
+          domain,
+          account("manager-other"),
+        );
+        const rows = own.items.filter(
+          (item) => item.tenantId === tenant.tenantId,
+        );
+        assert.equal(rows.filter((item) => item.status === "ACTIVE").length, 1);
+        assert.equal(
+          rows.filter((item) => item.status === "INVALIDATED").length,
+          1,
+        );
+        assert.equal(
+          rows.find((item) => item.invitationId === original.invitationId)
+            ?.status,
+          "REVOKED",
+        );
+        for (let i = 0; i < 21; i++)
+          await inviteManager(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            base,
+          );
+        const pageOne = await listOwnManagerInvitations(
+          domain,
+          account("manager-other"),
+        );
+        assert.equal(pageOne.items.length, 20);
+        assert.ok(pageOne.nextCursor);
+        const pageTwo = await listOwnManagerInvitations(
+          domain,
+          account("manager-other"),
+          pageOne.nextCursor,
+        );
+        assert.equal(pageTwo.items.length, 4);
+        assert.equal(pageTwo.nextCursor, null);
+        assert.equal(
+          new Set(
+            [...pageOne.items, ...pageTwo.items].map(
+              (item) => item.invitationId,
+            ),
+          ).size,
+          24,
+        );
+        assert.deepEqual(
+          await listOwnManagerInvitations(domain, account("operator")),
+          { items: [], nextCursor: null },
+        );
+        assert.equal(
+          (
+            await domain.query(
+              "SELECT * FROM domain.own_manager_invitations(NULL)",
+            )
+          ).rowCount,
+          0,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT * FROM domain.manager_event WHERE tenant_id=$1 AND operation='REPLACE_MANAGER'",
+              [tenant.tenantId],
+            )
+          ).rowCount,
+          1,
         );
       },
     );

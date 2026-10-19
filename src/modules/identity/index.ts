@@ -20,6 +20,7 @@ export type { ManagerInvitationInput, Operation } from "./manager.ts";
 export {
   acceptManager,
   inviteManager,
+  listOwnManagerInvitations,
   operations,
   requirePermission,
   revokeManager,
