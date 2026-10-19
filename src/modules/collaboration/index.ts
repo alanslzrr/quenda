@@ -4,6 +4,7 @@ export const moduleDefinition = {
 } as const;
 export type { AgreementApprovalInput } from "./approvals.ts";
 export { approveAgreement } from "./approvals.ts";
-export type { AgreementDraftInput } from "./drafts.ts";
+export type { AgreementDraftInput, AgreementVersionInput } from "./drafts.ts";
 export { createAgreementDraft, normalizeAgreementDraft } from "./drafts.ts";
 export { weeklyQuotaPeriod } from "./quota-period.ts";
+export { createAgreementVersion } from "./versions.ts";

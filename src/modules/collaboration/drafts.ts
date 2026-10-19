@@ -44,10 +44,15 @@ function instant(value: string) {
     throw error;
   }
 }
-export function normalizeAgreementDraft(
-  input: AgreementDraftInput,
+export type AgreementVersionInput = Omit<
+  AgreementDraftInput,
+  "name" | "timeZone"
+>;
+
+export function normalizeAgreementVersion(
+  input: AgreementVersionInput,
   tenantId: string,
-): AgreementDraftInput {
+): AgreementVersionInput {
   const startsAt = instant(input.startsAt),
     endsAt = instant(input.endsAt);
   if (
@@ -60,7 +65,6 @@ export function normalizeAgreementDraft(
     typeof input.aggregateReports !== "boolean"
   )
     throw new HttpError("INVALID_INPUT");
-  weeklyQuotaPeriod(startsAt, input.timeZone);
   const participants = input.participants
     .map((p) => {
       if (
@@ -85,8 +89,6 @@ export function normalizeAgreementDraft(
   )
     throw new HttpError("INVALID_INPUT");
   return {
-    name: text(input.name, 200),
-    timeZone: input.timeZone,
     startsAt,
     endsAt,
     purpose: text(input.purpose),
@@ -99,6 +101,19 @@ export function normalizeAgreementDraft(
     participants,
   };
 }
+export function normalizeAgreementDraft(
+  input: AgreementDraftInput,
+  tenantId: string,
+): AgreementDraftInput {
+  const normalized = normalizeAgreementVersion(input, tenantId);
+  weeklyQuotaPeriod(normalized.startsAt, input.timeZone);
+  return {
+    ...normalized,
+    name: text(input.name, 200),
+    timeZone: input.timeZone,
+  };
+}
+
 export async function createAgreementDraft(
   pool: Pool,
   actor: AuthenticatedAccount,

@@ -6,6 +6,7 @@ import {
   type AgreementDraftInput,
   approveAgreement,
   createAgreementDraft,
+  createAgreementVersion,
 } from "../../src/modules/collaboration/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
@@ -414,6 +415,263 @@ test("agreement drafts preserve participant ownership and do not activate capabi
           [id],
         );
         await assert.rejects(approve(0, "cannot-reapprove", id), {
+          code: "CONFLICT",
+        });
+      },
+    );
+    await t.test(
+      "new versions preserve evidence but require approvals from their own participants",
+      async () => {
+        const before = (
+          await migration.query(
+            "SELECT * FROM domain.agreement_version WHERE agreement_id=$1 AND version=1",
+            [agreement],
+          )
+        ).rows[0];
+        const approvals = (
+          await migration.query(
+            "SELECT * FROM domain.agreement_approval WHERE agreement_id=$1 ORDER BY tenant_id",
+            [agreement],
+          )
+        ).rows;
+        const { name: _name, timeZone: _zone, ...configuration } = input;
+        const revised = {
+          ...configuration,
+          expectedVersion: 1,
+          weeklyLimit: 2,
+          participants: [0, 2].map((i) => ({
+            tenantId: tenants[i] as string,
+            accreditationIssuer: true,
+            unitIds: [units[i] as string],
+          })),
+        };
+        const version = (key: string, data = revised) =>
+          createAgreementVersion(
+            domain,
+            actor(0),
+            tenant,
+            agreement,
+            key,
+            data,
+            randomUUID(),
+            3600,
+          );
+        await assert.rejects(
+          createAgreementVersion(
+            domain,
+            actor(2),
+            tenants[2] as string,
+            agreement,
+            "outsider-version",
+            revised,
+            randomUUID(),
+            3600,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await assert.rejects(
+          createAgreementVersion(
+            domain,
+            { ...actor(0), mfaVerifiedAt: null },
+            tenant,
+            agreement,
+            "version-no-mfa",
+            revised,
+            randomUUID(),
+            3600,
+          ),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          version("invalid-unit-version", {
+            ...revised,
+            participants: revised.participants.map((p) => ({
+              ...p,
+              unitIds: [units[1] as string],
+            })),
+          }),
+          { code: "NOT_FOUND" },
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_version WHERE agreement_id=$1",
+              [agreement],
+            )
+          ).rows[0].n,
+          1,
+        );
+        const saved = await version("version-two");
+        assert.deepEqual(saved.result, {
+          agreementId: agreement,
+          version: 2,
+          status: "BORRADOR",
+        });
+        assert.deepEqual((await version("version-two")).result, saved.result);
+        await assert.rejects(version("stale-version"), { code: "CONFLICT" });
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT * FROM domain.agreement_version WHERE agreement_id=$1 AND version=1",
+              [agreement],
+            )
+          ).rows[0],
+          before,
+        );
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT * FROM domain.agreement_approval WHERE agreement_id=$1 ORDER BY tenant_id",
+              [agreement],
+            )
+          ).rows,
+          approvals,
+        );
+        const current = (
+          await migration.query(
+            "SELECT status,weekly_limit,legal_review_reference,report_review_reference FROM domain.agreement_version WHERE agreement_id=$1 AND version=2",
+            [agreement],
+          )
+        ).rows[0];
+        assert.deepEqual(current, {
+          status: "BORRADOR",
+          weekly_limit: 2,
+          legal_review_reference: null,
+          report_review_reference: null,
+        });
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT timezone FROM domain.agreement WHERE id=$1",
+              [agreement],
+            )
+          ).rows[0].timezone,
+          input.timeZone,
+        );
+        await assert.rejects(approve(0, "obsolete-approval"), {
+          code: "CONFLICT",
+        });
+        const approveNew = (i: number) =>
+          approveAgreement(
+            domain,
+            actor(i),
+            tenants[i] as string,
+            agreement,
+            "approve-version-two",
+            { version: 2, unitIds: [units[i] as string] },
+            randomUUID(),
+            3600,
+          );
+        await assert.rejects(approveNew(1), { code: "NOT_FOUND" });
+        assert.equal((await approveNew(0)).result.status, "BORRADOR");
+        assert.equal((await approveNew(2)).result.status, "APROBADO");
+        await transaction(
+          domain,
+          async (c) => {
+            const visible = await c.query(
+              "SELECT version FROM domain.agreement_version WHERE agreement_id=$1 ORDER BY version",
+              [agreement],
+            );
+            assert.deepEqual(visible.rows, [{ version: 1 }]);
+          },
+          { accountId: actor(1).accountId, tenantId: tenants[1] as string },
+        );
+      },
+    );
+    await t.test(
+      "concurrent edits of the same base version have one winner",
+      async () => {
+        const id = (await create("versions-race")).result.agreementId;
+        const { name: _name, timeZone: _zone, ...configuration } = input;
+        const results = await Promise.allSettled(
+          [0, 1].map((i) =>
+            createAgreementVersion(
+              domain,
+              actor(i),
+              tenants[i] as string,
+              id,
+              "version-race",
+              { ...configuration, expectedVersion: 1, weeklyLimit: 4 + i },
+              randomUUID(),
+              3600,
+            ),
+          ),
+        );
+        assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+        for (const r of results)
+          if (r.status === "rejected") assert.equal(r.reason.code, "CONFLICT");
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT version,status FROM domain.agreement_version WHERE agreement_id=$1 ORDER BY version",
+              [id],
+            )
+          ).rows,
+          [
+            { version: 1, status: "BORRADOR" },
+            { version: 2, status: "BORRADOR" },
+          ],
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_approval WHERE agreement_id=$1",
+              [id],
+            )
+          ).rows[0].n,
+          0,
+        );
+      },
+    );
+    await t.test(
+      "an approval racing with a new version never approves the new configuration",
+      async () => {
+        const id = (await create("approval-edit-race")).result.agreementId;
+        const { name: _name, timeZone: _zone, ...configuration } = input;
+        const [approval, revision] = await Promise.allSettled([
+          approve(1, "approval-edit-race", id),
+          createAgreementVersion(
+            domain,
+            actor(0),
+            tenant,
+            id,
+            "approval-edit-race",
+            { ...configuration, expectedVersion: 1, weeklyLimit: 7 },
+            randomUUID(),
+            3600,
+          ),
+        ]);
+        assert.equal(revision.status, "fulfilled");
+        if (approval.status === "rejected")
+          assert.equal(approval.reason.code, "CONFLICT");
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_approval WHERE agreement_id=$1 AND version=2",
+              [id],
+            )
+          ).rows[0].n,
+          0,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT status FROM domain.agreement_version WHERE agreement_id=$1 AND version=2",
+              [id],
+            )
+          ).rows[0].status,
+          "BORRADOR",
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT latest_version FROM domain.agreement WHERE id=$1",
+              [id],
+            )
+          ).rows[0].latest_version,
+          2,
+        );
+        await assert.rejects(approve(1, "approve-obsolete-after-edit", id), {
           code: "CONFLICT",
         });
       },
