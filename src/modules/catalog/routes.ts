@@ -11,6 +11,7 @@ import {
   renameCatalogResource,
 } from "./maintenance.ts";
 import { listCatalogResources } from "./queries.ts";
+import { withdrawCatalogResource } from "./withdrawal.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
 const body = {
@@ -20,7 +21,7 @@ const body = {
   properties: { name: { type: "string", minLength: 1, maxLength: 200 } },
 } as const;
 const errors = Object.fromEntries(
-  [400, 401, 403, 404, 429, 500, 503].map((status) => [
+  [400, 401, 403, 404, 409, 429, 500, 503].map((status) => [
     status,
     { $ref: "ErrorResponse#" },
   ]),
@@ -165,6 +166,11 @@ export async function registerCatalog(
                       id: uuid,
                       name: { type: "string" },
                       facilityId: uuid,
+                      withdrawnAt: {
+                        type: "string",
+                        format: "date-time",
+                        nullable: true,
+                      },
                     },
                   },
                 },
@@ -194,7 +200,12 @@ export async function registerCatalog(
         type: "object",
         additionalProperties: false,
         required: ["tenantId", "id", "name"],
-        properties: { tenantId: uuid, id: uuid, name: { type: "string" } },
+        properties: {
+          tenantId: uuid,
+          id: uuid,
+          name: { type: "string" },
+          withdrawnAt: { type: "string", format: "date-time", nullable: true },
+        },
       },
     };
     app.get<{ Params: { tenantId: string; id: string } }>(
@@ -215,6 +226,51 @@ export async function registerCatalog(
           request.params.tenantId,
           kind,
           request.params.id,
+        ),
+    );
+
+    app.post<{
+      Params: { tenantId: string; id: string };
+      Body: { reason: string };
+    }>(
+      `/api/municipalities/:tenantId/${resource}/:id/withdraw`,
+      {
+        schema: {
+          operationId: `withdraw_${kind}`,
+          tags: ["Catalog"],
+          security: [{ quendaSession: [] }],
+          params,
+          body: {
+            type: "object",
+            additionalProperties: false,
+            required: ["reason"],
+            properties: {
+              reason: { type: "string", minLength: 1, maxLength: 500 },
+            },
+          },
+          response: {
+            ...errors,
+            200: {
+              type: "object",
+              additionalProperties: false,
+              required: ["tenantId", "id", "withdrawnAt"],
+              properties: {
+                tenantId: uuid,
+                id: uuid,
+                withdrawnAt: { type: "string", format: "date-time" },
+              },
+            },
+          },
+        },
+      },
+      async (request, reply) =>
+        withdrawCatalogResource(
+          pool,
+          await actor(request, reply),
+          request.params.tenantId,
+          kind,
+          request.params.id,
+          request.body.reason,
         ),
     );
     app.patch<{

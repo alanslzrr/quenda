@@ -12,6 +12,7 @@ import {
   inspectCatalogResource,
   listCatalogResources,
   renameCatalogResource,
+  withdrawCatalogResource,
 } from "../../src/modules/catalog/index.ts";
 import {
   acceptAdministratorInvitation,
@@ -2077,6 +2078,197 @@ test("municipal creation and first administrator acceptance are atomic and isola
           ),
           { items: [], nextCursor: null },
         );
+      },
+    );
+
+    await t.test(
+      "catalog withdrawal preserves resources and history and blocks additions to withdrawn facilities",
+      async () => {
+        const tenant = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          tenant.invitationId,
+        );
+        const f = await createFacility(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          { name: "Centro" },
+        );
+        const creator = await inviteManager(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          {
+            accountId: "manager",
+            expiresAt: new Date(Date.now() + 3600000).toISOString(),
+            permissions: [{ operation: "CATALOG_CREATE", unitId: null }],
+          },
+        );
+        await acceptManager(
+          domain,
+          account("manager"),
+          tenant.tenantId,
+          creator.invitationId,
+        );
+        const u = await createReservableUnit(
+          domain,
+          account("manager"),
+          tenant.tenantId,
+          f.facilityId,
+          { name: "Unidad" },
+        );
+        await assert.rejects(
+          withdrawCatalogResource(
+            domain,
+            account("manager"),
+            tenant.tenantId,
+            "unit",
+            u.unitId,
+            "No permitido",
+          ),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          withdrawCatalogResource(
+            domain,
+            account("admin-b"),
+            tenant.tenantId,
+            "facility",
+            f.facilityId,
+            "No permitido",
+          ),
+          { code: "FORBIDDEN" },
+        );
+        const withdrawn = await withdrawCatalogResource(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "unit",
+          u.unitId,
+          "Retirada de oferta",
+        );
+        assert.deepEqual(
+          await withdrawCatalogResource(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            "unit",
+            u.unitId,
+            "Reintento",
+          ),
+          withdrawn,
+        );
+        assert.equal(
+          (
+            await inspectCatalogResource(
+              domain,
+              account("admin-a"),
+              tenant.tenantId,
+              "unit",
+              u.unitId,
+            )
+          ).withdrawnAt,
+          withdrawn.withdrawnAt,
+        );
+        assert.equal(
+          (
+            await listCatalogResources(
+              domain,
+              account("admin-a"),
+              tenant.tenantId,
+              "unit",
+            )
+          ).items[0]?.withdrawnAt,
+          withdrawn.withdrawnAt,
+        );
+        await migration.query(
+          "REVOKE INSERT ON domain.catalog_event FROM quenda_domain",
+        );
+        try {
+          await assert.rejects(
+            withdrawCatalogResource(
+              domain,
+              account("admin-a"),
+              tenant.tenantId,
+              "facility",
+              f.facilityId,
+              "Rollback",
+            ),
+            { code: "42501" },
+          );
+        } finally {
+          await migration.query(
+            "GRANT INSERT ON domain.catalog_event TO quenda_domain",
+          );
+        }
+        assert.equal(
+          (
+            await inspectCatalogResource(
+              domain,
+              account("admin-a"),
+              tenant.tenantId,
+              "facility",
+              f.facilityId,
+            )
+          ).withdrawnAt,
+          null,
+        );
+        await withdrawCatalogResource(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "facility",
+          f.facilityId,
+          "Fin de oferta",
+        );
+        await assert.rejects(
+          createReservableUnit(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            f.facilityId,
+            { name: "No crear" },
+          ),
+          { code: "CONFLICT" },
+        );
+        await assert.rejects(
+          transaction(
+            domain,
+            (c) =>
+              c.query(
+                "INSERT INTO domain.reservable_unit(tenant_id,id,facility_id,name) VALUES ($1,$2,$3,'Bypass')",
+                [tenant.tenantId, randomUUID(), f.facilityId],
+              ),
+            { accountId: "admin-a", tenantId: tenant.tenantId },
+          ),
+          { code: "42501" },
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.reservable_unit WHERE tenant_id=$1",
+              [tenant.tenantId],
+            )
+          ).rows[0].n,
+          1,
+        );
+        const history = (
+          await migration.query(
+            "SELECT operation,reason FROM domain.catalog_event WHERE tenant_id=$1 AND operation LIKE 'WITHDRAW_%' ORDER BY operation",
+            [tenant.tenantId],
+          )
+        ).rows;
+        assert.deepEqual(history, [
+          { operation: "WITHDRAW_FACILITY", reason: "Fin de oferta" },
+          { operation: "WITHDRAW_UNIT", reason: "Retirada de oferta" },
+        ]);
       },
     );
   });

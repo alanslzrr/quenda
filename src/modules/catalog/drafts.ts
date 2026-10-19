@@ -55,6 +55,12 @@ export async function createReservableUnit(
       { accountId: actor.accountId, tenantId },
       async (client) => {
         await requirePermission(client, actor, "CATALOG_CREATE");
+        const parent = await client.query<{ withdrawn_at: Date | null }>(
+          "SELECT withdrawn_at FROM domain.lock_catalog_parent($1)",
+          [facilityId],
+        );
+        if (!parent.rows[0]) throw new HttpError("NOT_FOUND");
+        if (parent.rows[0].withdrawn_at) throw new HttpError("CONFLICT");
         await client.query(
           "INSERT INTO domain.reservable_unit (tenant_id,id,facility_id,name) VALUES ($1,$2,$3,$4)",
           [tenantId, unitId, facilityId, title],

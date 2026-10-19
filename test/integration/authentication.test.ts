@@ -710,6 +710,17 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             201,
             managerInvitation.body,
           );
+          const withdrawal = await client.request(
+            `/api/municipalities/${tenantId}/units/${unit.json().unitId}/withdraw`,
+            { reason: "Retirada HTTP" },
+          );
+          assert.equal(withdrawal.statusCode, 200, withdrawal.body);
+          assert.equal(
+            (
+              await client.request(`/api/municipalities/${tenantId}/units`)
+            ).json().items[0].withdrawnAt,
+            withdrawal.json().withdrawnAt,
+          );
           const managerial = await client.request(
             `/api/municipalities/${tenantId}/manager-invitations`,
           );

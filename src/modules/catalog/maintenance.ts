@@ -26,21 +26,31 @@ export async function inspectCatalogResource(
       );
       const result =
         kind === "facility"
-          ? await client.query<{ id: string; name: string }>(
-              "SELECT id,name FROM domain.facility WHERE tenant_id=$1 AND id=$2",
+          ? await client.query<{
+              id: string;
+              name: string;
+              withdrawn_at: Date | null;
+            }>(
+              "SELECT id,name,withdrawn_at FROM domain.facility WHERE tenant_id=$1 AND id=$2",
               [tenantId, id],
             )
           : await client.query<{
               id: string;
               name: string;
+              withdrawn_at: Date | null;
               facility_id: string;
             }>(
-              "SELECT id,name,facility_id FROM domain.reservable_unit WHERE tenant_id=$1 AND id=$2",
+              "SELECT id,name,withdrawn_at,facility_id FROM domain.reservable_unit WHERE tenant_id=$1 AND id=$2",
               [tenantId, id],
             );
       const row = result.rows[0];
       if (!row) throw new HttpError("NOT_FOUND");
-      return { tenantId, id: row.id, name: row.name };
+      return {
+        tenantId,
+        id: row.id,
+        name: row.name,
+        withdrawnAt: row.withdrawn_at?.toISOString() ?? null,
+      };
     },
   );
 }
