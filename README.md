@@ -118,13 +118,19 @@ La respuesta `201` contiene la reserva y sus condiciones aceptadas. Repetir la m
 
 La creación valida las reglas vigentes y confirma reserva, ocupación, evento, avisos y resultado idempotente en una sola transacción. Un conflicto no deja cambios parciales. El correo queda pendiente; todavía no hay worker de entrega. La disponibilidad pública aún no descuenta estas ocupaciones y no garantiza que una franja siga libre al reservar.
 
+## Cancelación de reservas
+
+`POST /api/municipalities/{tenantId}/reservations/{reservationId}/cancel` recibe `expectedRevision` y utiliza la misma sesión, protección de origen e idempotencia que la confirmación. Devuelve `200` con el estado cancelado. Una reserva ya cancelada no genera otro evento ni otro aviso, aunque se use una clave nueva.
+
+El titular cancela antes de `inicio − plazo aceptado`; la igualdad con el límite ya queda fuera de plazo. `administrative: true` exige permiso `RESERVATION_MANAGE`, MFA reciente y `reason`; permite omitir el plazo del titular, pero nunca cancelar tras el inicio. Una versión obsoleta produce `409`. Reserva, liberación de ocupación, evento y avisos se confirman juntos. La autorización se comprueba también al recuperar un resultado idempotente.
+
 ## Integridad de reservas y bloqueos
 
 PostgreSQL mantiene una ocupación activa por reserva confirmada o bloqueo vigente. Una exclusión temporal compartida impide solapes en la misma unidad y municipio; los intervalos son semiabiertos `[inicio, fin)`, por lo que admiten reservas consecutivas. Las claves compuestas impiden referencias entre municipios.
 
 Las restricciones diferidas comprueban al confirmar la transacción que la unidad y el intervalo de la ocupación coinciden con su origen. Cancelar una reserva o liberar un bloqueo exige liberar su ocupación en la misma transacción. Cambiar una reserva sustituye la ocupación sin borrar la anterior; un conflicto revierte todos los cambios. Los permisos SQL y RLS restringen la lectura y modificación al contexto autorizado.
 
-La confirmación HTTP utiliza estas garantías. Las rutas de modificación, cancelación y bloqueos, y la integración de ocupaciones en la disponibilidad pública, siguen pendientes.
+La confirmación HTTP utiliza estas garantías. Las rutas de modificación y bloqueos, y la integración de ocupaciones en la disponibilidad pública, siguen pendientes.
 
 ## Primer operador
 

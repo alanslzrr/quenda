@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
-import { createReservation } from "../../src/modules/reservations/index.ts";
+import {
+  cancelReservation,
+  createReservation,
+} from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
 test("reservation confirmation validates real calendars and commits every effect once", {
@@ -226,6 +229,150 @@ test("reservation confirmation validates real calendars and commits every effect
           ).rows[0].n,
           1,
         );
+      },
+    );
+    await t.test(
+      "cancellation enforces accepted deadlines, revision and ownership and releases occupancy",
+      async () => {
+        const data = {
+          ...input,
+          startsAt: "2030-01-06T10:00:00Z",
+          endsAt: "2030-01-06T11:00:00Z",
+        };
+        const booking = await create("to-cancel", data);
+        const cancel = (
+          key: string,
+          revision = 1,
+          now = "2030-01-06T08:59:59Z",
+          who = actor,
+          administrative = false,
+        ) =>
+          cancelReservation(
+            domain,
+            who,
+            tenant,
+            booking.result.id,
+            key,
+            {
+              expectedRevision: revision,
+              administrative,
+              ...(administrative ? { reason: "Municipal intervention" } : {}),
+            },
+            randomUUID(),
+            3600,
+            { now: () => new Date(now) },
+          );
+        await assert.rejects(cancel("stale", 2), { code: "CONFLICT" });
+        await assert.rejects(cancel("deadline", 1, "2030-01-06T09:00:00Z"), {
+          code: "CONFLICT",
+        });
+        await assert.rejects(cancel("started", 1, "2030-01-06T10:00:00Z"), {
+          code: "CONFLICT",
+        });
+        await assert.rejects(
+          cancel("other", 1, undefined, { ...actor, accountId: "newcomer" }),
+          { code: "NOT_FOUND" },
+        );
+        await assert.rejects(cancel("fake-admin", 1, undefined, actor, true), {
+          code: "FORBIDDEN",
+        });
+        const cancelled = await cancel("cancel");
+        assert.equal(cancelled.result.status, "CANCELADA");
+        assert.equal(cancelled.result.revision, 2);
+        assert.equal(
+          (await cancel("cancel", 1, "2030-01-07T10:00:00Z")).replayed,
+          true,
+        );
+        assert.equal(
+          (await cancel("already-cancelled", 1, "2030-01-07T10:00:00Z")).result
+            .revision,
+          2,
+        );
+        const count = (
+          await migration.query(
+            "SELECT count(*)::int AS n FROM domain.reservation_event WHERE reservation_id=$1",
+            [booking.result.id],
+          )
+        ).rows[0].n;
+        assert.equal(count, 2);
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.occupancy WHERE reservation_id=$1 AND released_at IS NULL",
+              [booking.result.id],
+            )
+          ).rows[0].n,
+          0,
+        );
+        assert.equal(
+          (await create("reuse-cancelled", data)).result.status,
+          "CONFIRMADA",
+        );
+      },
+    );
+    await t.test(
+      "administrative cancellation bypasses only the user deadline and rechecks revoked authority",
+      async () => {
+        const invitation = randomUUID();
+        await migration.query(
+          "INSERT INTO domain.administrator_invitation(tenant_id,id,account_id,invited_by,expires_at,accepted_at) VALUES($1,$2,'newcomer','citizen',now()+interval '1 day',now())",
+          [tenant, invitation],
+        );
+        await migration.query(
+          "INSERT INTO domain.municipal_administrator(tenant_id,account_id,invitation_id) VALUES($1,'newcomer',$2)",
+          [tenant, invitation],
+        );
+        const admin = {
+          ...actor,
+          accountId: "newcomer",
+          mfaVerifiedAt: new Date(),
+        };
+        const data = {
+          ...input,
+          startsAt: "2030-01-07T10:00:00Z",
+          endsAt: "2030-01-07T11:00:00Z",
+        };
+        const booking = await create("admin-target", data);
+        const cancel = (
+          key: string,
+          now = "2030-01-07T09:30:00Z",
+          reason = "Maintenance",
+        ) =>
+          cancelReservation(
+            domain,
+            admin,
+            tenant,
+            booking.result.id,
+            key,
+            { expectedRevision: 1, administrative: true, reason },
+            randomUUID(),
+            3600,
+            { now: () => new Date(now) },
+          );
+        await assert.rejects(cancel("missing-reason", undefined, ""), {
+          code: "INVALID_INPUT",
+        });
+        await assert.rejects(
+          cancel("already-started", "2030-01-07T10:00:00Z"),
+          { code: "CONFLICT" },
+        );
+        const result = await cancel("admin-cancel");
+        assert.equal(result.result.status, "CANCELADA");
+        const event = (
+          await migration.query(
+            "SELECT actor_id,reason FROM domain.reservation_event WHERE reservation_id=$1 AND kind='CANCELADA'",
+            [booking.result.id],
+          )
+        ).rows[0];
+        assert.deepEqual(event, {
+          actor_id: "newcomer",
+          reason: "Maintenance",
+        });
+        await migration.query(
+          "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1 AND account_id='newcomer'",
+          [tenant],
+        );
+        await assert.rejects(cancel("admin-cancel"), { code: "NOT_FOUND" });
       },
     );
     await t.test(

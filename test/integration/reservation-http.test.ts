@@ -194,6 +194,32 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
           "idempotency-expires-at",
         ),
       );
+      const cancelUrl = `${url}/${created.json().id}/cancel`;
+      const cancelled = await client.request(
+        cancelUrl,
+        { expectedRevision: 1 },
+        { "idempotency-key": "http-cancel" },
+      );
+      assert.equal(cancelled.statusCode, 200, cancelled.body);
+      assert.equal(cancelled.json().status, "CANCELADA");
+      assert.equal(cancelled.json().revision, 2);
+      const cancelReplay = await replica.inject({
+        method: "POST",
+        url: cancelUrl,
+        payload: { expectedRevision: 1 },
+        headers: {
+          origin: config.origin,
+          cookie: client.cookie(),
+          "idempotency-key": "http-cancel",
+        },
+      });
+      assert.equal(cancelReplay.statusCode, 200, cancelReplay.body);
+      assert.deepEqual(cancelReplay.json(), cancelled.json());
+      assert.equal(cancelReplay.headers["idempotency-replayed"], "true");
+      const second = await client.request(url, body, {
+        "idempotency-key": "after-cancel",
+      });
+      assert.equal(second.statusCode, 201, second.body);
       const cookie = client.cookie();
       assert.equal(
         (await client.request("/api/auth/sign-out", {})).statusCode,

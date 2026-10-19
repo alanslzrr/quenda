@@ -5,6 +5,7 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
+import { registerCancellationRoute } from "./cancel-routes.ts";
 import { type CreateReservationInput, createReservation } from "./create.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
@@ -17,6 +18,7 @@ export async function registerReservations(
   retentionSeconds: number,
 ) {
   const actor = createRequestActor(pool, auth, config);
+  await registerCancellationRoute(app, pool, auth, config, retentionSeconds);
   app.post<{
     Params: { tenantId: string };
     Headers: { "idempotency-key": string };
