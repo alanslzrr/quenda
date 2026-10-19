@@ -1,29 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { Temporal } from "@js-temporal/polyfill";
 import { DatabaseError, type Pool } from "pg";
 import { idempotentCommand } from "../../database/idempotency.ts";
 import { HttpError } from "../../http/errors.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
 import { validateReservableInterval } from "../catalog/index.ts";
 import type { AuthenticatedAccount } from "../identity/index.ts";
-import { appendReservationEvent } from "./events.ts";
+import {
+  type CreateReservationInput,
+  normalizeReservationInput,
+} from "./input.ts";
 
-export interface CreateReservationInput {
-  unitId: string;
-  startsAt: string;
-  endsAt: string;
-}
-function instant(value: string): string {
-  try {
-    const valueInstant = Temporal.Instant.from(value);
-    if (valueInstant.epochNanoseconds % 1_000_000n !== 0n)
-      throw new HttpError("INVALID_INPUT");
-    return valueInstant.toString({ smallestUnit: "millisecond" });
-  } catch (error) {
-    if (error instanceof RangeError) throw new HttpError("INVALID_INPUT");
-    throw error;
-  }
-}
+export type { CreateReservationInput } from "./input.ts";
+
+import { appendReservationEvent } from "./events.ts";
 
 export async function createReservation(
   pool: Pool,
@@ -35,19 +24,7 @@ export async function createReservation(
   retentionSeconds: number,
   clock: Clock = systemClock,
 ) {
-  if (
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      input.unitId,
-    )
-  )
-    throw new HttpError("INVALID_INPUT");
-  const normalized = {
-    unitId: input.unitId.toLowerCase(),
-    startsAt: instant(input.startsAt),
-    endsAt: instant(input.endsAt),
-  };
-  if (Temporal.Instant.compare(normalized.startsAt, normalized.endsAt) >= 0)
-    throw new HttpError("INVALID_INPUT");
+  const normalized = normalizeReservationInput(input);
   try {
     return await idempotentCommand(
       pool,

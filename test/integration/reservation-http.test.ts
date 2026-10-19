@@ -194,19 +194,44 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
           "idempotency-expires-at",
         ),
       );
+      const modifyUrl = `${url}/${created.json().id}/modify`;
+      const changedBody = {
+        unitId: unit,
+        startsAt: new Date(start.getTime() + 7200000).toISOString(),
+        endsAt: new Date(start.getTime() + 10800000).toISOString(),
+        expectedRevision: 1,
+      };
+      const modified = await client.request(modifyUrl, changedBody, {
+        "idempotency-key": "http-modify",
+      });
+      assert.equal(modified.statusCode, 200, modified.body);
+      assert.equal(modified.json().revision, 2);
+      const modifiedReplay = await replica.inject({
+        method: "POST",
+        url: modifyUrl,
+        payload: changedBody,
+        headers: {
+          origin: config.origin,
+          cookie: client.cookie(),
+          "idempotency-key": "http-modify",
+        },
+      });
+      assert.equal(modifiedReplay.statusCode, 200, modifiedReplay.body);
+      assert.deepEqual(modifiedReplay.json(), modified.json());
+      assert.equal(modifiedReplay.headers["idempotency-replayed"], "true");
       const cancelUrl = `${url}/${created.json().id}/cancel`;
       const cancelled = await client.request(
         cancelUrl,
-        { expectedRevision: 1 },
+        { expectedRevision: 2 },
         { "idempotency-key": "http-cancel" },
       );
       assert.equal(cancelled.statusCode, 200, cancelled.body);
       assert.equal(cancelled.json().status, "CANCELADA");
-      assert.equal(cancelled.json().revision, 2);
+      assert.equal(cancelled.json().revision, 3);
       const cancelReplay = await replica.inject({
         method: "POST",
         url: cancelUrl,
-        payload: { expectedRevision: 1 },
+        payload: { expectedRevision: 2 },
         headers: {
           origin: config.origin,
           cookie: client.cookie(),

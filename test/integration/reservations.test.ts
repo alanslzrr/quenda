@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   cancelReservation,
   createReservation,
+  modifyReservation,
 } from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
@@ -229,6 +230,157 @@ test("reservation confirmation validates real calendars and commits every effect
           ).rows[0].n,
           1,
         );
+      },
+    );
+    await t.test(
+      "modification preserves the original on conflict and versions successful changes without duplicate effects",
+      async () => {
+        const original = {
+          ...input,
+          startsAt: "2030-01-09T10:00:00Z",
+          endsAt: "2030-01-09T11:00:00Z",
+        };
+        const destination = {
+          ...input,
+          startsAt: "2030-01-09T12:00:00Z",
+          endsAt: "2030-01-09T13:00:00Z",
+        };
+        const booking = await create("modify-source", original);
+        await create("modify-conflict", destination);
+        const modify = (
+          key: string,
+          data = destination,
+          revision = 1,
+          now = "2030-01-01T00:00:00Z",
+        ) =>
+          modifyReservation(
+            domain,
+            actor,
+            tenant,
+            booking.result.id,
+            key,
+            { ...data, expectedRevision: revision },
+            randomUUID(),
+            3600,
+            { now: () => new Date(now) },
+          );
+        await assert.rejects(modify("occupied"), { code: "CONFLICT" });
+        const row = (
+          await migration.query(
+            "SELECT starts_at,revision FROM domain.reservation WHERE id=$1",
+            [booking.result.id],
+          )
+        ).rows[0];
+        assert.equal(row.starts_at.toISOString(), booking.result.startsAt);
+        assert.equal(row.revision, 1);
+        await assert.rejects(create("still-occupied", original), {
+          code: "CONFLICT",
+        });
+        await assert.rejects(
+          modify("late", destination, 1, "2030-01-09T09:00:00Z"),
+          { code: "CONFLICT" },
+        );
+        await assert.rejects(modify("stale", original, 2), {
+          code: "CONFLICT",
+        });
+        await assert.rejects(
+          modify("draft-target", { ...destination, unitId: draft }),
+          { code: "NOT_FOUND" },
+        );
+        const unchanged = await modify("unchanged", original);
+        assert.equal(unchanged.result.revision, 1);
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.reservation_event WHERE reservation_id=$1",
+              [booking.result.id],
+            )
+          ).rows[0].n,
+          1,
+        );
+        const moved = {
+          ...input,
+          startsAt: "2030-01-09T14:00:00Z",
+          endsAt: "2030-01-09T15:00:00Z",
+        };
+        const updated = await modify("move", moved);
+        assert.equal(updated.result.revision, 2);
+        const replay = await modify("move", moved);
+        assert.equal(replay.replayed, true);
+        assert.deepEqual(replay.result, updated.result);
+        assert.equal(
+          (await create("released-source", original)).result.status,
+          "CONFIRMADA",
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.reservation_event WHERE reservation_id=$1",
+              [booking.result.id],
+            )
+          ).rows[0].n,
+          2,
+        );
+        await migration.query(
+          "UPDATE domain.reservable_unit SET published_at=now() WHERE tenant_id=$1 AND id=$2",
+          [tenant, draft],
+        );
+        const changedUnit = await modify(
+          "move-unit",
+          { ...moved, unitId: draft },
+          2,
+        );
+        assert.equal(changedUnit.result.unitId, draft);
+        assert.equal(changedUnit.result.revision, 3);
+        const concurrent = await Promise.allSettled([
+          modify(
+            "change-race-a",
+            {
+              ...moved,
+              unitId: draft,
+              startsAt: "2030-01-09T13:00:00Z",
+              endsAt: "2030-01-09T14:00:00Z",
+            },
+            3,
+          ),
+          modify(
+            "change-race-b",
+            {
+              ...moved,
+              unitId: draft,
+              startsAt: "2030-01-09T15:00:00Z",
+              endsAt: "2030-01-09T16:00:00Z",
+            },
+            3,
+          ),
+        ]);
+        assert.equal(
+          concurrent.filter((r) => r.status === "fulfilled").length,
+          1,
+        );
+        assert.ok(
+          concurrent.some(
+            (r) => r.status === "rejected" && r.reason.code === "CONFLICT",
+          ),
+        );
+        await migration.query(
+          "UPDATE domain.reservable_unit SET published_at=NULL WHERE tenant_id=$1 AND id=$2",
+          [tenant, draft],
+        );
+        await cancelReservation(
+          domain,
+          actor,
+          tenant,
+          booking.result.id,
+          "cancel-modified",
+          { expectedRevision: 4 },
+          randomUUID(),
+          3600,
+          clock,
+        );
+        await assert.rejects(modify("modify-cancelled", moved, 5), {
+          code: "CONFLICT",
+        });
       },
     );
     await t.test(

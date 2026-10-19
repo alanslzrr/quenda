@@ -8,6 +8,8 @@ import {
 import { registerCancellationRoute } from "./cancel-routes.ts";
 import { type CreateReservationInput, createReservation } from "./create.ts";
 
+import { registerModificationRoute } from "./modify-routes.ts";
+
 const uuid = { type: "string", format: "uuid" } as const;
 const instant = { type: "string", format: "date-time" } as const;
 export async function registerReservations(
@@ -18,6 +20,7 @@ export async function registerReservations(
   retentionSeconds: number,
 ) {
   const actor = createRequestActor(pool, auth, config);
+  await registerModificationRoute(app, pool, auth, config, retentionSeconds);
   await registerCancellationRoute(app, pool, auth, config, retentionSeconds);
   app.post<{
     Params: { tenantId: string };

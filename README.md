@@ -118,6 +118,12 @@ La respuesta `201` contiene la reserva y sus condiciones aceptadas. Repetir la m
 
 La creación valida las reglas vigentes y confirma reserva, ocupación, evento, avisos y resultado idempotente en una sola transacción. Un conflicto no deja cambios parciales. El correo queda pendiente; todavía no hay worker de entrega. La disponibilidad pública aún no descuenta estas ocupaciones y no garantiza que una franja siga libre al reservar.
 
+## Modificación de reservas
+
+`POST /api/municipalities/{tenantId}/reservations/{reservationId}/modify` recibe `expectedRevision`, `unitId`, `startsAt` y `endsAt`, con la misma autenticación e idempotencia que la confirmación. Devuelve `200`. No cambia el titular ni el municipio.
+
+El sistema aplica el plazo aceptado de origen y las reglas vigentes del destino. Sustituye la ocupación, conserva la anterior liberada y registra las condiciones anteriores y nuevas. Un conflicto revierte todos los cambios. Una petición sin cambios de unidad o intervalo conserva versión y condiciones y no genera otro evento ni aviso. El modo `administrative: true` exige motivo, MFA reciente y permiso `RESERVATION_MANAGE` tanto en origen como en destino; nunca permite modificar una reserva ya iniciada.
+
 ## Cancelación de reservas
 
 `POST /api/municipalities/{tenantId}/reservations/{reservationId}/cancel` recibe `expectedRevision` y utiliza la misma sesión, protección de origen e idempotencia que la confirmación. Devuelve `200` con el estado cancelado. Una reserva ya cancelada no genera otro evento ni otro aviso, aunque se use una clave nueva.
@@ -130,7 +136,7 @@ PostgreSQL mantiene una ocupación activa por reserva confirmada o bloqueo vigen
 
 Las restricciones diferidas comprueban al confirmar la transacción que la unidad y el intervalo de la ocupación coinciden con su origen. Cancelar una reserva o liberar un bloqueo exige liberar su ocupación en la misma transacción. Cambiar una reserva sustituye la ocupación sin borrar la anterior; un conflicto revierte todos los cambios. Los permisos SQL y RLS restringen la lectura y modificación al contexto autorizado.
 
-La confirmación HTTP utiliza estas garantías. Las rutas de modificación y bloqueos, y la integración de ocupaciones en la disponibilidad pública, siguen pendientes.
+La confirmación HTTP utiliza estas garantías. Las rutas de bloqueos y la integración de ocupaciones en la disponibilidad pública siguen pendientes.
 
 ## Primer operador
 

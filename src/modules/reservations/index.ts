@@ -4,4 +4,5 @@ export const moduleDefinition = {
 } as const;
 export { cancelReservation } from "./cancel.ts";
 export { createReservation } from "./create.ts";
+export { modifyReservation } from "./modify.ts";
 export { registerReservations } from "./routes.ts";
