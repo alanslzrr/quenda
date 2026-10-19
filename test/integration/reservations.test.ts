@@ -1166,6 +1166,182 @@ test("reservation confirmation validates real calendars and commits every effect
       },
     );
     await t.test(
+      "administrative modification requires source and destination scope and cannot bypass integrity or start",
+      async () => {
+        const admin = { ...actor, mfaVerifiedAt: new Date() };
+        const manager = {
+          ...actor,
+          accountId: "newcomer",
+          email: "newcomer@example.test",
+          mfaVerifiedAt: new Date(),
+        };
+        await migration.query(
+          "UPDATE domain.reservable_unit SET published_at=now() WHERE tenant_id=$1 AND id=$2",
+          [tenant, draft],
+        );
+        const source = {
+          unitId: unit,
+          startsAt: "2030-01-18T10:00:00Z",
+          endsAt: "2030-01-18T11:00:00Z",
+        };
+        const target = {
+          unitId: draft,
+          startsAt: "2030-01-18T11:00:00Z",
+          endsAt: "2030-01-18T12:00:00Z",
+        };
+        const booking = await create("managed-move-source", source);
+        const grant = async (units: string[]) => {
+          const invited = await inviteManager(domain, admin, tenant, {
+            accountId: manager.accountId,
+            expiresAt: new Date(Date.now() + 3600000).toISOString(),
+            permissions: units.map((unitId) => ({
+              operation: "RESERVATION_MANAGE" as const,
+              unitId,
+            })),
+          });
+          await acceptManager(domain, manager, tenant, invited.invitationId);
+          return invited.invitationId;
+        };
+        const move = (
+          key: string,
+          data = target,
+          revision = 1,
+          now = "2030-01-18T09:30:00Z",
+          reason = "Relocation",
+        ) =>
+          modifyReservation(
+            domain,
+            manager,
+            tenant,
+            booking.result.id,
+            key,
+            {
+              ...data,
+              expectedRevision: revision,
+              administrative: true,
+              reason,
+            },
+            randomUUID(),
+            3600,
+            { now: () => new Date(now) },
+          );
+        const sourceOnly = await grant([unit]);
+        await assert.rejects(move("source-only"), { code: "FORBIDDEN" });
+        await revokeManager(domain, admin, tenant, sourceOnly, "Change scope");
+        const destinationOnly = await grant([draft]);
+        await assert.rejects(move("destination-only"), { code: "NOT_FOUND" });
+        await revokeManager(
+          domain,
+          admin,
+          tenant,
+          destinationOnly,
+          "Change scope",
+        );
+        const both = await grant([unit, draft]);
+        await assert.rejects(move("no-reason", target, 1, undefined, ""), {
+          code: "INVALID_INPUT",
+        });
+        await assert.rejects(
+          move("already-started", target, 1, "2030-01-18T10:00:00Z"),
+          { code: "CONFLICT" },
+        );
+        const before = (
+          await migration.query(
+            "SELECT revision,unit_id FROM domain.reservation WHERE id=$1",
+            [booking.result.id],
+          )
+        ).rows[0];
+        assert.deepEqual(before, { revision: 1, unit_id: unit });
+        const changed = await move("authorized-move");
+        assert.equal(changed.result.unitId, draft);
+        assert.equal(changed.result.revision, 2);
+        const event = (
+          await migration.query(
+            "SELECT actor_id,reason FROM domain.reservation_event WHERE reservation_id=$1 AND kind='MODIFICADA'",
+            [booking.result.id],
+          )
+        ).rows[0];
+        assert.deepEqual(event, { actor_id: "newcomer", reason: "Relocation" });
+        const occupied = {
+          unitId: draft,
+          startsAt: "2030-01-18T12:00:00Z",
+          endsAt: "2030-01-18T13:00:00Z",
+        };
+        await create("managed-move-occupied", occupied);
+        await assert.rejects(move("admin-conflict", occupied, 2), {
+          code: "CONFLICT",
+        });
+        assert.equal(
+          (
+            await readReservation(
+              domain,
+              actor,
+              tenant,
+              booking.result.id,
+              clock,
+            )
+          ).revision,
+          2,
+        );
+        await revokeManager(domain, admin, tenant, both, "Remove permission");
+        await assert.rejects(move("authorized-move"), { code: "NOT_FOUND" });
+      },
+    );
+    await t.test(
+      "concurrent block and reservation commands have one winner and no partial loser",
+      async () => {
+        const admin = { ...actor, mfaVerifiedAt: new Date() };
+        for (let i = 0; i < 5; i++) {
+          const start = new Date("2030-01-19T08:00:00Z");
+          start.setUTCHours(start.getUTCHours() + i);
+          const interval = {
+            unitId: unit,
+            startsAt: start.toISOString(),
+            endsAt: new Date(start.getTime() + 3600000).toISOString(),
+          };
+          const outcomes = await Promise.allSettled([
+            create(`closure-race-booking-${i}`, interval),
+            createBlock(
+              domain,
+              admin,
+              tenant,
+              `closure-race-block-${i}`,
+              { ...interval, reason: "Concurrent closure" },
+              randomUUID(),
+              3600,
+            ),
+          ]);
+          assert.equal(
+            outcomes.filter((r) => r.status === "fulfilled").length,
+            1,
+          );
+          assert.ok(
+            outcomes.some(
+              (r) => r.status === "rejected" && r.reason.code === "CONFLICT",
+            ),
+          );
+          const rows = (
+            await migration.query(
+              "SELECT reservation_id,block_id FROM domain.occupancy WHERE tenant_id=$1 AND unit_id=$2 AND released_at IS NULL AND period && tstzrange($3,$4,'[)')",
+              [tenant, unit, interval.startsAt, interval.endsAt],
+            )
+          ).rows;
+          assert.equal(rows.length, 1);
+          assert.notEqual(
+            rows[0].reservation_id === null,
+            rows[0].block_id === null,
+          );
+          const claims = (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.idempotent_command WHERE tenant_id=$1 AND key IN ($2,$3)",
+              [tenant, `closure-race-booking-${i}`, `closure-race-block-${i}`],
+            )
+          ).rows[0].n;
+          assert.equal(claims, 1);
+        }
+      },
+    );
+    await t.test(
       "withdrawal prevents new bookings without hiding an authorized prior result",
       async () => {
         const data = {
