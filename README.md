@@ -110,6 +110,14 @@ Sin sesión, bajo `/api/public/municipalities/{tenantId}`:
 
 Estas consultas no crean cuentas ni perfiles. Los recursos no publicados o retirados no aparecen; el detalle responde `404`. La disponibilidad calcula horarios y reglas, pero todavía no descuenta ocupaciones: esa integración pertenece al módulo de reservas y bloqueos. Consultar no garantiza ni confirma una reserva. Las cuatro rutas comparten un límite de 60 peticiones por 60 segundos y dirección reconocida por Fastify, incluso entre réplicas. Al superarlo devuelven `429 RATE_LIMITED` y `Retry-After`, antes de validar parámetros o calcular franjas. No confían en cabeceras de proxy enviadas por el cliente. PostgreSQL conserva una huella HMAC con clave compartida, no la IP en claro; cada petición elimina hasta 100 contadores cuya ventana tiene más de diez minutos. Sin tráfico, la limpieza se reanuda en la próxima petición; no constituye una garantía de borrado exactamente a los diez minutos. Las réplicas deben compartir `AUTH_SECRET`; rotarlo también reinicia la identidad de estos contadores.
 
+## Integridad de reservas y bloqueos
+
+PostgreSQL mantiene una ocupación activa por reserva confirmada o bloqueo vigente. Una exclusión temporal compartida impide solapes en la misma unidad y municipio; los intervalos son semiabiertos `[inicio, fin)`, por lo que admiten reservas consecutivas. Las claves compuestas impiden referencias entre municipios.
+
+Las restricciones diferidas comprueban al confirmar la transacción que la unidad y el intervalo de la ocupación coinciden con su origen. Cancelar una reserva o liberar un bloqueo exige liberar su ocupación en la misma transacción. Cambiar una reserva sustituye la ocupación sin borrar la anterior; un conflicto revierte todos los cambios. Los permisos SQL y RLS restringen la lectura y modificación al contexto autorizado.
+
+Estas garantías están implementadas en la base de datos. Todavía no hay comandos HTTP de reservas ni integración de ocupaciones en la disponibilidad pública.
+
 ## Primer operador
 
 Crear y verificar una cuenta por la API y completar el alta de TOTP antes de inicializar el operador. Con su identificador de cuenta y las credenciales de mantenimiento:
