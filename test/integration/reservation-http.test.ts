@@ -4,6 +4,7 @@ import test from "node:test";
 import { buildApp } from "../../src/app.ts";
 import { transaction } from "../../src/database/transaction.ts";
 import { processReservationEmail } from "../../src/modules/communications/index.ts";
+import { exportReservations } from "../../src/modules/communications/reservation-export.ts";
 import { createAuthentication } from "../../src/modules/identity/index.ts";
 import type { MailMessage } from "../../src/shared/mail.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
@@ -694,6 +695,77 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         CANCELADA: 0,
         FINALIZADA: 0,
       });
+      const exportActor = {
+        accountId,
+        email: "booking@example.test",
+        sessionId: "export-fixture",
+        mfaVerifiedAt: new Date(),
+      };
+      const exportData = JSON.parse(
+        JSON.stringify(
+          await exportReservations(
+            domain,
+            exportActor,
+            tenant,
+            "2030-01-01",
+            "2030-01-02",
+          ),
+        ),
+      );
+      assert.equal(exportData.format, "quenda.reservations");
+      assert.equal(exportData.version, 1);
+      assert.equal(exportData.tenantId, tenant);
+      assert.equal(exportData.unitId, null);
+      assert.deepEqual(exportData.entities, ["reservations"]);
+      assert.deepEqual(exportData.period, {
+        from: "2030-01-01",
+        to: "2030-01-02",
+        timeZone: "Europe/Madrid",
+        selection: "overlap",
+      });
+      assert.equal(exportData.reservations.length, 2);
+      assert.ok(
+        exportData.reservations.every(
+          (r: { unitId: string; accountId: string }) =>
+            r.unitId === otherUnit && r.accountId === accountId,
+        ),
+      );
+      await assert.rejects(
+        exportReservations(
+          domain,
+          { ...exportActor, mfaVerifiedAt: null },
+          tenant,
+          "2030-01-01",
+          "2030-01-02",
+        ),
+        { code: "FORBIDDEN" },
+      );
+      await assert.rejects(
+        exportReservations(
+          domain,
+          { ...exportActor, mfaVerifiedAt: new Date(Date.now() - 360000) },
+          tenant,
+          "2030-01-01",
+          "2030-01-02",
+        ),
+        { code: "REAUTHENTICATION_REQUIRED" },
+      );
+      await assert.rejects(
+        exportReservations(
+          domain,
+          exportActor,
+          tenant,
+          "2030-02-30",
+          "2030-03-01",
+        ),
+        { code: "INVALID_INPUT" },
+      );
+      await assert.rejects(
+        domain.query(
+          "SELECT domain.reservation_export('2030-01-01','2030-01-02')",
+        ),
+        { code: "42501" },
+      );
       const managerInvitation = randomUUID();
       await migration.query(
         "INSERT INTO domain.manager_invitation(tenant_id,id,account_id,invited_by,issuer_invitation_id,expires_at,accepted_at) VALUES($1,$2,$3,$3,$4,now()+interval '1 day',now())",
@@ -732,6 +804,95 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal((await client.request(indicatorUrl)).statusCode, 403);
       assert.equal((await client.request(municipalUrl)).statusCode, 403);
 
+      await migration.query(
+        "UPDATE domain.manager_grant SET revoked_at=NULL WHERE tenant_id=$1 AND invitation_id=$2",
+        [tenant, managerInvitation],
+      );
+      await migration.query(
+        "INSERT INTO domain.manager_permission(tenant_id,invitation_id,operation,unit_id) VALUES($1,$2,'DATA_EXPORT',$3)",
+        [tenant, managerInvitation, otherUnit],
+      );
+      await assert.rejects(
+        exportReservations(
+          domain,
+          exportActor,
+          tenant,
+          "2030-01-01",
+          "2030-01-02",
+          otherUnit,
+        ),
+        { code: "FORBIDDEN" },
+      );
+      await migration.query(
+        "INSERT INTO domain.manager_permission(tenant_id,invitation_id,operation,unit_id) VALUES($1,$2,'RESERVATION_READ',$3)",
+        [tenant, managerInvitation, otherUnit],
+      );
+      assert.equal(
+        JSON.parse(
+          JSON.stringify(
+            await exportReservations(
+              domain,
+              exportActor,
+              tenant,
+              "2030-01-01",
+              "2030-01-02",
+              otherUnit,
+            ),
+          ),
+        ).reservations.length,
+        2,
+      );
+      await assert.rejects(
+        exportReservations(
+          domain,
+          exportActor,
+          tenant,
+          "2030-01-01",
+          "2030-01-02",
+        ),
+        { code: "FORBIDDEN" },
+      );
+      await assert.rejects(
+        exportReservations(
+          domain,
+          exportActor,
+          tenant,
+          "2030-01-01",
+          "2030-01-02",
+          unit,
+        ),
+        { code: "FORBIDDEN" },
+      );
+      await migration.query(
+        "INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,status,cancellation_minutes,timezone) SELECT $1,gen_random_uuid(),$2,$3,1,'2030-01-01T02:00:00Z','2030-01-01T03:00:00Z','CANCELADA',60,'Europe/Madrid' FROM generate_series(1,9999)",
+        [tenant, accountId, otherUnit],
+      );
+      await assert.rejects(
+        exportReservations(
+          domain,
+          exportActor,
+          tenant,
+          "2030-01-01",
+          "2030-01-02",
+          otherUnit,
+        ),
+        { code: "INVALID_INPUT" },
+      );
+      await migration.query(
+        "UPDATE domain.manager_grant SET revoked_at=now() WHERE tenant_id=$1 AND invitation_id=$2",
+        [tenant, managerInvitation],
+      );
+      await assert.rejects(
+        exportReservations(
+          domain,
+          exportActor,
+          tenant,
+          "2030-01-01",
+          "2030-01-02",
+          otherUnit,
+        ),
+        { code: "FORBIDDEN" },
+      );
       const cookie = client.cookie();
       assert.equal(
         (await client.request("/api/auth/sign-out", {})).statusCode,
