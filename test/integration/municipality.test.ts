@@ -10,6 +10,7 @@ import {
   createFacility,
   createReservableUnit,
   inspectCatalogResource,
+  listCatalogResources,
   renameCatalogResource,
 } from "../../src/modules/catalog/index.ts";
 import {
@@ -1926,6 +1927,155 @@ test("municipal creation and first administrator acceptance are atomic and isola
             "No",
           ),
           { code: "FORBIDDEN" },
+        );
+      },
+    );
+
+    await t.test(
+      "catalog listings paginate after RLS and expose only permitted units",
+      async () => {
+        const tenant = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          tenant.invitationId,
+        );
+        const facility = await createFacility(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          { name: "Centro" },
+        );
+        const units = [];
+        for (let i = 0; i < 23; i++)
+          units.push(
+            await createReservableUnit(
+              domain,
+              account("admin-a"),
+              tenant.tenantId,
+              facility.facilityId,
+              { name: `Unidad ${i}` },
+            ),
+          );
+        const first = await listCatalogResources(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "unit",
+        );
+        assert.equal(first.items.length, 20);
+        assert.ok(first.nextCursor);
+        const second = await listCatalogResources(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "unit",
+          first.nextCursor,
+        );
+        assert.equal(second.items.length, 3);
+        assert.equal(second.nextCursor, null);
+        assert.equal(
+          new Set([...first.items, ...second.items].map((row) => row.id)).size,
+          23,
+        );
+        assert.ok(
+          first.items.every((row) => row.facilityId === facility.facilityId),
+        );
+        const permitted = units.slice(0, 2).map((unit) => unit.unitId);
+        const invite = await inviteManager(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          {
+            accountId: "manager",
+            expiresAt: new Date(Date.now() + 3600000).toISOString(),
+            permissions: permitted.map((unitId) => ({
+              operation: "CATALOG_MANAGE" as const,
+              unitId,
+            })),
+          },
+        );
+        await acceptManager(
+          domain,
+          account("manager"),
+          tenant.tenantId,
+          invite.invitationId,
+        );
+        const scoped = await listCatalogResources(
+          domain,
+          account("manager"),
+          tenant.tenantId,
+          "unit",
+        );
+        assert.deepEqual(
+          scoped.items.map((row) => row.id).sort(),
+          permitted.sort(),
+        );
+        assert.equal(scoped.nextCursor, null);
+        assert.deepEqual(
+          (
+            await listCatalogResources(
+              domain,
+              account("manager"),
+              tenant.tenantId,
+              "facility",
+            )
+          ).items,
+          [],
+        );
+        assert.equal(
+          (
+            await listCatalogResources(
+              domain,
+              account("admin-a"),
+              tenant.tenantId,
+              "facility",
+            )
+          ).items[0]?.id,
+          facility.facilityId,
+        );
+        for (const id of ["operator", "admin-b", "other"])
+          assert.deepEqual(
+            await listCatalogResources(
+              domain,
+              account(id),
+              tenant.tenantId,
+              "unit",
+            ),
+            { items: [], nextCursor: null },
+          );
+        await assert.rejects(
+          listCatalogResources(
+            domain,
+            {
+              ...account("manager"),
+              mfaVerifiedAt: new Date(Date.now() - 360000),
+            },
+            tenant.tenantId,
+            "unit",
+          ),
+          { code: "REAUTHENTICATION_REQUIRED" },
+        );
+        await revokeManager(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          invite.invitationId,
+          "Revocado",
+        );
+        assert.deepEqual(
+          await listCatalogResources(
+            domain,
+            account("manager"),
+            tenant.tenantId,
+            "unit",
+          ),
+          { items: [], nextCursor: null },
         );
       },
     );

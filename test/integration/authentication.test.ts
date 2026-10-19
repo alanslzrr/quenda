@@ -623,6 +623,23 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             { name: "Pista HTTP" },
           );
           assert.equal(unit.statusCode, 201, unit.body);
+          const unitList = await client.request(
+            `/api/municipalities/${tenantId}/units`,
+          );
+          assert.equal(unitList.statusCode, 200, unitList.body);
+          assert.equal(unitList.json().items[0].id, unit.json().unitId);
+          assert.equal(
+            unitList.json().items[0].facilityId,
+            facility.json().facilityId,
+          );
+          assert.equal(
+            (
+              await client.request(
+                `/api/municipalities/${tenantId}/units?accountId=other`,
+              )
+            ).statusCode,
+            400,
+          );
           const unitUrl = `/api/municipalities/${tenantId}/units/${unit.json().unitId}`;
           const renamedUnit = await app.inject({
             method: "PATCH",

@@ -10,6 +10,7 @@ import {
   inspectCatalogResource,
   renameCatalogResource,
 } from "./maintenance.ts";
+import { listCatalogResources } from "./queries.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
 const body = {
@@ -124,6 +125,63 @@ export async function registerCatalog(
   );
   for (const kind of ["facility", "unit"] as const) {
     const resource = kind === "facility" ? "facilities" : "units";
+
+    app.get<{ Params: { tenantId: string }; Querystring: { after?: string } }>(
+      `/api/municipalities/:tenantId/${resource}`,
+      {
+        schema: {
+          operationId: `list_${kind}`,
+          tags: ["Catalog"],
+          security: [{ quendaSession: [] }],
+          description:
+            "Listado administrativo con MFA reciente. Devuelve únicamente recursos visibles según los permisos del actor; sin permisos devuelve una lista vacía. Hasta veinte por página. No publica borradores.",
+          params: {
+            type: "object",
+            additionalProperties: false,
+            required: ["tenantId"],
+            properties: { tenantId: uuid },
+          },
+          querystring: {
+            type: "object",
+            additionalProperties: false,
+            properties: { after: uuid },
+          },
+          response: {
+            ...errors,
+            200: {
+              type: "object",
+              additionalProperties: false,
+              required: ["items", "nextCursor"],
+              properties: {
+                nextCursor: { ...uuid, nullable: true },
+                items: {
+                  type: "array",
+                  maxItems: 20,
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["id", "name", "facilityId"],
+                    properties: {
+                      id: uuid,
+                      name: { type: "string" },
+                      facilityId: uuid,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      async (request, reply) =>
+        listCatalogResources(
+          pool,
+          await actor(request, reply),
+          request.params.tenantId,
+          kind,
+          request.query.after ?? null,
+        ),
+    );
     const params = {
       type: "object",
       additionalProperties: false,

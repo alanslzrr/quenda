@@ -8,4 +8,5 @@ export {
   inspectCatalogResource,
   renameCatalogResource,
 } from "./maintenance.ts";
+export { listCatalogResources } from "./queries.ts";
 export { registerCatalog } from "./routes.ts";
