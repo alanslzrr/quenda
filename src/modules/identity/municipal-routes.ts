@@ -4,11 +4,14 @@ import type { Pool } from "pg";
 import { HttpError } from "../../http/errors.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
 import {
+  inviteAdministrator,
+  revokeAdministratorInvitation,
+} from "./invitations.ts";
+import {
   acceptAdministratorInvitation,
   createMunicipality,
   type MunicipalityInput,
 } from "./municipality.ts";
-
 import { consumeAdministrativeAttempt } from "./rate-limit.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
@@ -117,6 +120,94 @@ export async function registerMunicipalIdentity(
     },
     async (request, reply) =>
       acceptAdministratorInvitation(
+        pool,
+        await actor(request, reply),
+        request.params.tenantId,
+        request.params.invitationId,
+      ),
+  );
+  app.post<{
+    Params: { tenantId: string };
+    Body: { accountId: string; expiresAt: string };
+  }>(
+    "/api/municipalities/:tenantId/administrator-invitations",
+    {
+      schema: {
+        operationId: "inviteAdministrator",
+        tags: ["Identity"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Administrador municipal con MFA reciente: invita a una cuenta existente, sin conceder permisos hasta su aceptación.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId"],
+          properties: { tenantId: uuid },
+        },
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["accountId", "expiresAt"],
+          properties: {
+            accountId: { type: "string", minLength: 1, maxLength: 128 },
+            expiresAt: { type: "string", format: "date-time" },
+          },
+        },
+        response: {
+          ...errors,
+          201: {
+            type: "object",
+            additionalProperties: false,
+            required: ["tenantId", "invitationId"],
+            properties: { tenantId: uuid, invitationId: uuid },
+          },
+        },
+      },
+    },
+    async (request, reply) =>
+      reply
+        .code(201)
+        .send(
+          await inviteAdministrator(
+            pool,
+            await actor(request, reply),
+            request.params.tenantId,
+            request.body,
+          ),
+        ),
+  );
+  app.post<{
+    Params: { tenantId: string; invitationId: string };
+    Body: Record<string, never>;
+  }>(
+    "/api/municipalities/:tenantId/administrator-invitations/:invitationId/revoke",
+    {
+      schema: {
+        operationId: "revokeAdministratorInvitation",
+        tags: ["Identity"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Administrador municipal con MFA reciente: revoca una invitación no aceptada de su municipio.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId", "invitationId"],
+          properties: { tenantId: uuid, invitationId: uuid },
+        },
+        body: { type: "object", additionalProperties: false, maxProperties: 0 },
+        response: {
+          ...errors,
+          200: {
+            type: "object",
+            additionalProperties: false,
+            required: ["tenantId", "invitationId"],
+            properties: { tenantId: uuid, invitationId: uuid },
+          },
+        },
+      },
+    },
+    async (request, reply) =>
+      revokeAdministratorInvitation(
         pool,
         await actor(request, reply),
         request.params.tenantId,

@@ -6,6 +6,8 @@ import { transaction } from "../../src/database/transaction.ts";
 import {
   acceptAdministratorInvitation,
   createMunicipality,
+  inviteAdministrator,
+  revokeAdministratorInvitation,
 } from "../../src/modules/identity/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
@@ -281,6 +283,119 @@ test("municipal creation and first administrator acceptance are atomic and isola
             { accountId: "other", tenantId: a.tenantId },
           ),
           { code: "42501" },
+        );
+      },
+    );
+
+    await t.test(
+      "municipal delegation and revocation require current authority and preserve tenant scope",
+      async () => {
+        const input = {
+          accountId: "other",
+          expiresAt: new Date(Date.now() + 3600000).toISOString(),
+        };
+        await assert.rejects(
+          inviteAdministrator(domain, account("operator"), a.tenantId, input),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          inviteAdministrator(domain, account("admin-b"), a.tenantId, input),
+          { code: "FORBIDDEN" },
+        );
+        const invitation = await inviteAdministrator(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          input,
+        );
+        await assert.rejects(
+          revokeAdministratorInvitation(
+            domain,
+            account("admin-b"),
+            b.tenantId,
+            invitation.invitationId,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await revokeAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          invitation.invitationId,
+        );
+        await assert.rejects(
+          acceptAdministratorInvitation(
+            domain,
+            account("other"),
+            a.tenantId,
+            invitation.invitationId,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        const usable = await inviteAdministrator(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          input,
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("other"),
+          a.tenantId,
+          usable.invitationId,
+        );
+        await assert.rejects(
+          revokeAdministratorInvitation(
+            domain,
+            account("admin-a"),
+            a.tenantId,
+            usable.invitationId,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        const pending = await inviteAdministrator(
+          domain,
+          account("other"),
+          a.tenantId,
+          { ...input, accountId: "admin-b" },
+        );
+        await migration.query(
+          "UPDATE domain.municipal_administrator SET revoked_at = now() WHERE tenant_id = $1 AND account_id = 'other'",
+          [a.tenantId],
+        );
+        await assert.rejects(
+          acceptAdministratorInvitation(
+            domain,
+            account("admin-b"),
+            a.tenantId,
+            pending.invitationId,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await assert.rejects(
+          transaction(
+            domain,
+            async (connection) => {
+              await connection.query(
+                "INSERT INTO domain.municipal_profile (tenant_id,account_id) VALUES ($1,'admin-b') ON CONFLICT DO NOTHING",
+                [a.tenantId],
+              );
+              await connection.query(
+                "INSERT INTO domain.municipal_administrator (tenant_id,account_id) VALUES ($1,'admin-b')",
+                [a.tenantId],
+              );
+            },
+            { accountId: "admin-b", tenantId: a.tenantId },
+          ),
+          { code: "42501" },
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT * FROM domain.identity_event WHERE operation = 'REVOKE_INVITATION'",
+            )
+          ).rowCount,
+          1,
         );
       },
     );

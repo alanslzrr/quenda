@@ -3,12 +3,17 @@ export const moduleDefinition = {
   dependencies: [],
 } as const;
 
+export { requireAdministrator } from "./administrator.ts";
 export type {
   AuthConfiguration,
   AuthenticatedAccount,
   Authentication,
 } from "./auth.ts";
 export { authOptions, createAuthentication } from "./auth.ts";
+export {
+  inviteAdministrator,
+  revokeAdministratorInvitation,
+} from "./invitations.ts";
 export { registerMunicipalIdentity } from "./municipal-routes.ts";
 export {
   acceptAdministratorInvitation,

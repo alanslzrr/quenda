@@ -96,6 +96,11 @@ export async function acceptAdministratorInvitation(
     { accountId: actor.accountId, tenantId },
     async (client) => {
       requireRecentMfa(actor);
+      const authority = await client.query<{ allowed: boolean }>(
+        "SELECT domain.lock_invitation_authority($1) AS allowed",
+        [invitationId],
+      );
+      if (!authority.rows[0]?.allowed) throw new HttpError("NOT_FOUND");
       const invitation = await client.query<{ valid: boolean }>(
         "SELECT expires_at > now() AND accepted_at IS NULL AND revoked_at IS NULL AS valid FROM domain.administrator_invitation WHERE tenant_id = $1 AND id = $2 AND account_id = $3 FOR UPDATE",
         [tenantId, invitationId, actor.accountId],
@@ -105,6 +110,11 @@ export async function acceptAdministratorInvitation(
         "INSERT INTO domain.municipal_profile (tenant_id, account_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
         [tenantId, actor.accountId],
       );
+      const existing = await client.query(
+        "SELECT 1 FROM domain.municipal_administrator WHERE tenant_id = $1 AND account_id = $2",
+        [tenantId, actor.accountId],
+      );
+      if (existing.rowCount) throw new HttpError("CONFLICT");
       await client.query(
         "INSERT INTO domain.municipal_administrator (tenant_id, account_id) VALUES ($1, $2)",
         [tenantId, actor.accountId],

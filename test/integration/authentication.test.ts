@@ -456,6 +456,19 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             ).rowCount,
             1,
           );
+          const delegated = await client.request(
+            `/api/municipalities/${tenantId}/administrator-invitations`,
+            { accountId, expiresAt: input.invitationExpiresAt },
+          );
+          assert.equal(delegated.statusCode, 201, delegated.body);
+          const duplicateAccept = `/api/municipalities/${tenantId}/administrator-invitations/${delegated.json().invitationId}/accept`;
+          assert.equal(
+            (await client.request(duplicateAccept, {})).statusCode,
+            409,
+          );
+          const revokePath = `/api/municipalities/${tenantId}/administrator-invitations/${delegated.json().invitationId}/revoke`;
+          assert.equal((await client.request(revokePath, {})).statusCode, 200);
+          assert.equal((await client.request(revokePath, {})).statusCode, 404);
           for (let i = 0; i < 60; i++)
             await consumeAdministrativeAttempt(domain, accountId);
           const throttled = await replica.inject({
