@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { registerAdministratorQueryRoutes } from "./administrator-query-routes.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
 import {
   inviteAdministrator,
@@ -34,6 +35,7 @@ export async function registerMunicipalIdentity(
   const actor = createRequestActor(pool, auth, config);
   await registerManagerRoutes(app, pool, auth, config);
   await registerProfileRoutes(app, pool, auth, config);
+  await registerAdministratorQueryRoutes(app, pool, auth, config);
   app.post<{ Body: MunicipalityInput }>(
     "/api/municipalities",
     {

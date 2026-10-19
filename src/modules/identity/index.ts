@@ -5,6 +5,10 @@ export const moduleDefinition = {
 
 export { accessFailureAudit } from "./access-audit.ts";
 export { requireAdministrator } from "./administrator.ts";
+export {
+  listMunicipalAdministratorInvitations,
+  listMunicipalAdministrators,
+} from "./administrator-query.ts";
 export type {
   AuthConfiguration,
   AuthenticatedAccount,

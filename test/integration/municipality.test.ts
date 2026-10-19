@@ -16,6 +16,8 @@ import {
   createMunicipality,
   inviteAdministrator,
   inviteManager,
+  listMunicipalAdministratorInvitations,
+  listMunicipalAdministrators,
   listMunicipalManagerInvitations,
   listMunicipalProfiles,
   listOwnAdministratorInvitations,
@@ -1516,6 +1518,162 @@ test("municipal creation and first administrator acceptance are atomic and isola
           listMunicipalProfiles(domain, account("admin-a"), a.tenantId),
           { code: "FORBIDDEN" },
         );
+      },
+    );
+
+    await t.test(
+      "administrator queries separate current grants from historical invitations and paginate within one municipality",
+      async () => {
+        const tenant = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          tenant.invitationId,
+        );
+        for (let i = 0; i < 21; i++) {
+          const id = `query-admin-${i.toString().padStart(2, "0")}`;
+          await auth.query(
+            'INSERT INTO auth."user" (id,name,email,"emailVerified","createdAt","updatedAt") VALUES ($1,$1,$2,true,now(),now())',
+            [id, `${id}@example.test`],
+          );
+          const invitation = await inviteAdministrator(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            {
+              accountId: id,
+              expiresAt: new Date(Date.now() + 3600000).toISOString(),
+            },
+          );
+          await acceptAdministratorInvitation(
+            domain,
+            account(id),
+            tenant.tenantId,
+            invitation.invitationId,
+          );
+        }
+        const first = await listMunicipalAdministrators(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+        );
+        assert.equal(first.items.length, 20);
+        assert.ok(first.nextCursor);
+        const second = await listMunicipalAdministrators(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          first.nextCursor,
+        );
+        assert.equal(second.items.length, 2);
+        assert.equal(second.nextCursor, null);
+        assert.equal(
+          new Set([...first.items, ...second.items].map((row) => row.accountId))
+            .size,
+          22,
+        );
+        assert.ok([...first.items, ...second.items].every((row) => row.active));
+        const invitations = await listMunicipalAdministratorInvitations(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+        );
+        assert.equal(invitations.items.length, 20);
+        assert.ok(invitations.nextCursor);
+        const tail = await listMunicipalAdministratorInvitations(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          invitations.nextCursor,
+        );
+        assert.equal(tail.items.length, 2);
+        assert.equal(tail.nextCursor, null);
+        const history = [...invitations.items, ...tail.items];
+        assert.equal(new Set(history.map((row) => row.invitationId)).size, 22);
+        await revokeAdministrator(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          "query-admin-00",
+          "Fin de funciones",
+        );
+        const revoked = (
+          await listMunicipalAdministrators(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+          )
+        ).items.find((row) => row.accountId === "query-admin-00");
+        assert.equal(revoked?.active, false);
+        assert.ok(revoked?.revokedAt);
+        const renewed = await inviteAdministrator(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          {
+            accountId: "query-admin-00",
+            expiresAt: new Date(Date.now() + 3600000).toISOString(),
+          },
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("query-admin-00"),
+          tenant.tenantId,
+          renewed.invitationId,
+        );
+        const current = (
+          await listMunicipalAdministrators(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+          )
+        ).items.find((row) => row.accountId === "query-admin-00");
+        assert.equal(current?.active, true);
+        assert.equal(current?.invitationId, renewed.invitationId);
+        assert.notEqual(
+          current?.invitationId,
+          history.find((row) => row.accountId === "query-admin-00")
+            ?.invitationId,
+        );
+        await migration.query(
+          "UPDATE domain.municipal_administrator SET granted_at=now()-interval '2 minutes', expires_at=now()-interval '1 minute' WHERE tenant_id=$1 AND account_id='query-admin-01'",
+          [tenant.tenantId],
+        );
+        assert.equal(
+          (
+            await listMunicipalAdministrators(
+              domain,
+              account("admin-a"),
+              tenant.tenantId,
+            )
+          ).items.find((row) => row.accountId === "query-admin-01")?.active,
+          false,
+        );
+        for (const run of [
+          listMunicipalAdministrators,
+          listMunicipalAdministratorInvitations,
+        ]) {
+          for (const id of ["operator", "admin-b", "manager", "query-admin-01"])
+            await assert.rejects(run(domain, account(id), tenant.tenantId), {
+              code: "FORBIDDEN",
+            });
+          await assert.rejects(
+            run(
+              domain,
+              {
+                ...account("admin-a"),
+                mfaVerifiedAt: new Date(Date.now() - 360000),
+              },
+              tenant.tenantId,
+            ),
+            { code: "REAUTHENTICATION_REQUIRED" },
+          );
+        }
       },
     );
   });
