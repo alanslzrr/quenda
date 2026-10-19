@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { transaction } from "../../src/database/transaction.ts";
-import { suspendAgreement } from "../../src/modules/collaboration/index.ts";
+import {
+  activateAgreement,
+  approveAgreement,
+  createAgreementDraft,
+  suspendAgreement,
+} from "../../src/modules/collaboration/index.ts";
 import {
   cancelReservation,
   createReservation,
@@ -416,6 +421,261 @@ test("real booking commands enforce shared eligibility and quota in one transact
         await assert.rejects(create(winner, "no-public-fallback", 14), {
           code: "CONFLICT",
         });
+      },
+    );
+    await t.test(
+      "initial activation reconciles existing bookings even above quota and restores scope",
+      async () => {
+        const tenant = tenants[winner] as string;
+        const publicUnit = (
+          await migration.query(
+            "SELECT id FROM domain.reservable_unit WHERE tenant_id=$1 AND name='Public unit'",
+            [tenant],
+          )
+        ).rows[0].id;
+        const prior = [];
+        for (const day of [18, 19])
+          prior.push(
+            (
+              await createReservation(
+                domain,
+                actor,
+                tenant,
+                `before-activation-${day}`,
+                { ...input(winner, day), unitId: publicUnit },
+                randomUUID(),
+                3600,
+                clock,
+              )
+            ).result,
+          );
+        const otherTenant = tenants[1 - winner] as string;
+        const invite = randomUUID();
+        await migration.query(
+          "INSERT INTO domain.administrator_invitation(tenant_id,id,account_id,invited_by,expires_at,accepted_at) VALUES($1,$2,'citizen','citizen',now()+interval '1 day',now())",
+          [otherTenant, invite],
+        );
+        await migration.query(
+          "INSERT INTO domain.municipal_administrator(tenant_id,account_id,invitation_id) VALUES($1,'citizen',$2)",
+          [otherTenant, invite],
+        );
+        const activationTenant = [...tenants].sort()[0] as string;
+        const admin = { ...actor, mfaVerifiedAt: new Date() };
+        const draft = await createAgreementDraft(
+          domain,
+          admin,
+          tenant,
+          "activate-draft",
+          {
+            name: "Reconciliation",
+            timeZone: "Europe/Madrid",
+            startsAt: "2020-01-01T00:00:00Z",
+            endsAt: "2040-01-01T00:00:00Z",
+            purpose: "Shared service",
+            legalBasis: "Synthetic basis",
+            responsibilities: "Municipal management",
+            retentionPolicy: "Synthetic policy",
+            eligibility: "acceso_abierto",
+            weeklyLimit: 1,
+            aggregateReports: false,
+            participants: [
+              {
+                tenantId: tenant,
+                accreditationIssuer: false,
+                unitIds: [publicUnit],
+              },
+              {
+                tenantId: otherTenant,
+                accreditationIssuer: false,
+                unitIds: [],
+              },
+            ],
+          },
+          randomUUID(),
+          3600,
+        );
+        const id = draft.result.agreementId;
+        const evidence = {
+          version: 1,
+          legalReviewReference: "Synthetic reviewed basis",
+          reportReviewReference: null,
+        };
+        await assert.rejects(
+          activateAgreement(
+            domain,
+            admin,
+            activationTenant,
+            id,
+            "unapproved",
+            evidence,
+            randomUUID(),
+            3600,
+          ),
+          { code: "CONFLICT" },
+        );
+        await approveAgreement(
+          domain,
+          admin,
+          tenant,
+          id,
+          "approval",
+          { version: 1, unitIds: [publicUnit] },
+          randomUUID(),
+          3600,
+        );
+        await assert.rejects(
+          activateAgreement(
+            domain,
+            actor,
+            activationTenant,
+            id,
+            "activation-no-mfa",
+            evidence,
+            randomUUID(),
+            3600,
+          ),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          activateAgreement(
+            domain,
+            admin,
+            activationTenant,
+            id,
+            "no-review",
+            { ...evidence, legalReviewReference: " " },
+            randomUUID(),
+            3600,
+          ),
+          { code: "INVALID_INPUT" },
+        );
+        await assert.rejects(
+          activateAgreement(
+            domain,
+            admin,
+            activationTenant,
+            id,
+            "missing-participant",
+            evidence,
+            randomUUID(),
+            3600,
+          ),
+          { code: "CONFLICT" },
+        );
+        await approveAgreement(
+          domain,
+          admin,
+          otherTenant,
+          id,
+          "other-approval",
+          { version: 1, unitIds: [] },
+          randomUUID(),
+          3600,
+        );
+        const activated = await activateAgreement(
+          domain,
+          admin,
+          activationTenant,
+          id,
+          "activate",
+          evidence,
+          randomUUID(),
+          3600,
+        );
+        assert.equal(activated.result.status, "ACTIVADO");
+        assert.equal(
+          (
+            await activateAgreement(
+              domain,
+              admin,
+              activationTenant,
+              id,
+              "activate",
+              evidence,
+              randomUUID(),
+              3600,
+            )
+          ).replayed,
+          true,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_consumption WHERE agreement_id=$1 AND NOT released",
+              [id],
+            )
+          ).rows[0].n,
+          2,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_consumption_event WHERE agreement_id=$1 AND action='RECONCILED'",
+              [id],
+            )
+          ).rows[0].n,
+          2,
+        );
+        for (const r of prior)
+          assert.equal(
+            (
+              await migration.query(
+                "SELECT status FROM domain.reservation WHERE tenant_id=$1 AND id=$2",
+                [tenant, r.id],
+              )
+            ).rows[0].status,
+            "CONFIRMADA",
+          );
+        await assert.rejects(
+          createReservation(
+            domain,
+            actor,
+            tenant,
+            "over-reconciled-quota",
+            { ...input(winner, 20), unitId: publicUnit },
+            randomUUID(),
+            3600,
+            clock,
+          ),
+          { code: "CONFLICT" },
+        );
+        assert.equal(
+          (
+            await domain.query(
+              "SELECT nullif(current_setting('quenda.tenant_id',true),'') AS tenant",
+            )
+          ).rows[0].tenant,
+          null,
+        );
+        await assert.rejects(
+          domain.query(
+            "SELECT * FROM domain.project_agreement_reservations($1,1)",
+            [id],
+          ),
+          { code: "42501" },
+        );
+        await assert.rejects(
+          activateAgreement(
+            domain,
+            admin,
+            activationTenant,
+            id,
+            "second-activation",
+            evidence,
+            randomUUID(),
+            3600,
+          ),
+          { code: "CONFLICT" },
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_lifecycle_event WHERE agreement_id=$1 AND action='ACTIVATED'",
+              [id],
+            )
+          ).rows[0].n,
+          1,
+        );
       },
     );
   });

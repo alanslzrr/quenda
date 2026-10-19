@@ -2,6 +2,8 @@ export const moduleDefinition = {
   name: "collaboration",
   dependencies: ["identity", "catalog"],
 } as const;
+export type { ActivateAgreementInput } from "./activation.ts";
+export { activateAgreement } from "./activation.ts";
 export type { AgreementApprovalInput } from "./approvals.ts";
 export { approveAgreement } from "./approvals.ts";
 export { syncReservationConsumption } from "./consumption.ts";
