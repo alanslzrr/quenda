@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { transaction } from "../../src/database/transaction.ts";
+import { suspendAgreement } from "../../src/modules/collaboration/index.ts";
 import {
   cancelReservation,
   createReservation,
@@ -215,10 +216,97 @@ test("real booking commands enforce shared eligibility and quota in one transact
           ).rows[0].n,
           count,
         );
+        const invitation = randomUUID();
         await migration.query(
-          "UPDATE domain.agreement_version SET status='SUSPENDIDO' WHERE agreement_id=$1",
-          [agreement],
+          "INSERT INTO domain.administrator_invitation(tenant_id,id,account_id,invited_by,expires_at,accepted_at) VALUES($1,$2,'citizen','citizen',now()+interval '1 day',now())",
+          [tenants[winner], invitation],
         );
+        await migration.query(
+          "INSERT INTO domain.municipal_administrator(tenant_id,account_id,invitation_id) VALUES($1,'citizen',$2)",
+          [tenants[winner], invitation],
+        );
+        const admin = { ...actor, mfaVerifiedAt: new Date() };
+        await assert.rejects(
+          suspendAgreement(
+            domain,
+            actor,
+            tenants[winner] as string,
+            agreement,
+            "no-mfa",
+            { version: 1, reason: "Safety review" },
+            randomUUID(),
+            3600,
+          ),
+          { code: "FORBIDDEN" },
+        );
+        const suspended = await suspendAgreement(
+          domain,
+          admin,
+          tenants[winner] as string,
+          agreement,
+          "suspend",
+          { version: 1, reason: "Safety review" },
+          randomUUID(),
+          3600,
+        );
+        assert.equal(suspended.result.status, "SUSPENDIDO");
+        assert.equal(
+          (
+            await suspendAgreement(
+              domain,
+              admin,
+              tenants[winner] as string,
+              agreement,
+              "suspend",
+              { version: 1, reason: "Safety review" },
+              randomUUID(),
+              3600,
+            )
+          ).replayed,
+          true,
+        );
+        await suspendAgreement(
+          domain,
+          admin,
+          tenants[winner] as string,
+          agreement,
+          "repeat-suspend",
+          { version: 1, reason: "Another reason" },
+          randomUUID(),
+          3600,
+        );
+        const audit = (
+          await migration.query(
+            "SELECT reason,actor_id,actor_tenant_id FROM domain.agreement_lifecycle_event WHERE agreement_id=$1",
+            [agreement],
+          )
+        ).rows;
+        assert.deepEqual(audit, [
+          {
+            reason: "Safety review",
+            actor_id: "citizen",
+            actor_tenant_id: tenants[winner],
+          },
+        ]);
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_assignment WHERE agreement_id=$1 AND effective_period @> clock_timestamp()",
+              [agreement],
+            )
+          ).rows[0].n,
+          0,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.unit_agreement_gate WHERE agreement_id=$1",
+              [agreement],
+            )
+          ).rows[0].n,
+          2,
+        );
+
         const publicUnit = randomUUID();
         await migration.query(
           "INSERT INTO domain.reservable_unit(tenant_id,id,facility_id,name) SELECT tenant_id,$3,facility_id,'Public unit' FROM domain.reservable_unit WHERE tenant_id=$1 AND id=$2",
@@ -270,6 +358,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
           code: "CONFLICT",
         });
         await cancel(winner, booking, 2, "cancel-suspended");
+        // Restore an active lifecycle fixture for the independent eligibility scenario.
+        await migration.query(
+          "UPDATE domain.agreement_activation SET effective_period='[2020-01-01T00:00:00Z,2040-01-01T00:00:00Z)' WHERE agreement_id=$1",
+          [agreement],
+        );
         await migration.query(
           "UPDATE domain.agreement_version SET status='ACTIVADO',weekly_limit=NULL,eligibility='acreditacion_vigente' WHERE agreement_id=$1",
           [agreement],

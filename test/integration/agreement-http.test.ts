@@ -354,10 +354,39 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
           .statusCode,
         400,
       );
-      await migration.query(
-        "UPDATE domain.agreement_version SET status='SUSPENDIDO' WHERE agreement_id=$1 AND version=2",
-        [id],
+      const suspensionUrl = `${url}/${id}/suspend`;
+      const suspensionBody = { version: 2, reason: "Safety review" },
+        suspensionHeaders = { "idempotency-key": "http-suspend" };
+      assert.equal(
+        (
+          await client.request(
+            suspensionUrl,
+            { version: 2, reason: " " },
+            suspensionHeaders,
+          )
+        ).statusCode,
+        400,
       );
+      const suspended = await client.request(
+        suspensionUrl,
+        suspensionBody,
+        suspensionHeaders,
+      );
+      assert.equal(suspended.statusCode, 200, suspended.body);
+      assert.equal(suspended.json().status, "SUSPENDIDO");
+      const suspensionReplay = await replica.inject({
+        method: "POST",
+        url: suspensionUrl,
+        payload: suspensionBody,
+        headers: {
+          ...suspensionHeaders,
+          origin: config.origin,
+          cookie: client.cookie(),
+        },
+      });
+      assert.equal(suspensionReplay.statusCode, 200, suspensionReplay.body);
+      assert.equal(suspensionReplay.headers["idempotency-replayed"], "true");
+
       const revoked = await client.request(
         revokeUrl,
         revokeBody,
@@ -403,6 +432,11 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         (await client.request(revokeUrl, revokeBody, revokeHeaders)).statusCode,
         403,
       );
+      assert.equal(
+        (await client.request(suspensionUrl, suspensionBody, suspensionHeaders))
+          .statusCode,
+        403,
+      );
       assert.equal((await client.request(detailUrl)).statusCode, 403);
       assert.equal((await client.request(url)).statusCode, 403);
       assert.equal(
@@ -416,6 +450,7 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         "/api/municipalities/{tenantId}/agreements",
         "/api/municipalities/{tenantId}/agreements/{agreementId}/versions",
         "/api/municipalities/{tenantId}/agreements/{agreementId}/approve",
+        "/api/municipalities/{tenantId}/agreements/{agreementId}/suspend",
         "/api/municipalities/{tenantId}/credentials",
         "/api/municipalities/{tenantId}/credentials/{credentialId}/revoke",
       ])

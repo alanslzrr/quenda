@@ -13,6 +13,7 @@ import {
   createAgreementDraft,
 } from "./drafts.ts";
 import { registerAgreementQueries } from "./query-routes.ts";
+import { suspendAgreement } from "./suspension.ts";
 import { createAgreementVersion } from "./versions.ts";
 
 const uuid = { type: "string", format: "uuid" };
@@ -57,7 +58,7 @@ export async function registerCollaboration(
   const actor = createRequestActor(pool, auth, config);
   await registerAgreementQueries(app, pool, auth, config);
   await registerCredentialRoutes(app, pool, auth, config, retentionSeconds);
-  for (const action of ["create", "version", "approve"] as const) {
+  for (const action of ["create", "version", "approve", "suspend"] as const) {
     const properties =
       action === "create"
         ? {
@@ -67,21 +68,26 @@ export async function registerCollaboration(
           }
         : action === "version"
           ? { ...configuration, expectedVersion: integer }
-          : {
-              version: integer,
-              unitIds: { type: "array", uniqueItems: true, items: uuid },
-            };
-    const success = action === "approve" ? 200 : 201;
+          : action === "suspend"
+            ? {
+                version: integer,
+                reason: { type: "string", minLength: 1, maxLength: 500 },
+              }
+            : {
+                version: integer,
+                unitIds: { type: "array", uniqueItems: true, items: uuid },
+              };
+    const success = action === "approve" || action === "suspend" ? 200 : 201;
     app.post<{
       Params: { tenantId: string; agreementId?: string };
       Headers: { "idempotency-key": string };
       Body: AgreementDraftInput &
         AgreementVersionInput &
-        AgreementApprovalInput & { expectedVersion: number };
+        AgreementApprovalInput & { expectedVersion: number; reason: string };
     }>(
       action === "create"
         ? "/api/municipalities/:tenantId/agreements"
-        : `/api/municipalities/:tenantId/agreements/:agreementId/${action === "version" ? "versions" : "approve"}`,
+        : `/api/municipalities/:tenantId/agreements/:agreementId/${action === "version" ? "versions" : action}`,
       {
         schema: {
           operationId:
@@ -89,10 +95,12 @@ export async function registerCollaboration(
               ? "createAgreementDraft"
               : action === "version"
                 ? "createAgreementVersion"
-                : "approveAgreement",
+                : action === "suspend"
+                  ? "suspendAgreement"
+                  : "approveAgreement",
           tags: ["Collaboration"],
           security: [{ quendaSession: [] }],
-          description: `${action === "create" ? "Crea un convenio en BORRADOR sin activar capacidades." : action === "version" ? "Crea una nueva versión BORRADOR sin heredar aprobaciones; exige expectedVersion vigente y conserva la zona del convenio." : "Aprueba la versión y el conjunto exacto de unidades del municipio; todas las aprobaciones producen APROBADO, nunca ACTIVADO."} Exige administrador participante, MFA reciente y Origin autorizado. Retención idempotente: ${retentionSeconds} segundos.`,
+          description: `${action === "create" ? "Crea un convenio en BORRADOR sin activar capacidades." : action === "version" ? "Crea una nueva versión BORRADOR sin heredar aprobaciones; exige expectedVersion vigente y conserva la zona del convenio." : action === "suspend" ? "Suspende el convenio con motivo, cierra vigencias efectivas y conserva reservas y vinculaciones de unidades." : "Aprueba la versión y el conjunto exacto de unidades del municipio; todas las aprobaciones producen APROBADO, nunca ACTIVADO."} Exige administrador participante, MFA reciente y Origin autorizado. Retención idempotente: ${retentionSeconds} segundos.`,
           params: {
             type: "object",
             additionalProperties: false,
@@ -133,7 +141,13 @@ export async function registerCollaboration(
               properties: {
                 agreementId: uuid,
                 version: integer,
-                status: { type: "string", enum: ["BORRADOR", "APROBADO"] },
+                status: {
+                  type: "string",
+                  enum:
+                    action === "suspend"
+                      ? ["SUSPENDIDO"]
+                      : ["BORRADOR", "APROBADO"],
+                },
               },
               headers: {
                 "idempotency-replayed": {
@@ -171,7 +185,9 @@ export async function registerCollaboration(
                   request.id,
                   retentionSeconds,
                 )
-              : await approveAgreement(
+              : await (action === "suspend"
+                  ? suspendAgreement
+                  : approveAgreement)(
                   pool,
                   account,
                   request.params.tenantId,

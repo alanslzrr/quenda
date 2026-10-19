@@ -15,4 +15,5 @@ export { createAgreementDraft, normalizeAgreementDraft } from "./drafts.ts";
 export { listAgreementVersions, readAgreementVersion } from "./queries.ts";
 export { weeklyQuotaPeriod } from "./quota-period.ts";
 export { registerCollaboration } from "./routes.ts";
+export { suspendAgreement } from "./suspension.ts";
 export { createAgreementVersion } from "./versions.ts";

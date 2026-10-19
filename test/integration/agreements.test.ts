@@ -11,6 +11,7 @@ import {
   listAgreementVersions,
   readAgreementVersion,
   revokeAgreementCredential,
+  suspendAgreement,
 } from "../../src/modules/collaboration/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
@@ -968,6 +969,102 @@ test("agreement drafts preserve participant ownership and do not activate capabi
             )
           ).rows[0],
           after,
+        );
+      },
+    );
+    await t.test(
+      "a participant suspends a scheduled activation without deleting its gate",
+      async () => {
+        const id = (await create("scheduled-suspension")).result.agreementId;
+        const reason = { version: 1, reason: "Review before opening" };
+        await assert.rejects(
+          suspendAgreement(
+            domain,
+            actor(0),
+            tenant,
+            id,
+            "draft-suspend",
+            reason,
+            randomUUID(),
+            3600,
+          ),
+          { code: "CONFLICT" },
+        );
+        await migration.query(
+          "UPDATE domain.agreement_version SET status='ACTIVADO' WHERE agreement_id=$1",
+          [id],
+        );
+        await migration.query(
+          "INSERT INTO domain.agreement_activation(agreement_id,version,effective_period,activated_by,correlation_id) VALUES($1,1,'[2030-01-01T00:00:00Z,2031-01-01T00:00:00Z)','admin-0',$2)",
+          [id, randomUUID()],
+        );
+        await migration.query(
+          "INSERT INTO domain.agreement_assignment SELECT agreement_id,version,tenant_id,unit_id,'[2030-01-01T00:00:00Z,2031-01-01T00:00:00Z)'::tstzrange FROM domain.agreement_unit WHERE agreement_id=$1",
+          [id],
+        );
+        await migration.query(
+          "INSERT INTO domain.unit_agreement_gate SELECT tenant_id,unit_id,agreement_id,version FROM domain.agreement_unit WHERE agreement_id=$1",
+          [id],
+        );
+        await assert.rejects(
+          suspendAgreement(
+            domain,
+            actor(2),
+            tenants[2] as string,
+            id,
+            "outsider-suspend",
+            reason,
+            randomUUID(),
+            3600,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await suspendAgreement(
+          domain,
+          actor(1),
+          tenants[1] as string,
+          id,
+          "participant-suspend",
+          reason,
+          randomUUID(),
+          3600,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT isempty(effective_period) AS closed FROM domain.agreement_activation WHERE agreement_id=$1",
+              [id],
+            )
+          ).rows[0].closed,
+          true,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.unit_agreement_gate WHERE agreement_id=$1",
+              [id],
+            )
+          ).rows[0].n,
+          2,
+        );
+        await assert.rejects(
+          domain.query("DELETE FROM domain.agreement_lifecycle_event"),
+          { code: "42501" },
+        );
+        await transaction(
+          domain,
+          async (c) => {
+            assert.equal(
+              (
+                await c.query(
+                  "SELECT * FROM domain.agreement_lifecycle_event WHERE agreement_id=$1",
+                  [id],
+                )
+              ).rowCount,
+              0,
+            );
+          },
+          { accountId: actor(2).accountId, tenantId: tenants[2] as string },
         );
       },
     );
