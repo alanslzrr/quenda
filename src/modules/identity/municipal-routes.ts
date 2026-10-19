@@ -14,6 +14,7 @@ import {
   type MunicipalityInput,
   replaceInitialAdministratorInvitation,
 } from "./municipality.ts";
+import { registerProfileRoutes } from "./profile-routes.ts";
 import { createRequestActor } from "./request-actor.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
@@ -32,6 +33,7 @@ export async function registerMunicipalIdentity(
 ) {
   const actor = createRequestActor(pool, auth, config);
   await registerManagerRoutes(app, pool, auth, config);
+  await registerProfileRoutes(app, pool, auth, config);
   app.post<{ Body: MunicipalityInput }>(
     "/api/municipalities",
     {

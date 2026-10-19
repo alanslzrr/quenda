@@ -16,6 +16,7 @@ import {
   createMunicipality,
   inviteAdministrator,
   inviteManager,
+  listMunicipalProfiles,
   listOwnAdministratorInvitations,
   listOwnManagerInvitations,
   replaceInitialAdministratorInvitation,
@@ -1364,6 +1365,113 @@ test("municipal creation and first administrator acceptance are atomic and isola
             )
           ).rows[0].n,
           2,
+        );
+      },
+    );
+
+    await t.test(
+      "municipal profile queries are bounded and never become a global account directory",
+      async () => {
+        const a = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        const b = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-b"),
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          a.invitationId,
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-b"),
+          b.tenantId,
+          b.invitationId,
+        );
+        for (let i = 0; i < 22; i++) {
+          const id = `profile-${i.toString().padStart(2, "0")}`;
+          await auth.query(
+            'INSERT INTO auth."user" (id,name,email,"emailVerified","createdAt","updatedAt") VALUES ($1,$1,$2,true,now(),now())',
+            [id, `${id}@example.test`],
+          );
+          await migration.query(
+            "INSERT INTO domain.municipal_profile(tenant_id,account_id) VALUES ($1,$2)",
+            [a.tenantId, id],
+          );
+        }
+        const first = await listMunicipalProfiles(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+        );
+        assert.equal(first.items.length, 20);
+        assert.ok(first.nextCursor);
+        const second = await listMunicipalProfiles(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          first.nextCursor,
+        );
+        assert.equal(second.items.length, 3);
+        assert.equal(second.nextCursor, null);
+        const rows = [...first.items, ...second.items];
+        assert.equal(new Set(rows.map((row) => row.accountId)).size, 23);
+        assert.ok(
+          rows.every(
+            (row) =>
+              Object.keys(row).sort().join(",") === "accountId,createdAt",
+          ),
+        );
+        assert.ok(
+          !rows.some((row) =>
+            ["operator", "admin-b", "other"].includes(row.accountId),
+          ),
+        );
+        for (const id of ["admin-b", "operator", "manager", "other"])
+          await assert.rejects(
+            listMunicipalProfiles(domain, account(id), a.tenantId),
+            { code: "FORBIDDEN" },
+          );
+        await assert.rejects(
+          listMunicipalProfiles(domain, account("admin-a"), b.tenantId),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          listMunicipalProfiles(
+            domain,
+            {
+              ...account("admin-a"),
+              mfaVerifiedAt: new Date(Date.now() - 360000),
+            },
+            a.tenantId,
+          ),
+          { code: "REAUTHENTICATION_REQUIRED" },
+        );
+        const ownB = await listMunicipalProfiles(
+          domain,
+          account("admin-b"),
+          b.tenantId,
+        );
+        assert.deepEqual(
+          ownB.items.map((row) => row.accountId),
+          ["admin-b"],
+        );
+        await revokeAdministrator(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          "admin-a",
+          "Fin de administración",
+        );
+        await assert.rejects(
+          listMunicipalProfiles(domain, account("admin-a"), a.tenantId),
+          { code: "FORBIDDEN" },
         );
       },
     );

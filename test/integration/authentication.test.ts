@@ -498,6 +498,25 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           );
           assert.equal((await client.request(accept, {})).statusCode, 200);
           assert.equal((await client.request(accept, {})).statusCode, 404);
+          const profiles = await client.request(
+            `/api/municipalities/${tenantId}/profiles`,
+          );
+          assert.equal(profiles.statusCode, 200, profiles.body);
+          assert.deepEqual(
+            profiles
+              .json()
+              .items.map((item: { accountId: string }) => item.accountId),
+            [accountId],
+          );
+          assert.equal(profiles.json().nextCursor, null);
+          assert.equal(
+            (
+              await client.request(
+                `/api/municipalities/${tenantId}/profiles?accountId=another`,
+              )
+            ).statusCode,
+            400,
+          );
           const contract = app.swagger();
           assert.ok(contract.paths?.["/api/municipalities"]?.post);
           assert.ok(contract.paths?.["/api/me"]?.get);
