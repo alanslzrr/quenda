@@ -14,6 +14,10 @@ const messages = {
     gl: "O formato da solicitude non está admitido.",
   },
   UNAUTHENTICATED: { es: "Debes iniciar sesión.", gl: "Debes iniciar sesión." },
+  RATE_LIMITED: {
+    es: "Demasiadas solicitudes. Espera antes de repetir.",
+    gl: "Demasiadas solicitudes. Agarda antes de repetir.",
+  },
   REAUTHENTICATION_REQUIRED: {
     es: "Vuelve a verificar el segundo factor para realizar esta operación.",
     gl: "Volve verificar o segundo factor para realizar esta operación.",
@@ -46,6 +50,7 @@ const statuses = {
   UNSUPPORTED_MEDIA_TYPE: 415,
   UNAUTHENTICATED: 401,
   FORBIDDEN: 403,
+  RATE_LIMITED: 429,
   REAUTHENTICATION_REQUIRED: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,

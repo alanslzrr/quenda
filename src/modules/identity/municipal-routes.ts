@@ -1,5 +1,5 @@
 import { fromNodeHeaders } from "better-auth/node";
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import { HttpError } from "../../http/errors.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
@@ -9,9 +9,11 @@ import {
   type MunicipalityInput,
 } from "./municipality.ts";
 
+import { consumeAdministrativeAttempt } from "./rate-limit.ts";
+
 const uuid = { type: "string", format: "uuid" } as const;
 const errors = Object.fromEntries(
-  [400, 401, 403, 404, 409, 500].map((status) => [
+  [400, 401, 403, 404, 409, 429, 500].map((status) => [
     status,
     { $ref: "ErrorResponse#" },
   ]),
@@ -23,7 +25,7 @@ export async function registerMunicipalIdentity(
   auth: Authentication,
   config: AuthConfiguration,
 ) {
-  const actor = async (request: FastifyRequest) => {
+  const actor = async (request: FastifyRequest, reply: FastifyReply) => {
     // Cookie-based mutation requires the configured Origin, not Host or proxy
     // headers. Missing Origin is rejected too, including requests from scripts.
     if (
@@ -33,6 +35,11 @@ export async function registerMunicipalIdentity(
       throw new HttpError("FORBIDDEN");
     const account = await auth.authenticate(fromNodeHeaders(request.headers));
     if (!account) throw new HttpError("UNAUTHENTICATED");
+    const limit = await consumeAdministrativeAttempt(pool, account.accountId);
+    if (!limit.allowed) {
+      reply.header("retry-after", limit.retryAfter);
+      throw new HttpError("RATE_LIMITED");
+    }
     return account;
   };
   app.post<{ Body: MunicipalityInput }>(
@@ -72,7 +79,7 @@ export async function registerMunicipalIdentity(
       },
     },
     async (request, reply) => {
-      const account = await actor(request);
+      const account = await actor(request, reply);
       return reply
         .code(201)
         .send(await createMunicipality(pool, account, request.body));
@@ -108,10 +115,10 @@ export async function registerMunicipalIdentity(
         },
       },
     },
-    async (request) =>
+    async (request, reply) =>
       acceptAdministratorInvitation(
         pool,
-        await actor(request),
+        await actor(request, reply),
         request.params.tenantId,
         request.params.invitationId,
       ),

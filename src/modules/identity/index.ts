@@ -15,5 +15,6 @@ export {
   createMunicipality,
 } from "./municipality.ts";
 export { requireOperator } from "./operator.ts";
+export { consumeAdministrativeAttempt } from "./rate-limit.ts";
 export { requireRecentMfa } from "./reauthentication.ts";
 export { authenticationSchema, registerAuthentication } from "./routes.ts";

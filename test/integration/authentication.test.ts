@@ -10,6 +10,7 @@ import { buildApp } from "../../src/app.ts";
 import { localMail } from "../../src/mail/local.ts";
 import {
   authOptions,
+  consumeAdministrativeAttempt,
   createAuthentication,
 } from "../../src/modules/identity/index.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
@@ -455,6 +456,21 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             ).rowCount,
             1,
           );
+          for (let i = 0; i < 60; i++)
+            await consumeAdministrativeAttempt(domain, accountId);
+          const throttled = await replica.inject({
+            method: "POST",
+            url: "/api/municipalities",
+            payload: input,
+            headers: {
+              cookie: client.cookie(),
+              origin: config.origin,
+              "x-forwarded-for": "198.51.100.200",
+            },
+          });
+          assert.equal(throttled.statusCode, 429, throttled.body);
+          assert.equal(throttled.json().error.code, "RATE_LIMITED");
+          assert.ok(Number(throttled.headers["retry-after"]) >= 1);
           const recovery = browser(replica, "192.0.2.32");
           assert.equal(
             (
