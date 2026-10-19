@@ -1,4 +1,7 @@
-import { resolve } from "node:path";
+import {
+  type MailConfiguration,
+  readMailConfiguration,
+} from "./mail/config.ts";
 
 export const defaultIdempotencyRetentionSeconds = 86400;
 
@@ -12,7 +15,7 @@ export interface Config {
   databasePoolMax: number;
   authOrigin: string;
   authSecret: string;
-  localMailDirectory: string;
+  mail: MailConfiguration;
 }
 
 export class ConfigurationError extends Error {
@@ -91,12 +94,16 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
   } catch {
     throw new ConfigurationError("AUTH_ORIGIN");
   }
+  if (env.NODE_ENV === "production" && origin.protocol !== "https:")
+    throw new ConfigurationError("AUTH_ORIGIN");
   if (!env.AUTH_SECRET || env.AUTH_SECRET.length < 32)
     throw new ConfigurationError("AUTH_SECRET");
-  if (env.NODE_ENV === "production")
-    throw new ConfigurationError(
-      "MAIL_TRANSPORT: local mail is development-only",
-    );
+  let mail: MailConfiguration;
+  try {
+    mail = readMailConfiguration(env);
+  } catch {
+    throw new ConfigurationError("MAIL_TRANSPORT");
+  }
   return {
     idempotencyRetentionSeconds: integer(
       env.IDEMPOTENCY_RETENTION_SECONDS ??
@@ -118,6 +125,6 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
     authDatabaseUrl: auth.href,
     authOrigin: origin.origin,
     authSecret: env.AUTH_SECRET,
-    localMailDirectory: resolve(env.LOCAL_MAIL_DIR ?? ".local/mail"),
+    mail,
   };
 }

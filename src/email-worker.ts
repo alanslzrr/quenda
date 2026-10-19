@@ -1,7 +1,8 @@
 import { setTimeout } from "node:timers/promises";
 import { Pool } from "pg";
 import { assertRuntimeRole } from "./database/pools.ts";
-import { localMail } from "./mail/local.ts";
+import { readMailConfiguration } from "./mail/config.ts";
+import { createMailTransport } from "./mail/transport.ts";
 import { processReservationEmail } from "./modules/communications/index.ts";
 
 function required(name: string) {
@@ -17,8 +18,6 @@ function integer(name: string, fallback: number, min: number, max: number) {
   return value;
 }
 async function run() {
-  if (process.env.NODE_ENV === "production")
-    throw new Error("Production mail transport is not configured");
   if (process.argv.slice(2).some((arg) => arg !== "--once"))
     throw new Error("Invalid worker arguments");
   const locale = required("EMAIL_LOCALE");
@@ -27,6 +26,7 @@ async function run() {
   const origin = new URL(required("AUTH_ORIGIN"));
   if (
     !["http:", "https:"].includes(origin.protocol) ||
+    (process.env.NODE_ENV === "production" && origin.protocol !== "https:") ||
     origin.username ||
     origin.password ||
     origin.pathname !== "/" ||
@@ -42,7 +42,7 @@ async function run() {
     retrySeconds: integer("EMAIL_RETRY_SECONDS", 60, 1, 86400),
   } as const;
   const idleMs = integer("EMAIL_POLL_MS", 1000, 100, 60000);
-  const transport = localMail(required("LOCAL_MAIL_DIR"));
+  const transport = createMailTransport(readMailConfiguration(process.env));
   const pool = new Pool({
     connectionString: required("WORKER_DATABASE_URL"),
     max: 2,

@@ -1,7 +1,7 @@
 import { buildApp } from "./app.ts";
 import { ConfigurationError, readConfig } from "./config.ts";
 import { createDatabases } from "./database/pools.ts";
-import { localMail } from "./mail/local.ts";
+import { createMailTransport } from "./mail/transport.ts";
 import { createAuthentication } from "./modules/identity/index.ts";
 
 async function start(): Promise<void> {
@@ -14,7 +14,7 @@ async function start(): Promise<void> {
   const authentication = createAuthentication(
     database.auth,
     identityConfig,
-    localMail(config.localMailDirectory),
+    createMailTransport(config.mail),
   );
   const app = await buildApp({
     database,

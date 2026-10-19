@@ -25,7 +25,7 @@ El proceso web recibe exclusivamente la configuración de `.env.local`. Las cred
 
 Better Auth utiliza el esquema `auth`, con migraciones ejecutadas fuera del proceso web. Kysely configura su adaptador PostgreSQL con transacciones; las consultas del dominio utilizan `pg`.
 
-`AUTH_ORIGIN` fija el origen permitido y `AUTH_SECRET` se genera con la configuración local. El registro exige verificar el correo antes de iniciar sesión. Los mensajes de verificación y recuperación se guardan en `.local/mail`, con permisos privados y fuera de Git. Este transporte no envía correo y no admite ejecución en producción.
+`AUTH_ORIGIN` fija el origen permitido y `AUTH_SECRET` se genera con la configuración local. El registro exige verificar el correo antes de iniciar sesión. Con el transporte local, los mensajes de verificación y recuperación se guardan en `.local/mail`, con permisos privados y fuera de Git. Este transporte no envía correo y no admite ejecución en producción.
 
 Las rutas habilitadas están bajo `/api/auth`; `GET /api/auth/open-api/generate-schema` devuelve su contrato OpenAPI. `GET /api/me` devuelve la identidad verificada y si la sesión ha superado MFA. Las cookies son Secure, HttpOnly y SameSite=Lax; fuera del desarrollo en loopback se requiere HTTPS. La autenticación no concede permisos municipales.
 
@@ -237,7 +237,7 @@ El rol worker solo ejecuta las funciones de reclamar y finalizar; no puede consu
 
 La función recibe explícitamente origen, idioma, duración de concesión, máximo de intentos y espera de reintento. Sus resultados son `IDLE`, `ACCEPTED`, `RETRY_SCHEDULED`, `EXHAUSTED` y `LEASE_LOST`. `ACCEPTED` no garantiza recepción. Un envío aceptado cuyo resultado no llegue a registrarse puede repetirse tras vencer la concesión.
 
-Para ejecutar el worker local: `pnpm worker:local`; añadir `--once` procesa como máximo un evento y termina. Tras `pnpm build`, `pnpm worker:start` ejecuta `dist/email-worker.js` con las variables del entorno. Requiere `WORKER_DATABASE_URL`, `AUTH_ORIGIN`, `LOCAL_MAIL_DIR` y `EMAIL_LOCALE` (`gl` o `es`). La configuración generada usa gallego; este valor es del proceso, no una preferencia persistida del usuario.
+Para ejecutar el worker local: `pnpm worker:local`; añadir `--once` procesa como máximo un evento y termina. Tras `pnpm build`, `pnpm worker:start` ejecuta `dist/email-worker.js` con las variables del entorno. Requiere `WORKER_DATABASE_URL`, `AUTH_ORIGIN` y `EMAIL_LOCALE` (`gl` o `es`). La configuración generada usa gallego; este valor es del proceso, no una preferencia persistida del usuario.
 
 Los parámetros opcionales son `EMAIL_LEASE_SECONDS` (60), `EMAIL_MAX_ATTEMPTS` (5), `EMAIL_RETRY_SECONDS` (60) y `EMAIL_POLL_MS` (1000). Reducir el máximo agota los pendientes que ya lo alcanzan. SIGINT/SIGTERM detienen nuevas iteraciones y cierran el pool tras el intento en curso. Los logs contienen códigos de estado, no destinatarios ni respuestas del proveedor. El transporte local no permite ejecutar el worker con `NODE_ENV=production`.
 
@@ -248,3 +248,11 @@ El worker publica `EMAIL_QUEUE_HEALTH` con cantidades de pendientes, concesiones
 `GET /api/me/preferences` consulta la preferencia de la cuenta autenticada. `PUT /api/me/preferences`, con `Origin` autorizado, recibe únicamente `{ "locale": "gl" }`, `{ "locale": "es" }` o `{ "locale": null }`. El valor nulo utiliza `EMAIL_LOCALE` del worker. No permite consultar ni modificar otra cuenta.
 
 Cada correo guarda la preferencia del titular al generarse el evento, también cuando la operación la realiza personal municipal. Cambiar la preferencia no altera correos ya pendientes. El worker utiliza ese idioma guardado y solo recurre a su configuración cuando no existe una elección del titular.
+
+### Transporte SMTP
+
+Autenticación y worker utilizan la misma implementación de `MailTransport`. `MAIL_TRANSPORT=local` es el valor predeterminado de desarrollo; `MAIL_TRANSPORT=smtp` permite configurar un servidor sin depender de un proveedor concreto. En producción se exige SMTP y `AUTH_ORIGIN` HTTPS.
+
+SMTP requiere `SMTP_HOST` y `SMTP_FROM` (una dirección). `SMTP_TLS=starttls` exige actualizar la conexión a TLS y usa el puerto 587 por defecto; `SMTP_TLS=tls` inicia con TLS y usa 465. `SMTP_PORT` permite otro puerto. `SMTP_USER` y `SMTP_PASSWORD` se proporcionan juntos cuando el servidor requiere autenticación. `SMTP_SERVERNAME` identifica el certificado y debe indicarse al conectar por IP; `SMTP_CA_FILE` permite una CA privada. Nunca se desactiva la validación del certificado ni se admite degradación a texto plano.
+
+Nodemailer 10.1.7 está fijado en el lockfile e incluye tipos TypeScript y licencia MIT-0. Se utiliza sin pool SMTP, sin logs de protocolo y sin acceso a archivos/URLs desde el contenido del mensaje. Los errores del proveedor se sustituyen por un error genérico. Las pruebas usan servidores SMTP temporales locales con TLS, STARTTLS, autenticación y rechazos; no envían mensajes externos. Configuración basada en la [documentación oficial de Nodemailer](https://nodemailer.com/smtp).
