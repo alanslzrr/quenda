@@ -5,6 +5,7 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
+import { registerIndicatorRoutes } from "./indicator-routes.ts";
 import { listOwnNotices } from "./notices.ts";
 
 export async function registerCommunications(
@@ -13,6 +14,7 @@ export async function registerCommunications(
   auth: Authentication,
   config: AuthConfiguration,
 ) {
+  await registerIndicatorRoutes(app, pool, auth, config);
   const actor = createRequestActor(pool, auth, config);
   const uuid = { type: "string", format: "uuid" },
     instant = { type: "string", format: "date-time" };

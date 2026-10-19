@@ -180,3 +180,80 @@ test("zero offering is not applicable; exceptions, multiple units and date valid
     { code: "INVALID_INPUT" },
   );
 });
+
+test("publication history intersects facility and unit state across calendar changes", async () => {
+  const { publishedCalendarSlices } = await import(
+    "../../src/modules/communications/indicator-history.ts"
+  );
+  const first = calendar(),
+    second = calendar(720, 840);
+  const history = {
+    calendars: [
+      { version: 1, createdAt: "2029-01-01T00:00:00Z", calendar: first },
+      { version: 2, createdAt: "2030-01-02T12:00:00Z", calendar: second },
+    ],
+    publications: [
+      {
+        operation: "PUBLISH_FACILITY" as const,
+        occurredAt: "2030-01-01T00:00:00Z",
+      },
+      {
+        operation: "PUBLISH_UNIT" as const,
+        occurredAt: "2030-01-01T00:00:00Z",
+      },
+      {
+        operation: "WITHDRAW_FACILITY" as const,
+        occurredAt: "2030-01-02T04:00:00Z",
+      },
+      {
+        operation: "WITHDRAW_UNIT" as const,
+        occurredAt: "2030-01-02T06:00:00Z",
+      },
+      {
+        operation: "PUBLISH_FACILITY" as const,
+        occurredAt: "2030-01-02T07:00:00Z",
+      },
+      {
+        operation: "PUBLISH_UNIT" as const,
+        occurredAt: "2030-01-02T08:00:00Z",
+      },
+    ],
+  };
+  const result = publishedCalendarSlices(
+    history,
+    "2030-01-01T00:00:00Z",
+    "2030-01-03T00:00:00Z",
+  );
+  assert.deepEqual(result, [
+    {
+      start: "2030-01-01T00:00:00Z",
+      end: "2030-01-02T04:00:00Z",
+      calendar: first,
+    },
+    {
+      start: "2030-01-02T08:00:00Z",
+      end: "2030-01-02T12:00:00Z",
+      calendar: first,
+    },
+    {
+      start: "2030-01-02T12:00:00Z",
+      end: "2030-01-03T00:00:00Z",
+      calendar: second,
+    },
+  ]);
+  assert.throws(
+    () =>
+      publishedCalendarSlices(
+        {
+          ...history,
+          publications: [
+            ...history.publications,
+            { operation: "WITHDRAW_UNIT", occurredAt: "2030-01-01T00:00:00Z" },
+          ],
+        },
+        "2030-01-01T00:00:00Z",
+        "2030-01-03T00:00:00Z",
+      ),
+    { code: "CONFLICT" },
+  );
+});

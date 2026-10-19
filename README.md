@@ -256,3 +256,9 @@ Autenticación y worker utilizan la misma implementación de `MailTransport`. `M
 SMTP requiere `SMTP_HOST` y `SMTP_FROM` (una dirección). `SMTP_TLS=starttls` exige actualizar la conexión a TLS y usa el puerto 587 por defecto; `SMTP_TLS=tls` inicia con TLS y usa 465. `SMTP_PORT` permite otro puerto. `SMTP_USER` y `SMTP_PASSWORD` se proporcionan juntos cuando el servidor requiere autenticación. `SMTP_SERVERNAME` identifica el certificado y debe indicarse al conectar por IP; `SMTP_CA_FILE` permite una CA privada. Nunca se desactiva la validación del certificado ni se admite degradación a texto plano.
 
 Nodemailer 10.1.7 está fijado en el lockfile e incluye tipos TypeScript y licencia MIT-0. Se utiliza sin pool SMTP, sin logs de protocolo y sin acceso a archivos/URLs desde el contenido del mensaje. Los errores del proveedor se sustituyen por un error genérico. Las pruebas usan servidores SMTP temporales locales con TLS, STARTTLS, autenticación y rechazos; no envían mensajes externos. Configuración basada en la [documentación oficial de Nodemailer](https://nodemailer.com/smtp).
+
+### Indicadores por unidad
+
+`GET /api/municipalities/{tenantId}/units/{unitId}/indicators?from=2030-01-01&to=2030-02-01` exige `REPORT_READ` sobre la unidad y MFA. El periodo usa fechas locales `[from,to)`, con un máximo de 366 días. Devuelve conteos por estado, minutos reservados, minutos ofertados y porcentaje de ocupación (`null` cuando la oferta es cero), con zona e instante de consulta.
+
+La oferta utiliza versiones de calendario y eventos históricos de publicación/retirada de instalación y unidad. Los cierres se recortan a su vigencia efectiva. Dos transiciones contradictorias de publicación con el mismo instante devuelven `409` en vez de inventar un orden. No se devuelven titulares, motivos ni eventos de auditoría. Las respuestas usan `Cache-Control: no-store`.

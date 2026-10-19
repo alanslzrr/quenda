@@ -523,6 +523,70 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(compatible.statusCode, 200, compatible.body);
       assert.equal(compatible.json().version, 2);
       assert.deepEqual(await available(), []);
+      const indicatorUrl = `/api/municipalities/${tenant}/units/${unit}/indicators?from=2030-01-01&to=2030-01-02`;
+      const unavailableReport = await client.request(indicatorUrl);
+      assert.equal(unavailableReport.statusCode, 200, unavailableReport.body);
+      assert.equal(unavailableReport.json().occupancyPercent, null);
+      for (const [operation, eventUnit, occurred] of [
+        ["PUBLISH_FACILITY", null, "2029-12-31T23:00:00Z"],
+        ["PUBLISH_UNIT", unit, "2029-12-31T23:00:00Z"],
+        ["WITHDRAW_FACILITY", null, "2030-01-01T11:00:00Z"],
+      ] as const)
+        await migration.query(
+          "INSERT INTO domain.catalog_event(tenant_id,id,actor_id,facility_id,unit_id,operation,occurred_at,reason,calendar_version,independence_confirmed) VALUES($1,$2,$3,$4,$5,$6,$7,'Historical fixture',CASE WHEN $5::uuid IS NULL THEN NULL ELSE 1 END,true)",
+          [
+            tenant,
+            randomUUID(),
+            accountId,
+            facility,
+            eventUnit,
+            operation,
+            occurred,
+          ],
+        );
+      await migration.query(
+        "INSERT INTO domain.schedule_block(tenant_id,id,unit_id,starts_at,ends_at,actor_id,reason,created_at,released_at) VALUES($1,$2,$3,'2030-01-01T08:00:00Z','2030-01-01T10:00:00Z',$4,'Historical fixture','2030-01-01T07:00:00Z','2030-01-01T09:00:00Z')",
+        [tenant, randomUUID(), unit, accountId],
+      );
+      const report = await client.request(indicatorUrl);
+      assert.equal(report.statusCode, 200, report.body);
+      assert.equal(report.headers["cache-control"], "no-store");
+      assert.equal(report.json().offeredMinutes, 660);
+      assert.equal(report.json().reservedMinutes, 0);
+      assert.equal(report.json().occupancyPercent, 0);
+      assert.ok(!report.body.includes("accountId"));
+      assert.equal((await app.inject({ url: indicatorUrl })).statusCode, 401);
+      assert.equal(
+        (await client.request(indicatorUrl.replace(unit, randomUUID())))
+          .statusCode,
+        404,
+      );
+      assert.equal(
+        (await client.request(indicatorUrl.replace(tenant, randomUUID())))
+          .statusCode,
+        403,
+      );
+      assert.equal(
+        (
+          await client.request(
+            indicatorUrl.replace("to=2030-01-02", "to=2032-01-01"),
+          )
+        ).statusCode,
+        400,
+      );
+      assert.ok(
+        (app.swagger() as { paths: Record<string, unknown> }).paths[
+          "/api/municipalities/{tenantId}/units/{unitId}/indicators"
+        ],
+      );
+      await assert.rejects(
+        domain.query(
+          "SELECT domain.unit_indicator_source($1,'2030-01-01','2030-01-02')",
+          [unit],
+        ),
+        { code: "42501" },
+      );
+
       const cookie = client.cookie();
       assert.equal(
         (await client.request("/api/auth/sign-out", {})).statusCode,
