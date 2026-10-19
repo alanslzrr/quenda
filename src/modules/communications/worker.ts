@@ -33,6 +33,7 @@ export async function processReservationEmail(
   // held while sending; a lost acknowledgement is recovered by lease expiry.
   const result = await pool.query<{
     token: string;
+    locale: "es" | "gl" | null;
     attempt: number;
     recipient: string;
     tenant_id: string;
@@ -50,16 +51,21 @@ export async function processReservationEmail(
   let accepted = false;
   try {
     await transport.send(
-      reservationMail(job.recipient, options.origin, options.locale, {
-        tenantId: job.tenant_id,
-        reservationId: job.reservation_id,
-        revision: job.revision,
-        kind: job.kind,
-        occurredAt: job.occurred_at.toISOString(),
-        startsAt: job.after_state.startsAt,
-        endsAt: job.after_state.endsAt,
-        timeZone: job.after_state.timezone,
-      }),
+      reservationMail(
+        job.recipient,
+        options.origin,
+        job.locale ?? options.locale,
+        {
+          tenantId: job.tenant_id,
+          reservationId: job.reservation_id,
+          revision: job.revision,
+          kind: job.kind,
+          occurredAt: job.occurred_at.toISOString(),
+          startsAt: job.after_state.startsAt,
+          endsAt: job.after_state.endsAt,
+          timeZone: job.after_state.timezone,
+        },
+      ),
     );
     accepted = true;
   } catch {

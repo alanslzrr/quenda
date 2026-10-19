@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
 import test from "node:test";
 import { buildApp } from "../../src/app.ts";
+import { transaction } from "../../src/database/transaction.ts";
+import { processReservationEmail } from "../../src/modules/communications/index.ts";
 import { createAuthentication } from "../../src/modules/identity/index.ts";
 import type { MailMessage } from "../../src/shared/mail.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
@@ -10,7 +12,7 @@ import { withDatabase } from "../helpers/postgres.ts";
 test("reservation HTTP uses verified sessions, origin checks and replay across replicas", {
   timeout: 60000,
 }, async () => {
-  await withDatabase(async ({ domain, auth, migration }) => {
+  await withDatabase(async ({ domain, auth, migration, worker }) => {
     const messages: MailMessage[] = [];
     const mail = {
       send: async (message: MailMessage) => {
@@ -148,6 +150,57 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
           ) as string[];
       };
       assert.ok((await available()).includes(body.startsAt));
+      const preference = (payload: unknown) =>
+        app.inject({
+          method: "PUT",
+          url: "/api/me/preferences",
+          payload: payload as Record<string, unknown>,
+          headers: { origin: config.origin, cookie: client.cookie() },
+        });
+      assert.deepEqual((await client.request("/api/me/preferences")).json(), {
+        locale: null,
+      });
+      assert.equal((await preference({ locale: "fr" })).statusCode, 400);
+      assert.equal(
+        (await preference({ locale: "es", accountId: "other" })).statusCode,
+        400,
+      );
+      assert.equal(
+        (
+          await app.inject({
+            method: "PUT",
+            url: "/api/me/preferences",
+            payload: { locale: "es" },
+            headers: { cookie: client.cookie() },
+          })
+        ).statusCode,
+        403,
+      );
+      assert.equal(
+        (await app.inject({ url: "/api/me/preferences" })).statusCode,
+        401,
+      );
+      assert.equal((await preference({ locale: "es" })).statusCode, 200);
+      assert.deepEqual((await client.request("/api/me/preferences")).json(), {
+        locale: "es",
+      });
+      assert.equal(
+        (await domain.query("SELECT * FROM domain.account_preferences"))
+          .rowCount,
+        0,
+      );
+      await assert.rejects(
+        transaction(
+          domain,
+          (c) =>
+            c.query(
+              "INSERT INTO domain.account_preferences(account_id,locale) VALUES($1,'gl')",
+              [accountId],
+            ),
+          { accountId: "different-account", tenantId: null },
+        ),
+        { code: "42501" },
+      );
       const created = await client.request(url, body, headers);
       assert.equal(created.statusCode, 201, created.body);
       assert.ok(!(await available()).includes(body.startsAt));
@@ -206,6 +259,7 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
           "idempotency-expires-at",
         ),
       );
+      assert.equal((await preference({ locale: "gl" })).statusCode, 200);
       const modifyUrl = `${url}/${created.json().id}/modify`;
       const changedBody = {
         unitId: unit,
@@ -246,6 +300,42 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(detail.statusCode, 200, detail.body);
       assert.equal(detail.json().status, "CANCELADA");
       assert.equal(detail.json().revision, 3);
+      const snapshots = (
+        await migration.query(
+          "SELECT e.revision,q.locale FROM domain.reservation_email q JOIN domain.reservation_event e ON (e.tenant_id,e.id)=(q.tenant_id,q.event_id) WHERE e.reservation_id=$1 ORDER BY e.revision",
+          [created.json().id],
+        )
+      ).rows;
+      assert.deepEqual(snapshots, [
+        { revision: 1, locale: "es" },
+        { revision: 2, locale: "gl" },
+        { revision: 3, locale: "gl" },
+      ]);
+      assert.equal((await preference({ locale: null })).statusCode, 200);
+      const delivered: string[] = [];
+      for (let i = 0; i < 3; i++)
+        assert.equal(
+          await processReservationEmail(
+            worker,
+            {
+              send: async (mail) => {
+                delivered.push(mail.text);
+              },
+            },
+            {
+              origin: config.origin,
+              locale: "es",
+              leaseSeconds: 30,
+              maxAttempts: 3,
+              retrySeconds: 60,
+            },
+          ),
+          "ACCEPTED",
+        );
+      assert.match(delivered[0] as string, /Fecha del evento/);
+      assert.match(delivered[1] as string, /Data do evento/);
+      assert.match(delivered[2] as string, /Data do evento/);
+
       const notices = await client.request("/api/me/notices");
       assert.equal(notices.statusCode, 200, notices.body);
       assert.equal(notices.headers["cache-control"], "no-store");

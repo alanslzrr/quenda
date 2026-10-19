@@ -38,6 +38,10 @@ export {
   replaceInitialAdministratorInvitation,
 } from "./municipality.ts";
 export { requireOperator } from "./operator.ts";
+export {
+  readAccountPreferences,
+  saveAccountPreferences,
+} from "./preferences.ts";
 export { listMunicipalProfiles } from "./profiles.ts";
 export { consumeAdministrativeAttempt } from "./rate-limit.ts";
 export { requireRecentMfa } from "./reauthentication.ts";

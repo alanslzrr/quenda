@@ -242,3 +242,9 @@ Para ejecutar el worker local: `pnpm worker:local`; añadir `--once` procesa com
 Los parámetros opcionales son `EMAIL_LEASE_SECONDS` (60), `EMAIL_MAX_ATTEMPTS` (5), `EMAIL_RETRY_SECONDS` (60) y `EMAIL_POLL_MS` (1000). Reducir el máximo agota los pendientes que ya lo alcanzan. SIGINT/SIGTERM detienen nuevas iteraciones y cierran el pool tras el intento en curso. Los logs contienen códigos de estado, no destinatarios ni respuestas del proveedor. El transporte local no permite ejecutar el worker con `NODE_ENV=production`.
 
 El worker publica `EMAIL_QUEUE_HEALTH` con cantidades de pendientes, concesiones y agotados al iniciar el procesamiento y, como máximo, una vez por minuto, salvo que un intento agote su límite. Emite `EMAIL_QUEUE_ATTENTION` cuando detecta un total no nulo de agotados distinto del último observado. La alerta también cubre agotamientos por concesión vencida o reducción del límite. Solo el rol worker puede consultar estos contadores; no incluyen identificadores ni destinatarios.
+
+### Idioma de avisos
+
+`GET /api/me/preferences` consulta la preferencia de la cuenta autenticada. `PUT /api/me/preferences`, con `Origin` autorizado, recibe únicamente `{ "locale": "gl" }`, `{ "locale": "es" }` o `{ "locale": null }`. El valor nulo utiliza `EMAIL_LOCALE` del worker. No permite consultar ni modificar otra cuenta.
+
+Cada correo guarda la preferencia del titular al generarse el evento, también cuando la operación la realiza personal municipal. Cambiar la preferencia no altera correos ya pendientes. El worker utiliza ese idioma guardado y solo recurre a su configuración cuando no existe una elección del titular.
