@@ -4,6 +4,7 @@ export const moduleDefinition = {
 } as const;
 export type { AgreementApprovalInput } from "./approvals.ts";
 export { approveAgreement } from "./approvals.ts";
+export { syncReservationConsumption } from "./consumption.ts";
 export type { IssueCredentialInput } from "./credentials.ts";
 export {
   issueAgreementCredential,

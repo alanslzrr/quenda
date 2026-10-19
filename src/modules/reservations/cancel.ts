@@ -2,6 +2,7 @@ import { DatabaseError, type Pool } from "pg";
 import { idempotentCommand } from "../../database/idempotency.ts";
 import { HttpError } from "../../http/errors.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
+import { syncReservationConsumption } from "../collaboration/index.ts";
 import {
   type AuthenticatedAccount,
   requirePermission,
@@ -90,6 +91,11 @@ export async function cancelReservation(
           await client.query(
             "UPDATE domain.occupancy SET released_at=clock_timestamp() WHERE tenant_id=$1 AND reservation_id=$2 AND released_at IS NULL",
             [tenantId, reservationId],
+          );
+          await syncReservationConsumption(
+            client,
+            reservationId,
+            correlationId,
           );
           await appendReservationEvent(
             client,

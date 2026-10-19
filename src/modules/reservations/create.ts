@@ -12,6 +12,7 @@ import {
 
 export type { CreateReservationInput } from "./input.ts";
 
+import { syncReservationConsumption } from "../collaboration/index.ts";
 import { appendReservationEvent } from "./events.ts";
 
 export async function createReservation(
@@ -83,6 +84,7 @@ export async function createReservation(
               normalized.endsAt,
             ],
           );
+          await syncReservationConsumption(client, id, correlationId);
           await appendReservationEvent(client, id, correlationId);
           return {
             tenantId,

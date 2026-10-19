@@ -4,6 +4,7 @@ import { idempotentCommand } from "../../database/idempotency.ts";
 import { HttpError } from "../../http/errors.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
 import { validateReservableInterval } from "../catalog/index.ts";
+import { syncReservationConsumption } from "../collaboration/index.ts";
 import {
   type AuthenticatedAccount,
   requirePermission,
@@ -140,6 +141,11 @@ export async function modifyReservation(
               normalized.startsAt,
               normalized.endsAt,
             ],
+          );
+          await syncReservationConsumption(
+            client,
+            reservationId,
+            correlationId,
           );
           await appendReservationEvent(
             client,
