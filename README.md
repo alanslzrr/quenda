@@ -201,3 +201,6 @@ Los comandos requieren administrador del municipio participante, sesión verific
 - `POST /api/municipalities/{tenantId}/agreements/{agreementId}/approve`: recibe `version` y el conjunto exacto `unitIds` del municipio. Devuelve `200`: `BORRADOR` mientras falten participantes y `APROBADO` cuando todos hayan aprobado. No admite nuevas aprobaciones de versiones superadas.
 
 Las respuestas incluyen las cabeceras de idempotencia y `Cache-Control: no-store`. Un replay conserva el resultado original, no representa necesariamente el estado actual. Ninguno de estos comandos activa el convenio ni habilita capacidades de reserva.
+
+- `GET /api/municipalities/{tenantId}/agreements`: lista las versiones visibles al administrador municipal con MFA reciente, en páginas de 20 y orden por convenio/versión. `after` acepta el `nextCursor` anterior; no identifica versiones efectivas.
+- `GET /api/municipalities/{tenantId}/agreements/{agreementId}/versions/{version}`: devuelve configuración, participantes, unidades, aprobaciones y evidencia de creación. Una versión sin participación del municipio devuelve `404`, aunque haya participado en otra versión. Ambas consultas utilizan `Cache-Control: no-store`.

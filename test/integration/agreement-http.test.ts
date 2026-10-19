@@ -236,6 +236,33 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         ).rows[0].n,
         0,
       );
+      const detailUrl = `${url}/${id}/versions/2`;
+      const detail = await client.request(detailUrl);
+      assert.equal(detail.statusCode, 200, detail.body);
+      assert.equal(detail.headers["cache-control"], "no-store");
+      assert.equal(detail.json().status, "APROBADO");
+      assert.equal(detail.json().weeklyLimit, 2);
+      assert.equal(detail.json().approvals.length, 1);
+      assert.deepEqual(detail.json().participants, input.participants);
+      const listing = await client.request(url);
+      assert.equal(listing.statusCode, 200, listing.body);
+      assert.deepEqual(
+        listing.json().items.map((r: { version: number }) => r.version),
+        [1, 2],
+      );
+      assert.equal(listing.json().nextCursor, null);
+      assert.equal(
+        (await client.request(`${url}?after=invalid`)).statusCode,
+        400,
+      );
+      assert.equal(
+        (await client.request(`${url}/${id}/versions/999`)).statusCode,
+        404,
+      );
+      assert.equal(
+        (await client.request(`${url}/${id}/versions/2147483648`)).statusCode,
+        400,
+      );
       await migration.query(
         "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1 AND account_id=$2",
         [tenant, accountId],
@@ -251,11 +278,14 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         ).statusCode,
         403,
       );
+      assert.equal((await client.request(detailUrl)).statusCode, 403);
+      assert.equal((await client.request(url)).statusCode, 403);
       assert.equal(
         (await client.request("/api/auth/sign-out", {})).statusCode,
         200,
       );
       assert.equal((await client.request(url, input, headers)).statusCode, 401);
+      assert.equal((await client.request(detailUrl)).statusCode, 401);
       const spec = app.swagger() as { paths: Record<string, unknown> };
       for (const path of [
         "/api/municipalities/{tenantId}/agreements",

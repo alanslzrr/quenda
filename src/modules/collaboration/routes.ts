@@ -11,6 +11,7 @@ import {
   type AgreementVersionInput,
   createAgreementDraft,
 } from "./drafts.ts";
+import { registerAgreementQueries } from "./query-routes.ts";
 import { createAgreementVersion } from "./versions.ts";
 
 const uuid = { type: "string", format: "uuid" };
@@ -53,6 +54,7 @@ export async function registerCollaboration(
   retentionSeconds: number,
 ) {
   const actor = createRequestActor(pool, auth, config);
+  await registerAgreementQueries(app, pool, auth, config);
   for (const action of ["create", "version", "approve"] as const) {
     const properties =
       action === "create"

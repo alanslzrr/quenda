@@ -7,6 +7,8 @@ import {
   approveAgreement,
   createAgreementDraft,
   createAgreementVersion,
+  listAgreementVersions,
+  readAgreementVersion,
 } from "../../src/modules/collaboration/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
@@ -677,6 +679,105 @@ test("agreement drafts preserve participant ownership and do not activate capabi
       },
     );
     await t.test(
+      "configuration queries paginate after RLS and isolate historical participation",
+      async () => {
+        const current = await readAgreementVersion(
+          domain,
+          actor(0),
+          tenant,
+          agreement,
+          2,
+        );
+        assert.equal(current.status, "APROBADO");
+        assert.equal(current.weeklyLimit, 2);
+        assert.equal(current.approvals.length, 2);
+        assert.deepEqual(
+          current.participants.map((p) => p.tenantId).sort(),
+          [tenants[0], tenants[2]].sort(),
+        );
+        assert.equal(current.legalReviewReference, null);
+        assert.equal(
+          (
+            await readAgreementVersion(
+              domain,
+              actor(1),
+              tenants[1] as string,
+              agreement,
+              1,
+            )
+          ).weeklyLimit,
+          3,
+        );
+        await assert.rejects(
+          readAgreementVersion(
+            domain,
+            actor(1),
+            tenants[1] as string,
+            agreement,
+            2,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await assert.rejects(
+          readAgreementVersion(
+            domain,
+            actor(2),
+            tenants[2] as string,
+            agreement,
+            1,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await assert.rejects(
+          readAgreementVersion(domain, actor(0), tenant, agreement, 999),
+          { code: "NOT_FOUND" },
+        );
+        await assert.rejects(
+          listAgreementVersions(
+            domain,
+            { ...actor(0), mfaVerifiedAt: null },
+            tenant,
+          ),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          listAgreementVersions(domain, actor(0), tenant, "invalid"),
+          { code: "INVALID_INPUT" },
+        );
+        for (let i = 0; i < 22; i++) await create(`query-page-${i}`);
+        const expected = (
+          await migration.query(
+            "SELECT agreement_id,version FROM domain.agreement_participant WHERE tenant_id=$1 ORDER BY agreement_id,version",
+            [tenant],
+          )
+        ).rows.map((r) => `${r.agreement_id}:${r.version}`);
+        let after: string | null = null;
+        const ids: string[] = [];
+        do {
+          const page = await listAgreementVersions(
+            domain,
+            actor(0),
+            tenant,
+            after,
+          );
+          assert.ok(page.items.length <= 20);
+          ids.push(...page.items.map((r) => `${r.agreementId}:${r.version}`));
+          after = page.nextCursor;
+        } while (after);
+        assert.deepEqual(ids, expected);
+        assert.equal(new Set(ids).size, ids.length);
+        const outsider = await listAgreementVersions(
+          domain,
+          actor(2),
+          tenants[2] as string,
+        );
+        assert.deepEqual(
+          outsider.items.map((r) => [r.agreementId, r.version]),
+          [[agreement, 2]],
+        );
+      },
+    );
+    await t.test(
       "revoking the creator administrator prevents replay",
       async () => {
         await migration.query(
@@ -685,6 +786,9 @@ test("agreement drafts preserve participant ownership and do not activate capabi
         );
         await assert.rejects(create("draft"), { code: "FORBIDDEN" });
         await assert.rejects(approve(0, "approve-a"), { code: "FORBIDDEN" });
+        await assert.rejects(listAgreementVersions(domain, actor(0), tenant), {
+          code: "FORBIDDEN",
+        });
       },
     );
   });
