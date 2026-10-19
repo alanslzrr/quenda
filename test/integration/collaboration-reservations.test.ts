@@ -1303,7 +1303,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
               tenant,
               destination,
               "conflicting-future-approval",
-              { version: 2, unitIds: future.participants[0]!.unitIds },
+              { version: 2, unitIds: [destinationUnit, replacementUnit] },
               randomUUID(),
               3600,
             );

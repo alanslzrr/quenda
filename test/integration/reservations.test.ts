@@ -6,6 +6,7 @@ import {
   publicAvailability,
   saveUnitCalendar,
 } from "../../src/modules/catalog/index.ts";
+import { listOwnNotices } from "../../src/modules/communications/index.ts";
 import {
   acceptManager,
   inviteManager,
@@ -1052,6 +1053,42 @@ test("reservation confirmation validates real calendars and commits every effect
           ).rows[0].n,
           0,
         );
+        const notices = [];
+        let noticeCursor: string | null = null;
+        do {
+          const page = await listOwnNotices(domain, actor, noticeCursor);
+          assert.ok(page.items.length <= 20);
+          notices.push(...page.items);
+          noticeCursor = page.nextCursor;
+        } while (noticeCursor);
+        const expectedNotices = (
+          await migration.query(
+            "SELECT count(*)::int AS n FROM domain.reservation_notice WHERE account_id='citizen'",
+          )
+        ).rows[0].n;
+        assert.equal(notices.length, expectedNotices);
+        assert.equal(
+          new Set(notices.map((n) => n.eventId)).size,
+          expectedNotices,
+        );
+        assert.ok(notices.some((n) => n.reservationId === cross.result.id));
+        assert.ok(notices.some((n) => n.kind === "CANCELADA"));
+        assert.ok(
+          notices.every(
+            (n) => !("actorId" in n) && !("reason" in n) && !("accountId" in n),
+          ),
+        );
+        assert.equal(
+          (
+            await domain.query(
+              "SELECT * FROM domain.own_reservation_notices(NULL,NULL)",
+            )
+          ).rowCount,
+          0,
+        );
+        await assert.rejects(listOwnNotices(domain, actor, "invalid"), {
+          code: "INVALID_INPUT",
+        });
         const newcomer = { ...actor, accountId: "newcomer" };
         const own = await listOwnReservations(domain, newcomer);
         const ids = new Set(
@@ -1062,6 +1099,10 @@ test("reservation confirmation validates real calendars and commits every effect
           ).rows.map((r) => r.id),
         );
         assert.ok(own.items.every((r) => ids.has(r.id)));
+        const newcomerNotices = await listOwnNotices(domain, newcomer);
+        assert.ok(newcomerNotices.items.length > 0);
+        assert.ok(newcomerNotices.items.every((n) => ids.has(n.reservationId)));
+
         assert.ok(own.items.length > 0);
         const exactEnd = own.items[0]?.endsAt;
         assert.ok(exactEnd);

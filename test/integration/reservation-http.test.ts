@@ -246,6 +246,43 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(detail.statusCode, 200, detail.body);
       assert.equal(detail.json().status, "CANCELADA");
       assert.equal(detail.json().revision, 3);
+      const notices = await client.request("/api/me/notices");
+      assert.equal(notices.statusCode, 200, notices.body);
+      assert.equal(notices.headers["cache-control"], "no-store");
+      const events = notices
+        .json()
+        .items.filter(
+          (n: { reservationId: string }) =>
+            n.reservationId === created.json().id,
+        )
+        .sort(
+          (a: { revision: number }, b: { revision: number }) =>
+            a.revision - b.revision,
+        );
+      assert.deepEqual(
+        events.map((n: { kind: string }) => n.kind),
+        ["CONFIRMADA", "MODIFICADA", "CANCELADA"],
+      );
+      assert.equal(events[0].startsAt, body.startsAt);
+      assert.equal(events[2].reservationPath, `${url}/${created.json().id}`);
+      assert.equal(
+        (await app.inject({ url: "/api/me/notices" })).statusCode,
+        401,
+      );
+      assert.equal(
+        (await client.request("/api/me/notices?after=invalid")).statusCode,
+        400,
+      );
+      assert.equal(
+        (await client.request("/api/me/notices?accountId=other")).statusCode,
+        400,
+      );
+      assert.ok(
+        (app.swagger() as { paths: Record<string, unknown> }).paths[
+          "/api/me/notices"
+        ],
+      );
+
       assert.equal(detail.headers["cache-control"], "no-store");
       const originalReplay = await client.request(url, body, headers);
       assert.equal(originalReplay.statusCode, 201, originalReplay.body);
@@ -408,6 +445,11 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         headers: { ...headers, origin: config.origin, cookie },
       });
       assert.equal(revoked.statusCode, 401, revoked.body);
+      assert.equal(
+        (await replica.inject({ url: "/api/me/notices", headers: { cookie } }))
+          .statusCode,
+        401,
+      );
     } finally {
       await Promise.all([app.close(), replica.close()]);
     }

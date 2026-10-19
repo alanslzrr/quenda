@@ -224,3 +224,7 @@ Las reservas de unidades adscritas comprueban, en su misma transacción, la vige
 - `POST /api/municipalities/{tenantId}/units/{unitId}/agreement-restriction/release`: recibe `expectedAgreementId`, `expectedVersion` y `reason`. Retira la restricción únicamente si coincide la vinculación esperada y no quedan adscripciones actuales ni programadas. Conserva publicación, calendario, reservas y consumos; registra actor, motivo y correlación. Devuelve `removed: false` si ya no existe restricción.
 
 Ambos endpoints exigen administrador municipal y MFA reciente. El comando exige `Origin` autorizado e `Idempotency-Key`; revalida permisos antes del replay. Retirar la restricción no publica la unidad ni libera ocupaciones.
+
+### Avisos internos
+
+`GET /api/me/notices` devuelve los avisos del usuario autenticado entre municipios, con `Cache-Control: no-store`. Pagina de 20 en 20 por identificador de evento y municipio; `after` acepta el `nextCursor` anterior. Cada aviso contiene tipo, revisión, fecha del evento e intervalo histórico, junto con `reservationPath` para consultar el estado actual. No expone actores, motivos administrativos ni correlaciones, y no representa el estado de entrega del correo.
