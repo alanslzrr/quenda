@@ -20,6 +20,7 @@ export { registerMunicipalIdentity } from "./municipal-routes.ts";
 export {
   acceptAdministratorInvitation,
   createMunicipality,
+  replaceInitialAdministratorInvitation,
 } from "./municipality.ts";
 export { requireOperator } from "./operator.ts";
 export { consumeAdministrativeAttempt } from "./rate-limit.ts";

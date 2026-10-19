@@ -13,6 +13,7 @@ import {
   acceptAdministratorInvitation,
   createMunicipality,
   type MunicipalityInput,
+  replaceInitialAdministratorInvitation,
 } from "./municipality.ts";
 import { consumeAdministrativeAttempt } from "./rate-limit.ts";
 
@@ -324,5 +325,56 @@ export async function registerMunicipalIdentity(
         await actor(request, reply),
         request.query.after ?? null,
       ),
+  );
+  app.post<{
+    Params: { tenantId: string };
+    Body: { accountId: string; expiresAt: string; reason: string };
+  }>(
+    "/api/municipalities/:tenantId/initial-administrator-invitation/replace",
+    {
+      schema: {
+        operationId: "replaceInitialAdministratorInvitation",
+        tags: ["Identity"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Operador con MFA reciente: sustituye con motivo la invitación inicial únicamente antes de que el municipio haya tenido un administrador.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId"],
+          properties: { tenantId: uuid },
+        },
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["accountId", "expiresAt", "reason"],
+          properties: {
+            accountId: { type: "string", minLength: 1, maxLength: 128 },
+            expiresAt: { type: "string", format: "date-time" },
+            reason: { type: "string", minLength: 1, maxLength: 500 },
+          },
+        },
+        response: {
+          ...errors,
+          201: {
+            type: "object",
+            additionalProperties: false,
+            required: ["tenantId", "invitationId"],
+            properties: { tenantId: uuid, invitationId: uuid },
+          },
+        },
+      },
+    },
+    async (request, reply) =>
+      reply
+        .code(201)
+        .send(
+          await replaceInitialAdministratorInvitation(
+            pool,
+            await actor(request, reply),
+            request.params.tenantId,
+            request.body,
+          ),
+        ),
   );
 }

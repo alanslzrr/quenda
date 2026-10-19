@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { setTimeout } from "node:timers/promises";
+import { promisify } from "node:util";
 import { getMigrations } from "better-auth/db/migration";
-import { initializeOperator } from "../../scripts/lib/initialize-operator.ts";
 import { buildApp } from "../../src/app.ts";
 import { localMail } from "../../src/mail/local.ts";
 import {
@@ -364,12 +365,17 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             true,
           );
           const accountId = (await client.request("/api/me")).json().accountId;
-          const maintenance = await migration.connect();
-          try {
-            await initializeOperator(maintenance, accountId);
-          } finally {
-            maintenance.release();
-          }
+          const migrationUrl = migration.options.connectionString;
+          assert.ok(migrationUrl);
+          const initialized = await promisify(execFile)(
+            process.execPath,
+            ["scripts/initialize-operator.ts", accountId],
+            {
+              env: { ...process.env, MIGRATION_DATABASE_URL: migrationUrl },
+              timeout: 10000,
+            },
+          );
+          assert.match(initialized.stdout, /First operator initialized/);
           const input = {
             name: "Municipio HTTP",
             timezone: "Europe/Madrid",
@@ -436,13 +442,30 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           assert.equal(renewed.statusCode, 200, renewed.body);
           const created = await client.request("/api/municipalities", input);
           assert.equal(created.statusCode, 201, created.body);
-          const { tenantId, invitationId } = created.json();
+          const { tenantId } = created.json();
+          const replacement = await client.request(
+            `/api/municipalities/${tenantId}/initial-administrator-invitation/replace`,
+            {
+              accountId,
+              expiresAt: input.invitationExpiresAt,
+              reason: "Reemisión de prueba",
+            },
+          );
+          assert.equal(replacement.statusCode, 201, replacement.body);
+          const { invitationId } = replacement.json();
           const own = await app.inject({
             url: "/api/me/administrator-invitations",
             headers: { cookie: client.cookie() },
           });
           assert.equal(own.statusCode, 200, own.body);
-          assert.equal(own.json().items[0].invitationId, invitationId);
+          assert.ok(
+            own
+              .json()
+              .items.some(
+                (item: { invitationId: string }) =>
+                  item.invitationId === invitationId,
+              ),
+          );
           assert.equal(
             (
               await client.request(

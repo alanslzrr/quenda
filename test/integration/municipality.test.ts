@@ -8,6 +8,7 @@ import {
   createMunicipality,
   inviteAdministrator,
   listOwnAdministratorInvitations,
+  replaceInitialAdministratorInvitation,
   revokeAdministrator,
   revokeAdministratorInvitation,
 } from "../../src/modules/identity/index.ts";
@@ -489,6 +490,158 @@ test("municipal creation and first administrator acceptance are atomic and isola
         assert.equal(new Set(all.map((i) => i.invitationId)).size, 24);
         assert.ok(all.some((i) => i.tenantId === a.tenantId));
         assert.ok(all.some((i) => i.tenantId === b.tenantId));
+      },
+    );
+
+    await t.test(
+      "initial invitation replacement is atomic and closes permanently after first acceptance",
+      async () => {
+        const initial = await createMunicipality(
+          domain,
+          account("operator"),
+          input("other"),
+        );
+        const replacement = {
+          accountId: "other",
+          expiresAt: new Date(Date.now() + 3600000).toISOString(),
+          reason: "Corrección de destinatario",
+        };
+        await assert.rejects(
+          replaceInitialAdministratorInvitation(
+            domain,
+            account("admin-a"),
+            initial.tenantId,
+            replacement,
+          ),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          replaceInitialAdministratorInvitation(
+            domain,
+            account("operator"),
+            initial.tenantId,
+            { ...replacement, accountId: "missing" },
+          ),
+          { code: "INVALID_INPUT" },
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT revoked_at FROM domain.administrator_invitation WHERE id=$1",
+              [initial.invitationId],
+            )
+          ).rows[0].revoked_at,
+          null,
+        );
+        await migration.query(
+          "UPDATE domain.administrator_invitation SET created_at=now()-interval '2 hours', expires_at=now()-interval '1 hour' WHERE id=$1",
+          [initial.invitationId],
+        );
+        const next = await replaceInitialAdministratorInvitation(
+          domain,
+          account("operator"),
+          initial.tenantId,
+          replacement,
+        );
+        await assert.rejects(
+          acceptAdministratorInvitation(
+            domain,
+            account("other"),
+            initial.tenantId,
+            initial.invitationId,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("other"),
+          next.tenantId,
+          next.invitationId,
+        );
+        await assert.rejects(
+          replaceInitialAdministratorInvitation(
+            domain,
+            account("operator"),
+            initial.tenantId,
+            replacement,
+          ),
+          { code: "CONFLICT" },
+        );
+        await revokeAdministrator(
+          domain,
+          account("other"),
+          initial.tenantId,
+          "other",
+          "Fin de funciones",
+        );
+        await assert.rejects(
+          replaceInitialAdministratorInvitation(
+            domain,
+            account("operator"),
+            initial.tenantId,
+            replacement,
+          ),
+          { code: "CONFLICT" },
+        );
+        await assert.rejects(
+          transaction(
+            domain,
+            (client) =>
+              client.query(
+                "INSERT INTO domain.administrator_invitation (tenant_id,id,account_id,invited_by,expires_at) VALUES ($1,$2,'other','operator',now()+interval '1 hour')",
+                [initial.tenantId, randomUUID()],
+              ),
+            { accountId: "operator", tenantId: initial.tenantId },
+          ),
+          { code: "42501" },
+        );
+      },
+    );
+    await t.test(
+      "concurrent first acceptance and replacement have only one effective outcome",
+      async () => {
+        const initial = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        const [accepted, replaced] = await Promise.allSettled([
+          acceptAdministratorInvitation(
+            domain,
+            account("admin-a"),
+            initial.tenantId,
+            initial.invitationId,
+          ),
+          replaceInitialAdministratorInvitation(
+            domain,
+            account("operator"),
+            initial.tenantId,
+            {
+              accountId: "admin-b",
+              expiresAt: new Date(Date.now() + 3600000).toISOString(),
+              reason: "Nuevo destinatario",
+            },
+          ),
+        ]);
+        assert.ok(accepted && replaced);
+        assert.notEqual(accepted.status, replaced.status);
+        if (replaced.status === "fulfilled") {
+          await acceptAdministratorInvitation(
+            domain,
+            account("admin-b"),
+            initial.tenantId,
+            replaced.value.invitationId,
+          );
+        }
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT * FROM domain.municipal_administrator WHERE tenant_id=$1",
+              [initial.tenantId],
+            )
+          ).rowCount,
+          1,
+        );
       },
     );
   });

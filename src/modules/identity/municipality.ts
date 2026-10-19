@@ -127,3 +127,43 @@ export async function acceptAdministratorInvitation(
     },
   );
 }
+
+export async function replaceInitialAdministratorInvitation(
+  pool: Pool,
+  actor: AuthenticatedAccount,
+  tenantId: string,
+  input: { accountId: string; expiresAt: string; reason: string },
+) {
+  const reason = input.reason.trim();
+  if (
+    !reason ||
+    reason.length > 500 ||
+    !Number.isFinite(Date.parse(input.expiresAt))
+  )
+    throw new HttpError("INVALID_INPUT");
+  const invitationId = randomUUID();
+  try {
+    return await command(
+      pool,
+      { accountId: actor.accountId, tenantId },
+      async (client) => {
+        await requireOperator(client, actor);
+        const future = await client.query<{ valid: boolean }>(
+          "SELECT $1::timestamptz > now() AS valid",
+          [input.expiresAt],
+        );
+        if (!future.rows[0]?.valid) throw new HttpError("INVALID_INPUT");
+        const result = await client.query<{ allowed: boolean }>(
+          "SELECT domain.replace_initial_invitation($1,$2,$3,$4) AS allowed",
+          [input.accountId, input.expiresAt, reason, invitationId],
+        );
+        if (!result.rows[0]?.allowed) throw new HttpError("CONFLICT");
+        return { tenantId, invitationId };
+      },
+    );
+  } catch (error) {
+    if (error instanceof DatabaseError && error.code === "23503")
+      throw new HttpError("INVALID_INPUT");
+    throw error;
+  }
+}
