@@ -264,3 +264,20 @@ Nodemailer 10.1.7 está fijado en el lockfile e incluye tipos TypeScript y licen
 `GET /api/municipalities/{tenantId}/indicators` acepta el mismo periodo y exige `REPORT_READ` municipal y MFA. Incluye todas las unidades, aunque estén retiradas, en una misma transacción y con un único instante de consulta. Suma minutos antes de calcular el porcentaje; no promedia porcentajes por unidad. Un municipio sin unidades devuelve conteos y minutos cero, y porcentaje `null`. Los permisos limitados a unidades no habilitan este total municipal.
 
 La oferta utiliza versiones de calendario y eventos históricos de publicación/retirada de instalación y unidad. Los cierres se recortan a su vigencia efectiva. Dos transiciones contradictorias de publicación con el mismo instante devuelven `409` en vez de inventar un orden. No se devuelven titulares, motivos ni eventos de auditoría. Las respuestas usan `Cache-Control: no-store`.
+
+### Exportación de reservas
+
+`GET /api/municipalities/{tenantId}/exports/reservations?from=2030-01-01&to=2030-02-01` descarga JSON `quenda.reservations`, versión 1. El parámetro opcional `unitId` limita el conjunto a una unidad. Exige `DATA_EXPORT` y `RESERVATION_READ` o `RESERVATION_MANAGE` para el mismo ámbito, con MFA de los últimos cinco minutos. Sin `unitId`, ambos permisos deben ser municipales.
+
+El archivo identifica municipio, unidad solicitada (`null` para todo el municipio), instante de generación, periodo, zona horaria y entidades incluidas. Selecciona reservas que se solapan con `[from,to)` en la zona del municipio; conserva sus intervalos completos, aunque crucen una frontera del periodo. `FINALIZADA` se calcula al generar el archivo y no acredita asistencia. Incluye el identificador del titular, como la consulta municipal ordinaria, pero no nombres, correos ni credenciales. No es una copia de seguridad de la base de datos.
+
+Cada solicitud admite hasta 366 días y 10000 reservas. Si excede el límite, devuelve `400` sin archivo parcial: debe reducirse el periodo o seleccionar una unidad. La respuesta usa `Cache-Control: no-store` y descarga `quenda-reservations-v1.json`.
+
+Esquema JSON Schema Draft 7 y ejemplo sintético, generados desde el mismo contrato usado por la API:
+
+```sh
+node scripts/export-schema.ts > /tmp/quenda-export-schema.json
+node scripts/export-schema.ts --example > /tmp/quenda-export-example.json
+```
+
+Ambos archivos pueden validarse con herramientas independientes compatibles con Draft 7 y comprobación de formatos. El esquema valida la estructura; los permisos, el solape temporal y la pertenencia al municipio se comprueban en el sistema.

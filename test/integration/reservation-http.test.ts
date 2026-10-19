@@ -766,6 +766,72 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         ),
         { code: "42501" },
       );
+      const exportUrl = `/api/municipalities/${tenant}/exports/reservations?from=2030-01-01&to=2030-01-02`;
+      const boundaries = [
+        ["2029-12-31T22:00:00Z", "2029-12-31T23:00:00Z"],
+        ["2029-12-31T22:30:00Z", "2029-12-31T23:30:00Z"],
+        ["2030-01-01T22:30:00Z", "2030-01-01T23:30:00Z"],
+        ["2030-01-01T23:00:00Z", "2030-01-02T00:00:00Z"],
+      ].map(([start, end]) => ({ id: randomUUID(), start, end }));
+      for (const b of boundaries)
+        await migration.query(
+          "INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,status,cancellation_minutes,timezone) VALUES($1,$2,$3,$4,1,$5,$6,'CANCELADA',60,'Europe/Madrid')",
+          [tenant, b.id, accountId, unit, b.start, b.end],
+        );
+      const downloaded = await client.request(exportUrl);
+      assert.equal(downloaded.statusCode, 200, downloaded.body);
+      assert.equal(downloaded.headers["cache-control"], "no-store");
+      assert.equal(
+        downloaded.headers["content-disposition"],
+        'attachment; filename="quenda-reservations-v1.json"',
+      );
+      assert.equal(downloaded.json().reservations.length, 4);
+      const rows = downloaded.json().reservations as Array<{
+        id: string;
+        startsAt: string;
+        endsAt: string;
+      }>;
+      assert.ok(
+        !rows.some(
+          (r) => r.id === boundaries[0]?.id || r.id === boundaries[3]?.id,
+        ),
+      );
+      for (const b of boundaries.slice(1, 3)) {
+        const r = rows.find((r) => r.id === b.id);
+        assert.ok(r);
+        assert.equal(Date.parse(r.startsAt), Date.parse(b.start as string));
+        assert.equal(Date.parse(r.endsAt), Date.parse(b.end as string));
+      }
+      const emptyExport = await client.request(
+        exportUrl.replace(tenant, emptyTenant),
+      );
+      assert.equal(emptyExport.statusCode, 200, emptyExport.body);
+      assert.equal(emptyExport.json().reservations.length, 0);
+      assert.equal(emptyExport.json().tenantId, emptyTenant);
+      assert.equal(
+        (await client.request(exportUrl.replace(tenant, randomUUID())))
+          .statusCode,
+        403,
+      );
+      assert.equal((await app.inject({ url: exportUrl })).statusCode, 401);
+      assert.equal(
+        (await client.request(`${exportUrl}&unitId=${randomUUID()}`))
+          .statusCode,
+        404,
+      );
+      assert.equal(
+        (
+          await client.request(
+            exportUrl.replace("to=2030-01-02", "to=2032-01-02"),
+          )
+        ).statusCode,
+        400,
+      );
+      assert.ok(
+        (app.swagger() as { paths: Record<string, unknown> }).paths[
+          "/api/municipalities/{tenantId}/exports/reservations"
+        ],
+      );
       const managerInvitation = randomUUID();
       await migration.query(
         "INSERT INTO domain.manager_invitation(tenant_id,id,account_id,invited_by,issuer_invitation_id,expires_at,accepted_at) VALUES($1,$2,$3,$3,$4,now()+interval '1 day',now())",
@@ -862,6 +928,16 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
           unit,
         ),
         { code: "FORBIDDEN" },
+      );
+      const scopedDownload = await client.request(
+        `${exportUrl}&unitId=${otherUnit}`,
+      );
+      assert.equal(scopedDownload.statusCode, 200, scopedDownload.body);
+      assert.equal(scopedDownload.json().reservations.length, 2);
+      assert.equal((await client.request(exportUrl)).statusCode, 403);
+      assert.equal(
+        (await client.request(`${exportUrl}&unitId=${unit}`)).statusCode,
+        403,
       );
       await migration.query(
         "INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,status,cancellation_minutes,timezone) SELECT $1,gen_random_uuid(),$2,$3,1,'2030-01-01T02:00:00Z','2030-01-01T03:00:00Z','CANCELADA',60,'Europe/Madrid' FROM generate_series(1,9999)",
