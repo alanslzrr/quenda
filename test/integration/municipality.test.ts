@@ -4,6 +4,10 @@ import test from "node:test";
 import { initializeOperator } from "../../scripts/lib/initialize-operator.ts";
 import { transaction } from "../../src/database/transaction.ts";
 import {
+  createFacility,
+  createReservableUnit,
+} from "../../src/modules/catalog/index.ts";
+import {
   acceptAdministratorInvitation,
   createMunicipality,
   inviteAdministrator,
@@ -750,6 +754,98 @@ test("municipal creation and first administrator acceptance are atomic and isola
           ),
           { code: "NOT_FOUND" },
         );
+      },
+    );
+
+    await t.test(
+      "real catalog drafts enforce municipal scope and composite facility references",
+      async () => {
+        const facility = await createFacility(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          { name: " Pabellón " },
+        );
+        assert.equal(facility.name, "Pabellón");
+        const unit = await createReservableUnit(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          facility.facilityId,
+          { name: "Pista" },
+        );
+        assert.equal(unit.facilityId, facility.facilityId);
+        await assert.rejects(
+          createFacility(domain, account("operator"), a.tenantId, {
+            name: "Otro",
+          }),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          createFacility(domain, account("admin-b"), a.tenantId, {
+            name: "Otro",
+          }),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          createReservableUnit(
+            domain,
+            account("admin-b"),
+            b.tenantId,
+            facility.facilityId,
+            { name: "Inconsistente" },
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await assert.rejects(
+          createFacility(domain, account("admin-a"), a.tenantId, {
+            name: "  ",
+          }),
+          { code: "INVALID_INPUT" },
+        );
+        assert.equal(
+          (await domain.query("SELECT * FROM domain.reservable_unit")).rowCount,
+          0,
+        );
+        await transaction(
+          domain,
+          async (client) => {
+            assert.equal(
+              (await client.query("SELECT * FROM domain.reservable_unit"))
+                .rowCount,
+              1,
+            );
+            assert.equal(
+              (await client.query("SELECT * FROM domain.catalog_event"))
+                .rowCount,
+              2,
+            );
+          },
+          { accountId: "admin-a", tenantId: a.tenantId },
+        );
+        await transaction(
+          domain,
+          async (client) => {
+            assert.equal(
+              (await client.query("SELECT * FROM domain.reservable_unit"))
+                .rowCount,
+              0,
+            );
+          },
+          { accountId: "admin-a", tenantId: b.tenantId },
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT * FROM domain.reservable_unit WHERE tenant_id=$1",
+              [b.tenantId],
+            )
+          ).rowCount,
+          0,
+        );
+        await assert.rejects(domain.query("DELETE FROM domain.catalog_event"), {
+          code: "42501",
+        });
       },
     );
   });

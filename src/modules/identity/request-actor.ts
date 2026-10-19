@@ -1,0 +1,31 @@
+import { fromNodeHeaders } from "better-auth/node";
+import type { FastifyReply, FastifyRequest } from "fastify";
+import type { Pool } from "pg";
+import { HttpError } from "../../http/errors.ts";
+import type { AuthConfiguration, Authentication } from "./auth.ts";
+import { consumeAdministrativeAttempt } from "./rate-limit.ts";
+export function createRequestActor(
+  pool: Pool,
+  auth: Authentication,
+  config: AuthConfiguration,
+) {
+  const actor = async (request: FastifyRequest, reply: FastifyReply) => {
+    // Cookie-based mutation requires the configured Origin, not Host or proxy
+    // headers. Missing Origin is rejected too, including requests from scripts.
+    if (
+      request.method !== "GET" &&
+      (request.headers.origin !== config.origin ||
+        request.headers["sec-fetch-site"] === "cross-site")
+    )
+      throw new HttpError("FORBIDDEN");
+    const account = await auth.authenticate(fromNodeHeaders(request.headers));
+    if (!account) throw new HttpError("UNAUTHENTICATED");
+    const limit = await consumeAdministrativeAttempt(pool, account.accountId);
+    if (!limit.allowed) {
+      reply.header("retry-after", limit.retryAfter);
+      throw new HttpError("RATE_LIMITED");
+    }
+    return account;
+  };
+  return actor;
+}

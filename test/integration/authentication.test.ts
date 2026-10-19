@@ -498,6 +498,34 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             ).rowCount,
             1,
           );
+          const facility = await client.request(
+            `/api/municipalities/${tenantId}/facilities`,
+            { name: "Pabellón HTTP" },
+          );
+          assert.equal(facility.statusCode, 201, facility.body);
+          const unit = await client.request(
+            `/api/municipalities/${tenantId}/facilities/${facility.json().facilityId}/units`,
+            { name: "Pista HTTP" },
+          );
+          assert.equal(unit.statusCode, 201, unit.body);
+          assert.equal(
+            (
+              await migration.query(
+                "SELECT name FROM domain.reservable_unit WHERE tenant_id=$1 AND id=$2",
+                [tenantId, unit.json().unitId],
+              )
+            ).rows[0].name,
+            "Pista HTTP",
+          );
+          assert.equal(
+            (
+              await client.request(
+                `/api/municipalities/${tenantId}/facilities`,
+                { name: "No publicar", published: true },
+              )
+            ).statusCode,
+            400,
+          );
           const delegated = await client.request(
             `/api/municipalities/${tenantId}/administrator-invitations`,
             { accountId, expiresAt: input.invitationExpiresAt },

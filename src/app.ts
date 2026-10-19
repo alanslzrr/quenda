@@ -5,6 +5,7 @@ import type { Pool } from "pg";
 import type { Config } from "./config.ts";
 import type { DatabaseHealth } from "./database/pools.ts";
 import { HttpError, registerErrors } from "./http/errors.ts";
+import { registerCatalog } from "./modules/catalog/index.ts";
 import type {
   AuthConfiguration,
   Authentication,
@@ -82,13 +83,20 @@ export async function buildApp(options: {
       options.identity.authentication,
       options.identity.config,
     );
-    if (options.domain)
+    if (options.domain) {
+      await registerCatalog(
+        app,
+        options.domain,
+        options.identity.authentication,
+        options.identity.config,
+      );
       await registerMunicipalIdentity(
         app,
         options.domain,
         options.identity.authentication,
         options.identity.config,
       );
+    }
   }
   app.get(
     "/health/live",
