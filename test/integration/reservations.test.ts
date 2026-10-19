@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
+import { transaction } from "../../src/database/transaction.ts";
+import { publicAvailability } from "../../src/modules/catalog/index.ts";
 import {
   cancelReservation,
   createReservation,
@@ -525,6 +527,119 @@ test("reservation confirmation validates real calendars and commits every effect
           [tenant],
         );
         await assert.rejects(cancel("admin-cancel"), { code: "NOT_FOUND" });
+      },
+    );
+    await t.test(
+      "public availability follows committed creation, modification, cancellation and block release",
+      async () => {
+        const offered = async () =>
+          (
+            await publicAvailability(
+              domain,
+              tenant,
+              unit,
+              "2030-01-10",
+              60,
+              clock,
+            )
+          ).slots.map((s) => s.start.utc);
+        const a = "2030-01-10T10:00:00.000Z",
+          b = "2030-01-10T12:00:00.000Z";
+        assert.ok((await offered()).includes(a));
+        const booking = await create("availability-create", {
+          unitId: unit,
+          startsAt: a,
+          endsAt: "2030-01-10T11:00:00Z",
+        });
+        const afterCreate = await offered();
+        assert.ok(!afterCreate.includes(a));
+        assert.ok(!afterCreate.includes("2030-01-10T09:30:00.000Z"));
+        assert.ok(afterCreate.includes("2030-01-10T09:00:00.000Z"));
+        assert.ok(afterCreate.includes("2030-01-10T11:00:00.000Z"));
+        await modifyReservation(
+          domain,
+          actor,
+          tenant,
+          booking.result.id,
+          "availability-move",
+          {
+            expectedRevision: 1,
+            unitId: unit,
+            startsAt: b,
+            endsAt: "2030-01-10T13:00:00Z",
+          },
+          randomUUID(),
+          3600,
+          clock,
+        );
+        assert.ok((await offered()).includes(a));
+        assert.ok(!(await offered()).includes(b));
+        await cancelReservation(
+          domain,
+          actor,
+          tenant,
+          booking.result.id,
+          "availability-cancel",
+          { expectedRevision: 2 },
+          randomUUID(),
+          3600,
+          clock,
+        );
+        assert.ok((await offered()).includes(b));
+        const block = randomUUID();
+        const insertBlock = async (c: import("pg").PoolClient) => {
+          await c.query(
+            "INSERT INTO domain.schedule_block(tenant_id,id,unit_id,starts_at,ends_at,actor_id,reason) VALUES($1,$2,$3,$4,'2030-01-10T11:00:00Z','citizen','Fixture')",
+            [tenant, block, unit, a],
+          );
+          await c.query(
+            "INSERT INTO domain.occupancy(tenant_id,id,unit_id,block_id,period) VALUES($1,$2,$3,$4,tstzrange($5,'2030-01-10T11:00:00Z','[)'))",
+            [tenant, randomUUID(), unit, block, a],
+          );
+        };
+        await assert.rejects(
+          transaction(migration, async (c) => {
+            await insertBlock(c);
+            throw new Error("Abort block");
+          }),
+          /Abort block/,
+        );
+        assert.ok((await offered()).includes(a));
+        await transaction(migration, async (c) => {
+          await insertBlock(c);
+          assert.ok((await offered()).includes(a));
+        });
+        assert.ok(!(await offered()).includes(a));
+        await transaction(migration, async (c) => {
+          await c.query(
+            "UPDATE domain.schedule_block SET released_at=now() WHERE tenant_id=$1 AND id=$2",
+            [tenant, block],
+          );
+          await c.query(
+            "UPDATE domain.occupancy SET released_at=now() WHERE tenant_id=$1 AND block_id=$2",
+            [tenant, block],
+          );
+        });
+        assert.ok((await offered()).includes(a));
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.occupancy WHERE block_id=$1",
+              [block],
+            )
+          ).rows[0].n,
+          1,
+        );
+        const hidden = await domain.query(
+          "SELECT * FROM domain.public_available_slots($1,$2,ARRAY[$3::timestamptz],ARRAY[$4::timestamptz])",
+          [tenant, draft, a, "2030-01-10T11:00:00Z"],
+        );
+        assert.equal(hidden.rowCount, 0);
+        const foreign = await domain.query(
+          "SELECT * FROM domain.public_available_slots($1,$2,ARRAY[$3::timestamptz],ARRAY[$4::timestamptz])",
+          [randomUUID(), unit, a, "2030-01-10T11:00:00Z"],
+        );
+        assert.equal(foreign.rowCount, 0);
       },
     );
     await t.test(

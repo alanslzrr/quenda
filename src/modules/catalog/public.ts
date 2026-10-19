@@ -1,4 +1,5 @@
 import type { Pool, PoolClient } from "pg";
+import { transaction } from "../../database/transaction.ts";
 import { HttpError } from "../../http/errors.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
 import type { UnitCalendarInput } from "./calendar.ts";
@@ -78,22 +79,34 @@ export async function publicAvailability(
   durationMinutes: number,
   clock: Clock = systemClock,
 ) {
-  const unit = await publicUnitCalendar(pool, tenantId, unitId);
-  const now = clock.now().toISOString();
-  const slots = calendarSlots({
-    calendar: unit.calendar,
-    date,
-    durationMinutes,
-    timeZone: unit.timeZone,
-    municipalAdvanceDays: unit.municipalAdvanceDays,
-    now,
+  return transaction(pool, async (client) => {
+    const unit = await publicUnitCalendar(client, tenantId, unitId);
+    const now = clock.now().toISOString();
+    const candidates = calendarSlots({
+      calendar: unit.calendar,
+      date,
+      durationMinutes,
+      timeZone: unit.timeZone,
+      municipalAdvanceDays: unit.municipalAdvanceDays,
+      now,
+    });
+    const available = await client.query<{ slot_index: number }>(
+      "SELECT slot_index FROM domain.public_available_slots($1,$2,$3::timestamptz[],$4::timestamptz[])",
+      [
+        tenantId,
+        unitId,
+        candidates.map((slot) => slot.start.utc),
+        candidates.map((slot) => slot.end.utc),
+      ],
+    );
+    const positions = new Set(available.rows.map((row) => row.slot_index));
+    return {
+      unitId,
+      date,
+      timeZone: unit.timeZone,
+      calendarVersion: unit.calendarVersion,
+      calculatedAt: now,
+      slots: candidates.filter((_, index) => positions.has(index + 1)),
+    };
   });
-  return {
-    unitId,
-    date,
-    timeZone: unit.timeZone,
-    calendarVersion: unit.calendarVersion,
-    calculatedAt: now,
-    slots,
-  };
 }

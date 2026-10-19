@@ -137,8 +137,20 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         ).statusCode,
         403,
       );
+      const availabilityUrl = `/api/public/municipalities/${tenant}/units/${unit}/availability?date=${body.startsAt.slice(0, 10)}&durationMinutes=60`;
+      const available = async () => {
+        const response = await app.inject({ url: availabilityUrl });
+        assert.equal(response.statusCode, 200, response.body);
+        return response
+          .json()
+          .slots.map(
+            (s: { start: { utc: string } }) => s.start.utc,
+          ) as string[];
+      };
+      assert.ok((await available()).includes(body.startsAt));
       const created = await client.request(url, body, headers);
       assert.equal(created.statusCode, 201, created.body);
+      assert.ok(!(await available()).includes(body.startsAt));
       assert.equal(created.headers["idempotency-replayed"], "false");
       assert.equal(created.headers["idempotency-retention-seconds"], "3600");
       const expires = new Date(
@@ -206,6 +218,8 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       });
       assert.equal(modified.statusCode, 200, modified.body);
       assert.equal(modified.json().revision, 2);
+      assert.ok((await available()).includes(body.startsAt));
+      assert.ok(!(await available()).includes(changedBody.startsAt));
       const modifiedReplay = await replica.inject({
         method: "POST",
         url: modifyUrl,
@@ -228,6 +242,7 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(cancelled.statusCode, 200, cancelled.body);
       assert.equal(cancelled.json().status, "CANCELADA");
       assert.equal(cancelled.json().revision, 3);
+      assert.ok((await available()).includes(changedBody.startsAt));
       const cancelReplay = await replica.inject({
         method: "POST",
         url: cancelUrl,

@@ -193,6 +193,8 @@ export async function registerPublicCatalog(
       onRequest: limit,
       schema: {
         operationId: "publicAvailability",
+        description:
+          "Consulta franjas libres según calendario y ocupaciones no liberadas en una misma transacción. No expone reservas ni titulares y no garantiza disponibilidad al confirmar una reserva.",
         tags: ["Public catalog"],
         security: [],
         params: params({ unitId: uuid }),
