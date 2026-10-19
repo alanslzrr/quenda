@@ -3,6 +3,7 @@ export const moduleDefinition = {
   dependencies: ["identity"],
 } as const;
 
+export { readUnitCalendar, saveUnitCalendar } from "./calendar-store.ts";
 export { createFacility, createReservableUnit } from "./drafts.ts";
 export {
   inspectCatalogResource,
@@ -10,5 +11,4 @@ export {
 } from "./maintenance.ts";
 export { listCatalogResources } from "./queries.ts";
 export { registerCatalog } from "./routes.ts";
-
 export { withdrawCatalogResource } from "./withdrawal.ts";

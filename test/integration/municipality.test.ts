@@ -11,7 +11,9 @@ import {
   createReservableUnit,
   inspectCatalogResource,
   listCatalogResources,
+  readUnitCalendar,
   renameCatalogResource,
+  saveUnitCalendar,
   withdrawCatalogResource,
 } from "../../src/modules/catalog/index.ts";
 import {
@@ -2269,6 +2271,188 @@ test("municipal creation and first administrator acceptance are atomic and isola
           { operation: "WITHDRAW_FACILITY", reason: "Fin de oferta" },
           { operation: "WITHDRAW_UNIT", reason: "Retirada de oferta" },
         ]);
+      },
+    );
+
+    await t.test(
+      "calendar versions preserve history and reject concurrent stale edits",
+      async () => {
+        const tenant = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          tenant.invitationId,
+        );
+        const f = await createFacility(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          { name: "Calendarios" },
+        );
+        const u = await createReservableUnit(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          f.facilityId,
+          { name: "Unidad" },
+        );
+        const calendar = {
+          minimumMinutes: 30,
+          maximumMinutes: 120,
+          stepMinutes: 30,
+          advanceDays: 30,
+          weekly: [{ day: 1, startMinute: 480, endMinute: 720 }],
+          exceptions: [],
+        };
+        await assert.rejects(
+          readUnitCalendar(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            u.unitId,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        const first = await saveUnitCalendar(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          u.unitId,
+          { expectedVersion: 0, reason: "Horario inicial", calendar },
+        );
+        assert.equal(first.version, 1);
+        assert.deepEqual(first.calendar, calendar);
+        const outcomes = await Promise.allSettled(
+          [60, 90].map((maximumMinutes) =>
+            saveUnitCalendar(
+              domain,
+              account("admin-a"),
+              tenant.tenantId,
+              u.unitId,
+              {
+                expectedVersion: 1,
+                reason: "Cambio",
+                calendar: { ...calendar, maximumMinutes },
+              },
+            ),
+          ),
+        );
+        assert.equal(
+          outcomes.filter((o) => o.status === "fulfilled").length,
+          1,
+        );
+        assert.equal(
+          outcomes.filter(
+            (o) => o.status === "rejected" && o.reason.code === "CONFLICT",
+          ).length,
+          1,
+        );
+        assert.equal(
+          (
+            await readUnitCalendar(
+              domain,
+              account("admin-a"),
+              tenant.tenantId,
+              u.unitId,
+            )
+          ).version,
+          2,
+        );
+        assert.deepEqual(
+          await readUnitCalendar(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            u.unitId,
+            1,
+          ),
+          first,
+        );
+        await assert.rejects(
+          saveUnitCalendar(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            u.unitId,
+            {
+              expectedVersion: 2,
+              reason: "Inválido",
+              calendar: { ...calendar, advanceDays: 31 },
+            },
+          ),
+          { code: "INVALID_INPUT" },
+        );
+        for (const id of ["admin-b", "operator", "manager"])
+          await assert.rejects(
+            readUnitCalendar(domain, account(id), tenant.tenantId, u.unitId),
+            { code: "FORBIDDEN" },
+          );
+        const manager = await inviteManager(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          {
+            accountId: "manager",
+            expiresAt: new Date(Date.now() + 3600000).toISOString(),
+            permissions: [{ operation: "CATALOG_MANAGE", unitId: u.unitId }],
+          },
+        );
+        await acceptManager(
+          domain,
+          account("manager"),
+          tenant.tenantId,
+          manager.invitationId,
+        );
+        assert.equal(
+          (
+            await readUnitCalendar(
+              domain,
+              account("manager"),
+              tenant.tenantId,
+              u.unitId,
+            )
+          ).version,
+          2,
+        );
+        assert.equal(
+          (
+            await saveUnitCalendar(
+              domain,
+              account("manager"),
+              tenant.tenantId,
+              u.unitId,
+              {
+                expectedVersion: 2,
+                reason: "Cierre puntual",
+                calendar: {
+                  ...calendar,
+                  exceptions: [{ date: "2026-10-19", intervals: [] }],
+                },
+              },
+            )
+          ).version,
+          3,
+        );
+        for (const sql of [
+          "UPDATE domain.unit_calendar_version SET reason='changed'",
+          "DELETE FROM domain.unit_calendar_version",
+          "TRUNCATE domain.unit_calendar_version",
+        ])
+          await assert.rejects(domain.query(sql), { code: "42501" });
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.unit_calendar_version WHERE tenant_id=$1",
+              [tenant.tenantId],
+            )
+          ).rows[0].n,
+          3,
+        );
       },
     );
   });

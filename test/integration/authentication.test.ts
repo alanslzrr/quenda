@@ -710,6 +710,36 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             201,
             managerInvitation.body,
           );
+          const calendarUrl = `/api/municipalities/${tenantId}/units/${unit.json().unitId}/calendar`;
+          const calendarInput = {
+            expectedVersion: 0,
+            reason: "Horario HTTP",
+            calendar: {
+              minimumMinutes: 30,
+              maximumMinutes: 120,
+              stepMinutes: 30,
+              advanceDays: null,
+              weekly: [{ day: 1, startMinute: 480, endMinute: 720 }],
+              exceptions: [],
+            },
+          };
+          const savedCalendar = await app.inject({
+            method: "PUT",
+            url: calendarUrl,
+            headers: { cookie: client.cookie(), origin: config.origin },
+            payload: calendarInput,
+          });
+          assert.equal(savedCalendar.statusCode, 200, savedCalendar.body);
+          assert.equal(savedCalendar.json().version, 1);
+          assert.deepEqual(
+            (await client.request(`${calendarUrl}?version=1`)).json().calendar,
+            calendarInput.calendar,
+          );
+          assert.equal(
+            (await client.request(`${calendarUrl}?version=9999999999`))
+              .statusCode,
+            400,
+          );
           const withdrawal = await client.request(
             `/api/municipalities/${tenantId}/units/${unit.json().unitId}/withdraw`,
             { reason: "Retirada HTTP" },

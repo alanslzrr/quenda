@@ -5,6 +5,7 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
+import { registerCalendarRoutes } from "./calendar-routes.ts";
 import { createFacility, createReservableUnit } from "./drafts.ts";
 import {
   inspectCatalogResource,
@@ -33,6 +34,7 @@ export async function registerCatalog(
   config: AuthConfiguration,
 ) {
   const actor = createRequestActor(pool, auth, config);
+  await registerCalendarRoutes(app, pool, auth, config);
   app.post<{ Params: { tenantId: string }; Body: { name: string } }>(
     "/api/municipalities/:tenantId/facilities",
     {
