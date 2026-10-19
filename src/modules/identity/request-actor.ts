@@ -2,6 +2,7 @@ import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import { HttpError } from "../../http/errors.ts";
+import { rememberAuditActor } from "./access-audit.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
 import { consumeAdministrativeAttempt } from "./rate-limit.ts";
 export function createRequestActor(
@@ -20,6 +21,7 @@ export function createRequestActor(
       throw new HttpError("FORBIDDEN");
     const account = await auth.authenticate(fromNodeHeaders(request.headers));
     if (!account) throw new HttpError("UNAUTHENTICATED");
+    rememberAuditActor(request, account.accountId);
     const limit = await consumeAdministrativeAttempt(pool, account.accountId);
     if (!limit.allowed) {
       reply.header("retry-after", limit.retryAfter);

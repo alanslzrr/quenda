@@ -421,6 +421,18 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           const stale = await client.request("/api/municipalities", input);
           assert.equal(stale.statusCode, 403, stale.body);
           assert.equal(stale.json().error.code, "REAUTHENTICATION_REQUIRED");
+          const audited = await migration.query(
+            "SELECT actor_id, requested_tenant_id, operation, outcome FROM domain.access_denial WHERE request_id=$1",
+            [stale.json().requestId],
+          );
+          assert.deepEqual(audited.rows, [
+            {
+              actor_id: accountId,
+              requested_tenant_id: null,
+              operation: "createMunicipality",
+              outcome: "REAUTHENTICATION_REQUIRED",
+            },
+          ]);
           assert.equal((await client.request("/api/me")).statusCode, 200);
           // Prior enrollment and login deliberately used this endpoint's real
           // three-attempt window. Let it expire; never disable the limiter.

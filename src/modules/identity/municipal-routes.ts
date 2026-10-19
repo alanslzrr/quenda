@@ -18,7 +18,7 @@ import { createRequestActor } from "./request-actor.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
 const errors = Object.fromEntries(
-  [400, 401, 403, 404, 409, 429, 500].map((status) => [
+  [400, 401, 403, 404, 409, 429, 500, 503].map((status) => [
     status,
     { $ref: "ErrorResponse#" },
   ]),

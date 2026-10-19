@@ -1,4 +1,4 @@
-import type { FastifyError, FastifyInstance } from "fastify";
+import type { FastifyError, FastifyInstance, FastifyRequest } from "fastify";
 
 const messages = {
   INVALID_INPUT: {
@@ -109,15 +109,18 @@ export const errorSchema = {
   },
 } as const;
 
-export function registerErrors(app: FastifyInstance): void {
+export function registerErrors(
+  app: FastifyInstance,
+  audit?: (request: FastifyRequest, code: ErrorCode) => Promise<void>,
+): void {
   app.addSchema(errorSchema);
   app.setNotFoundHandler(() => {
     throw new HttpError("NOT_FOUND");
   });
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler(async (error, request, reply) => {
     const failure =
       error instanceof Error ? (error as FastifyError) : undefined;
-    const code =
+    let code: ErrorCode =
       error instanceof HttpError
         ? error.code
         : failure?.validation || failure?.statusCode === 400
@@ -127,6 +130,15 @@ export function registerErrors(app: FastifyInstance): void {
             : failure?.statusCode === 415
               ? "UNSUPPORTED_MEDIA_TYPE"
               : "INTERNAL_ERROR";
+    if (audit) {
+      try {
+        await audit(request, code);
+      } catch {
+        // Never report a normally audited rejection when persistence failed.
+        request.log.error({ code: "AUDIT_UNAVAILABLE" }, "Access audit failed");
+        code = "UNAVAILABLE";
+      }
+    }
     const locale = language(request.headers["accept-language"]);
     // Do not serialize database errors, credentials, request bodies or cookies.
     if (statuses[code] >= 500) request.log.error({ code }, "Request failed");

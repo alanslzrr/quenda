@@ -11,6 +11,7 @@ import type {
   Authentication,
 } from "./modules/identity/index.ts";
 import {
+  accessFailureAudit,
   registerAuthentication,
   registerMunicipalIdentity,
 } from "./modules/identity/index.ts";
@@ -54,7 +55,10 @@ export async function buildApp(options: {
       "Request completed",
     );
   });
-  registerErrors(app);
+  registerErrors(
+    app,
+    options.domain ? accessFailureAudit(options.domain) : undefined,
+  );
   await app.register(swagger, {
     openapi: {
       openapi: "3.0.3",

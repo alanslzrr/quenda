@@ -15,7 +15,7 @@ const body = {
   properties: { name: { type: "string", minLength: 1, maxLength: 200 } },
 } as const;
 const errors = Object.fromEntries(
-  [400, 401, 403, 404, 429, 500].map((status) => [
+  [400, 401, 403, 404, 429, 500, 503].map((status) => [
     status,
     { $ref: "ErrorResponse#" },
   ]),

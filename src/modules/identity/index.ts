@@ -3,6 +3,7 @@ export const moduleDefinition = {
   dependencies: [],
 } as const;
 
+export { accessFailureAudit } from "./access-audit.ts";
 export { requireAdministrator } from "./administrator.ts";
 export type {
   AuthConfiguration,
