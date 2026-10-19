@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
+import { setTimeout } from "node:timers/promises";
 import { initializeOperator } from "../../scripts/lib/initialize-operator.ts";
+import { command } from "../../src/database/command.ts";
+import { setTransactionContext } from "../../src/database/context.ts";
 import { transaction } from "../../src/database/transaction.ts";
 import {
   createFacility,
@@ -1219,6 +1222,148 @@ test("municipal creation and first administrator acceptance are atomic and isola
             )
           ).rowCount,
           1,
+        );
+      },
+    );
+
+    await t.test(
+      "permission use and revocation obey both transaction orderings",
+      async () => {
+        const tenant = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          tenant.invitationId,
+        );
+        const grant = async () => {
+          const invitation = await inviteManager(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            {
+              accountId: "manager",
+              expiresAt: new Date(Date.now() + 3600000).toISOString(),
+              permissions: [{ operation: "CATALOG_CREATE", unitId: null }],
+            },
+          );
+          await acceptManager(
+            domain,
+            account("manager"),
+            tenant.tenantId,
+            invitation.invitationId,
+          );
+          return invitation.invitationId;
+        };
+        const waitForBlockedPeer = async (holderPid: number) => {
+          const deadline = Date.now() + 5000;
+          while (Date.now() < deadline) {
+            const locks = await migration.query(
+              "SELECT 1 FROM pg_locks l WHERE NOT l.granted AND $1::integer=ANY(pg_blocking_pids(l.pid))",
+              [holderPid],
+            );
+            if (locks.rowCount) return;
+            await setTimeout(10);
+          }
+          assert.fail(
+            "Expected a real PostgreSQL lock wait on the held authorization",
+          );
+        };
+        const first = await grant();
+        const holder = await domain.connect();
+        let revoking: Promise<unknown> | undefined;
+        try {
+          await holder.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+          await setTransactionContext(holder, {
+            accountId: "manager",
+            tenantId: tenant.tenantId,
+          });
+          await requirePermission(holder, account("manager"), "CATALOG_CREATE");
+          const pid = (await holder.query("SELECT pg_backend_pid() AS pid"))
+            .rows[0].pid;
+          revoking = revokeManager(
+            domain,
+            account("admin-a"),
+            tenant.tenantId,
+            first,
+            "Fin de funciones",
+          );
+          // Attach rejection handling immediately, including assertion-failure paths.
+          void revoking.catch(() => {});
+          await waitForBlockedPeer(pid);
+          // Authorization remains usable for this transaction until its commit.
+          await requirePermission(holder, account("manager"), "CATALOG_CREATE");
+          await holder.query("COMMIT");
+          await revoking;
+          await assert.rejects(
+            command(
+              domain,
+              { accountId: "manager", tenantId: tenant.tenantId },
+              (c) => requirePermission(c, account("manager"), "CATALOG_CREATE"),
+            ),
+            { code: "FORBIDDEN" },
+          );
+        } finally {
+          await holder.query("ROLLBACK");
+          holder.release();
+          await revoking?.catch(() => {});
+        }
+
+        const second = await grant();
+        const revoker = await domain.connect();
+        let use: Promise<unknown> | undefined;
+        let attempts = 0;
+        try {
+          await revoker.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+          await setTransactionContext(revoker, {
+            accountId: "admin-a",
+            tenantId: tenant.tenantId,
+          });
+          assert.equal(
+            (
+              await revoker.query(
+                "SELECT domain.revoke_manager($1,$2) AS revoked",
+                [second, "Retirada inmediata"],
+              )
+            ).rows[0].revoked,
+            true,
+          );
+          const pid = (await revoker.query("SELECT pg_backend_pid() AS pid"))
+            .rows[0].pid;
+          use = command(
+            domain,
+            { accountId: "manager", tenantId: tenant.tenantId },
+            async (c) => {
+              attempts++;
+              await requirePermission(c, account("manager"), "CATALOG_CREATE");
+            },
+          );
+          void use.catch(() => {});
+          await waitForBlockedPeer(pid);
+          await revoker.query("COMMIT");
+          await assert.rejects(use, { code: "FORBIDDEN" });
+          assert.equal(
+            attempts,
+            2,
+            "serialization retry must re-evaluate authorization in a fresh snapshot",
+          );
+        } finally {
+          await revoker.query("ROLLBACK");
+          revoker.release();
+          await use?.catch(() => {});
+        }
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.manager_event WHERE tenant_id=$1 AND operation='REVOKE_MANAGER'",
+              [tenant.tenantId],
+            )
+          ).rows[0].n,
+          2,
         );
       },
     );
