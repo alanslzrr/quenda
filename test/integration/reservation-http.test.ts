@@ -954,6 +954,24 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         ),
         { code: "INVALID_INPUT" },
       );
+      const oversized = await client.request(
+        `${exportUrl}&unitId=${otherUnit}`,
+      );
+      assert.equal(oversized.statusCode, 400, oversized.body);
+      assert.equal(oversized.headers["content-disposition"], undefined);
+      assert.equal(oversized.json().reservations, undefined);
+      await migration.query(
+        "DELETE FROM domain.reservation WHERE tenant_id=$1 AND id=(SELECT id FROM domain.reservation WHERE tenant_id=$1 AND unit_id=$2 AND status='CANCELADA' ORDER BY id LIMIT 1)",
+        [tenant, otherUnit],
+      );
+      const maximum = await client.request(`${exportUrl}&unitId=${otherUnit}`);
+      assert.equal(maximum.statusCode, 200, maximum.body.slice(0, 200));
+      assert.equal(maximum.json().reservations.length, 10000);
+      assert.equal(
+        new Set(maximum.json().reservations.map((r: { id: string }) => r.id))
+          .size,
+        10000,
+      );
       await migration.query(
         "UPDATE domain.manager_grant SET revoked_at=now() WHERE tenant_id=$1 AND invitation_id=$2",
         [tenant, managerInvitation],
@@ -969,6 +987,11 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         ),
         { code: "FORBIDDEN" },
       );
+      const revokedExport = await client.request(
+        `${exportUrl}&unitId=${otherUnit}`,
+      );
+      assert.equal(revokedExport.statusCode, 403, revokedExport.body);
+      assert.equal(revokedExport.headers["content-disposition"], undefined);
       const cookie = client.cookie();
       assert.equal(
         (await client.request("/api/auth/sign-out", {})).statusCode,
