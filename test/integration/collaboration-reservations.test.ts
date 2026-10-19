@@ -6,6 +6,7 @@ import {
   activateAgreement,
   approveAgreement,
   createAgreementDraft,
+  createAgreementVersion,
   suspendAgreement,
 } from "../../src/modules/collaboration/index.ts";
 import {
@@ -424,7 +425,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
       },
     );
     await t.test(
-      "initial activation reconciles existing bookings even above quota and restores scope",
+      "activation, replacement and reactivation preserve reconciled quotas and scope",
       async () => {
         const tenant = tenants[winner] as string;
         const publicUnit = (
@@ -675,6 +676,304 @@ test("real booking commands enforce shared eligibility and quota in one transact
             )
           ).rows[0].n,
           1,
+        );
+        const definition = {
+          startsAt: "2020-01-01T00:00:00Z",
+          endsAt: "2040-01-01T00:00:00Z",
+          purpose: "Shared service",
+          legalBasis: "Synthetic basis",
+          responsibilities: "Municipal management",
+          retentionPolicy: "Synthetic policy",
+          eligibility: "acceso_abierto" as const,
+          weeklyLimit: 2,
+          aggregateReports: false,
+          participants: [
+            {
+              tenantId: tenant,
+              accreditationIssuer: false,
+              unitIds: [publicUnit],
+            },
+            { tenantId: otherTenant, accreditationIssuer: false, unitIds: [] },
+          ],
+        };
+        const next = await createAgreementVersion(
+          domain,
+          admin,
+          tenant,
+          id,
+          "version-two",
+          { ...definition, expectedVersion: 1 },
+          randomUUID(),
+          3600,
+        );
+        assert.equal(next.result.version, 2);
+        await assert.rejects(
+          activateAgreement(
+            domain,
+            admin,
+            activationTenant,
+            id,
+            "unapproved-replacement",
+            { ...evidence, version: 2 },
+            randomUUID(),
+            3600,
+          ),
+          { code: "CONFLICT" },
+        );
+        for (const p of definition.participants)
+          await approveAgreement(
+            domain,
+            admin,
+            p.tenantId,
+            id,
+            "approve-two",
+            { version: 2, unitIds: p.unitIds },
+            randomUUID(),
+            3600,
+          );
+        await activateAgreement(
+          domain,
+          admin,
+          activationTenant,
+          id,
+          "replace",
+          { ...evidence, version: 2 },
+          randomUUID(),
+          3600,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_activation WHERE agreement_id=$1 AND effective_period @> clock_timestamp()",
+              [id],
+            )
+          ).rows[0].n,
+          1,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_consumption WHERE agreement_id=$1 AND NOT released",
+              [id],
+            )
+          ).rows[0].n,
+          2,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_lifecycle_event WHERE agreement_id=$1 AND action='REPLACED' AND previous_period IS NOT NULL AND effective_period IS NOT NULL",
+              [id],
+            )
+          ).rows[0].n,
+          1,
+        );
+        await assert.rejects(
+          createReservation(
+            domain,
+            actor,
+            tenant,
+            "no-quota-reset",
+            { ...input(winner, 20), unitId: publicUnit },
+            randomUUID(),
+            3600,
+            clock,
+          ),
+          { code: "CONFLICT" },
+        );
+        await suspendAgreement(
+          domain,
+          admin,
+          activationTenant,
+          id,
+          "suspend-replaced",
+          { version: 2, reason: "Synthetic review" },
+          randomUUID(),
+          3600,
+        );
+        await assert.rejects(
+          activateAgreement(
+            domain,
+            admin,
+            activationTenant,
+            id,
+            "cannot-reuse-version",
+            { ...evidence, version: 2 },
+            randomUUID(),
+            3600,
+          ),
+          { code: "CONFLICT" },
+        );
+        await createAgreementVersion(
+          domain,
+          admin,
+          tenant,
+          id,
+          "version-three",
+          { ...definition, weeklyLimit: 3, expectedVersion: 2 },
+          randomUUID(),
+          3600,
+        );
+        for (const p of definition.participants)
+          await approveAgreement(
+            domain,
+            admin,
+            p.tenantId,
+            id,
+            "approve-three",
+            { version: 3, unitIds: p.unitIds },
+            randomUUID(),
+            3600,
+          );
+        await activateAgreement(
+          domain,
+          admin,
+          activationTenant,
+          id,
+          "reactivate",
+          { ...evidence, version: 3 },
+          randomUUID(),
+          3600,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_consumption WHERE agreement_id=$1 AND NOT released",
+              [id],
+            )
+          ).rows[0].n,
+          2,
+        );
+        assert.equal(
+          (
+            await createReservation(
+              domain,
+              actor,
+              tenant,
+              "remaining-quota",
+              { ...input(winner, 20), unitId: publicUnit },
+              randomUUID(),
+              3600,
+              clock,
+            )
+          ).result.status,
+          "CONFIRMADA",
+        );
+        const replacementUnit = randomUUID();
+        await migration.query(
+          "INSERT INTO domain.reservable_unit(tenant_id,id,facility_id,name) SELECT tenant_id,$3,facility_id,'Replacement unit' FROM domain.reservable_unit WHERE tenant_id=$1 AND id=$2",
+          [tenant, publicUnit, replacementUnit],
+        );
+        await migration.query(
+          "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason) SELECT tenant_id,$3,1,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,'citizen','Fixture' FROM domain.unit_calendar_version WHERE tenant_id=$1 AND unit_id=$2 AND version=1",
+          [tenant, publicUnit, replacementUnit],
+        );
+        await migration.query(
+          "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
+          [tenant, replacementUnit],
+        );
+        const movedUnits = definition.participants.map((p) => ({
+          ...p,
+          unitIds: p.tenantId === tenant ? [replacementUnit] : [],
+        }));
+        await createAgreementVersion(
+          domain,
+          admin,
+          tenant,
+          id,
+          "version-four",
+          {
+            ...definition,
+            participants: movedUnits,
+            weeklyLimit: 3,
+            expectedVersion: 3,
+          },
+          randomUUID(),
+          3600,
+        );
+        for (const p of movedUnits)
+          await approveAgreement(
+            domain,
+            admin,
+            p.tenantId,
+            id,
+            "approve-four",
+            { version: 4, unitIds: p.unitIds },
+            randomUUID(),
+            3600,
+          );
+        await activateAgreement(
+          domain,
+          admin,
+          activationTenant,
+          id,
+          "replace-units",
+          { ...evidence, version: 4 },
+          randomUUID(),
+          3600,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.agreement_consumption WHERE agreement_id=$1 AND NOT released",
+              [id],
+            )
+          ).rows[0].n,
+          3,
+        );
+        await assert.rejects(
+          createReservation(
+            domain,
+            actor,
+            tenant,
+            "removed-unit",
+            { ...input(winner, 21), unitId: publicUnit },
+            randomUUID(),
+            3600,
+            clock,
+          ),
+          { code: "CONFLICT" },
+        );
+        await assert.rejects(
+          createReservation(
+            domain,
+            actor,
+            tenant,
+            "retained-quota",
+            { ...input(winner, 21), unitId: replacementUnit },
+            randomUUID(),
+            3600,
+            clock,
+          ),
+          { code: "CONFLICT" },
+        );
+        const previous = prior[0];
+        assert.ok(previous);
+        await cancelReservation(
+          domain,
+          actor,
+          tenant,
+          previous.id,
+          "cancel-removed-unit",
+          { expectedRevision: 1 },
+          randomUUID(),
+          3600,
+          clock,
+        );
+        assert.equal(
+          (
+            await createReservation(
+              domain,
+              actor,
+              tenant,
+              "quota-after-cancel",
+              { ...input(winner, 21), unitId: replacementUnit },
+              randomUUID(),
+              3600,
+              clock,
+            )
+          ).result.status,
+          "CONFIRMADA",
         );
       },
     );
