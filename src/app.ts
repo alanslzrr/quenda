@@ -6,6 +6,7 @@ import { type Config, defaultIdempotencyRetentionSeconds } from "./config.ts";
 import type { DatabaseHealth } from "./database/pools.ts";
 import { HttpError, registerErrors } from "./http/errors.ts";
 import { registerCatalog } from "./modules/catalog/index.ts";
+import { registerCollaboration } from "./modules/collaboration/index.ts";
 import type {
   AuthConfiguration,
   Authentication,
@@ -91,6 +92,14 @@ export async function buildApp(options: {
       options.identity.config,
     );
     if (options.domain) {
+      await registerCollaboration(
+        app,
+        options.domain,
+        options.identity.authentication,
+        options.identity.config,
+        options.idempotencyRetentionSeconds ??
+          defaultIdempotencyRetentionSeconds,
+      );
       await registerReservations(
         app,
         options.domain,

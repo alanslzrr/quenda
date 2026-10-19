@@ -190,3 +190,14 @@ La comprobación de arquitectura impide dependencias circulares y accesos a arch
 ## Licencia
 
 Quenda utiliza **AGPL-3.0-only**, no «or later». El [texto íntegro](LICENSE) se distribuye con el proyecto. Los despliegues sujetos a sus obligaciones deben facilitar el código fuente correspondiente; las versiones modificadas accesibles por red deben ofrecerlo a sus usuarios conforme a la sección 13. [Identificador SPDX y términos](https://spdx.org/licenses/AGPL-3.0-only.html).
+
+
+### Convenios: creación, versiones y aprobación
+
+Los comandos requieren administrador del municipio participante, sesión verificada, MFA reciente, `Origin` autorizado e `Idempotency-Key`. Comprueban los permisos actuales antes de recuperar un resultado idempotente.
+
+- `POST /api/municipalities/{tenantId}/agreements`: registra nombre, zona IANA, vigencia, finalidad, base jurídica, responsabilidades, conservación, elegibilidad, cuota opcional, capacidad de informes y participantes con sus unidades y condición de emisor. Devuelve `201` con `agreementId`, `version: 1` y `BORRADOR`.
+- `POST /api/municipalities/{tenantId}/agreements/{agreementId}/versions`: recibe la configuración completa y `expectedVersion`, sin nombre ni zona. Devuelve `201` con la nueva versión `BORRADOR`; una versión base obsoleta produce `409`. Conserva las evidencias anteriores sin trasladar sus aprobaciones.
+- `POST /api/municipalities/{tenantId}/agreements/{agreementId}/approve`: recibe `version` y el conjunto exacto `unitIds` del municipio. Devuelve `200`: `BORRADOR` mientras falten participantes y `APROBADO` cuando todos hayan aprobado. No admite nuevas aprobaciones de versiones superadas.
+
+Las respuestas incluyen las cabeceras de idempotencia y `Cache-Control: no-store`. Un replay conserva el resultado original, no representa necesariamente el estado actual. Ninguno de estos comandos activa el convenio ni habilita capacidades de reserva.
