@@ -9,6 +9,8 @@ import { transaction } from "../../src/database/transaction.ts";
 import {
   createFacility,
   createReservableUnit,
+  inspectCatalogResource,
+  renameCatalogResource,
 } from "../../src/modules/catalog/index.ts";
 import {
   acceptAdministratorInvitation,
@@ -1674,6 +1676,257 @@ test("municipal creation and first administrator acceptance are atomic and isola
             { code: "REAUTHENTICATION_REQUIRED" },
           );
         }
+      },
+    );
+
+    await t.test(
+      "catalog maintenance honors unit scope and audits names atomically",
+      async () => {
+        const a = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-a"),
+        );
+        const b = await createMunicipality(
+          domain,
+          account("operator"),
+          input("admin-b"),
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          a.invitationId,
+        );
+        await acceptAdministratorInvitation(
+          domain,
+          account("admin-b"),
+          b.tenantId,
+          b.invitationId,
+        );
+        const facility = await createFacility(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          { name: "Original" },
+        );
+        const u = await createReservableUnit(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          facility.facilityId,
+          { name: "Unidad original" },
+        );
+        const other = await createReservableUnit(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          facility.facilityId,
+          { name: "Otra" },
+        );
+        const invitation = await inviteManager(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          {
+            accountId: "manager",
+            expiresAt: new Date(Date.now() + 3600000).toISOString(),
+            permissions: [{ operation: "CATALOG_MANAGE", unitId: u.unitId }],
+          },
+        );
+        await acceptManager(
+          domain,
+          account("manager"),
+          a.tenantId,
+          invitation.invitationId,
+        );
+        assert.equal(
+          (
+            await renameCatalogResource(
+              domain,
+              account("manager"),
+              a.tenantId,
+              "unit",
+              u.unitId,
+              "  Nueva unidad  ",
+            )
+          ).name,
+          "Nueva unidad",
+        );
+        assert.equal(
+          (
+            await inspectCatalogResource(
+              domain,
+              account("manager"),
+              a.tenantId,
+              "unit",
+              u.unitId,
+            )
+          ).name,
+          "Nueva unidad",
+        );
+        await renameCatalogResource(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          "facility",
+          facility.facilityId,
+          "Nuevo centro",
+        );
+        assert.equal(
+          (
+            await inspectCatalogResource(
+              domain,
+              account("admin-a"),
+              a.tenantId,
+              "facility",
+              facility.facilityId,
+            )
+          ).name,
+          "Nuevo centro",
+        );
+        for (const operation of [
+          inspectCatalogResource,
+          (
+            pool: Parameters<typeof renameCatalogResource>[0],
+            actor: ReturnType<typeof account>,
+            tenant: string,
+            kind: "unit" | "facility",
+            id: string,
+          ) =>
+            renameCatalogResource(pool, actor, tenant, kind, id, "Forbidden"),
+        ]) {
+          await assert.rejects(
+            operation(
+              domain,
+              account("manager"),
+              a.tenantId,
+              "unit",
+              other.unitId,
+            ),
+            { code: "FORBIDDEN" },
+          );
+          await assert.rejects(
+            operation(
+              domain,
+              account("manager"),
+              a.tenantId,
+              "facility",
+              facility.facilityId,
+            ),
+            { code: "FORBIDDEN" },
+          );
+          await assert.rejects(
+            operation(domain, account("admin-b"), a.tenantId, "unit", u.unitId),
+            { code: "FORBIDDEN" },
+          );
+          await assert.rejects(
+            operation(domain, account("admin-b"), b.tenantId, "unit", u.unitId),
+            { code: "NOT_FOUND" },
+          );
+        }
+        await assert.rejects(
+          renameCatalogResource(
+            domain,
+            account("admin-a"),
+            a.tenantId,
+            "unit",
+            u.unitId,
+            " ",
+          ),
+          { code: "INVALID_INPUT" },
+        );
+        await migration.query(
+          "REVOKE INSERT ON domain.catalog_event FROM quenda_domain",
+        );
+        try {
+          await assert.rejects(
+            renameCatalogResource(
+              domain,
+              account("admin-a"),
+              a.tenantId,
+              "unit",
+              u.unitId,
+              "Must roll back",
+            ),
+            { code: "42501" },
+          );
+        } finally {
+          await migration.query(
+            "GRANT INSERT ON domain.catalog_event TO quenda_domain",
+          );
+        }
+        assert.equal(
+          (
+            await inspectCatalogResource(
+              domain,
+              account("manager"),
+              a.tenantId,
+              "unit",
+              u.unitId,
+            )
+          ).name,
+          "Nueva unidad",
+        );
+        const events = (
+          await migration.query(
+            "SELECT operation,previous_name,new_name FROM domain.catalog_event WHERE tenant_id=$1 AND operation LIKE 'RENAME_%' ORDER BY operation",
+            [a.tenantId],
+          )
+        ).rows;
+        assert.deepEqual(events, [
+          {
+            operation: "RENAME_FACILITY",
+            previous_name: "Original",
+            new_name: "Nuevo centro",
+          },
+          {
+            operation: "RENAME_UNIT",
+            previous_name: "Unidad original",
+            new_name: "Nueva unidad",
+          },
+        ]);
+        await transaction(
+          domain,
+          async (c) => {
+            const result = await c.query(
+              "UPDATE domain.reservable_unit SET name='not allowed' WHERE tenant_id=$1 AND id=$2",
+              [a.tenantId, other.unitId],
+            );
+            assert.equal(result.rowCount, 0);
+          },
+          { accountId: "manager", tenantId: a.tenantId },
+        );
+        await assert.rejects(
+          transaction(
+            domain,
+            (c) =>
+              c.query(
+                "UPDATE domain.reservable_unit SET facility_id=$3 WHERE tenant_id=$1 AND id=$2",
+                [a.tenantId, u.unitId, facility.facilityId],
+              ),
+            { accountId: "admin-a", tenantId: a.tenantId },
+          ),
+          { code: "42501" },
+        );
+        await revokeManager(
+          domain,
+          account("admin-a"),
+          a.tenantId,
+          invitation.invitationId,
+          "Fin de mantenimiento",
+        );
+        await assert.rejects(
+          renameCatalogResource(
+            domain,
+            account("manager"),
+            a.tenantId,
+            "unit",
+            u.unitId,
+            "No",
+          ),
+          { code: "FORBIDDEN" },
+        );
       },
     );
   });

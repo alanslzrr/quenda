@@ -623,6 +623,30 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             { name: "Pista HTTP" },
           );
           assert.equal(unit.statusCode, 201, unit.body);
+          const unitUrl = `/api/municipalities/${tenantId}/units/${unit.json().unitId}`;
+          const renamedUnit = await app.inject({
+            method: "PATCH",
+            url: unitUrl,
+            headers: { cookie: client.cookie(), origin: config.origin },
+            payload: { name: "Pista actualizada" },
+          });
+          assert.equal(renamedUnit.statusCode, 200, renamedUnit.body);
+          assert.equal(
+            (await client.request(unitUrl)).json().name,
+            "Pista actualizada",
+          );
+          assert.equal(
+            (
+              await app.inject({
+                method: "PATCH",
+                url: unitUrl,
+                headers: { cookie: client.cookie(), origin: config.origin },
+                payload: { name: "Otra", tenantId: "other" },
+              })
+            ).statusCode,
+            400,
+          );
+
           assert.equal(
             (
               await migration.query(
@@ -630,7 +654,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
                 [tenantId, unit.json().unitId],
               )
             ).rows[0].name,
-            "Pista HTTP",
+            "Pista actualizada",
           );
           assert.equal(
             (

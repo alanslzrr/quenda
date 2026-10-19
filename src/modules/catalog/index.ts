@@ -4,4 +4,8 @@ export const moduleDefinition = {
 } as const;
 
 export { createFacility, createReservableUnit } from "./drafts.ts";
+export {
+  inspectCatalogResource,
+  renameCatalogResource,
+} from "./maintenance.ts";
 export { registerCatalog } from "./routes.ts";

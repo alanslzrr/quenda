@@ -6,6 +6,10 @@ import {
   createRequestActor,
 } from "../identity/index.ts";
 import { createFacility, createReservableUnit } from "./drafts.ts";
+import {
+  inspectCatalogResource,
+  renameCatalogResource,
+} from "./maintenance.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
 const body = {
@@ -118,4 +122,67 @@ export async function registerCatalog(
           ),
         ),
   );
+  for (const kind of ["facility", "unit"] as const) {
+    const resource = kind === "facility" ? "facilities" : "units";
+    const params = {
+      type: "object",
+      additionalProperties: false,
+      required: ["tenantId", "id"],
+      properties: { tenantId: uuid, id: uuid },
+    };
+    const response = {
+      ...errors,
+      200: {
+        type: "object",
+        additionalProperties: false,
+        required: ["tenantId", "id", "name"],
+        properties: { tenantId: uuid, id: uuid, name: { type: "string" } },
+      },
+    };
+    app.get<{ Params: { tenantId: string; id: string } }>(
+      `/api/municipalities/:tenantId/${resource}/:id`,
+      {
+        schema: {
+          operationId: `inspect_${kind}`,
+          tags: ["Catalog"],
+          security: [{ quendaSession: [] }],
+          params,
+          response,
+        },
+      },
+      async (request, reply) =>
+        inspectCatalogResource(
+          pool,
+          await actor(request, reply),
+          request.params.tenantId,
+          kind,
+          request.params.id,
+        ),
+    );
+    app.patch<{
+      Params: { tenantId: string; id: string };
+      Body: { name: string };
+    }>(
+      `/api/municipalities/:tenantId/${resource}/:id`,
+      {
+        schema: {
+          operationId: `rename_${kind}`,
+          tags: ["Catalog"],
+          security: [{ quendaSession: [] }],
+          params,
+          body,
+          response,
+        },
+      },
+      async (request, reply) =>
+        renameCatalogResource(
+          pool,
+          await actor(request, reply),
+          request.params.tenantId,
+          kind,
+          request.params.id,
+          request.body.name,
+        ),
+    );
+  }
 }
