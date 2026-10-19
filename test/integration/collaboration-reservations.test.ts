@@ -425,7 +425,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
       },
     );
     await t.test(
-      "activation, replacement and reactivation preserve reconciled quotas and scope",
+      "activation, version changes and cross-agreement moves preserve quotas and atomicity",
       async () => {
         const tenant = tenants[winner] as string;
         const publicUnit = (
@@ -974,6 +974,195 @@ test("real booking commands enforce shared eligibility and quota in one transact
             )
           ).result.status,
           "CONFIRMADA",
+        );
+        const destinationUnit = randomUUID();
+        await migration.query(
+          "INSERT INTO domain.reservable_unit(tenant_id,id,facility_id,name) SELECT tenant_id,$3,facility_id,'Other agreement unit' FROM domain.reservable_unit WHERE tenant_id=$1 AND id=$2",
+          [tenant, replacementUnit, destinationUnit],
+        );
+        await migration.query(
+          "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason) SELECT tenant_id,$3,1,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,'citizen','Fixture' FROM domain.unit_calendar_version WHERE tenant_id=$1 AND unit_id=$2 AND version=1",
+          [tenant, replacementUnit, destinationUnit],
+        );
+        await migration.query(
+          "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
+          [tenant, destinationUnit],
+        );
+        const destination = (
+          await createAgreementDraft(
+            domain,
+            admin,
+            tenant,
+            "destination-agreement",
+            {
+              ...definition,
+              name: "Destination",
+              timeZone: "Europe/Madrid",
+              weeklyLimit: 1,
+              participants: [
+                {
+                  tenantId: tenant,
+                  accreditationIssuer: false,
+                  unitIds: [destinationUnit],
+                },
+              ],
+            },
+            randomUUID(),
+            3600,
+          )
+        ).result.agreementId;
+        await approveAgreement(
+          domain,
+          admin,
+          tenant,
+          destination,
+          "destination-approval",
+          { version: 1, unitIds: [destinationUnit] },
+          randomUUID(),
+          3600,
+        );
+        await activateAgreement(
+          domain,
+          admin,
+          tenant,
+          destination,
+          "destination-activation",
+          evidence,
+          randomUUID(),
+          3600,
+        );
+        const occupiedQuota = (
+          await createReservation(
+            domain,
+            actor,
+            tenant,
+            "destination-quota-holder",
+            { ...input(winner, 20), unitId: destinationUnit },
+            randomUUID(),
+            3600,
+            clock,
+          )
+        ).result;
+        const movable = (
+          await createReservation(
+            domain,
+            actor,
+            tenant,
+            "quota-after-cancel",
+            { ...input(winner, 21), unitId: replacementUnit },
+            randomUUID(),
+            3600,
+            clock,
+          )
+        ).result;
+        const counts = async () =>
+          (
+            await migration.query(
+              "SELECT agreement_id,count(*)::int AS n FROM domain.agreement_consumption WHERE agreement_id=ANY($1::uuid[]) AND NOT released GROUP BY agreement_id ORDER BY agreement_id",
+              [[id, destination]],
+            )
+          ).rows;
+        const before = await counts();
+        await assert.rejects(
+          modifyReservation(
+            domain,
+            actor,
+            tenant,
+            movable.id,
+            "move-to-full-destination",
+            {
+              ...input(winner, 21),
+              unitId: destinationUnit,
+              expectedRevision: 1,
+            },
+            randomUUID(),
+            3600,
+            clock,
+          ),
+          { code: "CONFLICT" },
+        );
+        assert.deepEqual(await counts(), before);
+        const unchanged = (
+          await migration.query(
+            "SELECT unit_id,revision FROM domain.reservation WHERE tenant_id=$1 AND id=$2",
+            [tenant, movable.id],
+          )
+        ).rows[0];
+        assert.deepEqual(unchanged, { unit_id: replacementUnit, revision: 1 });
+        await cancelReservation(
+          domain,
+          actor,
+          tenant,
+          occupiedQuota.id,
+          "free-destination-quota",
+          { expectedRevision: 1 },
+          randomUUID(),
+          3600,
+          clock,
+        );
+        const moveCorrelation = randomUUID();
+        const movedAcross = await modifyReservation(
+          domain,
+          actor,
+          tenant,
+          movable.id,
+          "move-agreements",
+          {
+            ...input(winner, 21),
+            unitId: destinationUnit,
+            expectedRevision: 1,
+          },
+          moveCorrelation,
+          3600,
+          clock,
+        );
+        assert.equal(movedAcross.result.unitId, destinationUnit);
+        assert.equal(movedAcross.result.revision, 2);
+        const attribution = (
+          await migration.query(
+            "SELECT agreement_id,released FROM domain.agreement_consumption WHERE tenant_id=$1 AND reservation_id=$2 ORDER BY agreement_id",
+            [tenant, movable.id],
+          )
+        ).rows;
+        assert.deepEqual(
+          attribution,
+          [
+            { agreement_id: id, released: true },
+            { agreement_id: destination, released: false },
+          ].sort((a, b) => a.agreement_id.localeCompare(b.agreement_id)),
+        );
+        const events = (
+          await migration.query(
+            "SELECT agreement_id,action FROM domain.agreement_consumption_event WHERE correlation_id=$1 ORDER BY action",
+            [moveCorrelation],
+          )
+        ).rows;
+        assert.deepEqual(events, [
+          { agreement_id: destination, action: "ATTRIBUTED" },
+          { agreement_id: id, action: "RELEASED" },
+        ]);
+        const afterMove = await counts();
+        assert.equal(
+          afterMove.find(
+            (row: { agreement_id: string }) => row.agreement_id === id,
+          ).n,
+          2,
+        );
+        assert.equal(
+          afterMove.find(
+            (row: { agreement_id: string }) => row.agreement_id === destination,
+          ).n,
+          1,
+        );
+        await createReservation(
+          domain,
+          actor,
+          tenant,
+          "origin-quota-reused",
+          { ...input(winner, 21), unitId: replacementUnit },
+          randomUUID(),
+          3600,
+          clock,
         );
       },
     );
