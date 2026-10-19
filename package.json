@@ -1,0 +1,39 @@
+{
+  "name": "quenda-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=24.21.0 <25",
+    "pnpm": "10.30.3"
+  },
+  "scripts": {
+    "dev": "node --env-file=.env.local --watch src/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "node --test test/unit/*.test.ts test/http/*.test.ts",
+    "test:integration": "pnpm build && node --test test/integration/*.test.ts",
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "db:migrate": "node --env-file=.env.migration.local scripts/migrate.ts",
+    "openapi": "node scripts/openapi.ts",
+    "db:bootstrap": "node --env-file=.env.bootstrap.local scripts/bootstrap.ts",
+    "db:local:config": "node scripts/local-config.ts"
+  },
+  "dependencies": {
+    "@fastify/swagger": "9.9.2",
+    "better-auth": "1.7.11",
+    "fastify": "5.12.7",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
+    "typescript": "6.0.3"
+  }
+}
