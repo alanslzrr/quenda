@@ -1080,6 +1080,107 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           }
         },
       );
+      await t.test(
+        "audit storage failures return 503 without cookies and preserve evidence of committed effects",
+        async () => {
+          const client = browser(app, "192.0.2.120");
+          const email = "audit-storage@example.test";
+          const accountId = await signup(client, email);
+          await verify(client, email);
+          await migration.query(
+            "CREATE FUNCTION auth.fail_http_audit_fixture() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Storage-secret-fixture' USING ERRCODE='XX000'; END $$",
+          );
+          try {
+            for (const phase of ["RECEIVED", "RETURNED"]) {
+              await migration.query(
+                `CREATE TRIGGER fail_http_audit_fixture BEFORE INSERT ON auth.request_event FOR EACH ROW WHEN (NEW.operation='SIGN_IN' AND NEW.phase='${phase}') EXECUTE FUNCTION auth.fail_http_audit_fixture()`,
+              );
+              const response = await client.request("/api/auth/sign-in/email", {
+                email,
+                password,
+              });
+              assert.equal(response.statusCode, 503, response.body);
+              assert.equal(response.json().error.code, "UNAVAILABLE");
+              assert.equal(response.headers["set-cookie"], undefined);
+              assert.ok(!response.body.includes("Storage-secret-fixture"));
+              const phases = (
+                await migration.query(
+                  "SELECT phase FROM auth.request_event WHERE request_id=$1 ORDER BY occurred_at",
+                  [response.headers["x-request-id"]],
+                )
+              ).rows.map((row) => row.phase);
+              assert.deepEqual(
+                phases,
+                phase === "RECEIVED" ? [] : ["RECEIVED"],
+              );
+              assert.equal(
+                (
+                  await auth.query(
+                    'SELECT count(*)::int AS n FROM auth.session WHERE "userId"=$1',
+                    [accountId],
+                  )
+                ).rows[0].n,
+                phase === "RECEIVED" ? 0 : 1,
+              );
+              assert.equal(
+                (
+                  await migration.query(
+                    "SELECT count(*)::int AS n FROM auth.session_event WHERE subject_id=$1 AND operation='SESSION_CREATED'",
+                    [accountId],
+                  )
+                ).rows[0].n,
+                phase === "RECEIVED" ? 0 : 1,
+              );
+              await migration.query(
+                "DROP TRIGGER fail_http_audit_fixture ON auth.request_event",
+              );
+            }
+          } finally {
+            await migration.query(
+              "DROP TRIGGER IF EXISTS fail_http_audit_fixture ON auth.request_event; DROP FUNCTION auth.fail_http_audit_fixture()",
+            );
+          }
+          const signed = await client.request("/api/auth/sign-in/email", {
+            email,
+            password,
+          });
+          assert.equal(signed.statusCode, 200, signed.body);
+          const logout = await client.request("/api/auth/sign-out", {});
+          assert.equal(logout.statusCode, 200, logout.body);
+          assert.deepEqual(
+            (
+              await migration.query(
+                "SELECT phase,operation,actor_id,http_status FROM auth.request_event WHERE request_id=$1 ORDER BY occurred_at",
+                [logout.headers["x-request-id"]],
+              )
+            ).rows,
+            [
+              {
+                phase: "RECEIVED",
+                operation: "SIGN_OUT",
+                actor_id: accountId,
+                http_status: null,
+              },
+              {
+                phase: "RETURNED",
+                operation: "SIGN_OUT",
+                actor_id: accountId,
+                http_status: 200,
+              },
+            ],
+          );
+          const schema = (
+            await app.inject({ url: "/api/auth/open-api/generate-schema" })
+          ).json();
+          for (const operations of Object.values(schema.paths) as Record<
+            string,
+            { responses: Record<string, unknown> }
+          >[]) {
+            for (const operation of Object.values(operations))
+              assert.ok(operation.responses["503"]);
+          }
+        },
+      );
     } finally {
       await Promise.all([app.close(), replica.close()]);
     }

@@ -110,7 +110,7 @@ export async function authenticationSchema(auth: Authentication) {
                       }
                     : {}),
                   ...Object.fromEntries(
-                    [400, 401, 403, 404, 409, 413, 415, 429, 500].map(
+                    [400, 401, 403, 404, 409, 413, 415, 429, 500, 503].map(
                       (status) => [
                         String(status),
                         {
