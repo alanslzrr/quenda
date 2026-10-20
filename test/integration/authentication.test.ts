@@ -14,7 +14,9 @@ import {
   consumeAdministrativeAttempt,
   createAuthentication,
 } from "../../src/modules/identity/index.ts";
+import { authenticationSchema } from "../../src/modules/identity/routes.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
+import { verifyAuthenticationResponses } from "../helpers/auth-response-contract.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 import { verifyProductResponses } from "../helpers/response-contract.ts";
 
@@ -53,6 +55,10 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
       },
     });
     const contracts = [app, replica].map(verifyProductResponses);
+    const authSchema = await authenticationSchema(identity);
+    const authContracts = [app, replica].map((instance) =>
+      verifyAuthenticationResponses(instance, authSchema),
+    );
     const link = async (
       email: string,
       kind: "verify-email" | "reset-password",
@@ -1205,7 +1211,12 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
       );
     } finally {
       await Promise.all([app.close(), replica.close()]);
-      for (const contract of contracts) contract.assertValid();
+      assert.deepEqual(
+        [...contracts, ...authContracts].flatMap(
+          (contract) => contract.failures,
+        ),
+        [],
+      );
     }
   });
 });

@@ -34,7 +34,24 @@ const paths = {
 } as const;
 
 export async function authenticationSchema(auth: Authentication) {
-  const schema = await auth.schema();
+  const schema = structuredClone(await auth.schema());
+  // The database and Better Auth permit null for these optional fields; its
+  // generated shared components currently describe only their non-null type.
+  for (const [name, fields] of [
+    ["User", ["image"]],
+    ["Session", ["ipAddress", "userAgent"]],
+  ] as const) {
+    for (const field of fields) {
+      const properties: Record<string, unknown> | undefined =
+        schema.components.schemas[name]?.properties;
+      if (!properties?.[field])
+        throw new Error("Missing authentication schema field");
+      const property = properties[field];
+      properties[field] = {
+        anyOf: [property, { type: "null" }],
+      };
+    }
+  }
   const publicPaths = new Set([
     "/verify-email",
     "/reset-password/{token}",
@@ -93,6 +110,28 @@ export async function authenticationSchema(auth: Authentication) {
                     : [{ quendaSession: [] }],
                 responses: {
                   ...operation.responses,
+                  ...(challenge
+                    ? {
+                        "200": {
+                          description: "Segundo factor verificado",
+                          content: {
+                            "application/json": {
+                              schema: {
+                                type: "object",
+                                required:
+                                  path === "/two-factor/verify-totp"
+                                    ? ["token", "user"]
+                                    : ["user"],
+                                properties: {
+                                  token: { type: "string" },
+                                  user: { $ref: "#/components/schemas/User" },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      }
+                    : {}),
                   ...(path === "/sign-in/email"
                     ? {
                         "200": {

@@ -41,3 +41,46 @@ test("response verifier checks enums and formats, not just serializer output", a
     await app.close();
   }
 });
+
+test("authentication verifier retains invalid JSON responses without accepting an error fallback", async () => {
+  const { verifyAuthenticationResponses } = await import(
+    "../helpers/auth-response-contract.ts"
+  );
+  const app = await buildApp({
+    logLevel: "silent",
+    database: { check: async () => {}, close: async () => {} },
+  });
+  const contract = verifyAuthenticationResponses(app, {
+    openapi: "3.1.1",
+    paths: {
+      "/probe": {
+        get: {
+          responses: {
+            "200": {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["token"],
+                    properties: { token: { type: "string" } },
+                  },
+                },
+              },
+            },
+            "500": {
+              content: { "application/json": { schema: { type: "object" } } },
+            },
+          },
+        },
+      },
+    },
+  });
+  app.get("/api/auth/probe", async () => ({ wrong: true }));
+  try {
+    assert.equal((await app.inject("/api/auth/probe")).statusCode, 500);
+    assert.equal(contract.failures.length, 1);
+    assert.throws(() => contract.assertValid());
+  } finally {
+    await app.close();
+  }
+});

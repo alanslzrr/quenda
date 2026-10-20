@@ -18,7 +18,10 @@ export function verifyProductResponses(app: FastifyInstance) {
     try {
       if (!String(reply.getHeader("content-type")).includes("application/json"))
         return payload;
-      assert.ok(typeof payload === "string");
+      assert.ok(
+        typeof payload === "string",
+        `${request.method} ${request.routeOptions.url} ${reply.statusCode}: payload ${typeof payload}`,
+      );
       assert.ok(request.routeOptions.url);
       if (!registered) {
         validator.addSchema({ ...app.swagger(), $id: "urn:quenda:contract" });
