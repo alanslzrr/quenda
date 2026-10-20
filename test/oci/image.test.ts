@@ -70,3 +70,29 @@ test("API, mail worker and migrator reject missing configuration in the same ima
     });
   }
 });
+
+test("OCI retains base-system copyright notices and the pinned Node license bundle", async () => {
+  const result = await run(
+    "--input-type=module",
+    "-e",
+    `
+    import assert from 'node:assert/strict';
+    import { execFileSync } from 'node:child_process';
+    import { readFileSync, readdirSync } from 'node:fs';
+    import { createHash } from 'node:crypto';
+    const packages = execFileSync('dpkg-query', ['-W', '-f=\${binary:Package}\\n'], {encoding:'utf8'}).trim().split('\\n');
+    assert.ok(packages.length > 0);
+    for (const name of packages) {
+      assert.ok(readFileSync('/usr/share/doc/' + name.split(':')[0] + '/copyright').length > 0, name);
+    }
+    const nodeLicense = readFileSync('/usr/local/LICENSE');
+    assert.equal(createHash('sha256').update(nodeLicense).digest('hex'), '5888dbb9a1d2b18f2c3e6c5f6af1b39de658372b402a0577b002777f14c62ace');
+    for (const file of ['/usr/local/lib/node_modules/npm/LICENSE', '/usr/local/lib/node_modules/corepack/LICENSE.md', '/opt/yarn-v1.22.22/LICENSE']) assert.ok(readFileSync(file).length > 0);
+    for (const file of readdirSync('/usr/share/common-licenses')) assert.ok(readFileSync('/usr/share/common-licenses/' + file).length > 0);
+    console.log(JSON.stringify({ packages: packages.length, noticesPresent: true }));
+  `,
+  );
+  const evidence = JSON.parse(result.stdout);
+  assert.equal(evidence.noticesPresent, true);
+  assert.ok(evidence.packages > 0);
+});
