@@ -6,6 +6,7 @@ import {
   assessPersistedMonthlyAggregate,
   prepareMonthlyAssessment,
 } from "../../src/modules/collaboration/monthly-assessment.ts";
+import { reviewMonthlyAssessment } from "../../src/modules/collaboration/monthly-review.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
 test("worker monthly assessment scopes attributed bookings without quota or public identifier access", {
@@ -161,6 +162,193 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
         [agreement],
       ),
       { code: "23514" },
+    );
+    const reviewer = {
+      accountId: "report-0",
+      email: "report-0@example.test",
+      sessionId: "fixture",
+      mfaVerifiedAt: new Date(),
+    };
+    const reviewerTenant = tenants[0]!;
+    const invitation = randomUUID();
+    await migration.query(
+      "INSERT INTO domain.administrator_invitation(tenant_id,id,account_id,invited_by,expires_at,accepted_at) VALUES($1,$2,'report-0','report-0',now()+interval '1 day',now())",
+      [reviewerTenant, invitation],
+    );
+    await migration.query(
+      "INSERT INTO domain.municipal_administrator(tenant_id,account_id,invitation_id) VALUES($1,'report-0',$2)",
+      [reviewerTenant, invitation],
+    );
+    const context = () =>
+      transaction(
+        domain,
+        async (c) =>
+          (
+            await c.query(
+              "SELECT domain.monthly_review_context($1,'2024-03-01',2,$2,'report-1') AS digest",
+              [agreement, reviewerTenant],
+            )
+          ).rows[0].digest as string,
+        { accountId: "report-0", tenantId: reviewerTenant },
+      );
+    const history = await context();
+    const reviewInput = {
+      month: "2024-03",
+      revision: 2,
+      recipientTenantId: reviewerTenant,
+      recipientAccountId: "report-1",
+      expectedHistoryDigest: history,
+      decision: "APPROVE" as const,
+      auxiliaryReference: "risk/auxiliary",
+      ownDataReference: "risk/own-data",
+      priorReleasesReference: "risk/history",
+      correctionReference: "risk/differences",
+    };
+    const review = await reviewMonthlyAssessment(
+      domain,
+      reviewer,
+      reviewerTenant,
+      agreement,
+      "review-one",
+      reviewInput,
+      randomUUID(),
+      3600,
+    );
+    const replay = await reviewMonthlyAssessment(
+      domain,
+      reviewer,
+      reviewerTenant,
+      agreement,
+      "review-one",
+      reviewInput,
+      randomUUID(),
+      3600,
+    );
+    assert.deepEqual(replay.result, review.result);
+    assert.equal(replay.replayed, true);
+    assert.equal(
+      (
+        await migration.query(
+          "SELECT count(*)::integer AS n FROM domain.monthly_risk_review WHERE agreement_id=$1",
+          [agreement],
+        )
+      ).rows[0].n,
+      1,
+    );
+    const rejection = await reviewMonthlyAssessment(
+      domain,
+      reviewer,
+      reviewerTenant,
+      agreement,
+      "review-two",
+      { ...reviewInput, decision: "REJECT" },
+      randomUUID(),
+      3600,
+    );
+    assert.notEqual(rejection.result.reviewId, review.result.reviewId);
+    assert.deepEqual(
+      (
+        await migration.query(
+          "SELECT decision FROM domain.monthly_risk_review WHERE agreement_id=$1 ORDER BY id",
+          [agreement],
+        )
+      ).rows.map((r) => r.decision),
+      ["APPROVE", "REJECT"],
+    );
+    await assert.rejects(
+      reviewMonthlyAssessment(
+        domain,
+        { ...reviewer, mfaVerifiedAt: null },
+        reviewerTenant,
+        agreement,
+        "no-mfa",
+        reviewInput,
+        randomUUID(),
+        3600,
+      ),
+      { code: "FORBIDDEN" },
+    );
+    await assert.rejects(
+      reviewMonthlyAssessment(
+        domain,
+        reviewer,
+        reviewerTenant,
+        agreement,
+        "stale-snapshot",
+        { ...reviewInput, revision: 1 },
+        randomUUID(),
+        3600,
+      ),
+      { code: "CONFLICT" },
+    );
+    await assert.rejects(
+      reviewMonthlyAssessment(
+        domain,
+        reviewer,
+        reviewerTenant,
+        agreement,
+        "missing-recipient",
+        { ...reviewInput, recipientAccountId: "absent" },
+        randomUUID(),
+        3600,
+      ),
+      { code: "FORBIDDEN" },
+    );
+    await assert.rejects(
+      domain.query("SELECT * FROM domain.monthly_risk_review"),
+      { code: "42501" },
+    );
+    await assert.rejects(
+      worker.query("SELECT domain.monthly_release_history('report-1')"),
+      { code: "42501" },
+    );
+    await assert.rejects(
+      migration.query(
+        "UPDATE domain.monthly_risk_review SET decision='REJECT' WHERE id=$1",
+        [review.result.reviewId],
+      ),
+      { code: "23514" },
+    );
+    await migration.query(
+      "INSERT INTO domain.monthly_report_delivery(agreement_id,month_start,revision,recipient_tenant_id,recipient_account_id) VALUES($1,'2024-03-01',2,$2,'report-1')",
+      [agreement, reviewerTenant],
+    );
+    const changedHistory = await context();
+    assert.notEqual(changedHistory, history);
+    await migration.query(
+      "INSERT INTO domain.monthly_report_delivery(agreement_id,month_start,revision,recipient_tenant_id,recipient_account_id) VALUES($1,'2024-03-01',2,$2,'report-1')",
+      [agreement, reviewerTenant],
+    );
+    assert.equal(await context(), changedHistory);
+    await assert.rejects(
+      reviewMonthlyAssessment(
+        domain,
+        reviewer,
+        reviewerTenant,
+        agreement,
+        "review-one",
+        reviewInput,
+        randomUUID(),
+        3600,
+      ),
+      { code: "CONFLICT" },
+    );
+    await migration.query(
+      "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1 AND account_id='report-0'",
+      [reviewerTenant],
+    );
+    await assert.rejects(
+      reviewMonthlyAssessment(
+        domain,
+        reviewer,
+        reviewerTenant,
+        agreement,
+        "revoked-review",
+        { ...reviewInput, expectedHistoryDigest: changedHistory },
+        randomUUID(),
+        3600,
+      ),
+      { code: "FORBIDDEN" },
     );
     await assert.rejects(
       assessPersistedMonthlyAggregate(domain, agreement, "2024-03"),
