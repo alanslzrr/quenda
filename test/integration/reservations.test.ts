@@ -1264,6 +1264,86 @@ test("reservation confirmation validates real calendars and commits every effect
           readReservation(domain, scoped, tenant, scopedId),
           { code: "NOT_FOUND" },
         );
+        const temporary = await inviteManager(domain, admin, tenant, {
+          accountId: scoped.accountId,
+          expiresAt: new Date(Date.now() + 3600000).toISOString(),
+          roleExpiresAt: new Date(Date.now() + 5000).toISOString(),
+          permissions: [{ operation: "RESERVATION_READ", unitId: draft }],
+        });
+        await acceptManager(domain, scoped, tenant, temporary.invitationId);
+        const supportCorrelation = randomUUID();
+        await readReservation(
+          domain,
+          scoped,
+          tenant,
+          scopedId,
+          undefined,
+          supportCorrelation,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.reservation_read_event WHERE correlation_id=$1 AND actor_id=$2 AND reservation_id=$3",
+              [supportCorrelation, scoped.accountId, scopedId],
+            )
+          ).rows[0].n,
+          1,
+        );
+        const beforeExpiry = await auditCount();
+        // Wait for the stored database deadline, not an estimated arbitrary delay.
+        await migration.query(
+          "SELECT pg_sleep(greatest(0,extract(epoch FROM role_expires_at-clock_timestamp()))::double precision+0.01) FROM domain.manager_invitation WHERE tenant_id=$1 AND id=$2",
+          [tenant, temporary.invitationId],
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT role_expires_at<=clock_timestamp() AS expired FROM domain.manager_invitation WHERE tenant_id=$1 AND id=$2",
+              [tenant, temporary.invitationId],
+            )
+          ).rows[0].expired,
+          true,
+        );
+        assert.deepEqual(
+          (await listMunicipalReservations(domain, scoped, tenant)).items,
+          [],
+        );
+        await assert.rejects(
+          readReservation(domain, scoped, tenant, scopedId),
+          { code: "NOT_FOUND" },
+        );
+        await assert.rejects(
+          transaction(
+            domain,
+            async (client) => {
+              await client.query(
+                "SELECT domain.record_reservation_reads($1,'DETAIL',$2)",
+                [[scopedId], randomUUID()],
+              );
+            },
+            { accountId: scoped.accountId, tenantId: tenant },
+          ),
+          { code: "42501" },
+        );
+        assert.equal(await auditCount(), beforeExpiry);
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT operation FROM domain.manager_event WHERE tenant_id=$1 AND invitation_id=$2 ORDER BY operation",
+              [tenant, temporary.invitationId],
+            )
+          ).rows.map((row) => row.operation),
+          ["ACCEPT_MANAGER", "INVITE_MANAGER"],
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT revoked_at FROM domain.manager_grant WHERE tenant_id=$1 AND invitation_id=$2",
+              [tenant, temporary.invitationId],
+            )
+          ).rows[0].revoked_at,
+          null,
+        );
         const filtered = await listMunicipalReservations(
           domain,
           admin,
