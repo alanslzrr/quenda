@@ -86,6 +86,8 @@ export async function registerReservationQueries(
         account,
         request.params.tenantId,
         request.params.reservationId,
+        undefined,
+        request.id,
       );
     },
   );
@@ -190,6 +192,8 @@ export async function registerReservationQueries(
               account,
               request.params.tenantId,
               request.query,
+              undefined,
+              request.id,
             );
       },
     );

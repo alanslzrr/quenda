@@ -1144,6 +1144,40 @@ test("reservation confirmation validates real calendars and commits every effect
         assert.equal(page.items.length, 20);
         assert.ok(page.nextCursor);
         assert.ok(page.items.every((r) => r.tenantId === tenant));
+        const auditedPage = (
+          await migration.query(
+            "SELECT reservation_id,actor_id,operation,correlation_id FROM domain.reservation_read_event WHERE tenant_id=$1",
+            [tenant],
+          )
+        ).rows;
+        assert.deepEqual(
+          auditedPage.map((row) => row.reservation_id).sort(),
+          page.items.map((row) => row.id).sort(),
+        );
+        assert.ok(
+          auditedPage.every(
+            (row) =>
+              row.actor_id === admin.accountId &&
+              row.operation === "MUNICIPAL_LIST",
+          ),
+        );
+        assert.equal(
+          new Set(auditedPage.map((row) => row.correlation_id)).size,
+          1,
+        );
+        for (const runtime of [domain, auth, worker])
+          await assert.rejects(
+            runtime.query("SELECT * FROM domain.reservation_read_event"),
+            { code: "42501" },
+          );
+        await assert.rejects(
+          domain.query(
+            "SELECT domain.record_reservation_reads($1,'DETAIL',$2)",
+            [[page.items[0]?.id], randomUUID()],
+          ),
+          { code: "42501" },
+        );
+
         assert.deepEqual(
           (await listMunicipalReservations(domain, admin, otherTenant)).items,
           [],
@@ -1185,6 +1219,36 @@ test("reservation confirmation validates real calendars and commits every effect
           ),
           { code: "FORBIDDEN" },
         );
+        const detailEvents = (
+          await migration.query(
+            "SELECT actor_id FROM domain.reservation_read_event WHERE tenant_id=$1 AND reservation_id=$2 AND operation='DETAIL'",
+            [tenant, scopedId],
+          )
+        ).rows;
+        assert.ok(
+          detailEvents.some((row) => row.actor_id === scoped.accountId),
+        );
+        const auditCount = async () =>
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.reservation_read_event",
+            )
+          ).rows[0].n;
+        const beforeAuditFailure = await auditCount();
+        await migration.query(
+          "CREATE FUNCTION domain.fail_read_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Synthetic audit failure' USING ERRCODE='23514'; END $$; CREATE TRIGGER fail_read_audit BEFORE INSERT ON domain.reservation_read_event FOR EACH ROW EXECUTE FUNCTION domain.fail_read_audit()",
+        );
+        try {
+          await assert.rejects(
+            listMunicipalReservations(domain, admin, tenant),
+            { code: "23514" },
+          );
+        } finally {
+          await migration.query(
+            "DROP TRIGGER fail_read_audit ON domain.reservation_read_event; DROP FUNCTION domain.fail_read_audit()",
+          );
+        }
+        assert.equal(await auditCount(), beforeAuditFailure);
         await revokeManager(
           domain,
           admin,

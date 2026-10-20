@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
@@ -61,6 +62,7 @@ export async function listMunicipalReservations(
   tenantId: string,
   options: { after?: string | null; unitId?: string | null } = {},
   clock: Clock = systemClock,
+  correlationId: string = randomUUID(),
 ) {
   const after = options.after ?? null,
     unitId = options.unitId ?? null;
@@ -83,6 +85,11 @@ export async function listMunicipalReservations(
       );
       const page = result.rows.slice(0, 20),
         now = clock.now().getTime();
+      if (page.length)
+        await client.query(
+          "SELECT domain.record_reservation_reads($1::uuid[],'MUNICIPAL_LIST',$2)",
+          [page.map((row) => row.id), correlationId],
+        );
       return {
         items: page.map((row) => ({
           ...current(row, now),
@@ -100,6 +107,7 @@ export async function readReservation(
   tenantId: string,
   reservationId: string,
   clock: Clock = systemClock,
+  correlationId: string = randomUUID(),
 ) {
   if (!uuid.test(reservationId)) throw new HttpError("INVALID_INPUT");
   return command(
@@ -116,6 +124,11 @@ export async function readReservation(
       // other than the owner. Staff access also requires a verified MFA session.
       if (row.account_id !== actor.accountId && !actor.mfaVerifiedAt)
         throw new HttpError("FORBIDDEN");
+      if (row.account_id !== actor.accountId)
+        await client.query(
+          "SELECT domain.record_reservation_reads($1::uuid[],'DETAIL',$2)",
+          [[row.id], correlationId],
+        );
       return {
         ...current(row, clock.now().getTime()),
         accountId: row.account_id,
