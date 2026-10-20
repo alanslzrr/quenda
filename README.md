@@ -334,6 +334,12 @@ El entrypoint es `node`; el comando predeterminado inicia `dist/server.js`. El m
 
 Las pruebas OCI requieren Docker local y las imágenes oficiales referenciadas por digest. Crean una red interna efímera, sin publicar puertos, y dos bases PostgreSQL con credenciales aleatorias independientes. Ejecutan bootstrap/migraciones desde la imagen, verifican repetición de migraciones, catálogo de dos municipios en una instancia y uno en otra, rechazo de credenciales cruzadas, readiness durante caída/recuperación de PostgreSQL y persistencia tras reiniciar la API. El worker arranca con sus propias credenciales y procesa una cola vacía; esta prueba no verifica entrega SMTP ni sustituye las pruebas de correo. Los datos del catálogo son fixtures sintéticos, no evidencia del recorrido completo de alta por API. Los contenedores, volúmenes temporales, red y archivos privados de configuración se retiran al terminar.
 
+### Métricas HTTP
+
+La API emite `HTTP_METRICS` cada 30 segundos con acumulados locales de solicitudes terminadas: `read` agrupa GET/HEAD y `write` los demás métodos. Incluye respuestas correctas, redirecciones, errores de cliente y servidor, duración total y máxima, y un histograma de latencia. Cada solicitud incrementa un único intervalo; `bucketUpperBoundsMs` indica sus límites superiores inclusivos y `+Inf` recoge el resto. No son percentiles exactos ni métricas exclusivas de comandos válidos: incluyen autenticación, salud y solicitudes rechazadas.
+
+`HTTP_SERVER_ERRORS` registra únicamente los nuevos errores 5xx desde el informe anterior. No convierte respuestas 4xx en fallos del servidor ni repite alertas sin errores nuevos. Los contadores se reinician con el proceso; no incluyen ruta, parámetros, cuerpo, cuentas ni municipio y tienen tamaño fijo. El temporizador se elimina al cerrar la API. La agregación entre réplicas, los umbrales operativos y el destino de las alertas pertenecen a la configuración del despliegue.
+
 ### Copia lógica de PostgreSQL
 
 `PG_BIN=/ruta/postgresql17/bin BACKUP_DATABASE_URL=… pnpm db:backup /directorio-privado/copia.dump` crea un archivo custom de `pg_dump` y devuelve ruta, SHA-256 y duración observada. Proporcionar la URL mediante un mecanismo de secretos, no dejarla en historial de shell. Requiere un rol administrativo de copia con lectura íntegra; no utilizar credenciales web. No activa filtrado RLS ni acepta una copia parcial como completa. Las opciones de conexión admitidas son TLS y `connect_timeout`.

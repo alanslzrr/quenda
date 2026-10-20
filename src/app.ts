@@ -5,6 +5,7 @@ import type { Pool } from "pg";
 import { type Config, defaultIdempotencyRetentionSeconds } from "./config.ts";
 import type { DatabaseHealth } from "./database/pools.ts";
 import { HttpError, registerErrors } from "./http/errors.ts";
+import { registerHttpMetrics } from "./http/metrics.ts";
 import { registerSourceOffer, type SourceOffer } from "./http/source-offer.ts";
 import { registerCatalog } from "./modules/catalog/index.ts";
 import { registerCollaboration } from "./modules/collaboration/index.ts";
@@ -88,6 +89,7 @@ export async function buildApp(options: {
       },
     },
   });
+  registerHttpMetrics(app);
   registerSourceOffer(app, options.sourceOffer);
   if (options.identity) {
     await registerAuthentication(
