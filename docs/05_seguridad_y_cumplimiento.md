@@ -28,6 +28,8 @@ La revocación de un administrador conserva su perfil y las evidencias, pero inv
 
 Los permisos operativos no incluyen lectura general de reservas personales. Un acceso de soporte requiere autorización, caducidad y auditoría.
 
+Una intervención administrativa no acredita aceptación del titular. Los eventos distinguen la operación administrativa de la aceptación personal; si el dato no consta en un evento anterior, no se infiere. Las normas y condiciones aceptadas conservan su versión e instante sin sobrescribir la evidencia previa.
+
 **Justificación:** la combinación de rol, objeto y contexto limita el acceso que un rol genérico no puede expresar. [NIST ABAC](https://csrc.nist.gov/pubs/sp/800/162/upd2/final), [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html).
 
 ## Aislamiento de datos
@@ -45,8 +47,15 @@ Las credenciales de autenticación, dominio y migraciones tienen permisos separa
 - `cookieCache` permanece desactivado para comprobar la revocación en la siguiente petición. Las operaciones en curso respetan su orden transaccional.
 - El acceso administrativo exige MFA. El alta de municipios y la aceptación de permisos administrativos exigen una verificación del segundo factor realizada hace menos de cinco minutos. Al caducar esta comprobación, la sesión continúa activa, pero la operación requiere verificar de nuevo el segundo factor. La recuperación de acceso no concede permisos adicionales.
 - Los permisos se consultan en cada operación. El limitador de peticiones comparte estado entre réplicas y solo confía en los proxies configurados.
+- La baja lógica requiere sesión válida, origen autorizado y confirmación expresa. Revoca todas las sesiones de la cuenta, incluidas las creadas concurrentemente, y bloquea nuevos accesos autenticados y operaciones de la cuenta. La cuenta desactivada no se reactiva mediante registro, recuperación de contraseña ni una invitación.
 
 **Justificación:** evita prolongar sesiones o permisos revocados y mantiene los límites de acceso al distribuir peticiones entre réplicas. [Sesiones](https://better-auth.com/docs/concepts/session-management), [seguridad](https://better-auth.com/docs/reference/security), [límites](https://better-auth.com/docs/concepts/rate-limit).
+
+## Baja y conservación
+
+La comprobación de reservas futuras de una baja abarca la cuenta en toda la instancia, sin devolver actividad de otros municipios. La auditoría conserva cuenta afectada, fecha, correlación y número de sesiones revocadas; no almacena tokens. Un fallo de auditoría revierte la baja y la revocación.
+
+Desactivar la cuenta no borra identidad, perfiles, reservas ni auditorías. La supresión, el ejercicio de derechos y los plazos de conservación requieren una política aprobada del responsable del tratamiento; la baja no los sustituye ni ejecuta eliminaciones automáticas.
 
 ## Convenios y trazabilidad
 

@@ -57,6 +57,12 @@ Al invitar a un administrador, `roleExpiresAt` permite fijar la caducidad del ro
 
 `POST /api/auth/update-user` recibe exclusivamente `{ "name": "..." }` y modifica el nombre del titular de la sesión. El nombre admite hasta 200 caracteres, se guarda sin espacios exteriores y no puede quedar vacío ni contener caracteres de control. La operación no modifica el correo, la verificación, el MFA ni los permisos. El nombre actualizado se consulta mediante `GET /api/auth/get-session`. Cambiar el nombre no acredita una identidad legal.
 
+## Baja de cuenta
+
+`POST /api/me/deactivation` recibe `{ "confirm": true }`, exige sesión verificada y `Origin` autorizado y devuelve `{ status: "DEACTIVATED", deactivatedAt }`. Desactiva la cuenta y revoca todas sus sesiones en una transacción auditada, coordinada con nuevas sesiones y reservas. El rechazo `409 ACCOUNT_HAS_FUTURE_RESERVATIONS` indica alguna reserva confirmada con inicio futuro en cualquier municipio de la instancia; no revela sus datos a otros municipios.
+
+La baja conserva identidad, perfiles, asignaciones históricas, reservas y auditoría. No cancela reservas iniciadas, no elimina datos personales ni permite reactivación automática. Las operaciones autenticadas y nuevos accesos de una cuenta desactivada se rechazan. La protección contra dejar el servicio sin responsable devuelve `409 ACCOUNT_HANDOVER_REQUIRED` si se trata del último operador activo o del último administrador activo de algún municipio; no transfiere sus permisos. La política definitiva de relevo está en [PD-BAJA-RESPONSABLE](docs/06_decisiones_y_validacion.md#decisiones-pendientes).
+
 ## Gestores municipales
 
 `POST /api/municipalities/{tenantId}/manager-invitations` recibe `accountId`, `expiresAt`, `roleExpiresAt` opcional y `permissions: [{ operation, unitId }]`. El administrador invita; el destinatario acepta con MFA mediante `/{invitationId}/accept`. `/{invitationId}/revoke` revoca la invitación o concesión con `{ "reason": "..." }`.
@@ -67,7 +73,7 @@ Para sustituir una concesión, la nueva invitación incluye `replacesInvitationI
 
 `GET /api/municipalities/{tenantId}/manager-invitations` permite al administrador con MFA reciente consultar las invitaciones y concesiones del municipio. Incluye destinatario, emisor, permisos, referencia de sustitución y fechas de vencimiento, aceptación y revocación. Devuelve hasta 20 elementos y `nextCursor`; la página siguiente utiliza `?after=...`. Las fechas describen el historial y no sustituyen la comprobación de autoridad vigente de cada operación.
 
-Cada permiso se limita a una operación y unidad real del municipio; `unitId: null` abarca el municipio. `CATALOG_CREATE` exige ámbito municipal. Las operaciones admitidas son `CATALOG_CREATE`, `CATALOG_MANAGE`, `RESERVATION_READ`, `RESERVATION_MANAGE`, `UNIT_BLOCK`, `REPORT_READ` y `DATA_EXPORT`. Ninguna concede administración de cuentas. Las altas del catálogo ya aplican este control; el resto se integrará al implementar sus respectivos módulos.
+Cada permiso se limita a una operación y unidad real del municipio; `unitId: null` abarca el municipio. `CATALOG_CREATE` exige ámbito municipal. Las operaciones admitidas son `CATALOG_CREATE`, `CATALOG_MANAGE`, `RESERVATION_READ`, `RESERVATION_MANAGE`, `UNIT_BLOCK`, `REPORT_READ` y `DATA_EXPORT`. Ninguna concede administración de cuentas.
 
 ## Catálogo en borrador
 
@@ -77,7 +83,7 @@ Cada permiso se limita a una operación y unidad real del municipio; `unitId: nu
 
 `GET /api/municipalities/{tenantId}/facilities` y `GET /api/municipalities/{tenantId}/units` listan los recursos visibles para la cuenta con MFA reciente. Devuelven hasta 20 elementos y `nextCursor`; la página siguiente utiliza `?after=...`. RLS filtra antes de paginar: un gestor limitado a determinadas unidades no obtiene las restantes ni acceso municipal a instalaciones. Sin recursos autorizados, la respuesta es una lista vacía. Estos listados son administrativos, no publicaciones del catálogo público.
 
-`POST /api/municipalities/{tenantId}/facilities/{id}/withdraw` y la ruta equivalente `/units/{id}/withdraw` reciben `{ "reason": "..." }`. Registran la retirada y su motivo sin eliminar el recurso. Repetir la retirada devuelve el mismo instante sin duplicar el evento. Las consultas administrativas incluyen `withdrawnAt`; `null` indica que no se ha retirado, no que esté publicado. Una instalación retirada conserva sus unidades y no admite nuevas altas. Las reservas deberán comprobar la retirada de la unidad y de su instalación.
+`POST /api/municipalities/{tenantId}/facilities/{id}/withdraw` y la ruta equivalente `/units/{id}/withdraw` reciben `{ "reason": "..." }`. Registran la retirada y su motivo sin eliminar el recurso. Repetir la retirada devuelve el mismo instante sin duplicar el evento. Las consultas administrativas incluyen `withdrawnAt`; `null` indica que no se ha retirado, no que esté publicado. Una instalación retirada conserva sus unidades y no admite nuevas altas. Las reservas comprueban la retirada de la unidad y de su instalación.
 
 ## Calendarios de unidades
 
@@ -89,9 +95,15 @@ Cada permiso se limita a una operación y unidad real del municipio; `unitId: nu
 
 ## Publicación del catálogo
 
-`POST /api/municipalities/{tenantId}/facilities/{id}/publish` recibe `{ "reason": "..." }`. Para una unidad, `/units/{id}/publish` exige además `calendarVersion` e `independenceConfirmed: true`. La instalación debe estar publicada y no retirada; el calendario indicado debe ser el actual y superar la validación de reglas. La confirmación de independencia física queda auditada con el actor y la versión: no es una detección automática de espacios solapados.
+`POST /api/municipalities/{tenantId}/facilities/{id}/publish` recibe `{ "reason": "..." }`. Para una unidad, `/units/{id}/publish` exige además `calendarVersion` e `independenceConfirmed: true`. La instalación debe estar publicada y no retirada; el calendario indicado debe ser el actual y superar la validación de reglas. La unidad necesita normas vigentes con contenido; si faltan, devuelve `409 USAGE_RULES_REQUIRED`: «Añade las normas de uso para publicar esta unidad». La confirmación de independencia física queda auditada con el actor y la versión: no es una detección automática de espacios solapados.
 
-Publicar elimina la retirada del recurso indicado, sin borrar historial. Republicar una instalación vuelve a habilitar sus unidades previamente publicadas que no estén retiradas individualmente. Los cambios no alteran las reservas existentes. `publishedAt` y `withdrawnAt` se incluyen en las consultas administrativas; la disponibilidad pública deberá considerar también el estado de la instalación. La publicación no sustituye el cálculo de disponibilidad, todavía pendiente.
+Publicar elimina la retirada del recurso indicado, sin borrar historial. Republicar una instalación habilita sus unidades previamente publicadas, no retiradas y con normas válidas. Los cambios no alteran las reservas existentes. Las unidades anteriores publicadas sin normas se ocultan del catálogo y de la disponibilidad hasta completarlas; se conserva `publishedAt`, sin crear normas ni aceptaciones ficticias.
+
+## Normas y política de reserva
+
+`PUT /api/municipalities/{tenantId}/units/{unitId}/usage-rules` recibe `expectedVersion`, `text` y `reason`. Requiere `CATALOG_MANAGE` sobre la unidad y MFA reciente. El texto es plano, no vacío y de hasta 20.000 caracteres. `expectedVersion: 0` crea la primera versión; una versión obsoleta devuelve `409`. Cada versión conserva texto, autor, fecha, motivo y correlación. `GET` devuelve la actual; `?version=N`, una histórica. Los roles de ejecución no pueden sobrescribirlas ni eliminarlas.
+
+`GET` y `PUT /api/municipalities/{tenantId}/booking-policy` requieren administrador municipal y MFA reciente. El cambio recibe `expectedVersion`, `advanceDays`, `cancellationMinutes` y `reason`; incrementa la versión y conserva auditoría. No puede reducir la antelación municipal por debajo de un límite explícito vigente de una unidad. Los municipios nuevos parten de 30 días de antelación y 1.440 minutos de cancelación; las actualizaciones conservan las configuraciones existentes. Cambiar la política no modifica el plazo ya aceptado de las reservas.
 
 ## Tiempo civil y zonas IANA
 
@@ -105,10 +117,11 @@ Sin sesión, bajo `/api/public/municipalities/{tenantId}`:
 
 - `GET /facilities`: instalaciones publicadas, hasta 20 por página; `?after=nextCursor` continúa el listado.
 - `GET /facilities/{facilityId}/units`: unidades publicadas de una instalación publicada y no retirada, con la misma paginación.
-- `GET /units/{unitId}`: nombre, instalación, zona, límites municipales y calendario vigente, sin autor ni motivo de auditoría.
+- `GET /units/{unitId}`: nombre, instalación, zona, límites, calendario, `usageRulesVersion` y `bookingPolicyVersion`, sin datos de auditoría.
+- `GET /units/{unitId}/usage-rules`: texto plano y versión de las normas vigentes, sin autor ni motivo internos.
 - `GET /units/{unitId}/availability?date=AAAA-MM-DD&durationMinutes=N`: franjas libres con UTC, hora local, desplazamientos, versión y momento de cálculo.
 
-Estas consultas no crean cuentas ni perfiles. Los recursos no publicados o retirados no aparecen; el detalle responde `404`. La disponibilidad lee calendario y ocupaciones en una misma transacción y descarta cualquier solape con una ocupación no liberada. Solo expone franjas, no titulares, identificadores de reservas ni motivos de bloqueos. Consultar no garantiza ni confirma una reserva. Las cuatro rutas comparten un límite de 60 peticiones por 60 segundos y dirección reconocida por Fastify, incluso entre réplicas. Al superarlo devuelven `429 RATE_LIMITED` y `Retry-After`, antes de validar parámetros o calcular franjas. No confían en cabeceras de proxy enviadas por el cliente. PostgreSQL conserva una huella HMAC con clave compartida, no la IP en claro; cada petición elimina hasta 100 contadores cuya ventana tiene más de diez minutos. Sin tráfico, la limpieza se reanuda en la próxima petición; no constituye una garantía de borrado exactamente a los diez minutos. Las réplicas deben compartir `AUTH_SECRET`; rotarlo también reinicia la identidad de estos contadores.
+Estas consultas no crean cuentas ni perfiles. Los recursos no publicados o retirados no aparecen. Las unidades sin normas válidas tampoco se ofrecen; su detalle responde `404`. La disponibilidad lee calendario y ocupaciones en una misma transacción y descarta cualquier solape con una ocupación no liberada. Solo expone franjas, no titulares, identificadores de reservas ni motivos de bloqueos. Consultar no garantiza ni confirma una reserva. Las rutas públicas comparten un límite de 60 peticiones por 60 segundos y dirección reconocida por Fastify, incluso entre réplicas. Al superarlo devuelven `429 RATE_LIMITED` y `Retry-After`, antes de validar parámetros o calcular franjas. No confían en cabeceras de proxy enviadas por el cliente. PostgreSQL conserva una huella HMAC con clave compartida, no la IP en claro; cada petición elimina hasta 100 contadores cuya ventana tiene más de diez minutos. Sin tráfico, la limpieza se reanuda en la próxima petición; no constituye una garantía de borrado exactamente a los diez minutos. Las réplicas deben compartir `AUTH_SECRET`; rotarlo también reinicia la identidad de estos contadores.
 
 ## Consulta de reservas
 
@@ -122,9 +135,13 @@ El detalle no devuelve el resultado histórico de un comando: tras cancelar, mue
 
 Las consultas muestran `FINALIZADA` cuando el fin de una reserva confirmada es anterior o igual al instante de consulta. No modifican el estado almacenado ni ejecutan tareas programadas; una reserva cancelada sigue mostrando `CANCELADA`.
 
+Las condiciones incluyen `usageRulesVersion`, `rulesAcceptedAt`, `bookingPolicyVersion`, `conditionsAcceptedAt` y `nonCancellableAccepted`. En reservas anteriores pueden ser nulas: significa «sin aceptación registrada», no otro estado de reserva. Consultarlas o cancelarlas no exige completar esa evidencia.
+
 ## Confirmación de reservas
 
-`POST /api/municipalities/{tenantId}/reservations` requiere sesión verificada, `Origin` autorizado y cabecera `Idempotency-Key` (1–200 caracteres alfanuméricos, `.`, `_`, `:`, `-`). El cuerpo contiene `unitId`, `startsAt` y `endsAt` como instantes ISO con zona; el titular siempre es el usuario autenticado.
+`POST /api/municipalities/{tenantId}/reservations` requiere sesión verificada, `Origin` autorizado y cabecera `Idempotency-Key` (1–200 caracteres alfanuméricos, `.`, `_`, `:`, `-`). El cuerpo contiene `unitId`, `startsAt`, `endsAt` y `acceptance: { usageRulesVersion, bookingPolicyVersion, nonCancellable }`. Los instantes son ISO con zona; el titular siempre es el usuario autenticado.
+
+Enviar `acceptance` expresa la aceptación de esas versiones. `nonCancellable` debe ser `true` cuando la confirmación queda después de `inicio − plazo vigente`, y `false` en caso contrario. Las versiones proceden del detalle público de la unidad y su texto de normas. Si alguna cambia o se cruza el plazo durante la operación, devuelve `409 CONDITIONS_CHANGED` sin sustituir la aceptación ni guardar efectos. En el alta, `acceptance` solo puede omitirse para recuperar un comando anterior sin aceptación cuyo resultado siga retenido. Una creación nueva sin aceptación devuelve `409 CONDITIONS_ACCEPTANCE_REQUIRED`, igual que una modificación que necesita nueva aceptación y no la incluye.
 
 La respuesta `201` contiene la reserva y sus condiciones aceptadas. Repetir la misma clave y contenido devuelve el resultado original, también con `201`; cambiar el contenido devuelve `409`. Las cabeceras `Idempotency-Replayed` e `Idempotency-Expires-At` indican recuperación y vencimiento. `Idempotency-Retention-Seconds` publica la configuración para comandos nuevos: `IDEMPOTENCY_RETENTION_SECONDS`, 86.400 segundos por defecto. El vencimiento ya guardado no cambia al repetir una petición ni al cambiar esa configuración. Una clave caducada puede ejecutar un comando nuevo; no debe reutilizarse para recuperar resultados fuera de su ventana.
 
@@ -134,13 +151,21 @@ La creación valida las reglas vigentes y confirma reserva, ocupación, evento, 
 
 `POST /api/municipalities/{tenantId}/reservations/{reservationId}/modify` recibe `expectedRevision`, `unitId`, `startsAt` y `endsAt`, con la misma autenticación e idempotencia que la confirmación. Devuelve `200`. No cambia el titular ni el municipio.
 
-El sistema aplica el plazo aceptado de origen y las reglas vigentes del destino. Sustituye la ocupación, conserva la anterior liberada y registra las condiciones anteriores y nuevas. Un conflicto revierte todos los cambios. Una petición sin cambios de unidad o intervalo conserva versión y condiciones y no genera otro evento ni aviso. El modo `administrative: true` exige motivo, MFA reciente y permiso `RESERVATION_MANAGE` tanto en origen como en destino; nunca permite modificar una reserva ya iniciada.
+El sistema aplica el plazo aceptado de origen y las reglas vigentes del destino. `acceptance` solo puede omitirse si existe evidencia anterior de la misma unidad y versiones y cubre la condición de cancelación del nuevo intervalo. Una modificación real de una reserva sin evidencia exige aceptación del titular fechada en ese cambio, no en su creación original.
+
+Sustituye la ocupación, conserva la anterior liberada y registra las condiciones anteriores y nuevas. Un conflicto revierte todos los cambios. Una petición sin cambios de unidad o intervalo conserva versión y condiciones y no genera aceptación, evento ni aviso nuevos.
+
+`administrative: true` exige `reason`, MFA reciente y `RESERVATION_MANAGE`. Permite omitir el plazo del titular, siempre antes del inicio, pero solo mantiene la misma unidad y versión de normas ya aceptada. No admite `acceptance` en nombre del titular. Si cambia la unidad, cambian las normas o falta evidencia, devuelve `409 HOLDER_ACCEPTANCE_REQUIRED` y conserva la reserva. El titular debe modificar desde su cuenta dentro de su propio plazo; si ha vencido, solo cabe conservar la reserva o valorar una cancelación administrativa con motivo.
 
 ## Cancelación de reservas
 
 `POST /api/municipalities/{tenantId}/reservations/{reservationId}/cancel` recibe `expectedRevision` y utiliza la misma sesión, protección de origen e idempotencia que la confirmación. Devuelve `200` con el estado cancelado. Una reserva ya cancelada no genera otro evento ni otro aviso, aunque se use una clave nueva.
 
-El titular cancela antes de `inicio − plazo aceptado`; la igualdad con el límite ya queda fuera de plazo. `administrative: true` exige permiso `RESERVATION_MANAGE`, MFA reciente y `reason`; permite omitir el plazo del titular, pero nunca cancelar tras el inicio. Una versión obsoleta produce `409`. Reserva, liberación de ocupación, evento y avisos se confirman juntos. La autorización se comprueba también al recuperar un resultado idempotente.
+El titular cancela con `ahora ≤ inicio − plazo aceptado` y siempre `ahora < inicio`. Los municipios nuevos tienen 24 horas por defecto, configurables. El plazo se comprueba en servidor, también después de esperar bloqueos; su rechazo devuelve `409 RESERVATION_DEADLINE_PASSED` sin liberar ocupación ni cuota. No permite modificar para eludirlo. Cancelar nunca exige aceptar normas nuevas.
+
+`administrative: true` exige permiso `RESERVATION_MANAGE`, MFA reciente y `reason`; permite omitir el plazo del titular, pero nunca cancelar una reserva ya iniciada. Una versión obsoleta produce `409`. Reserva, liberación de ocupación y cuota, evento y avisos se confirman juntos. La autorización se comprueba también al recuperar un resultado idempotente.
+
+Una reserva de última hora exige aceptar que no puede cancelarse por cuenta propia. Ante una excepción, el usuario contacta directamente con el municipio; no se crea un ticket. El titular conserva su responsabilidad y puede reorganizar participantes según las normas, sin transferir la reserva. La ausencia conserva tiempo reservado e historial, sin inferir asistencia ni generar automáticamente incidencias o penalizaciones.
 
 ## Bloqueos de unidades
 
@@ -267,11 +292,11 @@ La oferta utiliza versiones de calendario y eventos históricos de publicación/
 
 ### Exportación de reservas
 
-`GET /api/municipalities/{tenantId}/exports/reservations?from=2030-01-01&to=2030-02-01` descarga JSON `quenda.reservations`, versión 1. El parámetro opcional `unitId` limita el conjunto a una unidad. Exige `DATA_EXPORT` y `RESERVATION_READ` o `RESERVATION_MANAGE` para el mismo ámbito, con MFA de los últimos cinco minutos. Sin `unitId`, ambos permisos deben ser municipales.
+`GET /api/municipalities/{tenantId}/exports/reservations?from=2030-01-01&to=2030-02-01` descarga JSON `quenda.reservations`, versión 2. El parámetro opcional `unitId` limita el conjunto a una unidad. Exige `DATA_EXPORT` y `RESERVATION_READ` o `RESERVATION_MANAGE` para el mismo ámbito, con MFA de los últimos cinco minutos. Sin `unitId`, ambos permisos deben ser municipales.
 
-El archivo identifica municipio, unidad solicitada (`null` para todo el municipio), instante de generación, periodo, zona horaria y entidades incluidas. Selecciona reservas que se solapan con `[from,to)` en la zona del municipio; conserva sus intervalos completos, aunque crucen una frontera del periodo. `FINALIZADA` se calcula al generar el archivo y no acredita asistencia. Incluye el identificador del titular, como la consulta municipal ordinaria, pero no nombres, correos ni credenciales. No es una copia de seguridad de la base de datos.
+El archivo identifica municipio, unidad solicitada (`null` para todo el municipio), instante de generación, periodo, zona horaria y entidades incluidas. Selecciona reservas que se solapan con `[from,to)` en la zona del municipio; conserva sus intervalos completos, aunque crucen una frontera del periodo. Incluye versiones e instantes de aceptación, plazo aceptado y `nonCancellableAccepted`; los nulos indican evidencia no registrada. `FINALIZADA` se calcula al generar el archivo y no acredita asistencia. Incluye el identificador del titular, como la consulta municipal ordinaria, pero no nombres, correos ni credenciales. No es una copia de seguridad de la base de datos.
 
-Cada solicitud admite hasta 366 días y 10000 reservas. Si excede el límite, devuelve `400` sin archivo parcial: debe reducirse el periodo o seleccionar una unidad. La respuesta usa `Cache-Control: no-store` y descarga `quenda-reservations-v1.json`.
+Cada solicitud admite hasta 366 días y 10000 reservas. Si excede el límite, devuelve `400` sin archivo parcial: debe reducirse el periodo o seleccionar una unidad. La respuesta usa `Cache-Control: no-store` y descarga `quenda-reservations-v2.json`.
 
 Esquema JSON Schema Draft 7 y ejemplo sintético, generados desde el mismo contrato usado por la API:
 

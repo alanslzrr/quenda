@@ -13,7 +13,7 @@ Cada instalación y unidad reservable tiene un único municipio gestor, aunque p
 | Regla horaria / Excepción | Aperturas regulares y cambios fechados del calendario. |
 | Normas de uso | Texto versionado por unidad reservable; las versiones aceptadas se conservan sin sobrescribir. |
 | Política de reserva | Condiciones versionadas que se aplican al crear o modificar una reserva. |
-| Reserva | Titular, unidad reservable, estado y versión de concurrencia. |
+| Reserva | Titular, unidad, intervalo, estado, versión de concurrencia y evidencia de las condiciones aceptadas. |
 | Bloqueo | Cierre de una unidad reservable, con responsable y motivo. |
 | Ocupación | Municipio, unidad reservable, intervalo y origen: reserva o bloqueo. |
 | Evento / Auditoría | Cambios de negocio y operaciones sensibles, con autor, fecha y correlación. |
@@ -33,6 +33,8 @@ erDiagram
   MUNICIPIO ||--o{ INSTALACION : gestiona
   INSTALACION ||--o{ UNIDAD_RESERVABLE : contiene
   UNIDAD_RESERVABLE ||--o{ RESERVA : recibe
+  UNIDAD_RESERVABLE ||--o{ NORMAS_VERSIONADAS : define
+  NORMAS_VERSIONADAS o|--o{ RESERVA : aceptacion_registrada
   UNIDAD_RESERVABLE ||--o{ BLOQUEO : restringe
   PERFIL_MUNICIPAL ||--o{ RESERVA : titular
   RESERVA o|--o{ OCUPACION : origen_reserva
@@ -85,9 +87,11 @@ El sistema intercambia instantes en UTC y conserva por separado la zona IANA del
 | Cómputo | En la zona municipal: `hoy ≤ fecha(inicio) ≤ hoy + N`, ambos días incluidos, e `inicio > ahora`. El fin respeta apertura y duración. |
 | Duración | Mínimo, máximo y paso en minutos por unidad reservable; valores positivos y compatibles, obligatorios antes de publicar. |
 | Apertura | Horarios semanales y excepciones fechadas; la reserva completa queda dentro de un intervalo permitido. |
-| Modificación y cancelación | Plazo no negativo en minutos antes del inicio; valor predeterminado: 0. El usuario opera antes de `inicio − plazo`, nunca tras comenzar. |
-| Intervención administrativa | Solo sobre reservas futuras, con permiso y motivo. Puede omitir el plazo del usuario, pero no integridad, vigencia ni cuotas. |
-| Publicación | Configuración válida y unidad físicamente independiente. No se publican como unidades distintas un espacio y sus partes solapadas. |
+| Modificación y cancelación | Plazo no negativo en minutos antes del inicio; valor predeterminado: 1.440 minutos —24 horas—. Se admite `ahora ≤ inicio − plazo` y siempre `ahora < inicio`. |
+| Intervención administrativa | Solo sobre reservas futuras, con permiso y motivo. Puede omitir el plazo del titular, pero no integridad, vigencia, cuotas ni aceptación personal de normas. |
+| Publicación | Configuración válida, normas vigentes con contenido y unidad físicamente independiente. No se publican como unidades distintas un espacio y sus partes solapadas. |
+
+El plazo utiliza minutos transcurridos entre instantes, no días naturales. El valor predeterminado se aplica al crear municipios; una actualización conserva los valores municipales existentes y las condiciones ya aceptadas.
 
 **Justificación:** el cómputo por fecha local conserva la antelación en días naturales durante los cambios de horario. Los parámetros tipados permiten configurar municipios sin ejecutar código introducido por administradores.
 
@@ -113,14 +117,36 @@ stateDiagram-v2
 
 **Justificación:** derivar la finalización evita escrituras causadas únicamente por el paso del tiempo. El sistema no deduce asistencia a partir de una reserva finalizada.
 
-La cancelación aplica las condiciones aceptadas de la reserva. La modificación comprueba las reglas vigentes y conserva en el historial las versiones anterior y nueva. Puede cambiar la unidad reservable dentro del mismo municipio, pero no el titular ni el municipio.
+La cancelación aplica las condiciones aceptadas de la reserva. La modificación del titular comprueba las reglas vigentes y conserva en el historial las versiones anterior y nueva. Puede cambiar la unidad reservable dentro del mismo municipio, pero no el titular ni el municipio.
 
 Un cierre o cambio de calendario incompatible con reservas confirmadas se rechaza hasta resolverlas mediante operaciones explícitas. Retirar una unidad del catálogo impide nuevas reservas y mantiene las existentes y su historial.
 
 ## Normas de uso y aceptación
 
-Cada unidad reservable tiene un texto de normas versionado. Crear una versión conserva las anteriores y registra autor, fecha, motivo y correlación. El usuario acepta expresamente la versión vigente al reservar. La reserva identifica la unidad y la versión aceptada; una modificación que cambie las normas aplicables requiere una nueva aceptación expresa. Actualizar las normas no modifica las aceptaciones anteriores.
+Cada unidad reservable tiene un texto de normas versionado. Crear una versión conserva las anteriores y registra autor, fecha, motivo y correlación. Sin normas con contenido, la unidad puede permanecer en borrador, pero no publicarse ni admitir reservas. Las unidades ya publicadas que carezcan de ellas quedan ocultas del catálogo y la disponibilidad hasta completarlas, sin borrar reservas ni alterar el historial de publicación.
+
+El titular acepta expresamente las versiones vigentes de normas y política al reservar. La reserva conserva esas referencias, el plazo de cancelación aceptado, los instantes de aceptación y, cuando corresponde, la aceptación de no poder cancelar por sí mismo. El servidor comprueba las versiones dentro de la transacción; una diferencia exige revisarlas y no sustituye la aceptación enviada.
+
+| Modificación | Regla de aceptación |
+|---|---|
+| Sin cambio de unidad ni intervalo | No genera aceptación ni evento nuevos. |
+| Del titular, con condiciones todavía cubiertas por su aceptación | Puede conservar la evidencia anterior. |
+| Del titular, con otra unidad, normas o política, sin evidencia anterior o entrando por primera vez fuera del plazo de cancelación | Exige aceptación expresa de las condiciones vigentes y registra su fecha actual. |
+| Administrativa | Solo mantiene la unidad y la versión de normas ya aceptada; conserva la evidencia y registra la intervención como administrativa. No admite aceptación en nombre del titular. |
+| Cancelación | No exige nuevas normas, incluso si falta evidencia de aceptación anterior. |
+
+Las reservas anteriores sin evidencia se identifican como «sin aceptación registrada», no como canceladas, rechazadas ni pendientes. Se consultan y cancelan conforme a las condiciones históricas guardadas. Una modificación real exige aceptación del titular; no se rellena retroactivamente ni se atribuye al momento de creación.
+
+## Cancelación y responsabilidad
+
+Una vez vencido el plazo aceptado, el titular no puede cancelar ni modificar para eludirlo; la reserva y su cuota permanecen ocupadas. Se permiten reservas con menos antelación que ese plazo si cumplen las demás reglas y el titular acepta expresamente que no podrá cancelarlas por sí mismo.
+
+Ante una imposibilidad de asistencia, el usuario contacta directamente con el ayuntamiento. El gestor autorizado puede cancelar excepcionalmente antes del inicio, conforme a las normas municipales y con motivo registrado. Si una reubicación requiere nuevas normas, debe hacerla el titular dentro de su propio plazo: la facultad excepcional del gestor no se transfiere al usuario. Si ese plazo ha vencido, se conserva la reserva o se cancela administrativamente cuando proceda.
+
+El titular mantiene su responsabilidad aunque no utilice la instalación. Puede reorganizar participantes cuando las normas municipales lo permitan, sin transferir la reserva; el sistema no registra jugadores. Una ausencia mantiene el historial y el tiempo reservado, sin inferir asistencia ni generar incidencias, deudas, multas o penalizaciones automáticas.
 
 ## Baja de cuenta
 
 La baja es lógica: revoca todas las sesiones e impide nuevas operaciones de la cuenta. Se rechaza si existen reservas futuras confirmadas en cualquier municipio de la instancia. La comprobación y la baja son atómicas frente a nuevas reservas. Se conservan las reservas y la auditoría; la baja no ejecuta la eliminación de datos personales, sujeta a la política de conservación aprobada.
+
+Se consideran futuras las reservas confirmadas con `inicio > ahora`; las ya iniciadas no cambian de estado por la baja. No existe reactivación automática. El relevo de la última cuenta responsable se delimita en [PD-BAJA-RESPONSABLE](06_decisiones_y_validacion.md#decisiones-pendientes).

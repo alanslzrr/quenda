@@ -5,7 +5,7 @@
 | ID | Actor y operación | Resultado |
 |---|---|---|
 | CU-01 | Un usuario consulta el catálogo y la disponibilidad. | Instalaciones publicadas y franjas en hora local, sin datos de titulares. |
-| CU-02 | Un usuario autenticado crea una reserva. | Confirmación o rechazo sin cambios parciales. |
+| CU-02 | Un usuario autenticado acepta las condiciones y crea una reserva. | Confirmación con las versiones aceptadas o rechazo sin cambios parciales. |
 | CU-03 | El titular o un gestor municipal modifica o cancela una reserva. | Cambio atómico; motivo obligatorio para el gestor. |
 | CU-04 | Un administrador o gestor autorizado mantiene el catálogo y calendario. | Configuración persistida y auditada, sin invalidar reservas confirmadas. |
 | CU-05 | Un gestor autorizado consulta indicadores o exporta datos. | Resultados del municipio y periodo permitidos. |
@@ -61,7 +61,7 @@ sequenceDiagram
 1. La API valida la sesión, resuelve el municipio y comprueba la estructura del comando y su clave idempotente.
 2. Abre una transacción `SERIALIZABLE`, establece el contexto autorizado y comprueba los permisos actuales.
 3. Si existe un resultado para la misma clave y contenido, lo devuelve. Si el contenido difiere, rechaza la reutilización.
-4. Para un comando nuevo, comprueba política, disponibilidad y, cuando corresponda, convenio, acreditación y cuota.
+4. Para un comando nuevo, bloquea las condiciones vigentes y comprueba su coincidencia con la aceptación del titular, disponibilidad y, cuando corresponda, convenio, acreditación y cuota.
 5. Guarda reserva, ocupación, consumo, evento, aviso pendiente y resultado idempotente; responde tras el `COMMIT`.
 6. Ante un error de serialización, revierte y reintenta el comando completo dentro del límite configurado. Un solape de negocio se devuelve como conflicto.
 
@@ -73,7 +73,7 @@ sequenceDiagram
   participant A as API
   participant I as Better Auth
   participant D as PostgreSQL
-  U->>A: Crear reserva con clave idempotente
+  U->>A: Crear reserva con aceptación y clave idempotente
   A->>I: Validar sesión
   I-->>A: Cuenta autenticada
   A->>D: BEGIN SERIALIZABLE
@@ -86,7 +86,7 @@ sequenceDiagram
     A->>D: Finalizar transacción de lectura
     A-->>U: Resultado original
   else Comando nuevo
-    A->>D: Reclamar clave y comprobar reglas, convenio y cuota
+    A->>D: Reclamar clave y comprobar aceptación, reglas, convenio y cuota
     alt Regla incumplida
       A->>D: ROLLBACK
       A-->>U: Rechazo sin cambios
@@ -96,8 +96,14 @@ sequenceDiagram
         A->>D: ROLLBACK
         A-->>U: Rechazo sin cambios
       else Escrituras válidas
-        A->>D: COMMIT
-        A-->>U: Reserva confirmada
+        A->>A: Revalidar inicio y plazo de cancelación
+        alt Condiciones todavía cubiertas
+          A->>D: COMMIT
+          A-->>U: Reserva confirmada
+        else Condiciones vencidas
+          A->>D: ROLLBACK
+          A-->>U: Revisar y aceptar las condiciones actuales
+        end
       end
     end
   end
@@ -107,9 +113,9 @@ sequenceDiagram
 
 ### Idempotencia
 
-La clave se delimita por municipio, actor y operación. La huella incluye todos los campos que afectan al resultado. Las ejecuciones simultáneas con la misma clave esperan de forma acotada o reciben una respuesta de operación en curso. Antes de recuperar un resultado se comprueba que el solicitante conserva acceso.
+La clave se delimita por municipio, actor y operación. La huella incluye todos los campos que afectan al resultado, incluida la aceptación. Las ejecuciones simultáneas con la misma clave esperan de forma acotada o reciben una respuesta de operación en curso. Antes de recuperar un resultado se comprueba que el solicitante conserva acceso.
 
-La API publica la duración de retención de los resultados, configurada para la instancia. Dentro de esa ventana, una respuesta perdida se recupera con la misma clave; el cliente no genera otra automáticamente. El resultado original y el estado actual de la reserva se consultan por separado.
+La API publica la duración de retención de los resultados, configurada para la instancia. Dentro de esa ventana, una respuesta perdida se recupera con la misma clave; el cliente no genera otra automáticamente. Los comandos anteriores sin aceptación conservan su huella y pueden recuperarse mientras su resultado siga retenido; la evidencia ausente se representa con valores nulos, sin completar ni modificar el resultado almacenado. Esto no permite crear reservas nuevas sin aceptación. El resultado original y el estado actual de la reserva se consultan por separado.
 
 Todas las operaciones de la transacción utilizan el mismo cliente del pool de conexiones. [Transacciones con `pg`](https://node-postgres.com/features/transactions).
 
@@ -119,7 +125,9 @@ El comando incluye la versión conocida de la reserva. El sistema comprueba auto
 
 Una modificación sin cambios de unidad o intervalo conserva la atribución de cuota y no genera un evento de cambio. Las demás modificaciones revalidan destino, horario y convenio; liberan el consumo anterior y registran el nuevo en la misma transacción. Un error conserva tanto la reserva como su consumo.
 
-El titular y el municipio de la reserva no cambian. Reservar en otro municipio requiere cancelar y crear otra reserva como operaciones independientes. La cancelación libera ocupación y consumo al confirmar la transacción.
+Se aplica el plazo aceptado de origen y la [regla de aceptación correspondiente](02_modelo_dominio.md#normas-de-uso-y-aceptación). El gestor conserva la misma unidad y normas aceptadas; si hace falta una nueva aceptación, se rechaza el cambio administrativo sin alterar la reserva. La cancelación no exige aceptar normas.
+
+El titular y el municipio de la reserva no cambian. Reservar en otro municipio requiere cancelar y crear otra reserva como operaciones independientes. Solo una cancelación confirmada libera ocupación y consumo. Un rechazo por plazo vencido no genera liberaciones ni avisos.
 
 ### D-05 Modificación y cancelación
 
@@ -143,21 +151,27 @@ sequenceDiagram
     alt Cancelar una reserva ya cancelada
       A->>D: Guardar resultado y COMMIT
       A-->>U: Reserva cancelada
-    else Versión obsoleta o estado no permitido
+    else Versión obsoleta, plazo vencido o estado no permitido
       A->>D: ROLLBACK
       A-->>U: Rechazo sin cambios
     else Modificación sin cambios
       A->>D: Guardar resultado y COMMIT, sin alterar consumos
       A-->>U: Estado actual
     else Modificación o cancelación válida
-      A->>D: Comprobar reglas y actualizar reserva, ocupación y consumos
+      A->>D: Comprobar aceptación si modifica, reglas y actualizar efectos
       alt Error de regla o integridad
         A->>D: ROLLBACK
         A-->>U: Reserva y consumos anteriores conservados
       else Escrituras válidas
         A->>D: Guardar evento, aviso, versión y resultado
-        A->>D: COMMIT
-        A-->>U: Cambio confirmado
+        A->>A: Revalidar plazo e inicio
+        alt Operación dentro de plazo
+          A->>D: COMMIT
+          A-->>U: Cambio confirmado
+        else Plazo vencido durante la operación
+          A->>D: ROLLBACK
+          A-->>U: Reserva y consumos anteriores conservados
+        end
       end
     end
   end
@@ -210,10 +224,18 @@ Los minutos ofertados se obtienen de los calendarios y cierres versionados corre
 
 La API utiliza OpenAPI para describir rutas, entradas, respuestas, permisos y ejemplos. Los comandos documentan clave idempotente, versión de concurrencia y errores por campo. Las exportaciones identifican versión de formato, municipio, periodo y entidades incluidas; aplican los mismos permisos que las consultas.
 
+La aceptación se envía como `acceptance: { usageRulesVersion, bookingPolicyVersion, nonCancellable }`. Los identificadores proceden del detalle público de la unidad; el texto de normas se consulta por separado. `nonCancellable` identifica la aceptación expresa de reservar cuando ya no es posible cancelar por cuenta propia. El backend comprueba su valor con el inicio solicitado y el plazo vigente.
+
+La exportación `quenda.reservations`, versión 2, incluye versiones e instantes de aceptación, plazo aceptado y aceptación de no cancelación. Los valores nulos indican evidencia no registrada; no cambian el estado de la reserva.
+
 | Situación | Resultado |
 |---|---|
 | Entrada inválida | Errores por campo, sin cambios parciales. |
 | Sesión ausente o permiso insuficiente | Rechazo sin revelar objetos ajenos. |
 | Solape, cuota agotada o versión obsoleta | Conflicto, sin datos de reservas de terceros. |
+| Publicación sin normas | `USAGE_RULES_REQUIRED`: «Añade las normas de uso para publicar esta unidad». |
+| Modificación que exige nueva aceptación o condiciones cambiadas | `CONDITIONS_ACCEPTANCE_REQUIRED` o `CONDITIONS_CHANGED`; el titular debe consultar y aceptar las condiciones aplicables. |
+| Modificación administrativa que requiere aceptación | `HOLDER_ACCEPTANCE_REQUIRED`; el titular debe modificar desde su cuenta, sujeto a su plazo. |
+| Modificación o cancelación fuera de plazo | `RESERVATION_DEADLINE_PASSED`; se conservan reserva, ocupación y cuota. |
 | Dependencia no disponible | Fallo o resultado incierto recuperable con la misma clave. |
 | Correo pendiente | Reserva confirmada con estado de aviso separado. |

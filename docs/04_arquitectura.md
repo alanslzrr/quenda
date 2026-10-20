@@ -63,6 +63,8 @@ Las ocupaciones aplican la exclusión temporal RN-02. Los comandos que modifican
 
 Las transacciones se mantienen breves y sin llamadas externas. Las pruebas de contención miden abortos y reintentos. La revocación de convenios y acreditaciones utiliza además el [protocolo de bloqueos](07_identidad_y_colaboracion.md#persistencia-y-concurrencia).
 
+La confirmación bloquea las versiones de normas y política y las compara con la aceptación enviada. Recomprueba los límites temporales después de las esperas; nunca sustituye una versión aceptada por otra. La baja de cuenta, los comandos y la creación de sesiones se coordinan sobre el estado global de la cuenta: la baja revoca todas las sesiones y no puede coexistir con una nueva reserva futura confirmada.
+
 ## ADR-07 Outbox y worker
 
 La transacción de reserva guarda los eventos pendientes en una outbox. Un worker del mismo producto los procesa y registra los intentos de envío. Puede ejecutarse separado de la API sin duplicar reglas ni código.
