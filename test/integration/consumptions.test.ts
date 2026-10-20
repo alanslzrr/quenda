@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
+import { setTransactionContext } from "../../src/database/context.ts";
 import { transaction } from "../../src/database/transaction.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
 test("internal agreement consumptions preserve account, reservation and week coherence", {
   timeout: 60000,
 }, async (t) => {
-  await withDatabase(async ({ domain, auth, migration }) => {
+  await withDatabase(async ({ domain, auth, worker, migration }) => {
     for (const account of ["citizen", "other"])
       await auth.query(
         'INSERT INTO auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,$1,$2,true,now(),now())',
@@ -122,8 +123,13 @@ test("internal agreement consumptions preserve account, reservation and week coh
     await t.test(
       "runtime has no direct subject mapping or consumption access",
       async () => {
-        for (const pool of [domain, auth])
-          for (const table of ["agreement_subject", "agreement_consumption"]) {
+        for (const pool of [domain, auth, worker])
+          for (const table of [
+            "agreement_subject",
+            "agreement_consumption",
+            "agreement_consumption_event",
+            "agreement_credential",
+          ]) {
             await assert.rejects(pool.query(`SELECT * FROM domain.${table}`), {
               code: "42501",
             });
@@ -136,6 +142,87 @@ test("internal agreement consumptions preserve account, reservation and week coh
             tenant,
             booking,
           ]),
+          { code: "42501" },
+        );
+      },
+    );
+    await t.test(
+      "internal projections and prelocks preserve scoped authority and restricted database roles",
+      async () => {
+        const tables = [
+          "agreement_subject",
+          "agreement_consumption",
+          "agreement_consumption_event",
+          "agreement_credential",
+        ];
+        const security = await migration.query(
+          "SELECT c.relname,c.relrowsecurity,c.relforcerowsecurity,r.rolsuper,r.rolbypassrls FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_roles r ON r.oid=c.relowner WHERE n.nspname='domain' AND c.relname=ANY($1::text[]) ORDER BY c.relname",
+          [tables],
+        );
+        assert.equal(security.rowCount, tables.length);
+        for (const row of security.rows) {
+          assert.equal(row.relrowsecurity, true);
+          assert.equal(row.relforcerowsecurity, true);
+          assert.equal(row.rolsuper, false);
+          assert.equal(row.rolbypassrls, false);
+        }
+        for (const pool of [domain, auth, worker]) {
+          const role = (
+            await pool.query(
+              "SELECT rolsuper,rolbypassrls,rolcreaterole FROM pg_roles WHERE rolname=current_user",
+            )
+          ).rows[0];
+          assert.deepEqual(role, {
+            rolsuper: false,
+            rolbypassrls: false,
+            rolcreaterole: false,
+          });
+          await assert.rejects(
+            pool.query(
+              "SELECT * FROM domain.project_agreement_reservations($1,1)",
+              [agreement],
+            ),
+            { code: "42501" },
+          );
+        }
+        for (const pool of [auth, worker])
+          await assert.rejects(
+            pool.query("SELECT domain.lock_booking_agreements($1)", [booking]),
+            { code: "42501" },
+          );
+        for (const [context, code] of [
+          [undefined, "P0002"],
+          [{ accountId: "citizen", tenantId: randomUUID() }, "P0002"],
+          [{ accountId: "other", tenantId: tenant }, "42501"],
+        ] as const) {
+          await assert.rejects(
+            transaction(domain, async (c) => {
+              await setTransactionContext(c, context);
+              await c.query("SELECT domain.lock_booking_agreements($1)", [
+                booking,
+              ]);
+            }),
+            { code },
+          );
+        }
+        await transaction(domain, async (c) => {
+          await setTransactionContext(c, {
+            accountId: "citizen",
+            tenantId: tenant,
+          });
+          await c.query("SELECT domain.lock_booking_agreements($1)", [booking]);
+        });
+        await assert.rejects(
+          transaction(domain, async (c) => {
+            await setTransactionContext(c, {
+              accountId: "citizen",
+              tenantId: tenant,
+            });
+            await c.query(
+              "SELECT * FROM domain.project_agreement_reservations($1,1)",
+              [agreement],
+            );
+          }),
           { code: "42501" },
         );
       },
