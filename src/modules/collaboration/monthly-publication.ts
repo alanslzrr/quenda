@@ -36,7 +36,8 @@ const reference = (value: string | null) =>
   typeof value === "string" && value.trim().length > 0 && value.length <= 500;
 const digest = (value: string) => /^[0-9a-f]{64}$/.test(value);
 
-// Internal decision only. The delivery command must recheck live permissions,
+// Decision for newly disclosed information only, not an identical prior delivery.
+// The delivery command must recheck live permissions,
 // capability and release history, and append its audit record atomically.
 export function authorizeMonthlyPublication(input: {
   candidate: MonthlyPublicationCandidate;

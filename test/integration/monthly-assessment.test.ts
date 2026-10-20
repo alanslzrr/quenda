@@ -6,6 +6,7 @@ import {
   assessPersistedMonthlyAggregate,
   prepareMonthlyAssessment,
 } from "../../src/modules/collaboration/monthly-assessment.ts";
+import { deliverMonthlyReport } from "../../src/modules/collaboration/monthly-delivery.ts";
 import { reviewMonthlyAssessment } from "../../src/modules/collaboration/monthly-review.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
@@ -48,11 +49,11 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
         [agreement, tenants[0]],
       );
       await c.query(
-        "INSERT INTO domain.agreement_version(agreement_id,version,status,starts_at,ends_at,purpose,legal_basis,responsibilities,retention_policy,eligibility,weekly_limit,aggregate_reports,created_by,correlation_id) VALUES($1,1,'ACTIVADO','2024-02-29T23:00:00Z','2024-03-31T22:00:00Z','Purpose','Basis','Responsibility','Policy','acceso_abierto',NULL,true,'report-0',$2)",
+        "INSERT INTO domain.agreement_version(agreement_id,version,status,starts_at,ends_at,purpose,legal_basis,responsibilities,retention_policy,eligibility,weekly_limit,aggregate_reports,created_by,correlation_id) VALUES($1,1,'ACTIVADO','2024-02-29T23:00:00Z','2040-01-01T00:00:00Z','Purpose','Basis','Responsibility','Policy','acceso_abierto',NULL,true,'report-0',$2)",
         [agreement, randomUUID()],
       );
       await c.query(
-        "INSERT INTO domain.agreement_activation(agreement_id,version,effective_period,activated_by,correlation_id) VALUES($1,1,'[2024-02-29T23:00:00Z,2024-03-31T22:00:00Z)','report-0',$2)",
+        "INSERT INTO domain.agreement_activation(agreement_id,version,effective_period,activated_by,correlation_id) VALUES($1,1,'[2024-02-29T23:00:00Z,2040-01-01T00:00:00Z)','report-0',$2)",
         [agreement, randomUUID()],
       );
       await c.query(
@@ -70,7 +71,7 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
           units[i],
         ]);
         await c.query(
-          "INSERT INTO domain.agreement_assignment VALUES($1,1,$2,$3,'[2024-02-29T23:00:00Z,2024-03-31T22:00:00Z)')",
+          "INSERT INTO domain.agreement_assignment VALUES($1,1,$2,$3,'[2024-02-29T23:00:00Z,2040-01-01T00:00:00Z)')",
           [agreement, tenants[i], units[i]],
         );
         await c.query(
@@ -308,6 +309,138 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
         [review.result.reviewId],
       ),
       { code: "23514" },
+    );
+    const recipientActor = {
+      ...reviewer,
+      accountId: "report-1",
+      email: "report-1@example.test",
+    };
+    for (const [tenant, account] of [
+      [reviewerTenant, "report-1"],
+      [tenants[1]!, "report-0"],
+    ]) {
+      const invitation = randomUUID();
+      await migration.query(
+        "INSERT INTO domain.administrator_invitation(tenant_id,id,account_id,invited_by,expires_at,accepted_at) VALUES($1,$2,$3,'report-0',now()+interval '1 day',now())",
+        [tenant, invitation, account],
+      );
+      await migration.query(
+        "INSERT INTO domain.municipal_administrator(tenant_id,account_id,invitation_id) VALUES($1,$2,$3)",
+        [tenant, account, invitation],
+      );
+    }
+    const deliver = () =>
+      deliverMonthlyReport(
+        domain,
+        recipientActor,
+        reviewerTenant,
+        agreement,
+        "2024-03",
+      );
+    assert.deepEqual(await deliver(), { status: "NOT_PUBLISHABLE" });
+    await reviewMonthlyAssessment(
+      domain,
+      reviewer,
+      reviewerTenant,
+      agreement,
+      "reapprove-a",
+      reviewInput,
+      randomUUID(),
+      3600,
+    );
+    assert.deepEqual(await deliver(), { status: "NOT_PUBLISHABLE" });
+    await reviewMonthlyAssessment(
+      domain,
+      reviewer,
+      tenants[1]!,
+      agreement,
+      "approve-b",
+      reviewInput,
+      randomUUID(),
+      3600,
+    );
+    await migration.query(
+      "CREATE FUNCTION domain.fail_monthly_delivery_fixture() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Fixture audit failure' USING ERRCODE='22000'; END $$",
+    );
+    await migration.query(
+      "CREATE TRIGGER fail_monthly_delivery_fixture BEFORE INSERT ON domain.monthly_report_delivery FOR EACH ROW EXECUTE FUNCTION domain.fail_monthly_delivery_fixture()",
+    );
+    await assert.rejects(deliver(), { code: "22000" });
+    assert.equal(
+      (
+        await migration.query(
+          "SELECT count(*)::integer AS n FROM domain.monthly_report_delivery WHERE agreement_id=$1",
+          [agreement],
+        )
+      ).rows[0].n,
+      0,
+    );
+    assert.equal(await context(), history);
+    await migration.query(
+      "DROP TRIGGER fail_monthly_delivery_fixture ON domain.monthly_report_delivery; DROP FUNCTION domain.fail_monthly_delivery_fixture()",
+    );
+    const published = JSON.parse(JSON.stringify(await deliver()));
+    assert.equal(published.status, "PUBLISHABLE");
+    assert.equal(published.reservations, 20);
+    assert.equal(published.reservedMinutes, 1200);
+    assert.equal(published.revision, 2);
+    assert.equal(published.controlVersion, 1);
+    assert.ok(!JSON.stringify(published).includes("report-"));
+    assert.ok(
+      tenants.every((tenant) => !JSON.stringify(published).includes(tenant)),
+    );
+    const repeats = await Promise.all([deliver(), deliver()]);
+    assert.ok(
+      repeats.every((r) => JSON.stringify(r) === JSON.stringify(published)),
+    );
+    const deliveries = (
+      await migration.query(
+        "SELECT review_ids,authorization_history_digest FROM domain.monthly_report_delivery WHERE agreement_id=$1",
+        [agreement],
+      )
+    ).rows;
+    assert.equal(deliveries.length, 3);
+    assert.ok(
+      deliveries.every(
+        (r) =>
+          r.review_ids.length === 2 &&
+          /^[0-9a-f]{64}$/.test(r.authorization_history_digest),
+      ),
+    );
+    await migration.query(
+      "UPDATE domain.agreement_version SET aggregate_reports=false WHERE agreement_id=$1",
+      [agreement],
+    );
+    assert.deepEqual(await deliver(), { status: "NOT_PUBLISHABLE" });
+    await migration.query(
+      "UPDATE domain.agreement_version SET aggregate_reports=true WHERE agreement_id=$1",
+      [agreement],
+    );
+    await reviewMonthlyAssessment(
+      domain,
+      reviewer,
+      tenants[1]!,
+      agreement,
+      "withdraw-review-b",
+      {
+        ...reviewInput,
+        expectedHistoryDigest: await context(),
+        decision: "REJECT",
+      },
+      randomUUID(),
+      3600,
+    );
+    assert.deepEqual(await deliver(), { status: "NOT_PUBLISHABLE" });
+    await migration.query(
+      "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1 AND account_id='report-1'",
+      [reviewerTenant],
+    );
+    await assert.rejects(deliver(), { code: "FORBIDDEN" });
+    await assert.rejects(
+      worker.query("SELECT domain.deliver_monthly_report($1,'2024-03-01')", [
+        agreement,
+      ]),
+      { code: "42501" },
     );
     await migration.query(
       "INSERT INTO domain.monthly_report_delivery(agreement_id,month_start,revision,recipient_tenant_id,recipient_account_id) VALUES($1,'2024-03-01',2,$2,'report-1')",
