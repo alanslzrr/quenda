@@ -20,6 +20,7 @@
     "test:oci": "node --test test/oci/*.test.ts",
     "test:integration": "pnpm build && node --test test/integration/*.test.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "db:restore": "node scripts/restore.ts",
     "db:backup": "node scripts/backup.ts",
     "db:migrate": "node --env-file=.env.migration.local scripts/migrate.ts",
     "openapi": "node scripts/openapi.ts",

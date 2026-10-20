@@ -5,32 +5,15 @@ import { access, link, mkdtemp, open, rm } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import { postgresCommandConnection } from "./postgres-connection.ts";
+
 const execute = promisify(execFile);
 export async function createBackup(
   connection: string,
   destination: string,
   bin: string,
 ) {
-  const url = new URL(connection);
-  if (
-    !["postgres:", "postgresql:"].includes(url.protocol) ||
-    !url.hostname ||
-    !url.pathname.slice(1)
-  )
-    throw new Error("Invalid backup connection");
-  for (const key of url.searchParams.keys())
-    if (
-      ![
-        "sslmode",
-        "sslrootcert",
-        "sslcert",
-        "sslkey",
-        "connect_timeout",
-      ].includes(key)
-    )
-      throw new Error("Unsupported backup connection option");
-  const password = decodeURIComponent(url.password);
-  url.password = "";
+  const { url, password } = postgresCommandConnection(connection);
   const executable = path.join(bin, "pg_dump");
   const version = await execute(executable, ["--version"]);
   if (!/PostgreSQL\) 17\./.test(version.stdout))
