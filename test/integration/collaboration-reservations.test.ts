@@ -712,6 +712,88 @@ test("real booking commands enforce shared eligibility and quota in one transact
       },
     );
     await t.test(
+      "modification and cancellation wait for agreement locks before locking the reservation",
+      async () => {
+        await migration.query(
+          "UPDATE domain.agreement_activation SET effective_period='[2020-01-01T00:00:00Z,2040-01-01T00:00:00Z)' WHERE agreement_id=$1",
+          [agreement],
+        );
+        await migration.query(
+          "UPDATE domain.agreement_version SET status='ACTIVADO',eligibility='acceso_abierto',weekly_limit=NULL WHERE agreement_id=$1",
+          [agreement],
+        );
+        const tenant = tenants[winner] as string;
+        for (const action of ["modify", "cancel"] as const) {
+          const booked = await create(
+            winner,
+            `lock-order-${action}`,
+            action === "modify" ? 22 : 24,
+          );
+          const holder = await migration.connect();
+          let pending: Promise<unknown> | undefined;
+          try {
+            await holder.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+            const pid = (await holder.query("SELECT pg_backend_pid() AS pid"))
+              .rows[0].pid as number;
+            await holder.query(
+              "SELECT id FROM domain.agreement WHERE id=$1 FOR UPDATE",
+              [agreement],
+            );
+            pending =
+              action === "modify"
+                ? modifyReservation(
+                    domain,
+                    actor,
+                    tenant,
+                    booked.result.id,
+                    "lock-order-modify-command",
+                    { ...input(winner, 23), expectedRevision: 1 },
+                    randomUUID(),
+                    3600,
+                    clock,
+                  )
+                : cancel(
+                    winner,
+                    booked.result.id,
+                    1,
+                    "lock-order-cancel-command",
+                  );
+            void pending.catch(() => {});
+            await blockedBy(pid);
+            // Activation must still be able to project this row while holding its agreement.
+            assert.equal(
+              (
+                await holder.query(
+                  "SELECT id FROM domain.reservation WHERE tenant_id=$1 AND id=$2 FOR SHARE NOWAIT",
+                  [tenant, booked.result.id],
+                )
+              ).rowCount,
+              1,
+            );
+            await holder.query("COMMIT");
+            await pending;
+            const current = await readReservation(
+              domain,
+              actor,
+              tenant,
+              booked.result.id,
+              clock,
+            );
+            assert.equal(
+              current.status,
+              action === "modify" ? "CONFIRMADA" : "CANCELADA",
+            );
+            if (action === "modify")
+              await cancel(winner, booked.result.id, 2, "lock-order-cleanup");
+          } finally {
+            await holder.query("ROLLBACK");
+            holder.release();
+            if (pending) await Promise.allSettled([pending]);
+          }
+        }
+      },
+    );
+    await t.test(
       "expired effective periods block new bookings and changes without a status worker or public fallback",
       async () => {
         await migration.query(

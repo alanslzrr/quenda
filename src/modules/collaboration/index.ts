@@ -6,7 +6,10 @@ export type { ActivateAgreementInput } from "./activation.ts";
 export { activateAgreement } from "./activation.ts";
 export type { AgreementApprovalInput } from "./approvals.ts";
 export { approveAgreement } from "./approvals.ts";
-export { syncReservationConsumption } from "./consumption.ts";
+export {
+  lockBookingAgreements,
+  syncReservationConsumption,
+} from "./consumption.ts";
 export type { IssueCredentialInput } from "./credentials.ts";
 export {
   issueAgreementCredential,

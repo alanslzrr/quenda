@@ -2,7 +2,10 @@ import { DatabaseError, type Pool } from "pg";
 import { idempotentCommand } from "../../database/idempotency.ts";
 import { HttpError } from "../../http/errors.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
-import { syncReservationConsumption } from "../collaboration/index.ts";
+import {
+  lockBookingAgreements,
+  syncReservationConsumption,
+} from "../collaboration/index.ts";
 import {
   type AuthenticatedAccount,
   requirePermission,
@@ -69,6 +72,7 @@ export async function cancelReservation(
           reservation = row;
         },
         execute: async (client) => {
+          await lockBookingAgreements(client, reservationId);
           const locked = await client.query<Reservation>(
             "SELECT * FROM domain.reservation WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
             [tenantId, reservationId],
