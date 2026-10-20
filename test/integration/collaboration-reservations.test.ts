@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
+import { setTransactionContext } from "../../src/database/context.ts";
 import { transaction } from "../../src/database/transaction.ts";
 import {
   activateAgreement,
@@ -425,6 +427,139 @@ test("real booking commands enforce shared eligibility and quota in one transact
         await assert.rejects(create(winner, "no-public-fallback", 14), {
           code: "CONFLICT",
         });
+      },
+    );
+    await t.test(
+      "booking and suspension serialize in both verified lock orderings",
+      async () => {
+        const tenant = tenants[winner] as string;
+        const admin = { ...actor, mfaVerifiedAt: new Date() };
+        const restore = async () => {
+          await migration.query(
+            "UPDATE domain.agreement_activation SET effective_period='[2020-01-01T00:00:00Z,2040-01-01T00:00:00Z)' WHERE agreement_id=$1",
+            [agreement],
+          );
+          await migration.query(
+            "UPDATE domain.agreement_version SET status='ACTIVADO',eligibility='acceso_abierto',weekly_limit=NULL WHERE agreement_id=$1",
+            [agreement],
+          );
+        };
+        const blockedBy = async (pid: number) => {
+          const until = Date.now() + 5000;
+          while (Date.now() < until) {
+            const rows = (
+              await migration.query(
+                "SELECT DISTINCT l.pid FROM pg_locks l WHERE NOT l.granted AND $1::integer=ANY(pg_blocking_pids(l.pid))",
+                [pid],
+              )
+            ).rows;
+            if (rows.length) return rows[0].pid as number;
+            await delay(10);
+          }
+          throw new Error("Expected blocked peer did not appear");
+        };
+        await restore();
+        const gate = await migration.connect();
+        let bookingAttempt: ReturnType<typeof create> | undefined;
+        let suspensionAttempt: ReturnType<typeof suspendAgreement> | undefined;
+        try {
+          const pid = (await gate.query("SELECT pg_backend_pid() AS pid"))
+            .rows[0].pid as number;
+          await gate.query("SELECT pg_advisory_lock(9055)");
+          await migration.query(
+            "CREATE FUNCTION domain.pause_booking_fixture() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_advisory_xact_lock(9055); RETURN NEW; END $$",
+          );
+          await migration.query(
+            "CREATE TRIGGER pause_booking_fixture BEFORE INSERT ON domain.agreement_consumption_event FOR EACH ROW WHEN (NEW.action='ATTRIBUTED') EXECUTE FUNCTION domain.pause_booking_fixture()",
+          );
+          bookingAttempt = create(winner, "booking-before-suspend", 17);
+          void bookingAttempt.catch(() => {});
+          const bookingPid = await blockedBy(pid);
+          suspensionAttempt = suspendAgreement(
+            domain,
+            admin,
+            tenant,
+            agreement,
+            "suspend-after-booking",
+            { version: 1, reason: "Verified booking-first ordering" },
+            randomUUID(),
+            3600,
+          );
+          void suspensionAttempt.catch(() => {});
+          await blockedBy(bookingPid);
+          await gate.query("SELECT pg_advisory_unlock(9055)");
+          const booked = await bookingAttempt;
+          assert.equal((await suspensionAttempt).result.status, "SUSPENDIDO");
+          assert.equal(
+            (
+              await readReservation(
+                domain,
+                actor,
+                tenant,
+                booked.result.id,
+                clock,
+              )
+            ).status,
+            "CONFIRMADA",
+          );
+          await assert.rejects(
+            create(winner, "new-after-serialized-suspend", 18),
+            { code: "CONFLICT" },
+          );
+          await cancel(
+            winner,
+            booked.result.id,
+            1,
+            "cancel-serialized-booking",
+          );
+        } finally {
+          await gate.query("SELECT pg_advisory_unlock_all()");
+          gate.release();
+          await Promise.allSettled(
+            [bookingAttempt, suspensionAttempt].filter((p) => p !== undefined),
+          );
+          await migration.query(
+            "DROP TRIGGER IF EXISTS pause_booking_fixture ON domain.agreement_consumption_event; DROP FUNCTION IF EXISTS domain.pause_booking_fixture()",
+          );
+        }
+        await restore();
+        const holder = await domain.connect();
+        let pending: ReturnType<typeof create> | undefined;
+        const before = (
+          await migration.query(
+            "SELECT count(*)::integer AS n FROM domain.reservation",
+          )
+        ).rows[0].n;
+        try {
+          await holder.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+          await setTransactionContext(holder, {
+            accountId: actor.accountId,
+            tenantId: tenant,
+          });
+          const pid = (await holder.query("SELECT pg_backend_pid() AS pid"))
+            .rows[0].pid as number;
+          await holder.query(
+            "SELECT domain.suspend_agreement($1,1,'Verified suspension-first ordering',$2)",
+            [agreement, randomUUID()],
+          );
+          pending = create(winner, "booking-after-suspend", 18);
+          void pending.catch(() => {});
+          await blockedBy(pid);
+          await holder.query("COMMIT");
+          await assert.rejects(pending, { code: "CONFLICT" });
+          assert.equal(
+            (
+              await migration.query(
+                "SELECT count(*)::integer AS n FROM domain.reservation",
+              )
+            ).rows[0].n,
+            before,
+          );
+        } finally {
+          await holder.query("ROLLBACK");
+          holder.release();
+          if (pending) await Promise.allSettled([pending]);
+        }
       },
     );
     await t.test(
