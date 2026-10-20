@@ -197,6 +197,49 @@ for (const upgrade of [false, true]) {
                 },
               ),
             );
+            const facilityPath = `${base}/facilities/${facility.facilityId}`;
+            const publicPath = `/api/public/municipalities/${municipality.tenantId}/facilities`;
+            assert.equal(
+              ok(await admin.client.request(`${base}/facilities`)).items.length,
+              1,
+            );
+            assert.equal(
+              ok(await admin.client.request(facilityPath)).id,
+              facility.facilityId,
+            );
+            const renamed = ok(
+              await app.inject({
+                method: "PATCH",
+                url: facilityPath,
+                headers: {
+                  origin: config.origin,
+                  cookie: admin.client.cookie(),
+                },
+                payload: { name: "Renamed journey facility" },
+              }),
+            );
+            assert.equal(renamed.name, "Renamed journey facility");
+            assert.equal(
+              ok(await app.inject(publicPath)).items[0].name,
+              renamed.name,
+            );
+            assert.equal(
+              ok(await app.inject(`${publicPath}/${facility.facilityId}/units`))
+                .items.length,
+              1,
+            );
+            ok(
+              await admin.client.request(`${facilityPath}/withdraw`, {
+                reason: "Temporary closure",
+              }),
+            );
+            assert.deepEqual(ok(await app.inject(publicPath)).items, []);
+            ok(
+              await admin.client.request(`${facilityPath}/publish`, {
+                reason: "Reopen facility",
+              }),
+            );
+            assert.equal(ok(await app.inject(publicPath)).items.length, 1);
             return { municipality, base, unit };
           };
           const { municipality, base, unit } = await setupMunicipality(admin);
