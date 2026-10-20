@@ -457,6 +457,26 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           });
           assert.equal(challenge.statusCode, 200, challenge.body);
           assert.equal(challenge.json().twoFactorRedirect, true);
+          assert.deepEqual(challenge.json().twoFactorMethods, ["totp"]);
+          const authContract = (
+            await app.inject({ url: "/api/auth/open-api/generate-schema" })
+          ).json();
+          const variants =
+            authContract.paths["/sign-in/email"].post.responses["200"].content[
+              "application/json"
+            ].schema.anyOf;
+          assert.equal(variants.length, 2);
+          assert.deepEqual(variants[0].required, ["redirect", "token", "user"]);
+          assert.deepEqual(variants[1].required, Object.keys(challenge.json()));
+          assert.deepEqual(variants[1].properties.twoFactorRedirect.enum, [
+            challenge.json().twoFactorRedirect,
+          ]);
+          assert.deepEqual(
+            variants[1].properties.twoFactorMethods.items.enum,
+            challenge.json().twoFactorMethods,
+          );
+          assert.equal(challenge.json().token, undefined);
+
           assert.equal((await client.request("/api/me")).statusCode, 401);
           const validCodes = [-1, 0, 1].map((offset) => totp(secret, offset));
           const wrong = ["000000", "111111", "222222", "333333"].find(

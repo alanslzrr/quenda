@@ -93,6 +93,45 @@ export async function authenticationSchema(auth: Authentication) {
                     : [{ quendaSession: [] }],
                 responses: {
                   ...operation.responses,
+                  ...(path === "/sign-in/email"
+                    ? {
+                        "200": {
+                          description:
+                            "Sesión iniciada o segundo factor requerido",
+                          content: {
+                            "application/json": {
+                              schema: {
+                                anyOf: [
+                                  operation.responses["200"].content[
+                                    "application/json"
+                                  ].schema,
+                                  {
+                                    type: "object",
+                                    required: [
+                                      "twoFactorRedirect",
+                                      "twoFactorMethods",
+                                    ],
+                                    properties: {
+                                      twoFactorMethods: {
+                                        type: "array",
+                                        items: {
+                                          type: "string",
+                                          enum: ["totp"],
+                                        },
+                                      },
+                                      twoFactorRedirect: {
+                                        type: "boolean",
+                                        enum: [true],
+                                      },
+                                    },
+                                  },
+                                ],
+                              },
+                            },
+                          },
+                        },
+                      }
+                    : {}),
                   ...(path === "/update-user"
                     ? {
                         "200": {
