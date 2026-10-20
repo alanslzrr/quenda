@@ -213,6 +213,15 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           assert.equal(currentUser.email, email);
           assert.equal(currentUser.emailVerified, true);
           assert.notEqual(currentUser.twoFactorEnabled, true);
+          assert.deepEqual(
+            (
+              await migration.query(
+                "SELECT operation FROM auth.session_event WHERE subject_id=$1 ORDER BY occurred_at,id",
+                [id],
+              )
+            ).rows,
+            [{ operation: "SESSION_CREATED" }],
+          );
           const saved = client.cookie();
           assert.equal(
             (
@@ -226,6 +235,18 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           assert.equal(
             (await client.request("/api/auth/sign-out", {})).statusCode,
             200,
+          );
+          assert.deepEqual(
+            (
+              await migration.query(
+                "SELECT operation FROM auth.session_event WHERE subject_id=$1 ORDER BY occurred_at,id",
+                [id],
+              )
+            ).rows,
+            [
+              { operation: "SESSION_CREATED" },
+              { operation: "SESSION_REMOVED" },
+            ],
           );
           assert.equal(
             (

@@ -305,3 +305,9 @@ Base: `/api/municipalities/{tenantId}/agreements/{agreementId}/reports/{AAAA-MM}
 - `GET` sobre la base: entrega el último informe autorizado al usuario autenticado, con `REPORT_READ` municipal y MFA. No admite filtros ni selección de revisiones. Registra la entrega en la misma transacción; si falla ese registro, no devuelve el informe.
 
 Todas las respuestas usan `Cache-Control: no-store`. La entrega necesita capacidad vigente y revisiones favorables de todos los municipios participantes, vinculadas al destinatario, evaluación e información previamente entregada. Un nuevo rechazo impide entregas posteriores. Sin autorización de publicación, devuelve únicamente `{"status":"NOT_PUBLISHABLE"}`, sin métricas, ceros ni causas. Las referencias de revisión documentan la evaluación humana del riesgo; no certifican automáticamente anonimato.
+
+### Auditoría de sesiones
+
+`auth.session_event` registra creación y eliminación de sesiones y cambios de la prueba MFA en la misma transacción que la escritura. Conserva únicamente identificador de evento, cuenta afectada, operación e instante; no contiene identificadores de sesión, tokens, IP, agente de usuario ni correo. Los roles de ejecución no pueden consultarlo ni modificarlo directamente. Un fallo al registrar el evento revierte la escritura de sesión.
+
+Son hechos de persistencia: crear una sesión no acredita por sí solo un inicio de sesión con MFA completo, y eliminarla no distingue cierre voluntario, revocación o limpieza. La cuenta afectada no se presenta como actor de la operación. El registro no sustituye la auditoría de intentos fallidos ni define una política de conservación.
