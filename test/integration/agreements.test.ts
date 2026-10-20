@@ -31,7 +31,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
         invitation = randomUUID(),
         facility = randomUUID();
       await auth.query(
-        'INSERT INTO auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,$1,$2,true,now(),now())',
+        'INSERT INTO auth."user"(id,name,email,"emailVerified","createdAt","updatedAt","twoFactorEnabled") VALUES($1,$1,$2,true,now(),now(),true)',
         [accountId, `${accountId}@example.test`],
       );
       await migration.query(

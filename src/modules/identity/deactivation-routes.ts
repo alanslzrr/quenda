@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
@@ -11,7 +13,7 @@ export async function registerDeactivationRoutes(
   config: AuthConfiguration,
 ) {
   const actor = createRequestActor(pool, auth, config);
-  app.post<{ Body: { confirm: true } }>(
+  app.post<{ Body: { confirm: true; password: string } }>(
     "/api/me/deactivation",
     {
       schema: {
@@ -19,12 +21,15 @@ export async function registerDeactivationRoutes(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Baja lógica de la cuenta autenticada. Requiere confirmación expresa y Origin autorizado. Rechaza reservas CONFIRMADA con inicio futuro en cualquier municipio de esta instancia y la baja del último operador activo o administrador activo de un municipio. Revoca todas las sesiones y bloquea nuevas operaciones; conserva identidad, reservas y auditoría. No elimina datos, transfiere responsabilidades ni reactiva cuentas.",
+          "Baja lógica de la cuenta autenticada. Requiere confirmación expresa, contraseña actual, Origin autorizado y MFA verificado durante los últimos cinco minutos si está habilitado. Rechaza reservas CONFIRMADA futuras o en curso en cualquier municipio y exige conservar un responsable habilitado sin caducidad. Revoca todas las sesiones, permisos e invitaciones pendientes; conserva identidad, reservas y auditoría. No elimina datos ni transfiere responsabilidades.",
         body: {
           type: "object",
           additionalProperties: false,
-          required: ["confirm"],
-          properties: { confirm: { type: "boolean", enum: [true] } },
+          required: ["confirm", "password"],
+          properties: {
+            confirm: { type: "boolean", enum: [true] },
+            password: { type: "string", minLength: 1, maxLength: 128 },
+          },
         },
         response: {
           ...Object.fromEntries(
@@ -47,7 +52,16 @@ export async function registerDeactivationRoutes(
     },
     async (request, reply) => {
       const account = await actor(request, reply);
-      const result = await deactivateAccount(pool, account, request.id);
+      const proof = await auth.verifyDeactivation(
+        fromNodeHeaders(request.headers),
+        request.body.password,
+      );
+      const result = await deactivateAccount(
+        pool,
+        account,
+        request.id,
+        createHash("sha256").update(proof).digest("hex"),
+      );
       return reply.header("cache-control", "no-store").send(result);
     },
   );

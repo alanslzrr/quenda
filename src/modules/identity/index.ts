@@ -32,6 +32,11 @@ export {
   revokeManager,
 } from "./manager.ts";
 export { listMunicipalManagerInvitations } from "./manager-query.ts";
+export {
+  makeAdministratorIndefinite,
+  recoverMunicipalAdministrator,
+  revokeMunicipalAccessForSecurity,
+} from "./municipal-continuity.ts";
 export { registerMunicipalIdentity } from "./municipal-routes.ts";
 export {
   acceptAdministratorInvitation,
@@ -48,3 +53,4 @@ export { consumeAdministrativeAttempt } from "./rate-limit.ts";
 export { requireRecentMfa } from "./reauthentication.ts";
 export { createRequestActor } from "./request-actor.ts";
 export { authenticationSchema, registerAuthentication } from "./routes.ts";
+export { suspendAccount } from "./security.ts";

@@ -32,7 +32,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-14 | Gestionar cuentas y sesiones | El usuario crea una cuenta, inicia sesión y la cierra sin obtener permisos municipales automáticamente. |
 | RF-15 | Cubrir la autenticación pública | El mecanismo y su evidencia de aceptación se determinan en [PD-AUTH-PUBLICA](06_decisiones_y_validacion.md#decisiones-pendientes). |
 | RF-16 | Autorizar operaciones | El sistema deniega toda operación que no cumpla los permisos sobre municipio, objeto y acción. |
-| RF-17 | Mantener datos desde la aplicación | La aplicación permite consultar datos y validar y persistir altas, modificaciones y bajas autorizadas de cuentas, perfiles y datos municipales. |
+| RF-17 | Mantener datos desde la aplicación | La aplicación valida y persiste altas, cambios y bajas autorizadas. La baja global rechaza reservas confirmadas futuras o en curso y exige verificación de identidad y continuidad administrativa; la reactivación recupera solo acceso personal. La suspensión de seguridad y la recuperación están autorizadas y auditadas. No existe una baja de afiliación municipal. |
 | RF-18 | Exportar datos municipales | El sistema entrega el conjunto autorizado en un formato abierto documentado, sin datos ajenos al ámbito solicitado. |
 | RF-19 | Bloquear unidades reservables | El cierre impide nuevas reservas y se rechaza si afecta a reservas confirmadas no resueltas. |
 | RF-20 | Administrar reservas | El gestor autorizado cambia fecha, horario o unidad y puede cancelar reservas futuras con motivo. La reubicación es inmediata y transaccional, notifica al titular y registra las normas pendientes cuando corresponda; no transfiere titularidad ni altera el plazo de cancelación aceptado. |

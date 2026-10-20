@@ -1,9 +1,13 @@
 import type { FastifyError, FastifyInstance, FastifyRequest } from "fastify";
 
 const messages = {
+  ACCOUNT_PASSWORD_REQUIRED: {
+    es: "Confirma tu contraseña actual para dar de baja la cuenta.",
+    gl: "Confirma o teu contrasinal actual para dar de baixa a conta.",
+  },
   ACCOUNT_HANDOVER_REQUIRED: {
-    es: "Debes transferir la última responsabilidad administrativa antes de dar de baja la cuenta.",
-    gl: "Debes transferir a última responsabilidade administrativa antes de dar de baixa a conta.",
+    es: "Debe quedar otro responsable habilitado con permiso indefinido antes de retirar esta responsabilidad.",
+    gl: "Debe quedar outro responsable habilitado con permiso indefinido antes de retirar esta responsabilidade.",
   },
   USAGE_RULES_REQUIRED: {
     es: "Añade las normas de uso para publicar esta unidad.",
@@ -26,12 +30,12 @@ const messages = {
     gl: "O prazo para realizar esta operación venceu. A reserva mantense; podes contactar co concello.",
   },
   ACCOUNT_HAS_FUTURE_RESERVATIONS: {
-    es: "No puedes dar de baja la cuenta mientras tengas reservas futuras confirmadas. Consulta tus reservas o contacta con el ayuntamiento.",
-    gl: "Non podes dar de baixa a conta mentres teñas reservas futuras confirmadas. Consulta as túas reservas ou contacta co concello.",
+    es: "No puedes dar de baja la cuenta mientras tengas reservas confirmadas futuras o en curso. Consulta tus reservas o contacta con el ayuntamiento.",
+    gl: "Non podes dar de baixa a conta mentres teñas reservas confirmadas futuras ou en curso. Consulta as túas reservas ou contacta co concello.",
   },
   ACCOUNT_INACTIVE: {
-    es: "La cuenta está dada de baja.",
-    gl: "A conta está dada de baixa.",
+    es: "La cuenta no está activa.",
+    gl: "A conta non está activa.",
   },
 
   INVALID_INPUT: {
@@ -78,6 +82,7 @@ const messages = {
 } as const;
 
 const statuses = {
+  ACCOUNT_PASSWORD_REQUIRED: 403,
   ACCOUNT_HANDOVER_REQUIRED: 409,
   USAGE_RULES_REQUIRED: 409,
   CONDITIONS_ACCEPTANCE_REQUIRED: 409,

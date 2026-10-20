@@ -23,7 +23,7 @@ export async function listMunicipalAdministrators(
         active: boolean;
       }>(
         `SELECT account_id,invitation_id,granted_at,expires_at,revoked_at,
-         revoked_at IS NULL AND (expires_at IS NULL OR expires_at>now()) AS active
+         domain.municipal_administrator_is_enabled(account_id) AS active
        FROM domain.municipal_administrator WHERE tenant_id=$1 AND ($2::text IS NULL OR account_id>$2)
        ORDER BY account_id LIMIT 21`,
         [tenantId, after],

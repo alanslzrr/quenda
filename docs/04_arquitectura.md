@@ -63,7 +63,7 @@ Las ocupaciones aplican la exclusión temporal RN-02. Los comandos que modifican
 
 Las transacciones se mantienen breves y sin llamadas externas. Las pruebas de contención miden abortos y reintentos. La revocación de convenios y acreditaciones utiliza además el [protocolo de bloqueos](07_identidad_y_colaboracion.md#persistencia-y-concurrencia).
 
-La confirmación bloquea las versiones de normas y política y las compara con la aceptación enviada. Recomprueba los límites temporales después de las esperas; nunca sustituye una versión aceptada por otra. La baja de cuenta, los comandos y la creación de sesiones se coordinan sobre el estado global de la cuenta: la baja revoca todas las sesiones y no puede coexistir con una nueva reserva futura confirmada.
+La confirmación bloquea las versiones de normas y política y las compara con la aceptación enviada. Recomprueba los límites temporales después de las esperas; nunca sustituye una versión aceptada por otra. La baja de cuenta, los comandos y la creación de sesiones se coordinan sobre el estado global de la cuenta: la baja revoca todas las sesiones y no puede coexistir con una reserva confirmada futura o en curso. El mismo bloqueo coordina cambios de credenciales, suspensión y reactivación. Las pruebas de autenticación de un solo uso permanecen en el esquema de identidad; el rol de dominio no puede emitirlas ni consultar credenciales.
 
 La reubicación administrativa separa la referencia de normas aceptadas de la obligación pendiente sobre el destino. Reprogramación, ocupación, cuota y aviso se confirman juntos. La aceptación posterior es otro comando idempotente del titular: valida la revisión y referencia asignadas, registra evidencia y no modifica ocupaciones ni consumos.
 

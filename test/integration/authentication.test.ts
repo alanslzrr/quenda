@@ -1091,9 +1091,18 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             ).statusCode,
             200,
           );
-          const removed = await client.request(
+          const ordinaryRemoval = await client.request(
             `/api/municipalities/${tenantId}/administrators/${accountId}/revoke`,
             { reason: "Fin de función de prueba" },
+          );
+          assert.equal(ordinaryRemoval.statusCode, 409, ordinaryRemoval.body);
+          assert.equal(
+            ordinaryRemoval.json().error.code,
+            "ACCOUNT_HANDOVER_REQUIRED",
+          );
+          const removed = await client.request(
+            `/api/municipalities/${tenantId}/accounts/${accountId}/revoke-access-for-security`,
+            { reason: "Contención municipal de una cuenta comprometida" },
           );
           assert.equal(removed.statusCode, 200, removed.body);
           assert.equal(

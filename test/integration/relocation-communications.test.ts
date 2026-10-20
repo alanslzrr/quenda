@@ -45,8 +45,12 @@ test("relocation communications separate accepted rules from pending rules and p
     };
     for (const actor of [holder, administrator, outsider])
       await auth.query(
-        'INSERT INTO auth."user"(id,name,email,"emailVerified") VALUES($1,$1,$2,true)',
-        [actor.accountId, actor.email],
+        'INSERT INTO auth."user"(id,name,email,"emailVerified","twoFactorEnabled") VALUES($1,$1,$2,true,$3)',
+        [
+          actor.accountId,
+          actor.email,
+          actor.accountId === administrator.accountId,
+        ],
       );
     await migration.query(
       "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Communications','UTC')",

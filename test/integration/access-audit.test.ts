@@ -30,6 +30,9 @@ test("authenticated access denials are durable, minimal and append-only", {
     const authentication = {
       handler: unavailable,
       schema: unavailable,
+      verifyDeactivation: unavailable,
+      requestReactivation: unavailable,
+      confirmReactivation: unavailable,
       authenticate: async () => account,
     };
     const app = await buildApp({

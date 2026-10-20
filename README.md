@@ -57,11 +57,22 @@ Al invitar a un administrador, `roleExpiresAt` permite fijar la caducidad del ro
 
 `POST /api/auth/update-user` recibe exclusivamente `{ "name": "..." }` y modifica el nombre del titular de la sesión. El nombre admite hasta 200 caracteres, se guarda sin espacios exteriores y no puede quedar vacío ni contener caracteres de control. La operación no modifica el correo, la verificación, el MFA ni los permisos. El nombre actualizado se consulta mediante `GET /api/auth/get-session`. Cambiar el nombre no acredita una identidad legal.
 
-## Baja de cuenta
+## Baja y reactivación de cuenta
 
-`POST /api/me/deactivation` recibe `{ "confirm": true }`, exige sesión verificada y `Origin` autorizado y devuelve `{ status: "DEACTIVATED", deactivatedAt }`. Desactiva la cuenta y revoca todas sus sesiones en una transacción auditada, coordinada con nuevas sesiones y reservas. El rechazo `409 ACCOUNT_HAS_FUTURE_RESERVATIONS` indica alguna reserva confirmada con inicio futuro en cualquier municipio de la instancia; no revela sus datos a otros municipios.
+`POST /api/me/deactivation` recibe `{ "confirm": true, "password": "..." }`. Exige sesión, `Origin` autorizado y contraseña actual. Con MFA habilitado, la verificación del segundo factor debe tener menos de cinco minutos. Rechaza reservas confirmadas futuras o en curso de cualquier municipio (`409 ACCOUNT_HAS_FUTURE_RESERVATIONS`) y dejar una última responsabilidad sin sustituto habilitado indefinido (`409 ACCOUNT_HANDOVER_REQUIRED`).
 
-La baja conserva identidad, perfiles, asignaciones históricas, reservas y auditoría. No cancela reservas iniciadas, no elimina datos personales ni permite reactivación automática. Las operaciones autenticadas y nuevos accesos de una cuenta desactivada se rechazan. La protección contra dejar el servicio sin responsable devuelve `409 ACCOUNT_HANDOVER_REQUIRED` si se trata del último operador activo o del último administrador activo de algún municipio; no transfiere sus permisos. La política definitiva de relevo está en [PD-BAJA-RESPONSABLE](docs/06_decisiones_y_validacion.md#decisiones-pendientes).
+La baja revoca sesiones, permisos propios e invitaciones pendientes recibidas y emitidas, sin retirar permisos ya aceptados por otros usuarios. Conserva identidad, perfiles, reservas y auditoría. No elimina datos personales ni cancela reservas.
+
+`POST /api/account/reactivation/request` recibe `email` y `password`; responde `202` sin revelar la existencia o estado de la cuenta. Si procede, envía un enlace de un solo uso, válido diez minutos. `POST /api/account/reactivation/confirm` recibe `token`, `password` y `totpCode` o `backupCode` —nunca ambos— cuando había MFA. El código de respaldo se consume con la reactivación. Permite cinco intentos por prueba, además de límites compartidos por IP y cuenta. La confirmación devuelve `REACTIVATED`; no emite sesión ni recupera permisos administrativos. El usuario inicia sesión de nuevo. No permite recuperar cuentas suprimidas ni levantar suspensiones.
+
+## Continuidad y seguridad administrativa
+
+- `POST /api/municipalities/{tenantId}/administrators/{accountId}/make-indefinite`, con `reason`, convierte un permiso temporal vigente ya aceptado en indefinido. La revocación ordinaria exige otro responsable habilitado indefinido.
+- `POST /api/municipalities/{tenantId}/accounts/{accountId}/revoke-access-for-security`, con `reason`, retira permisos e invitaciones pendientes solo en ese municipio, incluso los del último administrador. Requiere administrador municipal con MFA reciente.
+- `POST /api/municipalities/{tenantId}/administrator-recovery-invitations` recibe `accountId`, `expiresAt`, `reason` y `verificationReference`. Un operador con MFA reciente invita a un sustituto únicamente si el municipio inicializado no tiene administradores habilitados. La referencia identifica la verificación externa de autoridad; no la realiza automáticamente. El destinatario acepta con MFA.
+- `POST /api/platform/accounts/{accountId}/suspend`, con `reason`, exige operador y MFA reciente. Suspende la cuenta global, revoca sesiones y autoridad propia, incluso la del último operador, sin cancelar reservas. Un administrador municipal no puede utilizar esta operación por su rol municipal.
+
+Una cuenta habilitada está activa, tiene correo verificado y MFA configurado; no necesita mantener una sesión abierta. No se puede deshabilitar MFA conservando permisos administrativos vigentes. Los permisos retirados no se restauran automáticamente.
 
 ## Gestores municipales
 
@@ -193,6 +204,19 @@ Las restricciones diferidas comprueban al confirmar la transacción que la unida
 
 La confirmación HTTP utiliza estas garantías. Los cambios de calendario incompatibles requieren resolver antes las reservas afectadas mediante operaciones explícitas.
 
+## Gestión de operadores
+
+`POST /api/platform/operator-invitations` invita a una cuenta verificada con `accountId` y `expiresAt`. `GET` sobre la misma ruta lista las invitaciones para operadores autorizados. El destinatario consulta `GET /api/me/operator-invitations` y acepta mediante `POST /api/platform/operator-invitations/{invitationId}/accept`, con MFA reciente. `POST /api/platform/operator-invitations/{invitationId}/revoke` y `POST /api/platform/operators/{accountId}/revoke` requieren `reason`. `GET /api/platform/operators` lista los responsables. La retirada ordinaria no puede dejar la plataforma sin operador habilitado; el permiso no caduca automáticamente.
+
+La recuperación excepcional usa la credencial separada de mantenimiento y exige una verificación externa documentada:
+
+```sh
+pnpm operator:recover ACCOUNT_ID PERFORMED_BY AUTHORITY_REFERENCE REASON
+pnpm account:recover ACCOUNT_ID PERFORMED_BY IDENTITY_REFERENCE REMEDIATION_REFERENCE REASON
+```
+
+`operator:recover` solo actúa después de la inicialización y cuando no quedan operadores habilitados. La cuenta destinataria debe estar activa, verificada y tener MFA. `account:recover` recupera únicamente acceso personal de una cuenta conservada e inactiva; no genera sesiones ni recupera roles. Antes de levantar una suspensión deben sustituirse las credenciales comprometidas mediante el procedimiento controlado: contraseña, secreto MFA y códigos de respaldo si existían. El backend comprueba que sus registros hayan cambiado; la verificación operativa debe acreditar que son credenciales realmente nuevas y controladas por el titular. No se introducen contraseñas, secretos ni documentos completos en argumentos, referencias o registros de auditoría.
+
 ## Primer operador
 
 Crear y verificar una cuenta por la API y completar el alta de TOTP antes de inicializar el operador. Con su identificador de cuenta y las credenciales de mantenimiento:
@@ -201,7 +225,7 @@ Crear y verificar una cuenta por la API y completar el alta de TOTP antes de ini
 pnpm operator:initialize IDENTIFICADOR_DE_CUENTA
 ```
 
-La operación registra una única inicialización auditable. Rechaza cuentas sin correo verificado o MFA y no puede repetirse aunque el operador se revoque. El proceso web no tiene permisos SQL para asignar ni restaurar operadores. Este permiso operativo no concede acceso general a datos municipales.
+La operación registra una única inicialización auditable. Rechaza cuentas sin correo verificado o MFA y no puede repetirse aunque el operador se revoque. El proceso web no puede modificar directamente las tablas de operadores: utiliza funciones restringidas, autorizadas y auditadas. Este permiso operativo no concede acceso general a datos municipales.
 
 ## Auditoría de rechazos
 

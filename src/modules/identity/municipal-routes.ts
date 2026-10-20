@@ -11,15 +11,19 @@ import {
   revokeAdministratorInvitation,
 } from "./invitations.ts";
 import { registerManagerRoutes } from "./manager-routes.ts";
+import { registerMunicipalContinuityRoutes } from "./municipal-continuity-routes.ts";
 import {
   acceptAdministratorInvitation,
   createMunicipality,
   type MunicipalityInput,
   replaceInitialAdministratorInvitation,
 } from "./municipality.ts";
+import { registerOperatorLifecycleRoutes } from "./operator-lifecycle-routes.ts";
 import { registerPreferenceRoutes } from "./preference-routes.ts";
 import { registerProfileRoutes } from "./profile-routes.ts";
+import { registerReactivationRoutes } from "./reactivation-routes.ts";
 import { createRequestActor } from "./request-actor.ts";
+import { registerAccountSecurityRoutes } from "./security-routes.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
 const errors = Object.fromEntries(
@@ -36,6 +40,10 @@ export async function registerMunicipalIdentity(
   config: AuthConfiguration,
 ) {
   const actor = createRequestActor(pool, auth, config);
+  await registerMunicipalContinuityRoutes(app, pool, auth, config);
+  await registerOperatorLifecycleRoutes(app, pool, auth, config);
+  await registerAccountSecurityRoutes(app, pool, auth, config);
+  await registerReactivationRoutes(app, auth, config);
   await registerDeactivationRoutes(app, pool, auth, config);
   await registerBookingPolicyRoutes(app, pool, auth, config);
   await registerManagerRoutes(app, pool, auth, config);
@@ -317,7 +325,13 @@ export async function registerMunicipalIdentity(
                     },
                     status: {
                       type: "string",
-                      enum: ["PENDING", "ACCEPTED", "REVOKED", "EXPIRED"],
+                      enum: [
+                        "PENDING",
+                        "ACCEPTED",
+                        "REVOKED",
+                        "EXPIRED",
+                        "INVALIDATED",
+                      ],
                     },
                   },
                 },

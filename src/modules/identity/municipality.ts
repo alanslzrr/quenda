@@ -110,10 +110,20 @@ export async function acceptAdministratorInvitation(
         "INSERT INTO domain.municipal_profile (tenant_id, account_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
         [tenantId, actor.accountId],
       );
-      const activated = await client.query<{ allowed: boolean }>(
-        "SELECT domain.activate_administrator($1) AS allowed",
-        [invitationId],
-      );
+      const activated = await client
+        .query<{ allowed: boolean }>(
+          "SELECT domain.activate_administrator($1) AS allowed",
+          [invitationId],
+        )
+        .catch((error: unknown) => {
+          if (
+            error instanceof DatabaseError &&
+            error.code === "P0001" &&
+            error.message === "HANDOVER_REQUIRED"
+          )
+            throw new HttpError("ACCOUNT_HANDOVER_REQUIRED");
+          throw error;
+        });
       if (!activated.rows[0]?.allowed) throw new HttpError("CONFLICT");
       await client.query(
         "UPDATE domain.administrator_invitation SET accepted_at = now() WHERE tenant_id = $1 AND id = $2",

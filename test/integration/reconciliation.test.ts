@@ -383,7 +383,7 @@ test("reconciliation validates relocated and historical acceptance independently
       destination = randomUUID(),
       invitation = randomUUID();
     await auth.query(
-      `INSERT INTO auth."user"(id,name,email,"emailVerified") VALUES('reconcile-admin','Reconcile admin','reconcile-admin@example.test',true)`,
+      `INSERT INTO auth."user"(id,name,email,"emailVerified","twoFactorEnabled") VALUES('reconcile-admin','Reconcile admin','reconcile-admin@example.test',true,true)`,
     );
     await migration.query(
       "INSERT INTO domain.municipal_profile(tenant_id,account_id) VALUES($1,'reconcile-admin')",

@@ -40,6 +40,7 @@ import {
   revokeAdministratorInvitation,
   revokeManager,
 } from "../../src/modules/identity/index.ts";
+import { revokeMunicipalAccessForSecurity } from "../../src/modules/identity/municipal-continuity.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
 const account = (id: string) => ({
@@ -602,12 +603,12 @@ test("municipal creation and first administrator acceptance are atomic and isola
           ),
           { code: "CONFLICT" },
         );
-        await revokeAdministrator(
+        await revokeMunicipalAccessForSecurity(
           domain,
           account("other"),
           initial.tenantId,
           "other",
-          "Fin de funciones",
+          "Contención de seguridad",
         );
         await assert.rejects(
           replaceInitialAdministratorInvitation(
@@ -1519,12 +1520,12 @@ test("municipal creation and first administrator acceptance are atomic and isola
           ownB.items.map((row) => row.accountId),
           ["admin-b"],
         );
-        await revokeAdministrator(
+        await revokeMunicipalAccessForSecurity(
           domain,
           account("admin-a"),
           a.tenantId,
           "admin-a",
-          "Fin de administración",
+          "Contención de acceso municipal",
         );
         await assert.rejects(
           listMunicipalProfiles(domain, account("admin-a"), a.tenantId),
@@ -1550,7 +1551,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
         for (let i = 0; i < 21; i++) {
           const id = `query-admin-${i.toString().padStart(2, "0")}`;
           await auth.query(
-            'INSERT INTO auth."user" (id,name,email,"emailVerified","createdAt","updatedAt") VALUES ($1,$1,$2,true,now(),now())',
+            'INSERT INTO auth."user" (id,name,email,"emailVerified","createdAt","updatedAt","twoFactorEnabled") VALUES ($1,$1,$2,true,now(),now(),true)',
             [id, `${id}@example.test`],
           );
           const invitation = await inviteAdministrator(

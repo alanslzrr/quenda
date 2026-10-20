@@ -33,6 +33,9 @@ async function fixture(auth: Pool, migration: Pool) {
       'INSERT INTO auth."user"(id,name,email,"emailVerified") VALUES($1,$1,$2,true)',
       [account, `${account}@example.test`],
     );
+  await auth.query(
+    'UPDATE auth."user" SET "twoFactorEnabled"=true WHERE id=\'relocation-admin\'',
+  );
   const invitation = randomUUID();
   await migration.query(
     "INSERT INTO domain.municipal_profile(tenant_id,account_id) VALUES($1,'relocation-admin')",

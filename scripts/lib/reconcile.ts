@@ -91,7 +91,7 @@ export async function reconcileRestore(client: Client, directory: string) {
             THEN ARRAY['usageRulesVersion','rulesAcceptedAt','bookingPolicyVersion','conditionsAcceptedAt','nonCancellableAccepted']
             ELSE ARRAY[]::text[] END`,
       inactiveAccountSessions: `SELECT count(*)::int AS n FROM auth.session s JOIN auth.account_lifecycle a ON a.account_id=s."userId"
-        WHERE a.deactivated_at IS NOT NULL`,
+        WHERE a.deactivated_at IS NOT NULL OR a.suspended_at IS NOT NULL`,
       reservationEvents: `SELECT count(*)::int AS n FROM domain.reservation r WHERE
         (SELECT count(*) FROM domain.reservation_event e WHERE (e.tenant_id,e.reservation_id)=(r.tenant_id,r.id))<>r.revision
         OR NOT EXISTS(SELECT 1 FROM domain.reservation_event e WHERE (e.tenant_id,e.reservation_id,e.revision)=(r.tenant_id,r.id,r.revision)

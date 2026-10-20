@@ -273,6 +273,9 @@ test("real booking commands enforce shared eligibility and quota in one transact
           "INSERT INTO domain.municipal_administrator(tenant_id,account_id,invitation_id) VALUES($1,'citizen',$2)",
           [tenants[winner], invitation],
         );
+        await auth.query(
+          `UPDATE auth."user" SET "twoFactorEnabled"=true WHERE id='citizen'`,
+        );
         const admin = { ...actor, mfaVerifiedAt: new Date() };
         await assert.rejects(
           suspendAgreement(

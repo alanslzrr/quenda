@@ -16,7 +16,7 @@ Cada prueba registra versión del sistema, datos, entorno, resultado y evidencia
 | T-08 | RF-07; RNF-11 | Las caídas antes o después del envío y el vencimiento de concesiones no pierden eventos ni alteran reservas; se comprueban orden y duplicados. |
 | T-09 | RF-12 | Los indicadores reproducen un conjunto conocido con calendario histórico, denominador cero, periodo y zona horaria. |
 | T-10 | RF-13; RNF-08 | El alta de otro municipio y el despliegue de una instancia independiente utilizan los mismos artefactos sin cambiar código. |
-| T-11 | RF-14, RF-17 | Registro, invitaciones y cambios persisten tras reiniciar; rechazan entradas inválidas, duplicados y aumentos de permisos. Cerrar sesión impide reutilizarla. La baja rechaza reservas futuras de cualquier municipio, revoca todas las sesiones y se coordina con nuevos accesos y reservas concurrentes. |
+| T-11 | RF-14, RF-17 | Registro, invitaciones y cambios persisten tras reiniciar; rechazan entradas inválidas, duplicados y aumentos de permisos. Cerrar sesión impide reutilizarla. La baja exige contraseña actual y MFA reciente cuando esté habilitado; rechaza reservas futuras o en curso de cualquier municipio. Revoca sesiones y autoridad propia y se coordina con accesos, cambios de credenciales y reservas concurrentes. Reactivar verifica contraseña, correo y MFA sin restaurar permisos ni levantar suspensiones. Relevo, retirada por seguridad y recuperación preservan sus ámbitos y auditoría. |
 | T-12 | RF-18; RNF-07 | La exportación v3 contiene el periodo y entidades autorizados, con normas aceptadas, pendientes y ausencia explícita de evidencia. Su esquema versionado puede validarse con herramientas independientes. |
 | T-13 | RNF-04, RNF-05, RNF-15 | Teclado, lector de pantalla, contraste, zoom, móvil, movimiento reducido y traducciones permiten completar todos los flujos sin depender solo de color o arrastre. |
 | T-14 | RNF-03, RNF-11 | Se verifican minimización, conservación, derechos, auditoría y ausencia de secretos en registros. |
@@ -57,6 +57,5 @@ El procedimiento de recuperación comprueba reservas, ocupaciones y cuotas antes
 | ID | Resolución necesaria | Dependencia |
 |---|---|---|
 | PD-AUTH-PUBLICA | Obtener de AGASOL el significado y la evidencia exigidos para «autenticación pública», sin incluir Cl@ve en el alcance inicial. | Aceptación de RF-15. |
-| PD-BAJA-RESPONSABLE | Confirmar la política de relevo de la última cuenta operadora o administradora activa. La protección vigente rechaza su baja hasta disponer de otro responsable activo; no transfiere permisos automáticamente. | Baja de cuentas con responsabilidad operativa exclusiva. |
 | PD-OPERACION | Definir piloto, presupuesto, proveedor, región, capacidad, topología, disponibilidad, RTO, RPO, conservación y proveedor de correo. | Puesta en servicio de cada instancia. |
 | PD-DEMO | Seleccionar alojamiento y configuración de ejecución con datos sintéticos. | Despliegue de la demo; misma funcionalidad y artefactos que el producto. |

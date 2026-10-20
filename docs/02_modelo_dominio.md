@@ -160,8 +160,14 @@ Ante una imposibilidad de asistencia, el usuario contacta directamente con el ay
 
 El titular mantiene su responsabilidad aunque no utilice la instalación. Puede reorganizar participantes cuando las normas municipales lo permitan, sin transferir la reserva; el sistema no registra jugadores. Una ausencia mantiene el historial y el tiempo reservado, sin inferir asistencia ni generar incidencias, deudas, multas o penalizaciones automáticas.
 
-## Baja de cuenta
+## Cuenta y continuidad administrativa
 
-La baja es lógica: revoca todas las sesiones e impide nuevas operaciones de la cuenta. Se rechaza si existen reservas futuras confirmadas en cualquier municipio de la instancia. La comprobación y la baja son atómicas frente a nuevas reservas. Se conservan las reservas y la auditoría; la baja no ejecuta la eliminación de datos personales, sujeta a la política de conservación aprobada.
+La baja voluntaria es lógica. Requiere la contraseña actual y, si el usuario tiene MFA, una verificación del segundo factor realizada hace menos de cinco minutos. Se rechaza mientras exista una reserva confirmada con `fin > ahora`, futura o en curso, en cualquier municipio. La comprobación y la baja son atómicas frente a reservas, cambios de credenciales y sesiones concurrentes.
 
-Se consideran futuras las reservas confirmadas con `inicio > ahora`; las ya iniciadas no cambian de estado por la baja. No existe reactivación automática. El relevo de la última cuenta responsable se delimita en [PD-BAJA-RESPONSABLE](06_decisiones_y_validacion.md#decisiones-pendientes).
+La baja revoca sesiones, permisos administrativos propios e invitaciones pendientes recibidas o emitidas. No retira permisos que otros usuarios ya hayan aceptado. Conserva identidad, perfiles, reservas y auditorías; no ejecuta la supresión de datos personales.
+
+El usuario puede reactivar una cuenta conservada mediante contraseña, enlace de correo de un solo uso y TOTP o código de respaldo si MFA estaba habilitado. El código de respaldo se consume en la misma transacción. Recupera únicamente acceso personal y debe iniciar sesión de nuevo. Las cuentas suprimidas requieren un nuevo registro. La reactivación no levanta suspensiones de seguridad.
+
+Cada municipio inicializado mantiene un administrador habilitado con permiso indefinido; la plataforma mantiene un operador habilitado. Habilitado significa cuenta activa, correo verificado, MFA configurado y permiso vigente no revocado, sin exigir una sesión abierta. No se permite retirar la última responsabilidad por baja o revocación ordinaria. Un permiso temporal ya aceptado puede convertirse explícitamente en indefinido, con motivo, sin otra invitación ni extensiones automáticas.
+
+La retirada municipal por seguridad afecta solo a los permisos e invitaciones de ese municipio. La suspensión global corresponde a un operador y revoca sesiones y autoridad administrativa en toda la instancia, sin cancelar reservas. La contención puede dejar temporalmente al ámbito sin responsable. La recuperación exige verificar identidad o autoridad, resolver el compromiso y registrar la intervención; nunca restaura permisos antiguos automáticamente.

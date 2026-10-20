@@ -101,19 +101,29 @@ export async function revokeAdministrator(
   const rationale = reason.trim();
   if (!rationale || rationale.length > 500)
     throw new HttpError("INVALID_INPUT");
-  return command(
-    pool,
-    { accountId: actor.accountId, tenantId },
-    async (client) => {
-      await requireAdministrator(client, actor);
-      const result = await client.query<{ invitation: string | null }>(
-        "SELECT domain.revoke_administrator($1,$2) AS invitation",
-        [accountId, rationale],
-      );
-      if (!result.rows[0]?.invitation) throw new HttpError("NOT_FOUND");
-      return { tenantId, accountId };
-    },
-  );
+  try {
+    return await command(
+      pool,
+      { accountId: actor.accountId, tenantId },
+      async (client) => {
+        await requireAdministrator(client, actor);
+        const result = await client.query<{ invitation: string | null }>(
+          "SELECT domain.revoke_administrator($1,$2) AS invitation",
+          [accountId, rationale],
+        );
+        if (!result.rows[0]?.invitation) throw new HttpError("NOT_FOUND");
+        return { tenantId, accountId };
+      },
+    );
+  } catch (error) {
+    if (
+      error instanceof DatabaseError &&
+      error.code === "P0001" &&
+      error.message === "HANDOVER_REQUIRED"
+    )
+      throw new HttpError("ACCOUNT_HANDOVER_REQUIRED");
+    throw error;
+  }
 }
 
 export async function listOwnAdministratorInvitations(
@@ -131,7 +141,7 @@ export async function listOwnAdministratorInvitations(
         municipality: string;
         expires_at: Date;
         role_expires_at: Date | null;
-        status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
+        status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED" | "INVALIDATED";
       }>("SELECT * FROM domain.own_administrator_invitations($1)", [after]);
       const page = result.rows.slice(0, 20);
       return {

@@ -7,6 +7,7 @@ export async function deactivateAccount(
   pool: Pool,
   actor: AuthenticatedAccount,
   correlationId: string,
+  proofDigest: string,
 ) {
   return command(
     pool,
@@ -17,13 +18,20 @@ export async function deactivateAccount(
           outcome:
             | "DEACTIVATED"
             | "INACTIVE"
+            | "PROOF_REQUIRED"
+            | "MFA_REQUIRED"
             | "FUTURE_RESERVATIONS"
             | "HANDOVER_REQUIRED";
           deactivated_at: Date | null;
-        }>("SELECT * FROM domain.deactivate_current_account($1)", [
+        }>("SELECT * FROM domain.deactivate_current_account($1,$2)", [
           correlationId,
+          proofDigest,
         ])
       ).rows[0];
+      if (result?.outcome === "PROOF_REQUIRED")
+        throw new HttpError("ACCOUNT_PASSWORD_REQUIRED");
+      if (result?.outcome === "MFA_REQUIRED")
+        throw new HttpError("REAUTHENTICATION_REQUIRED");
       if (result?.outcome === "FUTURE_RESERVATIONS")
         throw new HttpError("ACCOUNT_HAS_FUTURE_RESERVATIONS");
       if (result?.outcome === "HANDOVER_REQUIRED")

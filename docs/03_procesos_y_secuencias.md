@@ -25,6 +25,31 @@ Los formularios envían datos a la API, que valida las entradas, comprueba los p
 
 **Justificación:** separar registro y asignación de permisos impide que una cuenta nueva obtenga acceso administrativo.
 
+### Baja, reactivación y relevo
+
+```mermaid
+sequenceDiagram
+  actor U as Usuario
+  participant A as API de identidad
+  participant D as PostgreSQL
+  U->>A: Solicita baja y confirma contraseña
+  A->>D: Verifica prueba, sesión y MFA si está habilitado
+  A->>D: Comprueba reservas futuras/en curso y continuidad
+  alt Puede darse de baja
+    A->>D: Baja, revocación de autoridad y sesiones, auditoría
+    A-->>U: Cuenta desactivada
+  else Reservas o relevo pendiente
+    A-->>U: Rechazo sin cambios
+  end
+  U->>A: Solicita reactivación con contraseña
+  A-->>U: Enlace de correo de un solo uso
+  U->>A: Confirma token, contraseña y segundo factor si procede
+  A->>D: Verifica baja voluntaria, consume prueba y reactiva
+  A-->>U: Acceso personal recuperado; requiere nuevo inicio de sesión
+```
+
+Para un relevo ordinario, el sustituto acepta una invitación o ya dispone de un permiso válido. Antes de retirar al último responsable indefinido, otro debe quedar habilitado con permiso indefinido. La retirada por seguridad no espera al relevo; si no queda un responsable habilitado se utiliza la recuperación controlada, sin reaprovechar permisos ni invitaciones anteriores.
+
 ### D-06 Registro y gestión manual
 
 ```mermaid

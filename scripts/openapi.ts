@@ -21,6 +21,9 @@ const app = await buildApp({
     authentication: {
       handler: unavailable,
       schema: unavailable,
+      verifyDeactivation: unavailable,
+      requestReactivation: unavailable,
+      confirmReactivation: unavailable,
       authenticate: unavailable,
     },
   },

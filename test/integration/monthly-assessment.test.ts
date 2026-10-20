@@ -15,7 +15,7 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
 }, async () => {
   await withDatabase(async ({ migration, auth, worker, domain }) => {
     await auth.query(
-      `INSERT INTO auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") SELECT 'report-'||n,'Synthetic','report-'||n||'@example.test',true,now(),now() FROM generate_series(0,9) n`,
+      `INSERT INTO auth."user"(id,name,email,"emailVerified","createdAt","updatedAt","twoFactorEnabled") SELECT 'report-'||n,'Synthetic','report-'||n||'@example.test',true,now(),now(),n IN (0,1) FROM generate_series(0,9) n`,
     );
     const agreement = randomUUID(),
       tenants = [randomUUID(), randomUUID()],

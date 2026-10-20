@@ -18,11 +18,16 @@ export async function initializeOperator(
     const account = await client.query<{
       emailVerified: boolean;
       twoFactorEnabled: boolean;
+      enabled: boolean;
     }>(
-      'SELECT "emailVerified", "twoFactorEnabled" FROM auth."user" WHERE id = $1 FOR SHARE',
+      'SELECT u."emailVerified", u."twoFactorEnabled", domain.responsible_account_enabled(u.id) AS enabled FROM auth."user" u JOIN auth.account_lifecycle l ON l.account_id=u.id WHERE u.id = $1 FOR SHARE OF l,u',
       [accountId],
     );
-    if (!account.rows[0]?.emailVerified || !account.rows[0].twoFactorEnabled)
+    if (
+      !account.rows[0]?.emailVerified ||
+      !account.rows[0].twoFactorEnabled ||
+      !account.rows[0].enabled
+    )
       throw new Error("Operator requires a verified account with MFA enabled");
     await client.query(
       "INSERT INTO domain.platform_operator (account_id) VALUES ($1)",

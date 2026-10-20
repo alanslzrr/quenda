@@ -37,7 +37,7 @@ test("reservation confirmation validates real calendars and commits every effect
   await withDatabase(async ({ domain, auth, migration, worker, root }) => {
     for (const id of ["citizen", "newcomer"])
       await auth.query(
-        `INSERT INTO auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,$1,$2,true,now(),now())`,
+        `INSERT INTO auth."user"(id,name,email,"emailVerified","twoFactorEnabled","createdAt","updatedAt") VALUES($1,$1,$2,true,true,now(),now())`,
         [id, `${id}@example.test`],
       );
     const tenant = randomUUID(),

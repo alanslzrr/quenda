@@ -49,15 +49,31 @@ Las credenciales de autenticación, dominio y migraciones tienen permisos separa
 - `cookieCache` permanece desactivado para comprobar la revocación en la siguiente petición. Las operaciones en curso respetan su orden transaccional.
 - El acceso administrativo exige MFA. El alta de municipios y la aceptación de permisos administrativos exigen una verificación del segundo factor realizada hace menos de cinco minutos. Al caducar esta comprobación, la sesión continúa activa, pero la operación requiere verificar de nuevo el segundo factor. La recuperación de acceso no concede permisos adicionales.
 - Los permisos se consultan en cada operación. El limitador de peticiones comparte estado entre réplicas y solo confía en los proxies configurados.
-- La baja lógica requiere sesión válida, origen autorizado y confirmación expresa. Revoca todas las sesiones de la cuenta, incluidas las creadas concurrentemente, y bloquea nuevos accesos autenticados y operaciones de la cuenta. La cuenta desactivada no se reactiva mediante registro, recuperación de contraseña ni una invitación.
+- La baja lógica requiere sesión válida, origen autorizado, confirmación expresa y contraseña actual. Si hay MFA, exige una verificación realizada hace menos de cinco minutos. Revoca todas las sesiones de la cuenta, incluidas las creadas concurrentemente, y bloquea nuevos accesos autenticados y operaciones de la cuenta. La cuenta desactivada no se reactiva mediante registro, recuperación de contraseña ni una invitación.
 
 **Justificación:** evita prolongar sesiones o permisos revocados y mantiene los límites de acceso al distribuir peticiones entre réplicas. [Sesiones](https://better-auth.com/docs/concepts/session-management), [seguridad](https://better-auth.com/docs/reference/security), [límites](https://better-auth.com/docs/concepts/rate-limit).
 
 ## Baja y conservación
 
-La comprobación de reservas futuras de una baja abarca la cuenta en toda la instancia, sin devolver actividad de otros municipios. La auditoría conserva cuenta afectada, fecha, correlación y número de sesiones revocadas; no almacena tokens. Un fallo de auditoría revierte la baja y la revocación.
+La comprobación de reservas confirmadas futuras o en curso de una baja abarca la cuenta en toda la instancia, sin devolver actividad de otros municipios. La auditoría conserva cuenta afectada, fecha, correlación y número de sesiones revocadas; no almacena tokens. Un fallo de auditoría revierte la baja y la revocación.
 
 Desactivar la cuenta no borra identidad, perfiles, reservas ni auditorías. La supresión, el ejercicio de derechos y los plazos de conservación requieren una política aprobada del responsable del tratamiento; la baja no los sustituye ni ejecuta eliminaciones automáticas.
+
+## Reactivación y recuperación
+
+La reactivación ciudadana verifica contraseña, correo y TOTP o un código de respaldo si MFA estaba habilitado. El código de respaldo se consume atómicamente; nunca puede reutilizarse. El enlace contiene un token aleatorio de un solo uso; solo se conserva su resumen criptográfico, ligado al ciclo exacto de baja. Caduca a los diez minutos y admite cinco intentos. Los límites por dirección IP y cuenta se comparten entre réplicas. La solicitud no revela si una cuenta existe, está activa o está suspendida. La confirmación no crea una sesión ni recupera permisos administrativos.
+
+La prueba de contraseña para darse de baja pertenece a la cuenta y sesión verificadas, caduca a los cinco minutos y no sirve después de cambiar la contraseña. El backend comprueba de nuevo sesión, credenciales y MFA en la transacción de baja. Una marca de sesión reciente no sustituye la contraseña solicitada para esta operación.
+
+No se permite deshabilitar MFA mientras se conserven permisos administrativos vigentes. La sustitución de factores requiere verificar al titular; perder un factor no habilita una vía de menor seguridad.
+
+Un administrador puede retirar inmediatamente todos los permisos e invitaciones pendientes de una cuenta en su municipio, con motivo, incluso si era el último administrador. No puede suspender la identidad global. Un operador puede suspenderla con MFA reciente; la suspensión bloquea nuevos accesos y conserva reservas y evidencias.
+
+La recuperación municipal solo se inicia cuando no queda ningún administrador habilitado. Un operador registra el motivo y la referencia a la verificación externa de autoridad, e invita al sustituto; este acepta con correo verificado y MFA. La recuperación no concede al operador acceso a datos municipales. La primera inicialización permanece cerrada.
+
+La gestión ordinaria de operadores utiliza invitaciones y revocaciones por API. La inicialización del primer operador y la recuperación sin operadores habilitados requieren credenciales operativas separadas. La recuperación asistida de una cuenta conserva referencias de identidad y resolución del compromiso; no presenta esas referencias como una verificación automática. Tras una suspensión se sustituyen contraseña, segundo factor y códigos de respaldo afectados antes de recuperar acceso personal. Los permisos se conceden nuevamente por los procedimientos ordinarios.
+
+**Justificación:** la confirmación de una operación sensible, la recuperación de identidad y la asignación de autoridad son comprobaciones distintas. Separarlas evita utilizar una sesión robada o una recuperación de acceso para recuperar privilegios retirados. [OWASP: reautenticación](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#require-re-authentication-for-sensitive-features), [OWASP: recuperación de MFA](https://cheatsheetseries.owasp.org/cheatsheets/Multifactor_Authentication_Cheat_Sheet.html#resetting-mfa).
 
 ## Convenios y trazabilidad
 

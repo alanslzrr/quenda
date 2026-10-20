@@ -35,9 +35,12 @@
     "licenses:inventory": "node scripts/license-inventory.ts",
     "source:archive": "node scripts/source-archive.ts",
     "image:build": "node scripts/build-image.ts",
-    "test:performance": "node test/performance/run.ts"
+    "test:performance": "node test/performance/run.ts",
+    "operator:recover": "node --env-file=.env.migration.local scripts/recover-operator.ts",
+    "account:recover": "node --env-file=.env.migration.local scripts/recover-account.ts"
   },
   "dependencies": {
+    "@better-auth/utils": "0.5.0",
     "@fastify/swagger": "9.9.2",
     "@js-temporal/polyfill": "0.5.1",
     "better-auth": "1.7.11",

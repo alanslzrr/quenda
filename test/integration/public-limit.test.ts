@@ -65,6 +65,9 @@ test("public limits are shared, IP-private, atomic and clean up bounded expired 
           authentication: {
             handler: unavailable,
             schema: unavailable,
+            verifyDeactivation: unavailable,
+            requestReactivation: unavailable,
+            confirmReactivation: unavailable,
             authenticate: unavailable,
           },
         },

@@ -1,11 +1,17 @@
+import { createHash, randomBytes } from "node:crypto";
 import { betterAuth } from "better-auth";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import {
+  APIError,
+  createAuthMiddleware,
+  getAuthoritativeSessionFromCtx,
+} from "better-auth/api";
 import { openAPI, twoFactor } from "better-auth/plugins";
 import { PostgresDialect } from "kysely";
 import type { Pool } from "pg";
-import { language } from "../../http/errors.ts";
+import { HttpError, language } from "../../http/errors.ts";
 import type { MailTransport } from "../../shared/mail.ts";
 import { normalizedAccountName } from "./account-profile.ts";
+import { accountReactivation } from "./reactivation.ts";
 import { auditedAuthenticationHandler } from "./request-audit.ts";
 
 export interface AuthConfiguration {
@@ -94,7 +100,7 @@ export function authOptions(
         create: {
           before: async (session: { userId: string }) => {
             const active = await pool.query(
-              "SELECT 1 FROM auth.account_lifecycle WHERE account_id=$1 AND deactivated_at IS NULL",
+              "SELECT 1 FROM auth.account_lifecycle WHERE account_id=$1 AND deactivated_at IS NULL AND suspended_at IS NULL",
               [session.userId],
             );
             if (!active.rowCount)
@@ -112,6 +118,21 @@ export function authOptions(
     ],
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path === "/two-factor/disable") {
+          const session = await getAuthoritativeSessionFromCtx(ctx);
+          if (session) {
+            const authority = await pool.query<{ required: boolean }>(
+              "SELECT auth.account_has_administrative_authority($1) AS required",
+              [session.user.id],
+            );
+            if (authority.rows[0]?.required)
+              throw new APIError("FORBIDDEN", {
+                code: "MFA_REQUIRED_FOR_ADMINISTRATION",
+                message:
+                  "Transfer or relinquish administrative permissions before disabling MFA",
+              });
+          }
+        }
         if (ctx.path === "/update-user") {
           const name = normalizedAccountName(ctx.body);
           if (name === null)
@@ -164,6 +185,45 @@ export function createAuthentication(
 ) {
   const auth = betterAuth(authOptions(pool, config, mail));
   return {
+    ...accountReactivation(
+      pool,
+      mail,
+      config.origin,
+      config.secret,
+      async () => (await auth.$context).password,
+    ),
+    async verifyDeactivation(headers: Headers, password: string) {
+      const session = await auth.api.getSession({ headers });
+      if (!session?.user.emailVerified) throw new HttpError("UNAUTHENTICATED");
+      const credential = (
+        await pool.query<{ password: string }>(
+          `SELECT password FROM auth.account
+           WHERE "userId"=$1 AND "providerId"='credential' AND password IS NOT NULL`,
+          [session.user.id],
+        )
+      ).rows[0];
+      if (!credential) throw new HttpError("ACCOUNT_PASSWORD_REQUIRED");
+      try {
+        await auth.api.verifyPassword({ headers, body: { password } });
+      } catch (error) {
+        if (error instanceof APIError)
+          throw new HttpError("ACCOUNT_PASSWORD_REQUIRED");
+        throw error;
+      }
+      const token = randomBytes(32).toString("base64url");
+      const issued = await pool.query<{ issued: boolean }>(
+        "SELECT auth.issue_deactivation_proof($1,$2,$3,$4) AS issued",
+        [
+          session.user.id,
+          session.session.id,
+          credential.password,
+          createHash("sha256").update(token).digest("hex"),
+        ],
+      );
+      if (!issued.rows[0]?.issued)
+        throw new HttpError("ACCOUNT_PASSWORD_REQUIRED");
+      return token;
+    },
     handler: auditedAuthenticationHandler(
       pool,
       auth.handler,
@@ -180,7 +240,7 @@ export function createAuthentication(
         verified: Date | null;
         enabled: boolean;
       }>(
-        'SELECT s."mfaVerifiedAt" AS verified, u."twoFactorEnabled" AS enabled FROM auth.session s JOIN auth."user" u ON u.id = s."userId" JOIN auth.account_lifecycle l ON l.account_id=u.id AND l.deactivated_at IS NULL WHERE s.id = $1 AND s."userId" = $2 AND s."expiresAt" > now()',
+        'SELECT s."mfaVerifiedAt" AS verified, u."twoFactorEnabled" AS enabled FROM auth.session s JOIN auth."user" u ON u.id = s."userId" JOIN auth.account_lifecycle l ON l.account_id=u.id AND l.deactivated_at IS NULL AND l.suspended_at IS NULL WHERE s.id = $1 AND s."userId" = $2 AND s."expiresAt" > now()',
         [result.session.id, result.user.id],
       );
       if (!proof.rows[0]) return null;

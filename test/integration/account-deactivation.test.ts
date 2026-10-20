@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { cp, mkdtemp, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -30,6 +30,26 @@ const account = (id: string) => ({
   sessionId: `session-${id}`,
   mfaVerifiedAt: null,
 });
+
+const proofDigest = (id: string) =>
+  createHash("sha256").update(id).digest("hex");
+
+// Command/concurrency fixtures model a proof already issued by the auth service.
+// Actual password and MFA verification is exercised through HTTP separately.
+async function seedProof(migration: Pool, id: string) {
+  await migration.query(
+    `INSERT INTO auth.account(id,"accountId","providerId","userId",password,"updatedAt") VALUES($1,$1,'credential',$1,'fixture-credential-hash',now()) ON CONFLICT(id) DO NOTHING`,
+    [id],
+  );
+  await migration.query(
+    `INSERT INTO auth.session(id,"expiresAt",token,"userId","updatedAt","mfaVerifiedAt") VALUES($1,now()+interval '1 day',$1,$2,now(),now()) ON CONFLICT(id) DO NOTHING`,
+    [`session-${id}`, id],
+  );
+  await migration.query(
+    `INSERT INTO auth.account_deactivation_proof(token_digest,account_id,session_id,password_hash,expires_at) VALUES($1,$2,$3,'fixture-credential-hash',clock_timestamp()+interval '5 minutes')`,
+    [proofDigest(id), id, `session-${id}`],
+  );
+}
 
 async function fixture(migration: Pool, actorId: string) {
   const tenantId = randomUUID(),
@@ -187,7 +207,7 @@ test("account deactivation revokes every session, preserves history and rejects 
             (
               await first.request(
                 "/api/me/deactivation",
-                { confirm: true },
+                { confirm: true, password },
                 { origin: "https://other.invalid" },
               )
             ).statusCode,
@@ -219,6 +239,7 @@ test("account deactivation revokes every session, preserves history and rejects 
           assert.ok(firstReservation && secondReservation);
           const denied = await first.request("/api/me/deactivation", {
             confirm: true,
+            password,
           });
           assert.equal(denied.statusCode, 409, denied.body);
           assert.equal(
@@ -253,8 +274,12 @@ test("account deactivation revokes every session, preserves history and rejects 
             3600,
           );
           assert.equal(
-            (await first.request("/api/me/deactivation", { confirm: true }))
-              .statusCode,
+            (
+              await first.request("/api/me/deactivation", {
+                confirm: true,
+                password,
+              })
+            ).statusCode,
             409,
           );
           await cancelReservation(
@@ -278,8 +303,12 @@ test("account deactivation revokes every session, preserves history and rejects 
           );
           try {
             assert.equal(
-              (await first.request("/api/me/deactivation", { confirm: true }))
-                .statusCode,
+              (
+                await first.request("/api/me/deactivation", {
+                  confirm: true,
+                  password,
+                })
+              ).statusCode,
               500,
             );
             assert.equal(
@@ -324,6 +353,7 @@ test("account deactivation revokes every session, preserves history and rejects 
           ).rows;
           const result = await first.request("/api/me/deactivation", {
             confirm: true,
+            password,
           });
           assert.equal(result.statusCode, 200, result.body);
           assert.equal(result.json().status, "DEACTIVATED");
@@ -402,16 +432,28 @@ test("account deactivation revokes every session, preserves history and rejects 
           assert.equal(login.statusCode, 403, login.body);
           assert.equal(login.json().error.code, "ACCOUNT_INACTIVE");
           assert.equal(
-            (await first.request("/api/me/deactivation", { confirm: true }))
-              .statusCode,
+            (
+              await first.request("/api/me/deactivation", {
+                confirm: true,
+                password,
+              })
+            ).statusCode,
             401,
           );
           await assert.rejects(saveAccountPreferences(domain, actor, "gl"), {
             code: "ACCOUNT_INACTIVE",
           });
-          await assert.rejects(deactivateAccount(domain, actor, randomUUID()), {
-            code: "ACCOUNT_INACTIVE",
-          });
+          await assert.rejects(
+            deactivateAccount(
+              domain,
+              actor,
+              randomUUID(),
+              proofDigest(actor.accountId),
+            ),
+            {
+              code: "ACCOUNT_INACTIVE",
+            },
+          );
           await assert.rejects(
             auth.query("UPDATE auth.\"user\" SET name='Changed' WHERE id=$1", [
               id,
@@ -445,8 +487,8 @@ test("account deactivation revokes every session, preserves history and rejects 
           }
           await assert.rejects(
             domain.query(
-              "SELECT * FROM domain.deactivate_current_account($1)",
-              [randomUUID()],
+              "SELECT * FROM domain.deactivate_current_account($1,$2)",
+              [randomUUID(), proofDigest(actor.accountId)],
             ),
             { code: "42501" },
           );
@@ -475,6 +517,14 @@ test("deactivation serializes against reservation commands and session creation"
         [id, `${id}@example.test`],
       );
 
+    for (const id of [
+      "reservation-first",
+      "deactivation-first",
+      "session-first",
+      "session-after",
+    ])
+      await seedProof(migration, id);
+
     await t.test(
       "booking committing first prevents deactivation despite its earlier snapshot",
       async () => {
@@ -502,7 +552,12 @@ test("deactivation serializes against reservation commands and session creation"
             "INSERT INTO domain.reservation",
           );
           deactivating = assert.rejects(
-            deactivateAccount(domain, actor, randomUUID()),
+            deactivateAccount(
+              domain,
+              actor,
+              randomUUID(),
+              proofDigest(actor.accountId),
+            ),
             { code: "ACCOUNT_HAS_FUTURE_RESERVATIONS" },
           );
           await waitForBlockedQuery(
@@ -551,8 +606,8 @@ test("deactivation serializes against reservation commands and session creation"
           domain,
           async (client) => {
             const result = await client.query(
-              "SELECT * FROM domain.deactivate_current_account($1)",
-              [randomUUID()],
+              "SELECT * FROM domain.deactivate_current_account($1,$2)",
+              [randomUUID(), proofDigest(actor.accountId)],
             );
             assert.equal(result.rows[0].outcome, "DEACTIVATED");
             acquired();
@@ -612,7 +667,12 @@ test("deactivation serializes against reservation commands and session creation"
             [randomUUID(), actor.accountId],
           );
           await waitForBlockedQuery(administration, "INSERT INTO auth.session");
-          deactivating = deactivateAccount(domain, actor, randomUUID());
+          deactivating = deactivateAccount(
+            domain,
+            actor,
+            randomUUID(),
+            proofDigest(actor.accountId),
+          );
           await waitForBlockedQuery(
             administration,
             "domain.lock_active_account",
@@ -653,8 +713,8 @@ test("deactivation serializes against reservation commands and session creation"
             actor.accountId,
           ]);
           await client.query(
-            "SELECT * FROM domain.deactivate_current_account($1)",
-            [randomUUID()],
+            "SELECT * FROM domain.deactivate_current_account($1,$2)",
+            [randomUUID(), proofDigest(actor.accountId)],
           );
           const creating = assert.rejects(
             auth.query(
@@ -730,12 +790,14 @@ test("deactivation migration initializes existing accounts without revoking vali
           .rows[0].n,
         1,
       );
+      await seedProof(migration, "legacy-account");
       assert.equal(
         (
           await deactivateAccount(
             domain,
             account("legacy-account"),
             randomUUID(),
+            proofDigest("legacy-account"),
           )
         ).status,
         "DEACTIVATED",
@@ -765,19 +827,46 @@ test("deactivation does not remove the last active platform or municipal respons
         'INSERT INTO auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,$1,$2,true,now(),now())',
         [id, `${id}@example.test`],
       );
+    for (const id of [
+      "operator-a",
+      "operator-b",
+      "administrator-a",
+      "administrator-b",
+    ]) {
+      await migration.query(
+        'UPDATE auth."user" SET "twoFactorEnabled"=true WHERE id=$1',
+        [id],
+      );
+      await seedProof(migration, id);
+    }
     await migration.query(
       "INSERT INTO domain.platform_operator(account_id) VALUES('operator-a')",
     );
     await assert.rejects(
-      deactivateAccount(domain, account("operator-a"), randomUUID()),
+      deactivateAccount(
+        domain,
+        account("operator-a"),
+        randomUUID(),
+        proofDigest("operator-a"),
+      ),
       { code: "ACCOUNT_HANDOVER_REQUIRED" },
     );
     await migration.query(
       "INSERT INTO domain.platform_operator(account_id) VALUES('operator-b')",
     );
     const attempts = await Promise.allSettled([
-      deactivateAccount(domain, account("operator-a"), randomUUID()),
-      deactivateAccount(domain, account("operator-b"), randomUUID()),
+      deactivateAccount(
+        domain,
+        account("operator-a"),
+        randomUUID(),
+        proofDigest("operator-a"),
+      ),
+      deactivateAccount(
+        domain,
+        account("operator-b"),
+        randomUUID(),
+        proofDigest("operator-b"),
+      ),
     ]);
     assert.equal(
       attempts.filter((result) => result.status === "fulfilled").length,
@@ -822,7 +911,12 @@ test("deactivation does not remove the last active platform or municipal respons
     }
     // An existing but revoked administrator is not a valid replacement.
     await assert.rejects(
-      deactivateAccount(domain, account("administrator-a"), randomUUID()),
+      deactivateAccount(
+        domain,
+        account("administrator-a"),
+        randomUUID(),
+        proofDigest("administrator-a"),
+      ),
       { code: "ACCOUNT_HANDOVER_REQUIRED" },
     );
     await migration.query(
@@ -830,11 +924,28 @@ test("deactivation does not remove the last active platform or municipal respons
     );
     // An unrevoked but expired administrator cannot take over responsibility.
     await assert.rejects(
-      deactivateAccount(domain, account("administrator-a"), randomUUID()),
+      deactivateAccount(
+        domain,
+        account("administrator-a"),
+        randomUUID(),
+        proofDigest("administrator-a"),
+      ),
       { code: "ACCOUNT_HANDOVER_REQUIRED" },
     );
     await migration.query(
       "UPDATE domain.municipal_administrator SET expires_at=now()+interval '1 day' WHERE account_id='administrator-b'",
+    );
+    await assert.rejects(
+      deactivateAccount(
+        domain,
+        account("administrator-a"),
+        randomUUID(),
+        proofDigest("administrator-a"),
+      ),
+      { code: "ACCOUNT_HANDOVER_REQUIRED" },
+    );
+    await migration.query(
+      "UPDATE domain.municipal_administrator SET expires_at=NULL WHERE account_id='administrator-b'",
     );
     assert.equal(
       (
@@ -842,13 +953,19 @@ test("deactivation does not remove the last active platform or municipal respons
           domain,
           account("administrator-a"),
           randomUUID(),
+          proofDigest("administrator-a"),
         )
       ).status,
       "DEACTIVATED",
     );
     // Historical grants on a deactivated account do not count as active custody.
     await assert.rejects(
-      deactivateAccount(domain, account("administrator-b"), randomUUID()),
+      deactivateAccount(
+        domain,
+        account("administrator-b"),
+        randomUUID(),
+        proofDigest("administrator-b"),
+      ),
       { code: "ACCOUNT_HANDOVER_REQUIRED" },
     );
     // Once its only grant has expired, this account has no active custody to
@@ -862,6 +979,7 @@ test("deactivation does not remove the last active platform or municipal respons
           domain,
           account("administrator-b"),
           randomUUID(),
+          proofDigest("administrator-b"),
         )
       ).status,
       "DEACTIVATED",

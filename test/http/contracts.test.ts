@@ -23,6 +23,9 @@ test("all product operations declare shared failures, unique IDs and complete pa
       authentication: {
         handler: unavailable,
         schema: unavailable,
+        verifyDeactivation: unavailable,
+        requestReactivation: unavailable,
+        confirmReactivation: unavailable,
         authenticate: unavailable,
       },
     },
