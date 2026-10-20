@@ -108,6 +108,8 @@ test("one OCI artifact migrates and runs isolated shared and dedicated installat
             "exec",
             db,
             "pg_isready",
+            "-h",
+            "127.0.0.1",
             "-U",
             "quenda_bootstrap",
             "-d",
