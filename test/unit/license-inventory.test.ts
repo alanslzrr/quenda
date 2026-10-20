@@ -70,6 +70,27 @@ test("license inventory reports evidence hashes and gaps without exposing filesy
     const withReadme = await licenseInventory(new Set([b, a]), new Set([a]));
     assert.equal(withReadme.status, "EVIDENCE_COLLECTED");
     assert.equal(withReadme.packages[1]?.evidence[0]?.file, "README.md");
+    await writeFile(
+      path.join(a, "ROME-LICENSE-MIT"),
+      "Preserved legacy permission",
+    );
+    await writeFile(
+      path.join(a, "ThirdPartyNoticeText.txt"),
+      "Preserved upstream third-party notices",
+    );
+    const expanded = await licenseInventory(new Set([a]), new Set([a]));
+    assert.deepEqual(
+      expanded.packages[0]?.evidence.map((item) => item.file),
+      ["LICENSE", "ROME-LICENSE-MIT", "ThirdPartyNoticeText.txt"],
+    );
+    await rm(path.join(b, "README.md"));
+    await writeFile(
+      path.join(b, "NOTICE"),
+      "Attribution without permission text",
+    );
+    const noticeOnly = await licenseInventory(new Set([b]), new Set([b]));
+    assert.equal(noticeOnly.status, "REVIEW_REQUIRED");
+    assert.equal(noticeOnly.packages[0]?.evidence[0]?.file, "NOTICE");
     await writeFile(path.join(a, "package.json"), "invalid JSON");
     await assert.rejects(licenseInventory(new Set([a]), new Set()));
   } finally {

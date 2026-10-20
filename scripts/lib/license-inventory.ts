@@ -46,9 +46,10 @@ export async function licenseInventory(all: Set<string>, runtime: Set<string>) {
     }
     const manifest = JSON.parse(source);
     const evidence = [];
+    let hasLicenseText = false;
     for (const filename of (await readdir(root)).sort()) {
       if (
-        !/^(licen[sc]e|copying|notice)([.-]|$)/i.test(filename) &&
+        !/licen[sc]e|copying|notice/i.test(filename) &&
         !/^readme([.-]|$)/i.test(filename)
       )
         continue;
@@ -63,6 +64,7 @@ export async function licenseInventory(all: Set<string>, runtime: Set<string>) {
         )
       )
         continue;
+      if (readme || /licen[sc]e|copying/i.test(filename)) hasLicenseText = true;
       evidence.push({
         file: filename,
         sha256: createHash("sha256").update(content).digest("hex"),
@@ -74,7 +76,7 @@ export async function licenseInventory(all: Set<string>, runtime: Set<string>) {
       scope: runtime.has(root) ? "runtime" : "development",
       declaredLicense: manifest.license ?? null,
       evidence,
-      reviewRequired: !manifest.license || evidence.length === 0,
+      reviewRequired: !manifest.license || !hasLicenseText,
     });
   }
   packages.sort((a, b) =>
