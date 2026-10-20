@@ -295,3 +295,13 @@ El comando utiliza exclusivamente `quenda_worker`. No requiere configuración de
 El mes debe estar cerrado en la zona del convenio. La evaluación usa su ámbito efectivo, incluye consumos aunque no exista cuota semanal y suprime las métricas si alguna contribución municipal no alcanza diez cuentas distintas. El máximo de procesamiento es 100000 consumos: superar el límite hace fallar la preparación, sin truncar el conjunto ni cambiar el periodo mensual.
 
 La salida contiene únicamente convenio, mes, revisión y corte; no incluye métricas ni sujetos. La evaluación queda almacenada con acceso restringido. Prepararla no autoriza su publicación: la entrega exige las revisiones de riesgo correspondientes y deja constancia del destinatario y de la evaluación entregada.
+
+### Revisión y entrega de informes mensuales
+
+Base: `/api/municipalities/{tenantId}/agreements/{agreementId}/reports/{AAAA-MM}`.
+
+- `GET /review-context?revision=1&recipientTenantId=…&recipientAccountId=…`: devuelve referencias y `historyDigest`, sin métricas ni historial individual. Exige administrador participante y MFA reciente.
+- `POST /reviews`: registra `revision`, destinatario, `expectedHistoryDigest`, decisión `APPROVE`/`REJECT` y referencias `auxiliaryReference`, `ownDataReference`, `priorReleasesReference` y `correctionReference`. Esta última puede ser `null` solo en la primera revisión. Exige administrador, MFA reciente, Origin e `Idempotency-Key`.
+- `GET` sobre la base: entrega el último informe autorizado al usuario autenticado, con `REPORT_READ` municipal y MFA. No admite filtros ni selección de revisiones. Registra la entrega en la misma transacción; si falla ese registro, no devuelve el informe.
+
+Todas las respuestas usan `Cache-Control: no-store`. La entrega necesita capacidad vigente y revisiones favorables de todos los municipios participantes, vinculadas al destinatario, evaluación e información previamente entregada. Un nuevo rechazo impide entregas posteriores. Sin autorización de publicación, devuelve únicamente `{"status":"NOT_PUBLISHABLE"}`, sin métricas, ceros ni causas. Las referencias de revisión documentan la evaluación humana del riesgo; no certifican automáticamente anonimato.

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
 import test from "node:test";
 import { buildApp } from "../../src/app.ts";
+import { transaction } from "../../src/database/transaction.ts";
 import { createAuthentication } from "../../src/modules/identity/index.ts";
 import type { MailMessage } from "../../src/shared/mail.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
@@ -527,6 +528,142 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         null,
       );
 
+      const monthlyAgreement = randomUUID();
+      await transaction(migration, async (c) => {
+        await c.query(
+          "INSERT INTO domain.agreement(id,name,timezone,created_by,created_by_tenant) VALUES($1,'Monthly fixture','Europe/Madrid',$2,$3)",
+          [monthlyAgreement, accountId, tenant],
+        );
+        await c.query(
+          "INSERT INTO domain.agreement_version(agreement_id,version,status,starts_at,ends_at,purpose,legal_basis,responsibilities,retention_policy,eligibility,aggregate_reports,created_by,correlation_id) VALUES($1,1,'ACTIVADO','2024-01-01T00:00:00Z','2040-01-01T00:00:00Z','Purpose','Basis','Responsibility','Policy','acceso_abierto',true,$2,$3)",
+          [monthlyAgreement, accountId, randomUUID()],
+        );
+        await c.query(
+          "INSERT INTO domain.agreement_participant VALUES($1,1,$2,false)",
+          [monthlyAgreement, tenant],
+        );
+        await c.query(
+          "INSERT INTO domain.agreement_activation(agreement_id,version,effective_period,activated_by,correlation_id) VALUES($1,1,'[2024-01-01T00:00:00Z,2040-01-01T00:00:00Z)',$2,$3)",
+          [monthlyAgreement, accountId, randomUUID()],
+        );
+        await c.query(
+          "INSERT INTO domain.monthly_assessment(agreement_id,month_start,revision,cutoff,control_version,source_digest,participants,status,reservations,reserved_minutes) VALUES($1,'2024-03-01',1,now(),1,$2,$3,'THRESHOLD_MET',20,1200)",
+          [monthlyAgreement, "a".repeat(64), [tenant]],
+        );
+      });
+      const monthlyUrl = `${url}/${monthlyAgreement}/reports/2024-03`;
+      const contextUrl = `${monthlyUrl}/review-context?revision=1&recipientTenantId=${tenant}&recipientAccountId=${encodeURIComponent(accountId)}`;
+      const unpublished = await client.request(monthlyUrl);
+      assert.equal(unpublished.statusCode, 200, unpublished.body);
+      assert.deepEqual(unpublished.json(), { status: "NOT_PUBLISHABLE" });
+      assert.equal(unpublished.headers["cache-control"], "no-store");
+      assert.equal((await app.inject({ url: monthlyUrl })).statusCode, 401);
+      assert.equal(
+        (await client.request(`${monthlyUrl}?unitId=${unit}`)).statusCode,
+        400,
+      );
+      const contextResponse = await client.request(contextUrl);
+      assert.equal(contextResponse.statusCode, 200, contextResponse.body);
+      assert.deepEqual(
+        Object.keys(contextResponse.json()).sort(),
+        [
+          "agreementId",
+          "month",
+          "revision",
+          "recipientTenantId",
+          "recipientAccountId",
+          "historyDigest",
+        ].sort(),
+      );
+      const reviewBody = {
+        revision: 1,
+        recipientTenantId: tenant,
+        recipientAccountId: accountId,
+        expectedHistoryDigest: contextResponse.json().historyDigest,
+        decision: "APPROVE",
+        auxiliaryReference: "risk/auxiliary",
+        ownDataReference: "risk/own",
+        priorReleasesReference: "risk/previous",
+        correctionReference: null,
+      };
+      const reviewUrl = `${monthlyUrl}/reviews`,
+        reviewHeaders = { "idempotency-key": "monthly-review" };
+      const missingOrigin = await app.inject({
+        method: "POST",
+        url: reviewUrl,
+        payload: reviewBody,
+        headers: { ...reviewHeaders, cookie: client.cookie() },
+      });
+      assert.equal(missingOrigin.statusCode, 403, missingOrigin.body);
+      assert.equal(
+        (await client.request(reviewUrl, reviewBody)).statusCode,
+        400,
+      );
+      assert.equal(
+        (
+          await client.request(
+            reviewUrl,
+            { ...reviewBody, sourceDigest: "a".repeat(64) },
+            reviewHeaders,
+          )
+        ).statusCode,
+        400,
+      );
+      await auth.query(
+        `UPDATE auth.session SET "mfaVerifiedAt"=now()-interval '6 minutes' WHERE "userId"=$1`,
+        [accountId],
+      );
+      assert.equal((await client.request(contextUrl)).statusCode, 403);
+      assert.equal(
+        (await client.request(reviewUrl, reviewBody, reviewHeaders)).statusCode,
+        403,
+      );
+      await auth.query(
+        'UPDATE auth.session SET "mfaVerifiedAt"=now() WHERE "userId"=$1',
+        [accountId],
+      );
+      const reviewed = await client.request(
+        reviewUrl,
+        reviewBody,
+        reviewHeaders,
+      );
+      assert.equal(reviewed.statusCode, 200, reviewed.body);
+      const replayReview = await client.request(
+        reviewUrl,
+        reviewBody,
+        reviewHeaders,
+      );
+      assert.equal(replayReview.statusCode, 200, replayReview.body);
+      assert.equal(replayReview.headers["idempotency-replayed"], "true");
+      assert.deepEqual(replayReview.json(), reviewed.json());
+      const delivered = await replica.inject({
+        url: monthlyUrl,
+        headers: { cookie: client.cookie() },
+      });
+      assert.equal(delivered.statusCode, 200, delivered.body);
+      assert.equal(delivered.json().status, "PUBLISHABLE");
+      assert.equal(delivered.json().reservations, 20);
+      assert.equal(delivered.json().reservedMinutes, 1200);
+      assert.ok(!delivered.body.includes(accountId));
+      assert.equal(delivered.headers["cache-control"], "no-store");
+      assert.equal(
+        (await client.request(reviewUrl, reviewBody, reviewHeaders)).statusCode,
+        409,
+      );
+      const updatedContext = await client.request(contextUrl);
+      const rejectedReview = await client.request(
+        reviewUrl,
+        {
+          ...reviewBody,
+          expectedHistoryDigest: updatedContext.json().historyDigest,
+          decision: "REJECT",
+        },
+        { "idempotency-key": "monthly-reject" },
+      );
+      assert.equal(rejectedReview.statusCode, 200, rejectedReview.body);
+      assert.deepEqual((await client.request(monthlyUrl)).json(), {
+        status: "NOT_PUBLISHABLE",
+      });
       await migration.query(
         "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1 AND account_id=$2",
         [tenant, accountId],
@@ -566,6 +703,12 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
           .statusCode,
         403,
       );
+      assert.equal((await client.request(monthlyUrl)).statusCode, 403);
+      assert.equal((await client.request(contextUrl)).statusCode, 403);
+      assert.equal(
+        (await client.request(reviewUrl, reviewBody, reviewHeaders)).statusCode,
+        403,
+      );
       assert.equal((await client.request(restrictionUrl)).statusCode, 403);
       assert.equal((await client.request(detailUrl)).statusCode, 403);
       assert.equal((await client.request(url)).statusCode, 403);
@@ -575,8 +718,12 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       );
       assert.equal((await client.request(url, input, headers)).statusCode, 401);
       assert.equal((await client.request(detailUrl)).statusCode, 401);
+      assert.equal((await client.request(monthlyUrl)).statusCode, 401);
       const spec = app.swagger() as { paths: Record<string, unknown> };
       for (const path of [
+        "/api/municipalities/{tenantId}/agreements/{agreementId}/reports/{month}",
+        "/api/municipalities/{tenantId}/agreements/{agreementId}/reports/{month}/review-context",
+        "/api/municipalities/{tenantId}/agreements/{agreementId}/reports/{month}/reviews",
         "/api/municipalities/{tenantId}/agreements",
         "/api/municipalities/{tenantId}/agreements/{agreementId}/versions",
         "/api/municipalities/{tenantId}/agreements/{agreementId}/approve",
