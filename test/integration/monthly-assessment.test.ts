@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { transaction } from "../../src/database/transaction.ts";
-import { assessPersistedMonthlyAggregate } from "../../src/modules/collaboration/monthly-assessment.ts";
+import {
+  assessPersistedMonthlyAggregate,
+  prepareMonthlyAssessment,
+} from "../../src/modules/collaboration/monthly-assessment.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
 test("worker monthly assessment scopes attributed bookings without quota or public identifier access", {
@@ -91,6 +94,74 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
     });
     assert.ok(!JSON.stringify(result).includes("report-"));
     assert.ok(tenants.every((t) => !JSON.stringify(result).includes(t)));
+    const first = await prepareMonthlyAssessment(
+      worker,
+      agreement,
+      "2024-03",
+      0,
+    );
+    assert.equal(first.revision, 1);
+    assert.deepEqual(first.assessment, result.assessment);
+    const corrections = await Promise.allSettled([
+      prepareMonthlyAssessment(worker, agreement, "2024-03", 1),
+      prepareMonthlyAssessment(worker, agreement, "2024-03", 1),
+    ]);
+    assert.equal(corrections.filter((r) => r.status === "fulfilled").length, 1);
+    const loser = corrections.find((r) => r.status === "rejected");
+    assert.ok(loser && loser.status === "rejected");
+    assert.equal(loser.reason.code, "CONFLICT");
+    const saved = (
+      await migration.query(
+        "SELECT revision,status,reservations,reserved_minutes,source_digest,control_version,participants,cutoff,created_at FROM domain.monthly_assessment WHERE agreement_id=$1 ORDER BY revision",
+        [agreement],
+      )
+    ).rows;
+    assert.deepEqual(
+      saved.map((r) => r.revision),
+      [1, 2],
+    );
+    assert.ok(
+      saved.every(
+        (r) =>
+          r.status === "THRESHOLD_MET" &&
+          r.reservations === 20 &&
+          r.reserved_minutes === 1200 &&
+          r.control_version === 1,
+      ),
+    );
+    assert.ok(
+      saved.every(
+        (r) =>
+          /^[0-9a-f]{64}$/.test(r.source_digest) && r.cutoff <= r.created_at,
+      ),
+    );
+    assert.deepEqual([...saved[0].participants].sort(), [...tenants].sort());
+    await assert.rejects(
+      worker.query("SELECT * FROM domain.monthly_assessment"),
+      { code: "42501" },
+    );
+    await assert.rejects(
+      domain.query("SELECT * FROM domain.monthly_assessment"),
+      { code: "42501" },
+    );
+    await assert.rejects(
+      prepareMonthlyAssessment(domain, agreement, "2024-03", 2),
+      { code: "FORBIDDEN" },
+    );
+    await assert.rejects(
+      migration.query(
+        "UPDATE domain.monthly_assessment SET reservations=0 WHERE agreement_id=$1",
+        [agreement],
+      ),
+      { code: "23514" },
+    );
+    await assert.rejects(
+      migration.query(
+        "DELETE FROM domain.monthly_assessment WHERE agreement_id=$1",
+        [agreement],
+      ),
+      { code: "23514" },
+    );
     await assert.rejects(
       assessPersistedMonthlyAggregate(domain, agreement, "2024-03"),
       { code: "FORBIDDEN" },
@@ -115,6 +186,32 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
       (await assessPersistedMonthlyAggregate(worker, agreement, "2024-03"))
         .assessment,
       { status: "NOT_PUBLISHABLE" },
+    );
+    const suppressed = await prepareMonthlyAssessment(
+      worker,
+      agreement,
+      "2024-03",
+      2,
+    );
+    assert.equal(suppressed.revision, 3);
+    assert.deepEqual(suppressed.assessment, { status: "NOT_PUBLISHABLE" });
+    assert.deepEqual(
+      (
+        await migration.query(
+          "SELECT status,reservations,reserved_minutes FROM domain.monthly_assessment WHERE agreement_id=$1 AND revision=3",
+          [agreement],
+        )
+      ).rows[0],
+      { status: "NOT_PUBLISHABLE", reservations: null, reserved_minutes: null },
+    );
+    assert.equal(
+      (
+        await migration.query(
+          "SELECT reservations FROM domain.monthly_assessment WHERE agreement_id=$1 AND revision=1",
+          [agreement],
+        )
+      ).rows[0].reservations,
+      20,
     );
     await migration.query(
       "UPDATE domain.agreement_consumption SET released=false WHERE agreement_id=$1",
