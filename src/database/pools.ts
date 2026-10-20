@@ -23,6 +23,14 @@ export async function assertRuntimeRole(pool: Pool): Promise<void> {
     throw new Error("Unsafe database role");
 }
 
+export async function assertPrivacyOperational(pool: Pool): Promise<void> {
+  const privacy = await pool.query<{ ready: boolean }>(
+    "SELECT domain.privacy_operational() AS ready",
+  );
+  if (privacy.rows[0]?.ready !== true)
+    throw new Error("Privacy recovery review required");
+}
+
 export function createDatabases(config: Config) {
   const makePool = (connectionString: string) => {
     const pool = new Pool({
@@ -46,6 +54,7 @@ export function createDatabases(config: Config) {
     auth,
     async check() {
       await Promise.all([assertRuntimeRole(domain), assertRuntimeRole(auth)]);
+      await assertPrivacyOperational(domain);
     },
     async close() {
       await Promise.all([domain.end(), auth.end()]);

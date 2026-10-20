@@ -10,6 +10,54 @@ La consulta del historial propio obtiene la cuenta de la sesión y no acepta otr
 
 Las instancias independientes mantienen cuentas y sesiones propias. La federación entre instancias queda fuera del alcance inicial.
 
+## Permisos de privacidad
+
+`PRIVACY_READ` autoriza consultas de privacidad y preparación de copias personales; `PRIVACY_EXECUTE` autoriza políticas, excepciones y actuaciones individuales. Son permisos independientes: ninguno incluye al otro. Las operaciones requieren MFA verificado hace menos de cinco minutos.
+
+| Ámbito | Concesión | Límite |
+|---|---|---|
+| Municipio | El administrador invita mediante el mecanismo de permisos existente; el destinatario acepta con MFA. | Todo el municipio, sin limitar por unidad reservable ni extenderse a otros municipios. |
+| Identidad global | Un operador invita con permisos y motivo explícitos; el destinatario acepta con MFA. | Datos de identidad y seguridad de la instancia, no actividad municipal. |
+
+Ser administrador, operador o disponer de exportación deportiva no concede estos permisos. Un administrador u operador que los necesite recibe y acepta una concesión explícita, igual que cualquier destinatario. La asignación no acredita por sí sola una autorización jurídica para cada actuación ni designa al usuario como delegado de protección de datos.
+
+Las concesiones identifican operaciones y vencimiento opcional; su creación, aceptación y revocación quedan auditadas. Ampliar sus permisos exige otra aceptación. La autorización efectiva se comprueba y bloquea durante cada transacción. La baja o suspensión global revoca las concesiones propias e invalida invitaciones pendientes; la recuperación de la cuenta no las restituye.
+
+**Justificación:** separar consulta y ejecución evita que la gestión deportiva habilite descargas personales o supresiones. El permiso global no sirve para eludir el aislamiento municipal.
+
+## Acceso y actualización de datos
+
+### Descarga personal
+
+El usuario autenticado obtiene una descarga JSON `quenda.personal-data`, versión 1, con los campos disponibles de su cuenta, perfiles, reservas, comunicaciones, permisos y acreditaciones. La cuenta se toma de la sesión; la descarga ordinaria puede reunir sus datos de varios municipios, sin otorgar esa consulta conjunta al personal municipal.
+
+La preparación administrativa exige `PRIVACY_READ`, MFA reciente, motivo y referencia de autorización:
+
+- La municipal entrega únicamente datos del municipio autorizado.
+- La global entrega identidad y seguridad, sin actividad municipal.
+- Ambas pueden atender a una cuenta desactivada o suspendida sin reactivarla.
+
+Cada entrega registra actor, interesado, ámbito, instante y número de registros. Excluye contraseñas, secretos MFA, códigos de recuperación y tokens. El contenido bloqueado no se incorpora; la descarga identifica las categorías restringidas.
+
+La respuesta declara `PARTIAL` y `legalAccessResponseComplete: false`. La revisión de texto libre, información de terceros, otras evidencias e información del responsable se tramita por la vía administrativa. No se presenta la descarga como portabilidad RGPD ni como resolución completa de un derecho. El acceso incluye información sobre el tratamiento además de una copia de datos. [AEPD: derecho de acceso](https://www.aepd.es/derechos-y-deberes/conoce-tus-derechos/derecho-de-acceso).
+
+La generación observa una transacción coherente y admite hasta 10.000 registros proyectados y 10 MiB de contenido. Si excede el límite, no entrega un archivo truncado: indica que la preparación requiere intervención administrativa.
+
+### Actualización y cambio de correo
+
+El usuario actualiza sus campos permitidos sin modificar identificadores ni evidencias históricas de una reserva. El correo pertenece a la identidad global y sigue esta secuencia:
+
+1. Confirma la contraseña actual y, si tiene MFA, una verificación realizada hace menos de cinco minutos.
+2. Autoriza el cambio desde el correo actual.
+3. Verifica el nuevo correo.
+4. El sistema aplica el cambio atómicamente, revoca las sesiones y registra la operación.
+
+Los enlaces son de un solo uso, caducan y quedan vinculados a la cuenta, solicitud y credenciales. Cambiar contraseña, factores, correo o estado de cuenta invalida las comprobaciones anteriores. El correo no se sustituye mientras falte una confirmación.
+
+Si el usuario perdió acceso al correo anterior, una intervención operativa controlada comprueba su identidad y registra responsable, evidencia y motivo. El usuario debe verificar el nuevo correo y sus credenciales; la intervención no acepta esos controles en su nombre. Ningún permiso municipal permite cambiar unilateralmente el correo global.
+
+La conservación y las actuaciones individuales se rigen por el [modelo de dominio](02_modelo_dominio.md#conservación-y-derechos). No existe una operación de «abandonar municipio» ni un gestor de solicitudes RGPD separado.
+
 ## Gobierno del convenio
 
 El convenio define identificador estable, versiones, municipios participantes, unidades reservables, capacidades, finalidad, base jurídica, responsables, vigencia, zona IANA, emisores de acreditaciones, cuota y políticas de informes y conservación. Cada unidad pertenece a un único municipio gestor y, durante un intervalo, a un máximo de un convenio.
@@ -148,3 +196,5 @@ flowchart TB
 Una unidad adscrita no pasa a acceso abierto al vencer o suspenderse el convenio. El sistema rechaza nuevas reservas y reprogramaciones; mantiene las confirmadas y permite su consulta o cancelación conforme a sus condiciones.
 
 Reabrir la unidad fuera del convenio exige configuración municipal explícita y respeta las ocupaciones existentes. La finalización termina el acceso compartido y conserva únicamente las evidencias exigidas por la política aplicable, sin redistribuir historiales.
+
+Una política municipal no autoriza a destruir consumos, acreditaciones o referencias compartidas de otros participantes. La API municipal devuelve un conflicto y conserva esas evidencias para revisión conjunta; no ejecuta su supresión unilateral. El vencimiento del convenio tampoco constituye un permiso de borrado.

@@ -40,7 +40,7 @@ export async function registerManagerRoutes(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Administrador con MFA reciente: invita con operaciones y unidades explícitas. unitId nulo delimita todo el municipio; CATALOG_CREATE solo admite ámbito municipal.",
+          "Administrador con MFA reciente: invita con operaciones y unidades explícitas. unitId nulo delimita todo el municipio; CATALOG_CREATE, PRIVACY_READ y PRIVACY_EXECUTE solo admiten ámbito municipal. Los permisos de privacidad requieren concesión explícita incluso para administradores.",
         params: {
           type: "object",
           additionalProperties: false,

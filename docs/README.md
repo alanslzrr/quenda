@@ -8,7 +8,7 @@ Quenda gestiona la consulta y reserva de instalaciones deportivas municipales. E
 |---|---|
 | [01 Requisitos](01_requisitos.md) | Alcance, actores y requisitos funcionales y no funcionales. |
 | [02 Modelo de dominio](02_modelo_dominio.md) | Entidades, invariantes, estados y configuración municipal. |
-| [03 Procesos y secuencias](03_procesos_y_secuencias.md) | Registro, administración, reservas, avisos e indicadores. |
+| [03 Procesos y secuencias](03_procesos_y_secuencias.md) | Registro, administración, reservas, avisos, indicadores y conservación. |
 | [04 Arquitectura](04_arquitectura.md) | Componentes, decisiones técnicas y despliegue. |
 | [05 Seguridad y cumplimiento](05_seguridad_y_cumplimiento.md) | Autorización, aislamiento, privacidad y accesibilidad. |
 | [06 Validación](06_decisiones_y_validacion.md) | Pruebas de aceptación, rendimiento y requisitos de implantación. |

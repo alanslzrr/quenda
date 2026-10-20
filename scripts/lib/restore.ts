@@ -75,6 +75,23 @@ export async function restoreBackup(
     );
     if (result.stderr.trim())
       throw new Error("Restore diagnostics require review");
+    // Keep an application-level privacy gate even if a DBA subsequently changes
+    // CONNECT or the database connection limit during recovery checks.
+    const destination = new Client({
+      connectionString: (() => {
+        const value = new URL(connection);
+        value.pathname = `/${database}`;
+        return value.toString();
+      })(),
+    });
+    try {
+      await destination.connect();
+      await destination.query(
+        "UPDATE domain.retention_control SET restore_review_required=true,privacy_replayed_at=NULL,privacy_checkpoint_sha256=NULL WHERE id",
+      );
+    } finally {
+      await destination.end();
+    }
     return {
       database,
       sha256,

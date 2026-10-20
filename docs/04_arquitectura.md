@@ -75,6 +75,8 @@ La transacción de reserva guarda los eventos pendientes en una outbox. Un worke
 
 El consumidor recupera concesiones vencidas y mantiene el orden por reserva. La entrega externa admite duplicados y no garantiza recepción por el destinatario.
 
+El mismo proceso ejecuta lotes acotados de conservación. Selecciona registros ordinarios conforme a políticas aprobadas del ámbito y destruye archivos bloqueados conforme a su autorización y fecha de destrucción, respetando las excepciones vigentes. Registra resultados y separa los conflictos para revisión. Las actuaciones de datos, su evidencia y el archivo restringido comparten transacción. No se añade otro servicio ni un planificador externo.
+
 ## ADR-08 Frontend
 
 El frontend es una SPA con React 19, TypeScript y Vite. Utiliza React Router para navegación, TanStack Query para estado remoto, CSS Modules y CSS custom properties para estilos, Radix UI Primitives para interacciones accesibles, Motion para animaciones y Lucide React para iconos. Las tipografías son Geist e Inter; pnpm gestiona las dependencias. Los componentes son propios y no dependen de Tailwind.
@@ -111,7 +113,7 @@ Las acreditaciones y los consumos compartidos siguen sujetos a protección de da
 
 ```mermaid
 flowchart TB
-  Fuente["Código, migraciones y versión"] --> Artefactos["Web React · API Fastify · consumidor de avisos"]
+  Fuente["Código, migraciones y versión"] --> Artefactos["Web React · API Fastify · worker de avisos y conservación"]
   Terraform["Terraform<br/>Módulos por proveedor, estado separado"] --> Config["Configuración y secretos de cada instancia"]
   Artefactos --> Comun
   Config --> Comun
@@ -120,7 +122,7 @@ flowchart TB
     Web --> Negocio["Permisos · catálogo · reservas · colaboración"]
     Auth --> DB[("PostgreSQL<br/>Identidad, datos municipales y convenios<br/>Permisos diferenciados")]
     Negocio --> DB
-    Avisos["Consumidor de outbox"] --> DB
+    Avisos["Outbox y conservación aprobada"] --> DB
     Avisos --> Correo["Canal de avisos"]
   end
   Comun --> Compartida["Instancia compartida<br/>Cuenta global, municipios aislados<br/>Convenios autorizados"]
@@ -128,3 +130,9 @@ flowchart TB
   Compartida -.-> SinFederacion["Sin federación automática entre instancias"]
   Dedicada -.-> SinFederacion
 ```
+
+## ADR-12 Privacidad por ámbito y operaciones cerradas
+
+Las operaciones de privacidad permanecen en identidad y utilizan permisos explícitos, SQL parametrizado y el ejecutor transaccional. La selección de datos procede de manejadores cerrados por familia, no de consultas o reglas ejecutables configurables. El archivo bloqueado tiene permisos de mantenimiento independientes de los roles de ejecución. La exportación personal usa una proyección permitida por campo, no una serialización de tablas completas.
+
+**Justificación:** reutiliza los límites del monolito y permite probar el aislamiento por municipio. Una política legal no se convierte en código arbitrario; ampliar las familias o sus selecciones requiere modificar y probar el manejador. Las referencias intermunicipales sin autorización conjunta producen un conflicto, no una eliminación en cascada.

@@ -272,3 +272,29 @@ La exportación `quenda.reservations`, versión 3, distingue la unidad y versió
 | Modificación o cancelación fuera de plazo | `RESERVATION_DEADLINE_PASSED`; se conservan reserva, ocupación y cuota. |
 | Dependencia no disponible | Fallo o resultado incierto recuperable con la misma clave. |
 | Correo pendiente | Reserva confirmada con estado de aviso separado. |
+
+## D-09 Conservación automática
+
+```mermaid
+sequenceDiagram
+  actor Responsable as Delegado autorizado
+  participant API
+  participant DB as PostgreSQL
+  participant Worker
+  Responsable->>API: Política y referencia de aprobación
+  API->>DB: Comprobar ámbito, permiso y MFA reciente
+  DB-->>API: Política activa y auditoría
+  Worker->>DB: Seleccionar lote vencido
+  loop Cada registro
+    DB->>DB: Comprobar dependencias, excepciones y vigencia
+    alt Conflicto
+      DB->>DB: Señalar para revisión sin eliminar
+    else Actuación autorizada
+      DB->>DB: Eliminar o retirar al archivo bloqueado
+      DB->>DB: Registrar actuación en la misma transacción
+    end
+  end
+  DB-->>Worker: Conteos, sin datos personales
+```
+
+La aprobación configura la ejecución posterior; no exige autorizar de nuevo cada vencimiento. Las políticas de distintos municipios no se sustituyen entre sí. La restitución de una copia anterior exige aplicar las actuaciones posteriores verificadas antes de autorizar el acceso ordinario.

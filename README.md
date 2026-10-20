@@ -84,7 +84,7 @@ Para sustituir una concesión, la nueva invitación incluye `replacesInvitationI
 
 `GET /api/municipalities/{tenantId}/manager-invitations` permite al administrador con MFA reciente consultar las invitaciones y concesiones del municipio. Incluye destinatario, emisor, permisos, referencia de sustitución y fechas de vencimiento, aceptación y revocación. Devuelve hasta 20 elementos y `nextCursor`; la página siguiente utiliza `?after=...`. Las fechas describen el historial y no sustituyen la comprobación de autoridad vigente de cada operación.
 
-Cada permiso se limita a una operación y unidad real del municipio; `unitId: null` abarca el municipio. `CATALOG_CREATE` exige ámbito municipal. Las operaciones admitidas son `CATALOG_CREATE`, `CATALOG_MANAGE`, `RESERVATION_READ`, `RESERVATION_MANAGE`, `UNIT_BLOCK`, `REPORT_READ` y `DATA_EXPORT`. Ninguna concede administración de cuentas.
+Cada permiso se limita a una operación y unidad real del municipio; `unitId: null` abarca el municipio. Las operaciones admitidas son `CATALOG_CREATE`, `CATALOG_MANAGE`, `RESERVATION_READ`, `RESERVATION_MANAGE`, `UNIT_BLOCK`, `REPORT_READ`, `DATA_EXPORT`, `PRIVACY_READ` y `PRIVACY_EXECUTE`. `CATALOG_CREATE` y los permisos de privacidad exigen ámbito municipal. Ninguna concede administración de la identidad global ni acceso a otros municipios.
 
 ## Catálogo en borrador
 
@@ -417,7 +417,7 @@ La copia incluye datos, esquemas, permisos e historial de migraciones de una bas
 
 El destino debe ser un clúster aislado con los cuatro roles de Quenda provisionados con credenciales propias, sin privilegios elevados ni membresías. El comando requiere un administrador PostgreSQL con capacidad de superusuario: la base se crea con límite de conexiones cero y se revoca el acceso público antes de restaurar. No admite reemplazar una base existente ni ejecuta `DROP` o `--clean`. Si falla después de crearla, la base permanece cerrada para su inspección; no se elimina automáticamente.
 
-El resultado `RESTORED_CLOSED` confirma la carga del archivo, no autoriza tráfico. La API y los workers deben permanecer detenidos hasta verificar migraciones, propietarios, permisos y RLS, conciliar reservas/ocupaciones/consumos y revisar avisos pendientes frente a entregas anteriores al incidente. Solo después de aprobar estas comprobaciones se habilitan las conexiones y los permisos mínimos de cada rol. El comando no realiza esa apertura ni reinicia envíos. La recuperación de un despliegue fallido y el procedimiento operativo completo requieren validación adicional.
+El resultado `RESTORED_CLOSED` confirma la carga del archivo, no autoriza tráfico. La API y los workers deben permanecer detenidos hasta verificar migraciones, propietarios, permisos y RLS, conciliar reservas/ocupaciones/consumos y revisar avisos pendientes frente a entregas anteriores al incidente. También se concilian las actuaciones de privacidad posteriores al corte y se revisa la barrera de recuperación. Solo después de aprobar estas comprobaciones se habilitan las conexiones y los permisos mínimos de cada rol. El comando no realiza esa apertura ni reinicia envíos. La recuperación de un despliegue fallido y el procedimiento operativo completo requieren validación adicional.
 
 ### Recuperación de una actualización fallida
 
@@ -458,3 +458,70 @@ Los roles de API, autenticación y worker no pueden leer, alterar ni borrar dire
 `PG_BIN=/ruta/postgresql17/bin pnpm test:performance` crea una base temporal con 3 municipios, 30 unidades y 3.000 reservas históricas sintéticas, autentica 10 sesiones y ejercita HTTP en loopback. Tras 60 segundos de calentamiento separado, programa 3.000 solicitudes en 10 minutos: 70 % consulta de reservas propias, 10 % disponibilidad y 20 % altas de reservas. No omite solicitudes lentas ni cuenta ensayos abreviados como aceptación. `--smoke` reduce únicamente calentamiento y medición para comprobar el montaje; conserva el conjunto de datos completo y nunca aprueba el escenario.
 
 El informe JSON privado en el directorio temporal incluye revisión, cambios pendientes, entorno, muestras, percentiles, errores, abortos, conexiones y retraso de avisos. El correo usa transporte sintético sin latencia externa. Para aprobar exige una revisión limpia, todas las solicitudes válidas, los límites p95 definidos y ausencia de avisos sin aceptar al terminar la espera acotada. Los resultados describen este equipo y esta mezcla de operaciones, no un SLA ni capacidad del proveedor de correo o de otros endpoints.
+
+## Privacidad y conservación
+
+Los permisos `PRIVACY_READ` y `PRIVACY_EXECUTE` son explícitos, requieren MFA reciente y no se heredan del rol de administrador u operador. Para un municipio se conceden mediante las invitaciones de gestores, con `unitId: null`. La concesión global utiliza `/api/platform/privacy-invitations` y requiere aceptación del destinatario; solo cubre identidad y evidencias globales, no actividad municipal. Una baja o suspensión retira las concesiones y no las recupera automáticamente.
+
+### Descarga personal
+
+- `GET /api/me/personal-data`: JSON `quenda.personal-data` v1 con la proyección accesible del titular entre municipios.
+- `POST /api/municipalities/{tenantId}/accounts/{accountId}/personal-data`: proyección municipal con `PRIVACY_READ` del municipio.
+- `POST /api/platform/accounts/{accountId}/personal-data`: proyección global con permiso global explícito, sin historiales municipales.
+
+Las dos vías administrativas reciben `reason` y `authorizationReference`. Admiten cuentas desactivadas sin reactivarlas. Todas las respuestas indican `completeness.status: PARTIAL`, las exclusiones y la revisión administrativa necesaria. No se entregan secretos ni texto libre sin revisión. Superar 10.000 registros o 10 MiB devuelve `409 PERSONAL_DATA_TOO_LARGE`, sin truncar. La descarga no acredita por sí sola una respuesta completa al derecho de acceso ni la aplicabilidad del derecho de portabilidad.
+
+### Cambio de correo
+
+1. `POST /api/me/email-change/request`, con `newEmail` y contraseña actual, envía la autorización al correo actual.
+2. `POST /api/me/email-change/approve`, con el token recibido, consume esa autorización y envía la verificación al nuevo correo.
+3. `POST /api/me/email-change/confirm`, con el segundo token, cambia el correo y revoca todas las sesiones. Hay que iniciar sesión con la nueva dirección.
+
+El autoservicio mantiene la sesión original y exige MFA reciente cuando esté habilitado. Los tokens caducan a los diez minutos y no sobreviven a cambios incompatibles de credenciales o estado. Los enlaces transportan el token en el fragmento; ningún GET confirma el cambio. La ruta nativa `/api/auth/change-email` no se expone.
+
+Si el usuario perdió el buzón anterior, `pnpm email:recover <cuenta> <nuevo-correo> <responsable-operativo> <referencia-verificación> <motivo>` inicia el procedimiento asistido con credenciales de mantenimiento y configuración de correo. No cambia la identidad inmediatamente: el titular confirma el nuevo buzón, contraseña y MFA desde una sesión propia. No reactiva cuentas ni recupera permisos.
+
+### Políticas y actuaciones
+
+Bases de API: `/api/municipalities/{tenantId}` y `/api/platform`. El ámbito global solo admite `IDENTITY`, `AUTHENTICATION` y `AUTHORITY`.
+
+| Operación | Ruta relativa | Permiso |
+|---|---|---|
+| Aprobar una política | `POST /retention-policies` | `PRIVACY_EXECUTE` |
+| Consultar políticas | `GET /retention-policies` | `PRIVACY_READ` |
+| Retirar una política | `POST /retention-policies/{policyId}/revoke` | `PRIVACY_EXECUTE` |
+| Registrar una excepción de conservación | `POST /retention-holds` | `PRIVACY_EXECUTE` |
+| Levantar una excepción | `POST /retention-holds/{holdId}/release` | `PRIVACY_EXECUTE` |
+| Consultar excepciones y conflictos | `GET /retention-status` | `PRIVACY_READ` |
+| Ejecutar una actuación individual autorizada | `POST /privacy-actions` | `PRIVACY_EXECUTE` |
+
+La política recibe `category`, `retentionDays`, `action`, `purpose`, `controllerReference`, `approvalReference` y `reason`. `BLOCK` exige además `blockDays`; `ERASE` no lo admite. Los periodos son días completos de 24 horas desde el anclaje definido para la familia, sin valores legales predeterminados. Una nueva aprobación sustituye la política activa de esa familia y ámbito. El límite técnico de 365.000 días no es una recomendación de conservación. No se ejecutan scripts, SQL ni selectores libres introducidos por un administrador.
+
+| Familia | Selección y anclaje |
+|---|---|
+| `COMMUNICATIONS` | Aviso, cola e intentos de un evento; última actividad del conjunto. Un envío con concesión vigente impide la actuación. |
+| `RESERVATIONS` | Reserva, ocupaciones e historial; fin de la reserva o último evento, el posterior. Se preservan comunicaciones aún retenidas, idempotencia vigente y referencias compartidas. |
+| `MUNICIPAL_PROFILE` | Perfil sin dependencias protegidas; última actividad municipal conservada. Suprimirlo no cierra la cuenta global. |
+| `AUTHORITY` | Permisos e invitaciones retirados o vencidos, y evidencias asociadas; último hecho del conjunto. Los accesos de privacidad y rechazos globales se tratan por evento independiente. |
+| `ACCREDITATIONS` | Acreditación vencida o revocada; revocación, si existe, o fin de vigencia en otro caso. Las evidencias compartidas requieren revisión de los responsables. |
+| `AUTHENTICATION` | Eventos de seguridad cerrados y artefactos técnicos vencidos; hecho registrado o vencimiento. No elimina credenciales activas por antigüedad. |
+| `IDENTITY` | Cuenta dada de baja; instante de baja, sin autoridad, conflictos de seguridad ni evidencia municipal dependiente. Retira acceso y datos directos; los identificadores residuales no se consideran anónimos. |
+
+El worker existente revisa la conservación cada minuto en lotes acotados. La selección de registros ordinarios requiere una política aprobada. Los archivos bloqueados siguen su autorización y fecha de destrucción, aunque procedan de una actuación individual o la política original ya no esté activa. Cada actuación respeta las excepciones, vuelve a comprobar el estado y confirma cambios y auditoría en una transacción. Los conflictos se registran sin eliminar el conjunto afectado; se reevalúan con espera para que no impidan avanzar a otros registros. Cada municipio puede tener periodos distintos en la misma instancia.
+
+`BLOCK` retira el registro de las consultas ordinarias y guarda el contenido necesario en `retention_archive`, inaccesible a los roles de ejecución. No copia secretos de autenticación. La destrucción posterior utiliza la fecha aprobada y respeta excepciones vigentes. `domain.read_blocked_privacy_record` solo está disponible en mantenimiento y exige referencia de autorización, finalidad legal y correlación; registra el acceso. El responsable debe verificar que la consulta excepcional esté legalmente permitida.
+
+Una excepción identifica `category` y exactamente uno de `targetKey` o `subjectId`, junto con `authorizationReference` y `reason`. Impide la eliminación correspondiente; no bloquea por sí sola el uso ordinario de los datos. La actuación individual recibe categoría, registro, acción, referencia de autorización y motivo, más `blockDays` cuando corresponda. Su respuesta diferencia `APPLIED`, `CONFLICT` y `ABSENT`: HTTP 200 confirma una evaluación auditada, no necesariamente una eliminación. No sustituye la tramitación administrativa de una solicitud de derechos.
+
+### Recuperación sin rehabilitar datos suprimidos
+
+```sh
+pnpm privacy:checkpoint /directorio-privado/privacidad.json
+RESTORE_ADMIN_DATABASE_URL=… pnpm privacy:restore-reconcile /directorio-privado/privacidad.json SHA256 REFERENCIA_AUTORIZACION
+```
+
+El checkpoint utiliza credenciales de mantenimiento, un destino nuevo con modo `0600` y un checksum. Contiene referencias de actuaciones y excepciones, no contenidos bloqueados ni secretos. Debe conservarse fuera de las copias antiguas y actualizarse mediante el procedimiento operativo de respaldo. Su procedencia y actualidad se comprueban por separado: un hash no demuestra que el archivo sea el último. La ausencia de evidencia actual impide autorizar la reapertura.
+
+`db:restore` activa `restore_review_required`, además de cerrar conexiones. API y workers rechazan el arranque mientras esté activo, aunque se hayan vuelto a conceder permisos de conexión. La conciliación de privacidad reproduce eliminaciones y bloqueos del checkpoint, conserva su evidencia para futuras copias y deja las políticas restauradas desactivadas para revisión. No abre el servicio ni presume resueltos conflictos de conservación.
+
+El responsable operativo debe verificar el checkpoint más reciente, resolver diferencias con los responsables del tratamiento, revisar políticas y excepciones y completar `db:reconcile` antes de retirar la barrera de recuperación mediante mantenimiento autorizado. Los comandos no realizan esa autorización. El diario contiene referencias personales; su retirada se coordina con la caducidad de las copias recuperables y la política de conservación, no con una eliminación automática por antigüedad arbitraria.

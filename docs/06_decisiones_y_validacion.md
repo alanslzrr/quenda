@@ -19,10 +19,10 @@ Cada prueba registra versión del sistema, datos, entorno, resultado y evidencia
 | T-11 | RF-14, RF-17 | Registro, invitaciones y cambios persisten tras reiniciar; rechazan entradas inválidas, duplicados y aumentos de permisos. Cerrar sesión impide reutilizarla. La baja exige contraseña actual y MFA reciente cuando esté habilitado; rechaza reservas futuras o en curso de cualquier municipio. Revoca sesiones y autoridad propia y se coordina con accesos, cambios de credenciales y reservas concurrentes. Reactivar verifica contraseña, correo y MFA sin restaurar permisos ni levantar suspensiones. Relevo, retirada por seguridad y recuperación preservan sus ámbitos y auditoría. |
 | T-12 | RF-18; RNF-07 | La exportación v3 contiene el periodo y entidades autorizados, con normas aceptadas, pendientes y ausencia explícita de evidencia. Su esquema versionado puede validarse con herramientas independientes. |
 | T-13 | RNF-04, RNF-05, RNF-15 | Teclado, lector de pantalla, contraste, zoom, móvil, movimiento reducido y traducciones permiten completar todos los flujos sin depender solo de color o arrastre. |
-| T-14 | RNF-03, RNF-11 | Se verifican minimización, conservación, derechos, auditoría y ausencia de secretos en registros. |
+| T-14 | RF-25–RF-29; RNF-03, RNF-11 | Se verifican permisos explícitos de privacidad, MFA reciente, políticas independientes por municipio, ausencia de ejecución sin aprobación, excepciones, bloqueo, eliminación y auditoría atómica. La descarga personal declara sus exclusiones; el cambio de correo exige los dos buzones y no admite pruebas obsoletas. |
 | T-15 | RNF-06, RNF-12 | Se respetan los límites entre módulos y se comprueban dependencias, licencias y atribuciones. |
 | T-16 | RNF-09, RNF-13 | El escenario de rendimiento mide latencia, errores y capacidad, separando calentamiento y contención. |
-| T-17 | RNF-10, RNF-14 | La restauración aislada conserva integridad, permisos, convenios, consumos y eventos; la recuperación de un despliegue fallido incluye migraciones y datos. |
+| T-17 | RNF-10, RNF-14 | La restauración aislada conserva integridad, permisos, convenios, consumos y eventos. Una copia anterior a una supresión permanece cerrada hasta contrastar y reproducir el diario externo; repetir la conciliación no duplica archivos ni pierde las actuaciones en el siguiente checkpoint. |
 | T-18 | RNF-07, RNF-08, RNF-14 | Se reconstruye el sistema en otro proveedor, se restauran datos y se registran las adaptaciones necesarias. |
 | T-19 | RF-15 | Se verifica el mecanismo y la evidencia establecidos al resolver PD-AUTH-PUBLICA. |
 | T-20 | RF-02–RF-05, RF-11 | Se prueban antelación, cambios horarios e intervalos contiguos; plazo de cancelación 0, 1.440 y otro valor, igualdad con el límite y vencimiento mientras se espera un bloqueo. Las reservas de última hora exigen aceptación de no cancelación. Las normas pendientes pueden aceptarse fuera del plazo de modificación, pero nunca desde el inicio. |
@@ -50,7 +50,7 @@ La medición registra cliente, región, capacidad asignada, p50/p95/p99, errores
 
 La implantación requiere artefactos reproducibles, migraciones versionadas, configuración de entorno, contratos API, pruebas de aceptación, manual operativo, alertas y restauración verificada. El despliegue identifica responsables, capacidad, contratos y validación municipal.
 
-El procedimiento de recuperación comprueba reservas, ocupaciones y cuotas antes de reabrir el servicio. Si el RPO admite pérdida de datos, concilia las reservas confirmadas que puedan verse afectadas. [PostgreSQL: replicación y durabilidad](https://www.postgresql.org/docs/current/warm-standby.html#SYNCHRONOUS-REPLICATION).
+El procedimiento de recuperación comprueba reservas, ocupaciones, cuotas y actuaciones de privacidad antes de reabrir el servicio. La procedencia y actualidad del checkpoint se verifican fuera de la copia restaurada; un checksum no demuestra por sí solo que sea el último. Si el RPO admite pérdida de datos, concilia las reservas confirmadas que puedan verse afectadas. [PostgreSQL: replicación y durabilidad](https://www.postgresql.org/docs/current/warm-standby.html#SYNCHRONOUS-REPLICATION).
 
 ## Decisiones pendientes
 

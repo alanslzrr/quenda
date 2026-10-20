@@ -14,6 +14,8 @@ export const operations = [
   "UNIT_BLOCK",
   "REPORT_READ",
   "DATA_EXPORT",
+  "PRIVACY_READ",
+  "PRIVACY_EXECUTE",
 ] as const;
 export type Operation = (typeof operations)[number];
 export interface ManagerInvitationInput {
@@ -63,7 +65,10 @@ export async function inviteManager(
   for (const permission of input.permissions) {
     if (
       !operations.includes(permission.operation) ||
-      (permission.operation === "CATALOG_CREATE" && permission.unitId !== null)
+      (["CATALOG_CREATE", "PRIVACY_READ", "PRIVACY_EXECUTE"].includes(
+        permission.operation,
+      ) &&
+        permission.unitId !== null)
     )
       throw new HttpError("INVALID_INPUT");
     const key = JSON.stringify([permission.operation, permission.unitId]);

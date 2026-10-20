@@ -436,6 +436,15 @@ test("operator invitations, handover and controlled recovery preserve global aut
                 confirmReactivation: async () => {
                   throw new Error("Not used by this test");
                 },
+                requestEmailChange: async () => {
+                  throw new Error("Not used");
+                },
+                approveEmailChange: async () => {
+                  throw new Error("Not used");
+                },
+                confirmEmailChange: async () => {
+                  throw new Error("Not used");
+                },
                 authenticate: async () => current,
               },
             },

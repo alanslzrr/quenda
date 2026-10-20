@@ -111,8 +111,14 @@ export async function reconcileRestore(client: Client, directory: string) {
         "SELECT current_database() AS name, datconnlimit FROM pg_database WHERE datname=current_database()",
       )
     ).rows[0];
+    const privacy = (
+      await client.query(
+        'SELECT restore_review_required AS "reviewRequired",privacy_replayed_at AS "replayedAt",privacy_checkpoint_sha256 AS "checkpointSha256" FROM domain.retention_control WHERE id',
+      )
+    ).rows[0];
     await client.query("COMMIT");
     return {
+      privacy,
       database: database.name,
       connectionLimit: database.datconnlimit,
       checks,

@@ -1,5 +1,8 @@
 import { Pool } from "pg";
-import { assertRuntimeRole } from "./database/pools.ts";
+import {
+  assertPrivacyOperational,
+  assertRuntimeRole,
+} from "./database/pools.ts";
 import { HttpError } from "./http/errors.ts";
 import { prepareMonthlyAssessment } from "./modules/collaboration/index.ts";
 
@@ -33,6 +36,7 @@ async function run() {
   );
   try {
     await assertRuntimeRole(pool);
+    await assertPrivacyOperational(pool);
     if (
       (await pool.query("SELECT current_user AS role")).rows[0]?.role !==
       "quenda_worker"

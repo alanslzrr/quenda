@@ -1,9 +1,13 @@
 import { setTimeout } from "node:timers/promises";
 import { Pool } from "pg";
-import { assertRuntimeRole } from "./database/pools.ts";
+import {
+  assertPrivacyOperational,
+  assertRuntimeRole,
+} from "./database/pools.ts";
 import { readMailConfiguration } from "./mail/config.ts";
 import { createMailTransport } from "./mail/transport.ts";
 import { processReservationEmail } from "./modules/communications/index.ts";
+import { processRetentionBatch } from "./modules/identity/index.ts";
 
 function required(name: string) {
   const value = process.env[name];
@@ -59,6 +63,7 @@ async function run() {
   process.once("SIGTERM", stop);
   try {
     await assertRuntimeRole(pool);
+    await assertPrivacyOperational(pool);
     if (
       (await pool.query("SELECT current_user AS role")).rows[0]?.role !==
       "quenda_worker"
@@ -66,8 +71,17 @@ async function run() {
       throw new Error("Invalid worker role");
     process.stdout.write('{"event":"EMAIL_WORKER_READY"}\n');
     let lastHealthCheck = 0;
+    let lastRetentionCheck = 0;
     let lastExhausted: string | null = null;
     do {
+      if (Date.now() - lastRetentionCheck >= 60000) {
+        const retention = await processRetentionBatch(pool);
+        if (retention.examined || retention.processed)
+          process.stdout.write(
+            `${JSON.stringify({ event: "RETENTION_BATCH", ...retention })}\n`,
+          );
+        lastRetentionCheck = Date.now();
+      }
       const outcome = await processReservationEmail(pool, transport, options);
       if (outcome !== "IDLE")
         process.stdout.write(

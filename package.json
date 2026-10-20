@@ -37,6 +37,9 @@
     "image:build": "node scripts/build-image.ts",
     "test:performance": "node test/performance/run.ts",
     "operator:recover": "node --env-file=.env.migration.local scripts/recover-operator.ts",
+    "privacy:checkpoint": "node --env-file=.env.migration.local scripts/privacy-checkpoint.ts",
+    "privacy:restore-reconcile": "node scripts/privacy-restore-reconcile.ts",
+    "email:recover": "node --env-file=.env.migration.local scripts/recover-email.ts",
     "account:recover": "node --env-file=.env.migration.local scripts/recover-account.ts"
   },
   "dependencies": {

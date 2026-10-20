@@ -3,7 +3,9 @@ import type { Pool } from "pg";
 import { registerAdministratorQueryRoutes } from "./administrator-query-routes.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
 import { registerBookingPolicyRoutes } from "./booking-policy-routes.ts";
+import { registerConservationRoutes } from "./conservation-routes.ts";
 import { registerDeactivationRoutes } from "./deactivation-routes.ts";
+import { registerEmailChangeRoutes } from "./email-change-routes.ts";
 import {
   inviteAdministrator,
   listOwnAdministratorInvitations,
@@ -19,7 +21,9 @@ import {
   replaceInitialAdministratorInvitation,
 } from "./municipality.ts";
 import { registerOperatorLifecycleRoutes } from "./operator-lifecycle-routes.ts";
+import { registerPersonalDataRoutes } from "./personal-data-routes.ts";
 import { registerPreferenceRoutes } from "./preference-routes.ts";
+import { registerPrivacyPermissionRoutes } from "./privacy-permissions-routes.ts";
 import { registerProfileRoutes } from "./profile-routes.ts";
 import { registerReactivationRoutes } from "./reactivation-routes.ts";
 import { createRequestActor } from "./request-actor.ts";
@@ -40,6 +44,10 @@ export async function registerMunicipalIdentity(
   config: AuthConfiguration,
 ) {
   const actor = createRequestActor(pool, auth, config);
+  await registerPrivacyPermissionRoutes(app, pool, auth, config);
+  await registerConservationRoutes(app, pool, auth, config);
+  await registerPersonalDataRoutes(app, pool, auth, config);
+  await registerEmailChangeRoutes(app, auth, config);
   await registerMunicipalContinuityRoutes(app, pool, auth, config);
   await registerOperatorLifecycleRoutes(app, pool, auth, config);
   await registerAccountSecurityRoutes(app, pool, auth, config);

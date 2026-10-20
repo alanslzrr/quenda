@@ -57,7 +57,7 @@ Las credenciales de autenticación, dominio y migraciones tienen permisos separa
 
 La comprobación de reservas confirmadas futuras o en curso de una baja abarca la cuenta en toda la instancia, sin devolver actividad de otros municipios. La auditoría conserva cuenta afectada, fecha, correlación y número de sesiones revocadas; no almacena tokens. Un fallo de auditoría revierte la baja y la revocación.
 
-Desactivar la cuenta no borra identidad, perfiles, reservas ni auditorías. La supresión, el ejercicio de derechos y los plazos de conservación requieren una política aprobada del responsable del tratamiento; la baja no los sustituye ni ejecuta eliminaciones automáticas.
+Desactivar la cuenta no borra identidad, perfiles, reservas ni auditorías. La baja no sustituye el ejercicio de derechos ni aprueba una política de conservación. El worker ejecuta por separado las políticas aprobadas que correspondan a cada ámbito.
 
 ## Reactivación y recuperación
 
@@ -74,6 +74,36 @@ La recuperación municipal solo se inicia cuando no queda ningún administrador 
 La gestión ordinaria de operadores utiliza invitaciones y revocaciones por API. La inicialización del primer operador y la recuperación sin operadores habilitados requieren credenciales operativas separadas. La recuperación asistida de una cuenta conserva referencias de identidad y resolución del compromiso; no presenta esas referencias como una verificación automática. Tras una suspensión se sustituyen contraseña, segundo factor y códigos de respaldo afectados antes de recuperar acceso personal. Los permisos se conceden nuevamente por los procedimientos ordinarios.
 
 **Justificación:** la confirmación de una operación sensible, la recuperación de identidad y la asignación de autoridad son comprobaciones distintas. Separarlas evita utilizar una sesión robada o una recuperación de acceso para recuperar privilegios retirados. [OWASP: reautenticación](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#require-re-authentication-for-sensitive-features), [OWASP: recuperación de MFA](https://cheatsheetseries.owasp.org/cheatsheets/Multifactor_Authentication_Cheat_Sheet.html#resetting-mfa).
+
+## Actuaciones de privacidad
+
+`PRIVACY_READ` permite consultar las proyecciones personales autorizadas y los controles de conservación. `PRIVACY_EXECUTE` permite aprobar o retirar políticas, registrar excepciones y ejecutar actuaciones autorizadas. Ambos permisos son explícitos, limitados a un municipio o a la identidad global y requieren MFA verificado hace menos de cinco minutos. Un administrador deportivo o un operador no los obtiene por su rol. El ámbito global no concede acceso administrativo a los historiales municipales.
+
+Una política identifica familia de datos, finalidad, responsable, aprobación externa, plazo y actuación. No existen periodos legales predeterminados. Cada ámbito tiene una política activa por familia; una nueva aprobación sustituye la anterior sin reescribir actuaciones realizadas. La aprobación debe cubrir el conjunto de registros seleccionado por esa familia: el sistema no deduce bases jurídicas ni clasifica automáticamente finalidades de textos libres.
+
+El worker selecciona registros vencidos y vuelve a comprobar referencias, actividad vigente y excepciones dentro de la transacción. Un conflicto afecta al registro, no autoriza a eliminar sus dependencias. Las reservas en curso o futuras, los permisos activos, los envíos con concesión vigente y las evidencias compartidas sin autorización conjunta se preservan. Las excepciones de conservación se crean y retiran con autorización y motivo; no son una suspensión de cuenta ni una limitación general del tratamiento.
+
+`ERASE` elimina los registros incluidos en la actuación. `BLOCK` los retira de las tablas ordinarias y conserva su contenido en un archivo restringido, con fecha de destrucción aprobada. El rol web, el worker y los delegados de privacidad no pueden leer ese contenido directamente. El acceso excepcional requiere el procedimiento operativo autorizado y queda auditado; la autorización debe corresponder a los supuestos legales aplicables. Las excepciones vigentes impiden destruir el archivo. [LOPDGDD, artículo 32](https://www.boe.es/buscar/act.php?id=BOE-A-2018-16673#a3-4).
+
+Los identificadores conservados para integridad o recuperación siguen siendo datos personales cuando permiten vincular actividad. No se presentan como anónimos. La retirada de identidad global no borra unilateralmente evidencias municipales que aún dependan de ella; una identidad retirada no puede reactivarse. Los agregados solo se difunden conforme a los controles del convenio. [AEPD: anonimización](https://www.aepd.es/preguntas-frecuentes/0-conceptos-basicos/FAQ-0005-sobre-los-datos-anonimizados).
+
+**Justificación:** los permisos separan la gestión deportiva de las actuaciones de privacidad; las selecciones cerradas y la conservación de dependencias evitan que una autorización municipal se convierta en una eliminación transversal.
+
+## Acceso personal y rectificación
+
+El usuario descarga una proyección de sus datos accesibles en la instancia. No contiene secretos de autenticación, identificadores de terceros ni motivos libres que requieran revisión. Declara su alcance parcial, las categorías restringidas y la información que debe tramitarse por la vía administrativa. Superar los límites de volumen rechaza la descarga; no trunca los datos silenciosamente. La consulta administrativa necesita permiso de privacidad del ámbito, MFA reciente, motivo y referencia de autorización; también admite titulares desactivados sin reactivar sus cuentas.
+
+La descarga no se presenta como respuesta completa al derecho de acceso ni como reconocimiento automático del derecho de portabilidad. La respuesta administrativa incorpora la información del responsable, finalidades, destinatarios y conservación que corresponda. [AEPD: derecho de acceso](https://www.aepd.es/derechos-y-deberes/conoce-tus-derechos/derecho-de-acceso).
+
+El cambio de correo comprueba contraseña actual y MFA cuando esté habilitado, obtiene autorización desde el buzón actual y verifica el nuevo. Las confirmaciones utilizan tokens de un solo uso ligados a la cuenta, sesión, credenciales y ciclo de actividad. El cambio final revoca las sesiones. Una suspensión, baja o cambio de credenciales invalida la prueba anterior. Las confirmaciones se ejecutan por POST; abrir un enlace no cambia la identidad ni crea una sesión.
+
+Si el buzón anterior no está disponible, el procedimiento asistido registra la verificación externa de identidad y comprueba el nuevo correo. No sustituye contraseña ni MFA, no levanta suspensiones y no permite que un administrador municipal edite la identidad global.
+
+## Conservación en copias y restauraciones
+
+Una restauración permanece cerrada a los roles de ejecución y activa además una barrera de recuperación en la aplicación. Antes de reabrir se contrastan las actuaciones de supresión y bloqueo con un checkpoint externo actualizado, cuya procedencia, integridad y actualidad deben verificarse. Reproducir esas actuaciones no autoriza la reapertura por sí solo: también se revisan excepciones, políticas, integridad, sesiones y envíos pendientes.
+
+Sin evidencia actual suficiente, el destino permanece cerrado. Un checkpoint guardado dentro de la misma copia antigua no demuestra qué actuaciones ocurrieron después. El diario de recuperación contiene referencias, no contenidos bloqueados; su conservación debe cubrir las copias recuperables y su posterior retirada requiere la política aprobada del responsable. Ni el diario ni la auditoría tienen una exención de conservación indefinida.
 
 ## Convenios y trazabilidad
 

@@ -21,7 +21,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-03 | Crear una reserva | El usuario acepta las condiciones vigentes y recibe confirmación o rechazo con motivo. Si el plazo de cancelación ya ha vencido, acepta expresamente que no podrá cancelarla por sí mismo. |
 | RF-04 | Modificar una reserva | La modificación del titular comprueba el plazo aceptado de origen y las condiciones del destino; aplica el cambio atómicamente o conserva la reserva anterior. |
 | RF-05 | Cancelar una reserva | El sistema aplica el plazo aceptado y libera ocupación y cuota solo si confirma la cancelación. El rechazo conserva ambas. |
-| RF-06 | Consultar el historial | El usuario accede a sus reservas; el gestor municipal, únicamente a las incluidas en sus permisos. |
+| RF-06 | Consultar el historial | El usuario accede a sus reservas conservadas; el gestor municipal, únicamente a las incluidas en sus permisos. |
 | RF-07 | Recibir avisos | El sistema genera avisos internos y correos de confirmación, modificación y cancelación. |
 | RF-08 | Crear instalaciones | El administrador o gestor municipal autorizado registra instalaciones de su municipio. |
 | RF-09 | Mantener el catálogo | El sistema permite modificar o retirar instalaciones y unidades reservables sin borrar reservas ni alterar su historial. |
@@ -40,6 +40,11 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-22 | Comprobar elegibilidad | Durante un intento de reserva, el sistema comprueba el derecho de uso sin exponer expedientes ni historiales de otros municipios. |
 | RF-23 | Aplicar cuotas conjuntas | La reserva y su consumo de cuota se confirman en una transacción; las solicitudes concurrentes no superan el límite. |
 | RF-24 | Consultar informes conjuntos | Los usuarios autorizados reciben agregados del convenio sujetos a controles de inferencia y supresión. |
+| RF-25 | Autorizar actuaciones de privacidad | Consulta y ejecución requieren concesiones explícitas independientes, delimitadas al municipio o a la identidad global y MFA reciente. Ser administrador u operador no las concede automáticamente. |
+| RF-26 | Aplicar conservación aprobada | El sistema ejecuta automáticamente la política vigente de cada ámbito y familia de datos. Exige finalidad, responsable, aprobación y plazos explícitos; las excepciones o dependencias protegidas impiden únicamente la actuación afectada y quedan identificadas para revisión. |
+| RF-27 | Facilitar acceso a datos personales | El usuario descarga sus datos accesibles de la instancia. La vía administrativa atiende otros supuestos, incluidas cuentas inactivas, con autorización y alcance delimitados. La descarga identifica restricciones y no se presenta como respuesta completa al derecho de acceso. |
+| RF-28 | Ejecutar actuaciones individuales de privacidad | El personal con permiso específico registra autorización y motivo para suprimir o bloquear un conjunto admitido. El sistema distingue actuación realizada, conflicto y ausencia; conserva auditoría sin eliminar datos de otro ámbito. |
+| RF-29 | Cambiar el correo global | El usuario confirma contraseña y MFA cuando corresponda, autoriza desde el correo actual y verifica el nuevo antes del cambio. La pérdida del correo anterior requiere recuperación asistida verificada; un permiso municipal no habilita esta operación. |
 
 ## Requisitos no funcionales
 
@@ -47,14 +52,14 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 |---|---|---|
 | RNF-01 | Integridad | No se confirman ocupaciones solapadas de una unidad reservable ni se duplican reservas o consumos por reintentos. |
 | RNF-02 | Aislamiento | Los accesos respetan titularidad y permisos municipales; los convenios habilitan exclusivamente sus capacidades. |
-| RNF-03 | Privacidad | Cada tratamiento tiene finalidad, base jurídica, datos, conservación y accesos definidos; los procedimientos de derechos son verificables. |
+| RNF-03 | Privacidad | Cada tratamiento tiene finalidad, base jurídica, datos, conservación y accesos definidos. No se asignan plazos legales por defecto; los datos bloqueados quedan fuera de consultas, exportaciones y procesamiento ordinarios. Los procedimientos de derechos distinguen su alcance técnico de la resolución administrativa. |
 | RNF-04 | Accesibilidad | Los flujos de usuario y administración cumplen WCAG 2.1 AA mediante comprobaciones automáticas y manuales. |
 | RNF-05 | Adaptabilidad | Las funciones están disponibles en móvil y escritorio, sin acciones exclusivas de un tamaño de pantalla. |
 | RNF-06 | Modularidad | Los módulos respetan las responsabilidades e interfaces definidas en la arquitectura. |
 | RNF-07 | Interoperabilidad | Las interfaces y formatos abiertos disponen de esquemas y ejemplos validables con herramientas independientes. |
 | RNF-08 | Replicabilidad | Una instancia independiente utiliza los mismos artefactos y migraciones mediante configuración propia. |
 | RNF-09 | Escalabilidad | Las pruebas registran capacidad, latencia y errores al incrementar municipios, unidades reservables y carga. |
-| RNF-10 | Recuperación | Una restauración documentada cumple los objetivos RTO y RPO del despliegue y mantiene la integridad del sistema. |
+| RNF-10 | Recuperación | Una restauración documentada cumple los objetivos RTO y RPO del despliegue, mantiene la integridad y no habilita datos previamente suprimidos o restringidos. |
 | RNF-11 | Trazabilidad | Los cambios de reservas y operaciones administrativas conservan autor, instante, motivo cuando corresponda y resultado, sin secretos. |
 | RNF-12 | Licencia libre | El código utiliza AGPL-3.0-only, con dependencias y atribuciones compatibles y acceso al código fuente correspondiente cuando lo exige la licencia. |
 | RNF-13 | Rendimiento | El sistema cumple los umbrales del [escenario de aceptación](06_decisiones_y_validacion.md#escenario-de-rendimiento). |
@@ -62,3 +67,5 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RNF-15 | Localización | Los flujos, errores y avisos están disponibles en gallego y castellano, con formatos de fecha coherentes. |
 
 Las obligaciones de la convocatoria se recogen en las [bases oficiales, §1.1, §1.2 y §8](https://www.agasol.gal/wp-content/uploads/2026/10/Bases_I_Certame_GOBTEC_2026.pdf) y en la [descripción del reto](https://www.agasol.gal/i-certame-gobtec/#reto). Las ampliaciones valorables del §1.3 no son requisitos mínimos del certamen.
+
+Las familias, condiciones y límites de conservación se definen en el [modelo de dominio](02_modelo_dominio.md#conservación-y-derechos); los permisos y las descargas, en [identidad y colaboración](07_identidad_y_colaboracion.md#permisos-de-privacidad). Cada responsable aprueba las condiciones aplicables a sus datos, aunque varios municipios compartan una instancia.

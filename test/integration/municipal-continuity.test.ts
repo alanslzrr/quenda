@@ -428,6 +428,9 @@ test("municipal continuity protects lasting responsibility and separates securit
               verifyDeactivation: unavailable,
               requestReactivation: unavailable,
               confirmReactivation: unavailable,
+              requestEmailChange: unavailable,
+              approveEmailChange: unavailable,
+              confirmEmailChange: unavailable,
               authenticate: async () =>
                 activeAccount ? actor(activeAccount) : null,
             },

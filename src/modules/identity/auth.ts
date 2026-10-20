@@ -11,6 +11,7 @@ import type { Pool } from "pg";
 import { HttpError, language } from "../../http/errors.ts";
 import type { MailTransport } from "../../shared/mail.ts";
 import { normalizedAccountName } from "./account-profile.ts";
+import { accountEmailChange } from "./email-change.ts";
 import { accountReactivation } from "./reactivation.ts";
 import { auditedAuthenticationHandler } from "./request-audit.ts";
 
@@ -61,9 +62,33 @@ export function authOptions(
       autoSignIn: false,
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async (
-        { user, url }: { user: { email: string }; url: string },
+        {
+          user,
+          url,
+          token,
+        }: {
+          user: { id: string; email: string };
+          url: string;
+          token: string;
+        },
         request?: Request,
-      ) => sendLink("reset", user.email, url, request),
+      ) => {
+        // Better Auth reads the user before creating the reset token. A concurrent
+        // email change must not deliver a newly issued token to the old mailbox.
+        const current = await pool.query(
+          `SELECT 1 FROM auth."user" u JOIN auth.account_lifecycle l ON l.account_id=u.id
+           WHERE u.id=$1 AND u.email=$2 AND l.deactivated_at IS NULL AND l.suspended_at IS NULL`,
+          [user.id, user.email],
+        );
+        if (!current.rowCount) {
+          await pool.query(
+            "DELETE FROM auth.verification WHERE identifier=$1 AND value=$2",
+            [`reset-password:${token}`, user.id],
+          );
+          return;
+        }
+        await sendLink("reset", user.email, url, request);
+      },
     },
     emailVerification: {
       sendOnSignUp: true,
@@ -185,6 +210,14 @@ export function createAuthentication(
 ) {
   const auth = betterAuth(authOptions(pool, config, mail));
   return {
+    ...accountEmailChange(
+      pool,
+      mail,
+      config.origin,
+      (headers) => auth.api.getSession({ headers }),
+      (headers, password) =>
+        auth.api.verifyPassword({ headers, body: { password } }),
+    ),
     ...accountReactivation(
       pool,
       mail,

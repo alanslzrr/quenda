@@ -1,9 +1,13 @@
 import type { FastifyError, FastifyInstance, FastifyRequest } from "fastify";
 
 const messages = {
+  PERSONAL_DATA_TOO_LARGE: {
+    es: "El volumen de datos requiere una entrega por la vía administrativa. No se ha generado una descarga parcial por tamaño.",
+    gl: "O volume de datos require unha entrega pola vía administrativa. Non se xerou unha descarga parcial por tamaño.",
+  },
   ACCOUNT_PASSWORD_REQUIRED: {
-    es: "Confirma tu contraseña actual para dar de baja la cuenta.",
-    gl: "Confirma o teu contrasinal actual para dar de baixa a conta.",
+    es: "Confirma tu contraseña actual para realizar esta operación.",
+    gl: "Confirma o teu contrasinal actual para realizar esta operación.",
   },
   ACCOUNT_HANDOVER_REQUIRED: {
     es: "Debe quedar otro responsable habilitado con permiso indefinido antes de retirar esta responsabilidad.",
@@ -82,6 +86,7 @@ const messages = {
 } as const;
 
 const statuses = {
+  PERSONAL_DATA_TOO_LARGE: 409,
   ACCOUNT_PASSWORD_REQUIRED: 403,
   ACCOUNT_HANDOVER_REQUIRED: 409,
   USAGE_RULES_REQUIRED: 409,

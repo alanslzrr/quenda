@@ -11,7 +11,7 @@ Cada instalación y unidad reservable tiene un único municipio gestor, aunque p
 | Asignación de rol | Permisos de una cuenta sobre un municipio y, cuando corresponda, unidades reservables concretas. |
 | Instalación / Unidad reservable | Centro deportivo, espacios reservables y publicación del catálogo. |
 | Regla horaria / Excepción | Aperturas regulares y cambios fechados del calendario. |
-| Normas de uso | Texto versionado por unidad reservable; las versiones aceptadas se conservan sin sobrescribir. |
+| Normas de uso | Texto versionado por unidad reservable; las versiones aceptadas no se sobrescriben. |
 | Política de reserva | Condiciones versionadas que se aplican al crear o modificar una reserva. |
 | Reserva | Titular, unidad, intervalo, estado, revisión, condiciones aceptadas y normas asignadas pendientes cuando corresponda. |
 | Bloqueo | Cierre de una unidad reservable, con responsable y motivo. |
@@ -171,3 +171,52 @@ El usuario puede reactivar una cuenta conservada mediante contraseña, enlace de
 Cada municipio inicializado mantiene un administrador habilitado con permiso indefinido; la plataforma mantiene un operador habilitado. Habilitado significa cuenta activa, correo verificado, MFA configurado y permiso vigente no revocado, sin exigir una sesión abierta. No se permite retirar la última responsabilidad por baja o revocación ordinaria. Un permiso temporal ya aceptado puede convertirse explícitamente en indefinido, con motivo, sin otra invitación ni extensiones automáticas.
 
 La retirada municipal por seguridad afecta solo a los permisos e invitaciones de ese municipio. La suspensión global corresponde a un operador y revoca sesiones y autoridad administrativa en toda la instancia, sin cancelar reservas. La contención puede dejar temporalmente al ámbito sin responsable. La recuperación exige verificar identidad o autoridad, resolver el compromiso y registrar la intervención; nunca restaura permisos antiguos automáticamente.
+
+## Conservación y derechos
+
+La baja de cuenta, la retirada de un recurso y la supresión de datos son operaciones distintas. Las garantías de historial impiden borrados incidentales durante la gestión ordinaria; no establecen conservación indefinida.
+
+### Políticas por ámbito
+
+Cada política identifica ámbito, familia de datos, finalidad, referencia del responsable, referencia de aprobación, duración, actuación y motivo. La aprobación administrativa precede a su registro. Los plazos son obligatorios: no proceden de valores predeterminados del software ni se renuevan al desplegar una versión.
+
+Existe una política vigente por ámbito y familia. Una nueva aprobación sustituye la anterior sin reescribirla ni revertir actuaciones ejecutadas. Revocar una política detiene nuevas actuaciones, no recupera datos ni amplía el plazo ya autorizado de un archivo bloqueado. Municipios de la misma instancia pueden aplicar duraciones diferentes a la misma familia.
+
+| Familia | Ámbito | Inicio del cómputo |
+|---|---|---|
+| `COMMUNICATIONS` | Municipio | Último instante entre creación del evento, aviso, correo e intentos de entrega. |
+| `RESERVATIONS` | Municipio | El posterior entre fin de la reserva y último evento de su historial. |
+| `MUNICIPAL_PROFILE` | Municipio | Última actividad conservada de perfil, reservas, comunicaciones, permisos o acreditaciones del servicio. |
+| `AUTHENTICATION` | Global | Fecha del evento de seguridad; para sesiones y comprobaciones temporales, vencimiento. |
+| `IDENTITY` | Global | Baja voluntaria de la cuenta. |
+| `AUTHORITY` | Municipio o global | Última evidencia de la concesión o fecha del evento de acceso correspondiente. |
+| `ACCREDITATIONS` | Municipio emisor | Revocación, si existe; en otro caso, fin de vigencia. |
+
+El servidor compara el instante de referencia con una duración entera positiva en días de 24 horas, calculada en UTC. No convierte meses o años legales en un número aproximado de días. Los selectores y referencias temporales son fijos; las políticas no ejecutan expresiones, SQL ni filtros aportados por usuarios. La aprobación debe cubrir la familia completa del ámbito. Finalidades incompatibles dentro de una familia requieren resolver su clasificación o registrar la excepción correspondiente antes de automatizar su eliminación.
+
+**Justificación:** un conjunto cerrado permite comprobar qué datos selecciona cada política y evita que una configuración amplíe su alcance a otro municipio o a evidencias dependientes.
+
+### Ejecución y excepciones
+
+El procesamiento existente ejecuta lotes sin confirmaciones manuales repetitivas. Cada actuación vuelve a comprobar la política, las excepciones, los datos actuales y sus dependencias dentro de la transacción. La auditoría conserva alcance, regla o autorización, instante y resultado. Un rechazo no produce una supresión parcial.
+
+Una excepción de conservación —`hold`— identifica una familia y, exclusivamente, un registro o un interesado existente en su ámbito, incluido contenido ya bloqueado. Requiere autorización y motivo; su levantamiento también. Impide actuaciones destructivas de conservación sobre los datos afectados, pero no suspende por sí sola su consulta o tratamiento ordinario ni evita la revocación de credenciales por seguridad. No equivale a una suspensión de cuenta, un bloqueo de instalación ni una limitación del tratamiento. [AEPD: limitación](https://www.aepd.es/derechos-y-deberes/conoce-tus-derechos/derecho-la-limitacion-del-tratamiento).
+
+Se conservan los datos necesarios para reservas futuras o en curso, concesiones activas, entregas en proceso y referencias todavía protegidas. Las evidencias de convenio que afecten a otros participantes no se eliminan unilateralmente; se identifican para revisión conjunta. Los demás registros elegibles pueden continuar su procesamiento.
+
+El personal autorizado también puede ejecutar una actuación individual con referencia de autorización y motivo. Obtiene `APPLIED`, `CONFLICT` o `ABSENT`; un conflicto o una ausencia quedan auditados y no se presentan como supresión realizada. Esta vía respeta las mismas excepciones e integridad que la ejecución automática.
+
+### Supresión y bloqueo
+
+| Actuación | Efecto |
+|---|---|
+| `ERASE` | Retira el conjunto autorizado de los registros operativos, sin crear una copia de su contenido para el servicio. |
+| `BLOCK` | Retira el conjunto de los registros operativos y conserva su contenido en un archivo restringido, con fecha de destrucción autorizada. |
+
+Los archivos bloqueados no son consultables por los roles de aplicación, autenticación o trabajos, ni mediante permisos ordinarios de privacidad. Su disponibilidad excepcional exige intervención operativa autorizada. La destrucción posterior comprueba de nuevo las excepciones vigentes. Este aislamiento impide reutilizar el contenido para reservas, avisos o exportaciones ordinarias. [LOPDGDD, artículo 32](https://www.boe.es/buscar/act.php?id=BOE-A-2018-16673#a3-4).
+
+La retirada de identidad exige una cuenta dada de baja y las comprobaciones de protección aplicables. Elimina credenciales y datos identificativos operativos; conserva un identificador inhabilitado cuando es necesario para referencias históricas. Ese identificador no es anónimo ni permite recuperar la cuenta. Un nuevo registro crea otra identidad y no hereda actividad ni permisos.
+
+Quenda no considera anónimo un historial por sustituir nombres o identificadores. Los agregados de colaboración mantienen sus [controles de publicación](07_identidad_y_colaboracion.md#c-03-informes-agregados).
+
+Las solicitudes y su valoración jurídica se tramitan por los canales administrativos existentes, sin tickets ni expedientes nuevos en Quenda. Los mecanismos técnicos no sustituyen la identificación del responsable, la aprobación de los plazos ni la resolución del derecho. Las reservas protegidas pueden impedir una supresión concreta, no denegar indiscriminadamente acceso o rectificación.
