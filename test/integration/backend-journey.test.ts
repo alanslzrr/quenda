@@ -493,6 +493,7 @@ for (const upgrade of [false, true]) {
           );
         } finally {
           await app.close();
+          contracts.assertValid();
         }
       }, directory);
     } finally {

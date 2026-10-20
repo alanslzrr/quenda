@@ -7,6 +7,7 @@ import { createAuthentication } from "../../src/modules/identity/index.ts";
 import type { MailMessage } from "../../src/shared/mail.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
 import { withDatabase } from "../helpers/postgres.ts";
+import { verifyProductResponses } from "../helpers/response-contract.ts";
 
 test("agreement HTTP requires real sessions, MFA and version-specific approvals across replicas", {
   timeout: 60000,
@@ -34,6 +35,7 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       });
     const app = await make(),
       replica = await make();
+    const contracts = [app, replica].map(verifyProductResponses);
     try {
       const client = browser(app, "192.0.2.162");
       const password = "Synthetic-password-1234!";
@@ -738,6 +740,7 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
     } finally {
       await app.close();
       await replica.close();
+      for (const contract of contracts) contract.assertValid();
     }
   });
 });

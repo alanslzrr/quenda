@@ -16,6 +16,7 @@ import {
 } from "../../src/modules/identity/index.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
 import { withDatabase } from "../helpers/postgres.ts";
+import { verifyProductResponses } from "../helpers/response-contract.ts";
 
 const password = "Synthetic-test-password-1234!";
 
@@ -51,6 +52,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
         config,
       },
     });
+    const contracts = [app, replica].map(verifyProductResponses);
     const link = async (
       email: string,
       kind: "verify-email" | "reset-password",
@@ -1203,6 +1205,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
       );
     } finally {
       await Promise.all([app.close(), replica.close()]);
+      for (const contract of contracts) contract.assertValid();
     }
   });
 });

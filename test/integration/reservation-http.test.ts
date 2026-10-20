@@ -9,6 +9,7 @@ import { createAuthentication } from "../../src/modules/identity/index.ts";
 import type { MailMessage } from "../../src/shared/mail.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
 import { withDatabase } from "../helpers/postgres.ts";
+import { verifyProductResponses } from "../helpers/response-contract.ts";
 
 test("reservation HTTP uses verified sessions, origin checks and replay across replicas", {
   timeout: 60000,
@@ -37,6 +38,7 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       });
     const app = await make(),
       replica = await make();
+    const contracts = [app, replica].map(verifyProductResponses);
     try {
       const client = browser(app, "192.0.2.150");
       const password = "Synthetic-password-1234!";
@@ -1011,6 +1013,7 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       );
     } finally {
       await Promise.all([app.close(), replica.close()]);
+      for (const contract of contracts) contract.assertValid();
     }
   });
 });

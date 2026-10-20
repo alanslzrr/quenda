@@ -35,6 +35,8 @@ test("response verifier checks enums and formats, not just serializer output", a
     assert.equal((await app.inject("/probe")).statusCode, 500);
     value = { state: "READY", date: "not-a-date" };
     assert.equal((await app.inject("/probe")).statusCode, 500);
+    assert.equal(contracts.failures.length, 2);
+    assert.throws(() => contracts.assertValid());
   } finally {
     await app.close();
   }

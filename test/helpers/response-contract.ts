@@ -10,34 +10,47 @@ export function verifyProductResponses(app: FastifyInstance) {
   addFormats.default(validator);
   const compiled = new Map<string, ValidateFunction>();
   const successes = new Set<string>();
+  const failures: string[] = [];
   let registered = false;
   app.addHook("onSend", async (request, reply, payload) => {
-    if (request.routeOptions.schema?.hide) return payload;
-    if (!String(reply.getHeader("content-type")).includes("application/json"))
+    if (!request.routeOptions.schema || request.routeOptions.schema.hide)
       return payload;
-    assert.ok(typeof payload === "string");
-    assert.ok(request.routeOptions.url);
-    if (!registered) {
-      validator.addSchema({ ...app.swagger(), $id: "urn:quenda:contract" });
-      registered = true;
+    try {
+      if (!String(reply.getHeader("content-type")).includes("application/json"))
+        return payload;
+      assert.ok(typeof payload === "string");
+      assert.ok(request.routeOptions.url);
+      if (!registered) {
+        validator.addSchema({ ...app.swagger(), $id: "urn:quenda:contract" });
+        registered = true;
+      }
+      const path = request.routeOptions.url.replace(/:([^/]+)/g, "{$1}");
+      const method = request.method.toLowerCase();
+      const key = `${method} ${path} ${reply.statusCode}`;
+      let check = compiled.get(key);
+      if (!check) {
+        const escaped = path.replaceAll("~", "~0").replaceAll("/", "~1");
+        check = validator.compile({
+          $ref: `urn:quenda:contract#/paths/${escaped}/${method}/responses/${reply.statusCode}/content/application~1json/schema`,
+        });
+        compiled.set(key, check);
+      }
+      assert.ok(
+        check(JSON.parse(payload)),
+        `${key}: ${validator.errorsText(check.errors)}`,
+      );
+      if (reply.statusCode < 300) successes.add(`${method} ${path}`);
+      return payload;
+    } catch (error) {
+      failures.push(
+        error instanceof Error ? error.message : "Contract validation failed",
+      );
+      throw error;
     }
-    const path = request.routeOptions.url.replace(/:([^/]+)/g, "{$1}");
-    const method = request.method.toLowerCase();
-    const key = `${method} ${path} ${reply.statusCode}`;
-    let check = compiled.get(key);
-    if (!check) {
-      const escaped = path.replaceAll("~", "~0").replaceAll("/", "~1");
-      check = validator.compile({
-        $ref: `urn:quenda:contract#/paths/${escaped}/${method}/responses/${reply.statusCode}/content/application~1json/schema`,
-      });
-      compiled.set(key, check);
-    }
-    assert.ok(
-      check(JSON.parse(payload)),
-      `${key}: ${validator.errorsText(check.errors)}`,
-    );
-    if (reply.statusCode < 300) successes.add(`${method} ${path}`);
-    return payload;
   });
-  return { successes };
+  return {
+    successes,
+    failures,
+    assertValid: () => assert.deepEqual(failures, []),
+  };
 }
