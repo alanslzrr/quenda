@@ -34,6 +34,7 @@ export async function withDatabase<T>(
     worker: Pool;
     administration: Pool;
   }) => Promise<T>,
+  migrationsDirectory = path.resolve("db/migrations"),
 ): Promise<T> {
   const bin = process.env.PG_BIN;
   assert.ok(
@@ -105,7 +106,7 @@ export async function withDatabase<T>(
     const admin = await connect(url("quenda_bootstrap", adminPassword));
     await bootstrap(admin, passwords);
     const owner = await connect(url("quenda_migrator", passwords.migration));
-    await migrate(owner, path.resolve("db/migrations"));
+    await migrate(owner, migrationsDirectory);
     return await run({
       root,
       domain: pool("quenda_domain", passwords.domain),
