@@ -120,6 +120,93 @@ test("isolated PostgreSQL: bootstrap, migrations, role separation, transactions 
     );
 
     await t.test(
+      "worker provisioning upgrades existing databases without replacing roles or credentials",
+      async () => {
+        const credentials = async () =>
+          (
+            await admin.query(
+              "SELECT rolname,rolpassword FROM pg_authid WHERE rolname IN ('quenda_migrator','quenda_auth','quenda_domain') ORDER BY rolname",
+            )
+          ).rows;
+        const before = await credentials();
+        const invoke = (
+          password: string,
+          connection = url("quenda_bootstrap", adminPassword),
+        ) =>
+          execute(process.execPath, ["scripts/provision-worker.ts"], {
+            env: {
+              ...process.env,
+              BOOTSTRAP_DATABASE_URL: connection,
+              WORKER_DATABASE_PASSWORD: password,
+            },
+          });
+        await admin.query(
+          "DROP OWNED BY quenda_worker; DROP ROLE quenda_worker",
+        );
+        await assert.rejects(invoke("short"));
+        await assert.rejects(
+          invoke(
+            passwords.worker,
+            url("quenda_bootstrap", adminPassword, "postgres"),
+          ),
+        );
+        assert.equal(
+          (
+            await admin.query(
+              "SELECT 1 FROM pg_roles WHERE rolname='quenda_worker'",
+            )
+          ).rowCount,
+          0,
+        );
+        const result = await invoke(passwords.worker);
+        assert.match(result.stdout, /Worker role created/);
+        assert.equal(result.stderr, "");
+        assert.deepEqual(await credentials(), before);
+        const worker = new Pool({
+          connectionString: url("quenda_worker", passwords.worker),
+          max: 1,
+        });
+        pools.push(worker);
+        await assertRuntimeRole(worker);
+        assert.equal(
+          (await worker.query("SELECT current_user")).rows[0].current_user,
+          "quenda_worker",
+        );
+        assert.equal(
+          (await worker.query("SHOW search_path")).rows[0].search_path,
+          "pg_catalog, domain",
+        );
+        await assert.rejects(
+          worker.query("CREATE TABLE domain.forbidden_worker(id int)"),
+          { code: "42501" },
+        );
+        await assert.rejects(worker.query("SELECT * FROM auth.nonexistent"), {
+          code: "42501",
+        });
+        const secret = "replacement-secret-that-must-not-appear";
+        await assert.rejects(invoke(secret), (error: unknown) => {
+          const failure = error as {
+            stderr: string;
+            stdout: string;
+            code: number;
+          };
+          assert.equal(failure.code, 1);
+          assert.match(failure.stderr, /Worker provisioning failed/);
+          assert.equal(failure.stdout, "");
+          assert.ok(!failure.stderr.includes(secret));
+          return true;
+        });
+        // Authenticate a new connection: the rejected repeat must not rotate the secret.
+        const verify = await connect(url("quenda_worker", passwords.worker));
+        assert.equal(
+          (await verify.query("SELECT current_user")).rows[0].current_user,
+          "quenda_worker",
+        );
+        assert.deepEqual(await credentials(), before);
+      },
+    );
+
+    await t.test(
       "migration is repeatable, installs btree_gist and detects drift",
       async () => {
         assert.deepEqual(await migrate(migration, migrations), [
@@ -250,6 +337,36 @@ test("isolated PostgreSQL: bootstrap, migrations, role separation, transactions 
     );
 
     await migrate(migration, path.resolve("db/migrations"));
+    await t.test(
+      "provisioned worker receives only migration-defined capabilities",
+      async () => {
+        const worker = await connect(url("quenda_worker", passwords.worker));
+        assert.deepEqual(
+          (
+            await worker.query(
+              "SELECT * FROM domain.reservation_email_health()",
+            )
+          ).rows,
+          [{ pending: "0", leased: "0", exhausted: "0" }],
+        );
+        assert.equal(
+          (
+            await worker.query(
+              "SELECT * FROM domain.claim_reservation_email(60,5)",
+            )
+          ).rowCount,
+          0,
+        );
+        for (const table of [
+          "domain.reservation",
+          "domain.reservation_email",
+          'auth."user"',
+        ])
+          await assert.rejects(worker.query(`SELECT * FROM ${table}`), {
+            code: "42501",
+          });
+      },
+    );
     for (const entry of ["src/server.ts", "dist/server.js"]) {
       await t.test(
         `backend ${entry} starts with runtime credentials and exits cleanly on SIGTERM`,

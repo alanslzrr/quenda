@@ -21,6 +21,7 @@
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "db:migrate": "node --env-file=.env.migration.local scripts/migrate.ts",
     "openapi": "node scripts/openapi.ts",
+    "db:provision:worker": "node --env-file=.env.bootstrap.local scripts/provision-worker.ts",
     "db:bootstrap": "node --env-file=.env.bootstrap.local scripts/bootstrap.ts",
     "db:local:config": "node scripts/local-config.ts",
     "operator:initialize": "node --env-file=.env.migration.local scripts/initialize-operator.ts",
