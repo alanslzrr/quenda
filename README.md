@@ -281,3 +281,17 @@ node scripts/export-schema.ts --example > /tmp/quenda-export-example.json
 ```
 
 Ambos archivos pueden validarse con herramientas independientes compatibles con Draft 7 y comprobación de formatos. El esquema valida la estructura; los permisos, el solape temporal y la pertenencia al municipio se comprueban en el sistema.
+
+### Preparación de informes mensuales
+
+```sh
+pnpm reports:prepare <convenio-uuid> <AAAA-MM> <revision-actual>
+# Con la aplicación compilada y WORKER_DATABASE_URL configurada:
+node dist/monthly-report-worker.js <convenio-uuid> <AAAA-MM> <revision-actual>
+```
+
+El comando utiliza exclusivamente `quenda_worker`. No requiere configuración de correo ni credenciales del migrador. `revision-actual` es `0` para la primera evaluación; una corrección indica la revisión existente y crea la siguiente sin sobrescribirla. Una revisión obsoleta produce `CONFLICT` y código de salida `1`.
+
+El mes debe estar cerrado en la zona del convenio. La evaluación usa su ámbito efectivo, incluye consumos aunque no exista cuota semanal y suprime las métricas si alguna contribución municipal no alcanza diez cuentas distintas. El máximo de procesamiento es 100000 consumos: superar el límite hace fallar la preparación, sin truncar el conjunto ni cambiar el periodo mensual.
+
+La salida contiene únicamente convenio, mes, revisión y corte; no incluye métricas ni sujetos. La evaluación queda almacenada con acceso restringido. Prepararla no autoriza su publicación: la entrega exige las revisiones de riesgo correspondientes y deja constancia del destinatario y de la evaluación entregada.

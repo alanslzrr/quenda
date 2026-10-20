@@ -14,6 +14,8 @@ export {
 } from "./credentials.ts";
 export type { AgreementDraftInput, AgreementVersionInput } from "./drafts.ts";
 export { createAgreementDraft, normalizeAgreementDraft } from "./drafts.ts";
+// Internal worker entry point; not an HTTP handler.
+export { prepareMonthlyAssessment } from "./monthly-assessment.ts";
 export { listAgreementVersions, readAgreementVersion } from "./queries.ts";
 export { weeklyQuotaPeriod } from "./quota-period.ts";
 export type { ReleaseAgreementRestrictionInput } from "./reopening.ts";

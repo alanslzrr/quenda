@@ -84,6 +84,35 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
         );
       }
     });
+    const { execFile } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const execute = promisify(execFile);
+    const runWorker = (
+      expected: string,
+      url = worker.options.connectionString,
+    ) =>
+      execute(
+        process.execPath,
+        ["dist/monthly-report-worker.js", agreement, "2024-03", expected],
+        { env: { ...process.env, WORKER_DATABASE_URL: url }, timeout: 20000 },
+      );
+    const invalid = await runWorker("01").then(
+      () => null,
+      (error) => error,
+    );
+    assert.ok(invalid);
+    assert.equal(invalid.code, 1);
+    assert.equal(JSON.parse(invalid.stderr).code, "INVALID_INPUT");
+    const wrongRole = await runWorker(
+      "0",
+      domain.options.connectionString,
+    ).then(
+      () => null,
+      (error) => error,
+    );
+    assert.ok(wrongRole);
+    assert.equal(wrongRole.code, 1);
+    assert.equal(JSON.parse(wrongRole.stderr).code, "FORBIDDEN");
     const result = await assessPersistedMonthlyAggregate(
       worker,
       agreement,
@@ -96,14 +125,34 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
     });
     assert.ok(!JSON.stringify(result).includes("report-"));
     assert.ok(tenants.every((t) => !JSON.stringify(result).includes(t)));
-    const first = await prepareMonthlyAssessment(
-      worker,
-      agreement,
-      "2024-03",
+    const prepared = await runWorker("0");
+    assert.equal(prepared.stderr, "");
+    const receipt = JSON.parse(prepared.stdout);
+    assert.deepEqual(
+      Object.keys(receipt).sort(),
+      ["event", "agreementId", "month", "revision", "cutoff"].sort(),
+    );
+    assert.equal(receipt.event, "MONTHLY_ASSESSMENT_PREPARED");
+    assert.equal(receipt.revision, 1);
+    assert.equal(receipt.agreementId, agreement);
+    assert.equal(receipt.month, "2024-03");
+    assert.ok(!prepared.stdout.includes("report-"));
+    const stale = await runWorker("0").then(
+      () => null,
+      (error) => error,
+    );
+    assert.ok(stale);
+    assert.equal(stale.code, 1);
+    assert.equal(stale.stdout, "");
+    assert.equal(JSON.parse(stale.stderr).code, "CONFLICT");
+    assert.equal(
+      (
+        await migration.query(
+          "SELECT count(*)::integer AS n FROM pg_stat_activity WHERE application_name='quenda-monthly-assessment'",
+        )
+      ).rows[0].n,
       0,
     );
-    assert.equal(first.revision, 1);
-    assert.deepEqual(first.assessment, result.assessment);
     const corrections = await Promise.allSettled([
       prepareMonthlyAssessment(worker, agreement, "2024-03", 1),
       prepareMonthlyAssessment(worker, agreement, "2024-03", 1),
