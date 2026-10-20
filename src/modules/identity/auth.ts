@@ -6,6 +6,7 @@ import type { Pool } from "pg";
 import { language } from "../../http/errors.ts";
 import type { MailTransport } from "../../shared/mail.ts";
 import { normalizedAccountName } from "./account-profile.ts";
+import { auditedAuthenticationHandler } from "./request-audit.ts";
 
 export interface AuthConfiguration {
   origin: string;
@@ -146,7 +147,14 @@ export function createAuthentication(
 ) {
   const auth = betterAuth(authOptions(pool, config, mail));
   return {
-    handler: auth.handler,
+    handler: auditedAuthenticationHandler(
+      pool,
+      auth.handler,
+      async (headers) => {
+        const session = await auth.api.getSession({ headers });
+        return session?.user.emailVerified ? session.user.id : null;
+      },
+    ),
     schema: () => auth.api.generateOpenAPISchema(),
     async authenticate(headers: Headers) {
       const result = await auth.api.getSession({ headers });

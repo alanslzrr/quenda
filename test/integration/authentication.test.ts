@@ -155,12 +155,36 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           });
           assert.equal(denied.statusCode, 403, denied.body);
           assert.equal(denied.json().error.code, "EMAIL_NOT_VERIFIED");
+          assert.deepEqual(
+            (
+              await migration.query(
+                "SELECT phase,actor_id,http_status FROM auth.request_event WHERE request_id=$1 ORDER BY occurred_at",
+                [denied.headers["x-request-id"]],
+              )
+            ).rows,
+            [
+              { phase: "RECEIVED", actor_id: null, http_status: null },
+              { phase: "RETURNED", actor_id: null, http_status: 403 },
+            ],
+          );
           await verify(client, email);
           const signed = await client.request("/api/auth/sign-in/email", {
             email,
             password,
           });
           assert.equal(signed.statusCode, 200, signed.body);
+          assert.deepEqual(
+            (
+              await migration.query(
+                "SELECT phase,operation,http_status FROM auth.request_event WHERE request_id=$1 ORDER BY occurred_at",
+                [signed.headers["x-request-id"]],
+              )
+            ).rows,
+            [
+              { phase: "RECEIVED", operation: "SIGN_IN", http_status: null },
+              { phase: "RETURNED", operation: "SIGN_IN", http_status: 200 },
+            ],
+          );
           const cookieHeaders = JSON.stringify(signed.headers["set-cookie"]);
           assert.match(cookieHeaders, /Secure/);
           assert.match(cookieHeaders, /HttpOnly/);

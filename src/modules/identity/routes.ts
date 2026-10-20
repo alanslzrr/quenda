@@ -224,6 +224,7 @@ export async function registerAuthentication(
             ? { body: JSON.stringify(request.body ?? {}) }
             : {}),
         }),
+        request.id,
       );
       response.headers.forEach((value, name) => {
         if (name !== "set-cookie" && name !== "content-length")
