@@ -135,7 +135,7 @@ El detalle no devuelve el resultado histórico de un comando: tras cancelar, mue
 
 Las consultas muestran `FINALIZADA` cuando el fin de una reserva confirmada es anterior o igual al instante de consulta. No modifican el estado almacenado ni ejecutan tareas programadas; una reserva cancelada sigue mostrando `CANCELADA`.
 
-Las condiciones incluyen `usageRulesVersion`, `rulesAcceptedAt`, `bookingPolicyVersion`, `conditionsAcceptedAt` y `nonCancellableAccepted`. En reservas anteriores pueden ser nulas: significa «sin aceptación registrada», no otro estado de reserva. Consultarlas o cancelarlas no exige completar esa evidencia.
+Las condiciones distinguen la referencia de normas aceptadas de las normas asignadas pendientes tras una reubicación. La evidencia anterior conserva unidad, versión e instante, aunque corresponda a otro destino. Los datos nulos significan «sin aceptación registrada», no otro estado de reserva. La aceptación pendiente tampoco cambia `CONFIRMADA` ni libera ocupación o cuota. Consultar o cancelar no exige aceptar normas.
 
 ## Confirmación de reservas
 
@@ -151,11 +151,23 @@ La creación valida las reglas vigentes y confirma reserva, ocupación, evento, 
 
 `POST /api/municipalities/{tenantId}/reservations/{reservationId}/modify` recibe `expectedRevision`, `unitId`, `startsAt` y `endsAt`, con la misma autenticación e idempotencia que la confirmación. Devuelve `200`. No cambia el titular ni el municipio.
 
-El sistema aplica el plazo aceptado de origen y las reglas vigentes del destino. `acceptance` solo puede omitirse si existe evidencia anterior de la misma unidad y versiones y cubre la condición de cancelación del nuevo intervalo. Una modificación real de una reserva sin evidencia exige aceptación del titular fechada en ese cambio, no en su creación original.
+La modificación del titular aplica el plazo aceptado de origen y las reglas vigentes del destino. `acceptance` solo puede omitirse si existe evidencia anterior de la misma unidad y versiones y cubre la condición de cancelación del nuevo intervalo. Una modificación real del titular sin esa evidencia exige aceptación fechada en ese cambio, no en la creación original.
 
 Sustituye la ocupación, conserva la anterior liberada y registra las condiciones anteriores y nuevas. Un conflicto revierte todos los cambios. Una petición sin cambios de unidad o intervalo conserva versión y condiciones y no genera aceptación, evento ni aviso nuevos.
 
-`administrative: true` exige `reason`, MFA reciente y `RESERVATION_MANAGE`. Permite omitir el plazo del titular, siempre antes del inicio, pero solo mantiene la misma unidad y versión de normas ya aceptada. No admite `acceptance` en nombre del titular. Si cambia la unidad, cambian las normas o falta evidencia, devuelve `409 HOLDER_ACCEPTANCE_REQUIRED` y conserva la reserva. El titular debe modificar desde su cuenta dentro de su propio plazo; si ha vencido, solo cabe conservar la reserva o valorar una cancelación administrativa con motivo.
+`administrative: true` exige `reason`, MFA reciente y `RESERVATION_MANAGE` sobre origen y destino. Permite cambiar fecha, horario o unidad dentro del municipio antes del inicio, incluso fuera del plazo ordinario del titular. Libera el origen, ocupa el destino y recalcula la cuota en una transacción; no mantiene dos reservas ni crea una propuesta. Conserva el plazo de cancelación aceptado, aplicado al nuevo inicio.
+
+El gestor no envía `acceptance` por el titular. Si las normas del destino no están cubiertas por una aceptación de esa unidad y versión, el cambio queda realizado con aceptación pendiente y genera un aviso que lo indica. La misma regla se aplica a reservas históricas sin evidencia: se permite la modificación administrativa sin atribuirles una aceptación anterior.
+
+## Aceptación de normas después de una reubicación
+
+`POST /api/municipalities/{tenantId}/reservations/{reservationId}/accept-usage-rules` recibe `expectedRevision`, `unitId` y `usageRulesVersion`, con sesión, origen autorizado e `Idempotency-Key`. Solo puede ejecutarlo el titular. El detalle de la reserva identifica la versión asignada mediante `pendingUsageRulesVersion` y devuelve su texto en `pendingUsageRulesText`.
+
+El titular consulta las normas exactas asignadas a la reserva y las acepta antes del nuevo inicio. Puede hacerlo dentro de las últimas 24 horas: aceptar no vuelve a modificar la reserva ni altera el plazo de cancelación. Solo registra su aceptación e incrementa la revisión, sin mover ocupación o cuota ni generar otro aviso de reprogramación.
+
+La petición debe identificar la revisión, unidad y versión pendientes. Se rechaza si la reserva cambió concurrentemente. Publicar después otra versión del catálogo no reemplaza las normas ya asignadas a esa reserva; el gestor tampoco puede aceptarlas en nombre del usuario. El evento `NORMAS_ACEPTADAS` registra la nueva evidencia y elimina la referencia pendiente. No crea un aviso interno ni un correo.
+
+Sin respuesta, la reserva reubicada permanece confirmada, ocupada y con su cuota consumida. No se revierte ni cancela automáticamente. La falta de aceptación sigue visible al llegar el inicio, sin inferir asistencia ni generar una incidencia. Ante una discrepancia, el titular contacta directamente con el municipio. La aplicación informa del requisito de aceptación antes del uso; no controla físicamente el acceso a la instalación.
 
 ## Cancelación de reservas
 
@@ -252,7 +264,7 @@ Ambos endpoints exigen administrador municipal y MFA reciente. El comando exige 
 
 ### Avisos internos
 
-`GET /api/me/notices` devuelve los avisos del usuario autenticado entre municipios, con `Cache-Control: no-store`. Pagina de 20 en 20 por identificador de evento y municipio; `after` acepta el `nextCursor` anterior. Cada aviso contiene tipo, revisión, fecha del evento e intervalo histórico, junto con `reservationPath` para consultar el estado actual. No expone actores, motivos administrativos ni correlaciones, y no representa el estado de entrega del correo.
+`GET /api/me/notices` devuelve los avisos del usuario autenticado entre municipios, con `Cache-Control: no-store`. Pagina de 20 en 20 por identificador de evento y municipio; `after` acepta el `nextCursor` anterior. Cada aviso contiene tipo, revisión, fecha del evento e intervalo histórico, junto con `reservationPath` para consultar el estado actual. La reubicación administrativa indica si exige aceptar normas antes del uso. No expone actores, motivos administrativos ni correlaciones, y no representa el estado de entrega del correo.
 
 ### Procesamiento de correo
 
@@ -292,11 +304,11 @@ La oferta utiliza versiones de calendario y eventos históricos de publicación/
 
 ### Exportación de reservas
 
-`GET /api/municipalities/{tenantId}/exports/reservations?from=2030-01-01&to=2030-02-01` descarga JSON `quenda.reservations`, versión 2. El parámetro opcional `unitId` limita el conjunto a una unidad. Exige `DATA_EXPORT` y `RESERVATION_READ` o `RESERVATION_MANAGE` para el mismo ámbito, con MFA de los últimos cinco minutos. Sin `unitId`, ambos permisos deben ser municipales.
+`GET /api/municipalities/{tenantId}/exports/reservations?from=2030-01-01&to=2030-02-01` descarga JSON `quenda.reservations`, versión 3. El parámetro opcional `unitId` limita el conjunto a una unidad. Exige `DATA_EXPORT` y `RESERVATION_READ` o `RESERVATION_MANAGE` para el mismo ámbito, con MFA de los últimos cinco minutos. Sin `unitId`, ambos permisos deben ser municipales.
 
-El archivo identifica municipio, unidad solicitada (`null` para todo el municipio), instante de generación, periodo, zona horaria y entidades incluidas. Selecciona reservas que se solapan con `[from,to)` en la zona del municipio; conserva sus intervalos completos, aunque crucen una frontera del periodo. Incluye versiones e instantes de aceptación, plazo aceptado y `nonCancellableAccepted`; los nulos indican evidencia no registrada. `FINALIZADA` se calcula al generar el archivo y no acredita asistencia. Incluye el identificador del titular, como la consulta municipal ordinaria, pero no nombres, correos ni credenciales. No es una copia de seguridad de la base de datos.
+El archivo identifica municipio, unidad solicitada (`null` para todo el municipio), instante de generación, periodo, zona horaria y entidades incluidas. Selecciona reservas que se solapan con `[from,to)` en la zona del municipio; conserva sus intervalos completos, aunque crucen una frontera del periodo. `usageRulesUnitId`, `usageRulesVersion` y `usageRulesText` identifican las normas aceptadas, que pueden corresponder a la unidad anterior. `pendingUsageRulesVersion` y `pendingUsageRulesText` identifican las normas pendientes de la unidad actual. Incluye instantes de aceptación, plazo conservado y `nonCancellableAccepted`; los nulos indican evidencia no registrada. `FINALIZADA` se calcula al generar el archivo y no acredita asistencia. Incluye el identificador del titular, como la consulta municipal ordinaria, pero no nombres, correos ni credenciales. No es una copia de seguridad de la base de datos.
 
-Cada solicitud admite hasta 366 días y 10000 reservas. Si excede el límite, devuelve `400` sin archivo parcial: debe reducirse el periodo o seleccionar una unidad. La respuesta usa `Cache-Control: no-store` y descarga `quenda-reservations-v2.json`.
+Cada solicitud admite hasta 366 días y 10000 reservas. Si excede el límite, devuelve `400` sin archivo parcial: debe reducirse el periodo o seleccionar una unidad. La respuesta usa `Cache-Control: no-store` y descarga `quenda-reservations-v3.json`.
 
 Esquema JSON Schema Draft 7 y ejemplo sintético, generados desde el mismo contrato usado por la API:
 

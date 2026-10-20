@@ -6,7 +6,7 @@
 |---|---|---|
 | CU-01 | Un usuario consulta el catálogo y la disponibilidad. | Instalaciones publicadas y franjas en hora local, sin datos de titulares. |
 | CU-02 | Un usuario autenticado acepta las condiciones y crea una reserva. | Confirmación con las versiones aceptadas o rechazo sin cambios parciales. |
-| CU-03 | El titular o un gestor municipal modifica o cancela una reserva. | Cambio atómico; motivo obligatorio para el gestor. |
+| CU-03 | El titular o un gestor municipal modifica o cancela una reserva. | Cambio atómico; motivo obligatorio para el gestor y aceptación posterior del titular cuando la reubicación asigna normas no aceptadas. |
 | CU-04 | Un administrador o gestor autorizado mantiene el catálogo y calendario. | Configuración persistida y auditada, sin invalidar reservas confirmadas. |
 | CU-05 | Un gestor autorizado consulta indicadores o exporta datos. | Resultados del municipio y periodo permitidos. |
 | CU-06 | Un operador de plataforma da de alta un municipio. | Configuración inicial e invitación a su primer administrador. |
@@ -125,7 +125,7 @@ El comando incluye la versión conocida de la reserva. El sistema comprueba auto
 
 Una modificación sin cambios de unidad o intervalo conserva la atribución de cuota y no genera un evento de cambio. Las demás modificaciones revalidan destino, horario y convenio; liberan el consumo anterior y registran el nuevo en la misma transacción. Un error conserva tanto la reserva como su consumo.
 
-Se aplica el plazo aceptado de origen y la [regla de aceptación correspondiente](02_modelo_dominio.md#normas-de-uso-y-aceptación). El gestor conserva la misma unidad y normas aceptadas; si hace falta una nueva aceptación, se rechaza el cambio administrativo sin alterar la reserva. La cancelación no exige aceptar normas.
+Se aplica el plazo aceptado de origen y la [regla de aceptación correspondiente](02_modelo_dominio.md#normas-de-uso-y-aceptación). El gestor puede omitir el plazo del titular y reubicar dentro del mismo municipio, con permisos sobre origen y destino y motivo. La operación es inmediata; asigna las normas del destino y registra aceptación pendiente si no están cubiertas por la evidencia del titular. Conserva su política de cancelación y notifica el cambio. La cancelación no exige aceptar normas.
 
 El titular y el municipio de la reserva no cambian. Reservar en otro municipio requiere cancelar y crear otra reserva como operaciones independientes. Solo una cancelación confirmada libera ocupación y consumo. Un rechazo por plazo vencido no genera liberaciones ni avisos.
 
@@ -158,7 +158,8 @@ sequenceDiagram
       A->>D: Guardar resultado y COMMIT, sin alterar consumos
       A-->>U: Estado actual
     else Modificación o cancelación válida
-      A->>D: Comprobar aceptación si modifica, reglas y actualizar efectos
+      A->>D: Si modifica, validar aceptación o asignar normas pendientes al actuar el gestor
+      A->>D: Comprobar reglas y actualizar reserva, ocupación y consumos
       alt Error de regla o integridad
         A->>D: ROLLBACK
         A-->>U: Reserva y consumos anteriores conservados
@@ -180,9 +181,15 @@ sequenceDiagram
 
 Los cambios de horarios y excepciones comprueban las reservas afectadas con el mismo protocolo que los bloqueos. La sesión no sustituye la comprobación de permisos vigentes.
 
+### Aceptación de normas asignadas
+
+El titular consulta la reserva y el texto exacto pendiente. Envía revisión, unidad y versión para aceptarlo. La API comprueba sesión, titularidad, idempotencia, coincidencia con la obligación asignada e inicio futuro, dentro de la misma transacción. Un cambio concurrente exige consultar de nuevo la reserva.
+
+Aceptar incrementa la revisión y registra un evento de aceptación, no una modificación de horario. No toca ocupación, cuotas ni política de cancelación y no genera un aviso de reprogramación. No se aplica el plazo ordinario de modificación: puede aceptarse hasta antes del inicio, sin admitir aceptación retrospectiva.
+
 ## Avisos
 
-El sistema genera un aviso interno y un correo por confirmación, modificación o cancelación. El evento se guarda con la operación. Un fallo del correo mantiene la reserva confirmada y deja el aviso pendiente.
+El sistema genera un aviso interno y un correo por confirmación, modificación o cancelación. Una modificación administrativa indica si el titular debe aceptar las normas asignadas antes del uso. La aceptación posterior tiene auditoría propia, sin otro aviso de modificación. El evento se guarda con la operación. Un fallo del correo mantiene la reserva confirmada y deja el aviso pendiente.
 
 El worker reclama cada evento mediante una concesión temporal, envía el mensaje fuera de la transacción y registra el intento. Las concesiones vencidas permiten recuperar trabajos abandonados. Los avisos se procesan por reserva y versión; cada mensaje describe un evento fechado y enlaza al estado actual.
 
@@ -224,9 +231,9 @@ Los minutos ofertados se obtienen de los calendarios y cierres versionados corre
 
 La API utiliza OpenAPI para describir rutas, entradas, respuestas, permisos y ejemplos. Los comandos documentan clave idempotente, versión de concurrencia y errores por campo. Las exportaciones identifican versión de formato, municipio, periodo y entidades incluidas; aplican los mismos permisos que las consultas.
 
-La aceptación se envía como `acceptance: { usageRulesVersion, bookingPolicyVersion, nonCancellable }`. Los identificadores proceden del detalle público de la unidad; el texto de normas se consulta por separado. `nonCancellable` identifica la aceptación expresa de reservar cuando ya no es posible cancelar por cuenta propia. El backend comprueba su valor con el inicio solicitado y el plazo vigente.
+Al crear o modificar por cuenta del titular, la aceptación se envía como `acceptance: { usageRulesVersion, bookingPolicyVersion, nonCancellable }`. Los identificadores proceden del detalle público de la unidad; el texto de normas se consulta por separado. `nonCancellable` identifica la aceptación expresa de reservar cuando ya no es posible cancelar por cuenta propia. El backend comprueba su valor con el inicio solicitado y el plazo vigente.
 
-La exportación `quenda.reservations`, versión 2, incluye versiones e instantes de aceptación, plazo aceptado y aceptación de no cancelación. Los valores nulos indican evidencia no registrada; no cambian el estado de la reserva.
+La exportación `quenda.reservations`, versión 3, distingue la unidad y versión aceptadas de la unidad y normas pendientes tras una reubicación. Incluye sus textos, instantes de aceptación, plazo conservado y aceptación de no cancelación. Los valores nulos indican evidencia no registrada; no cambian el estado de la reserva.
 
 | Situación | Resultado |
 |---|---|
@@ -235,7 +242,8 @@ La exportación `quenda.reservations`, versión 2, incluye versiones e instantes
 | Solape, cuota agotada o versión obsoleta | Conflicto, sin datos de reservas de terceros. |
 | Publicación sin normas | `USAGE_RULES_REQUIRED`: «Añade las normas de uso para publicar esta unidad». |
 | Modificación que exige nueva aceptación o condiciones cambiadas | `CONDITIONS_ACCEPTANCE_REQUIRED` o `CONDITIONS_CHANGED`; el titular debe consultar y aceptar las condiciones aplicables. |
-| Modificación administrativa que requiere aceptación | `HOLDER_ACCEPTANCE_REQUIRED`; el titular debe modificar desde su cuenta, sujeto a su plazo. |
+| Intento de aceptar por otro titular | Rechazo sin registrar aceptación ni alterar la reserva. |
+| Aceptación posterior con revisión, unidad o versión distintas de las pendientes | Conflicto sin cambios; el titular debe consultar la reserva actual. |
 | Modificación o cancelación fuera de plazo | `RESERVATION_DEADLINE_PASSED`; se conservan reserva, ocupación y cuota. |
 | Dependencia no disponible | Fallo o resultado incierto recuperable con la misma clave. |
 | Correo pendiente | Reserva confirmada con estado de aviso separado. |

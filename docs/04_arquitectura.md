@@ -65,6 +65,8 @@ Las transacciones se mantienen breves y sin llamadas externas. Las pruebas de co
 
 La confirmación bloquea las versiones de normas y política y las compara con la aceptación enviada. Recomprueba los límites temporales después de las esperas; nunca sustituye una versión aceptada por otra. La baja de cuenta, los comandos y la creación de sesiones se coordinan sobre el estado global de la cuenta: la baja revoca todas las sesiones y no puede coexistir con una nueva reserva futura confirmada.
 
+La reubicación administrativa separa la referencia de normas aceptadas de la obligación pendiente sobre el destino. Reprogramación, ocupación, cuota y aviso se confirman juntos. La aceptación posterior es otro comando idempotente del titular: valida la revisión y referencia asignadas, registra evidencia y no modifica ocupaciones ni consumos.
+
 ## ADR-07 Outbox y worker
 
 La transacción de reserva guarda los eventos pendientes en una outbox. Un worker del mismo producto los procesa y registra los intentos de envío. Puede ejecutarse separado de la API sin duplicar reglas ni código.

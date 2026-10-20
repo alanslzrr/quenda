@@ -19,14 +19,14 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-01 | Consultar instalaciones | El usuario ve las instalaciones publicadas del municipio seleccionado. |
 | RF-02 | Consultar disponibilidad | El sistema muestra los intervalos admitidos y comprueba de nuevo su disponibilidad al confirmar. |
 | RF-03 | Crear una reserva | El usuario acepta las condiciones vigentes y recibe confirmación o rechazo con motivo. Si el plazo de cancelación ya ha vencido, acepta expresamente que no podrá cancelarla por sí mismo. |
-| RF-04 | Modificar una reserva | El sistema comprueba el plazo aceptado de origen y las condiciones del destino; aplica el cambio atómicamente o conserva la reserva anterior. |
+| RF-04 | Modificar una reserva | La modificación del titular comprueba el plazo aceptado de origen y las condiciones del destino; aplica el cambio atómicamente o conserva la reserva anterior. |
 | RF-05 | Cancelar una reserva | El sistema aplica el plazo aceptado y libera ocupación y cuota solo si confirma la cancelación. El rechazo conserva ambas. |
 | RF-06 | Consultar el historial | El usuario accede a sus reservas; el gestor municipal, únicamente a las incluidas en sus permisos. |
 | RF-07 | Recibir avisos | El sistema genera avisos internos y correos de confirmación, modificación y cancelación. |
 | RF-08 | Crear instalaciones | El administrador o gestor municipal autorizado registra instalaciones de su municipio. |
 | RF-09 | Mantener el catálogo | El sistema permite modificar o retirar instalaciones y unidades reservables sin borrar reservas ni alterar su historial. |
 | RF-10 | Configurar horarios | El sistema calcula la disponibilidad con los horarios, excepciones y cierres vigentes. |
-| RF-11 | Gestionar normas de uso | Publicar exige normas vigentes con contenido. El titular acepta su versión al reservar y al modificar si cambia la unidad o las normas aplicables, o falta evidencia anterior. Las versiones aceptadas se conservan; el gestor no puede aceptarlas en su nombre. |
+| RF-11 | Gestionar normas de uso | Publicar exige normas vigentes con contenido. El titular acepta las normas al reservar y, al modificar, cuando no están cubiertas por su evidencia. Una reubicación administrativa puede dejar las normas asignadas pendientes de aceptación antes del uso, sin atribuirla al gestor ni alterar la evidencia anterior. |
 | RF-12 | Consultar indicadores municipales | Los resultados reproducen las [fórmulas de reservas y ocupación](03_procesos_y_secuencias.md#indicadores-municipales) para el municipio y periodo seleccionados. |
 | RF-13 | Incorporar municipios | El operador de plataforma da de alta un municipio mediante configuración, sin modificar el código. |
 | RF-14 | Gestionar cuentas y sesiones | El usuario crea una cuenta, inicia sesión y la cierra sin obtener permisos municipales automáticamente. |
@@ -35,7 +35,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-17 | Mantener datos desde la aplicación | La aplicación permite consultar datos y validar y persistir altas, modificaciones y bajas autorizadas de cuentas, perfiles y datos municipales. |
 | RF-18 | Exportar datos municipales | El sistema entrega el conjunto autorizado en un formato abierto documentado, sin datos ajenos al ámbito solicitado. |
 | RF-19 | Bloquear unidades reservables | El cierre impide nuevas reservas y se rechaza si afecta a reservas confirmadas no resueltas. |
-| RF-20 | Administrar reservas | El gestor autorizado modifica o cancela reservas futuras con motivo, sin eludir integridad ni cuotas. Una modificación administrativa conserva la unidad y las normas aceptadas; cancelar no exige una nueva aceptación. |
+| RF-20 | Administrar reservas | El gestor autorizado cambia fecha, horario o unidad y puede cancelar reservas futuras con motivo. La reubicación es inmediata y transaccional, notifica al titular y registra las normas pendientes cuando corresponda; no transfiere titularidad ni altera el plazo de cancelación aceptado. |
 | RF-21 | Gestionar convenios | Los administradores participantes aprueban una versión con capacidades, unidades reservables y vigencia explícitas. |
 | RF-22 | Comprobar elegibilidad | Durante un intento de reserva, el sistema comprueba el derecho de uso sin exponer expedientes ni historiales de otros municipios. |
 | RF-23 | Aplicar cuotas conjuntas | La reserva y su consumo de cuota se confirman en una transacción; las solicitudes concurrentes no superan el límite. |

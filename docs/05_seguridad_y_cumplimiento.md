@@ -30,6 +30,8 @@ Los permisos operativos no incluyen lectura general de reservas personales. Un a
 
 Una intervención administrativa no acredita aceptación del titular. Los eventos distinguen la operación administrativa de la aceptación personal; si el dato no consta en un evento anterior, no se infiere. Las normas y condiciones aceptadas conservan su versión e instante sin sobrescribir la evidencia previa.
 
+El gestor necesita permiso sobre las unidades de origen y destino para reubicar. Solo el titular puede aceptar las normas asignadas a su reserva, con revisión y referencia exactas antes del inicio. La notificación del cambio, su entrega o la falta de respuesta no equivalen a aceptación.
+
 **Justificación:** la combinación de rol, objeto y contexto limita el acceso que un rol genérico no puede expresar. [NIST ABAC](https://csrc.nist.gov/pubs/sp/800/162/upd2/final), [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html).
 
 ## Aislamiento de datos
