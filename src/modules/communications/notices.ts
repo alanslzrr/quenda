@@ -35,6 +35,7 @@ export async function listOwnNotices(
         starts_at: Date;
         ends_at: Date;
         timezone: string;
+        pending_usage_rules_version: number | null;
       }>("SELECT * FROM domain.own_reservation_notices($1,$2)", cursor);
       const page = result.rows.slice(0, 20);
       return {
@@ -49,6 +50,7 @@ export async function listOwnNotices(
           startsAt: row.starts_at.toISOString(),
           endsAt: row.ends_at.toISOString(),
           timeZone: row.timezone,
+          pendingUsageRulesVersion: row.pending_usage_rules_version,
           reservationPath: `/api/municipalities/${row.tenant_id}/reservations/${row.reservation_id}`,
         })),
         nextCursor:

@@ -9,12 +9,17 @@ import { createBackup } from "../../scripts/lib/backup.ts";
 import { reconcileRestore } from "../../scripts/lib/reconcile.ts";
 import { restoreBackup } from "../../scripts/lib/restore.ts";
 import {
+  acceptReservationUsageRules,
   cancelReservation,
   createReservation,
+  modifyReservation,
 } from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 import { recoveryFixture } from "../helpers/recovery-fixture.ts";
-import { initialAcceptance } from "../helpers/usage-rules-fixture.ts";
+import {
+  initialAcceptance,
+  seedUsageRules,
+} from "../helpers/usage-rules-fixture.ts";
 
 const execute = promisify(execFile);
 test("restored database reconciliation is read-only, detects inconsistent occupancy and keeps mail closed", {
@@ -312,14 +317,31 @@ test("reconciliation checks acceptance evidence, legacy snapshots and sessions o
         "INSERT INTO domain.unit_usage_rules SELECT * FROM jsonb_populate_record(NULL::domain.unit_usage_rules,$1::jsonb)",
         [originalRules],
       );
+      // Snapshots from before explicit accepted-unit references remain valid
+      // only when their evidence still belongs to the current unit.
+      await corrupt(
+        "UPDATE domain.reservation_event SET after_state=after_state-ARRAY['usageRulesUnitId','pendingUsageRulesVersion'] WHERE reservation_id=$1",
+        [booking.result.id],
+      );
+      const previousFormat = await run();
+      assert.equal(previousFormat.checks.reservationSnapshots, 0);
+      await corrupt(
+        "UPDATE domain.reservation_event SET after_state=$2::jsonb-'usageRulesUnitId' WHERE reservation_id=$1",
+        [booking.result.id, original],
+      );
+      assert.equal((await run()).checks.reservationSnapshots, 1);
+      await corrupt(
+        "UPDATE domain.reservation_event SET after_state=$2 WHERE reservation_id=$1",
+        [booking.result.id, original],
+      );
       // A legacy record may lack all acceptance fields; its historical snapshot
       // remains valid without rewriting it to manufacture null-valued evidence.
       await corrupt(
-        "UPDATE domain.reservation SET usage_rules_version=NULL,rules_accepted_at=NULL,booking_policy_version=NULL,conditions_accepted_at=NULL,non_cancellable_accepted=NULL WHERE id=$1",
+        "UPDATE domain.reservation SET usage_rules_unit_id=NULL,usage_rules_version=NULL,rules_accepted_at=NULL,booking_policy_version=NULL,conditions_accepted_at=NULL,non_cancellable_accepted=NULL WHERE id=$1",
         [booking.result.id],
       );
       await corrupt(
-        "UPDATE domain.reservation_event SET after_state=after_state-ARRAY['usageRulesVersion','rulesAcceptedAt','bookingPolicyVersion','conditionsAcceptedAt','nonCancellableAccepted'] WHERE reservation_id=$1",
+        "UPDATE domain.reservation_event SET after_state=after_state-ARRAY['usageRulesUnitId','pendingUsageRulesVersion','usageRulesVersion','rulesAcceptedAt','bookingPolicyVersion','conditionsAcceptedAt','nonCancellableAccepted'] WHERE reservation_id=$1",
         [booking.result.id],
       );
       const legacy = await run();
@@ -345,6 +367,205 @@ test("reconciliation checks acceptance evidence, legacy snapshots and sessions o
         ).rows[0].n,
         1,
       );
+    } finally {
+      await admin.end();
+    }
+  });
+});
+
+test("reconciliation validates relocated and historical acceptance independently of cancellation evidence", {
+  timeout: 60000,
+}, async () => {
+  await withDatabase(async ({ auth, migration, domain, administration }) => {
+    const { tenants, units } = await recoveryFixture(auth, migration);
+    const tenant = tenants[0],
+      source = units[0],
+      destination = randomUUID(),
+      invitation = randomUUID();
+    await auth.query(
+      `INSERT INTO auth."user"(id,name,email,"emailVerified") VALUES('reconcile-admin','Reconcile admin','reconcile-admin@example.test',true)`,
+    );
+    await migration.query(
+      "INSERT INTO domain.municipal_profile(tenant_id,account_id) VALUES($1,'reconcile-admin')",
+      [tenant],
+    );
+    await migration.query(
+      "INSERT INTO domain.administrator_invitation(tenant_id,id,account_id,invited_by,expires_at,accepted_at) VALUES($1,$2,'reconcile-admin','reconcile-admin',now()+interval '1 day',now())",
+      [tenant, invitation],
+    );
+    await migration.query(
+      "INSERT INTO domain.municipal_administrator(tenant_id,account_id,invitation_id) VALUES($1,'reconcile-admin',$2)",
+      [tenant, invitation],
+    );
+    await migration.query(
+      "INSERT INTO domain.reservable_unit(tenant_id,id,facility_id,name) SELECT tenant_id,$3,facility_id,'Recovery destination' FROM domain.reservable_unit WHERE tenant_id=$1 AND id=$2",
+      [tenant, source, destination],
+    );
+    await migration.query(
+      "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason) SELECT tenant_id,$3,1,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,'Recovery fixture' FROM domain.unit_calendar_version WHERE tenant_id=$1 AND unit_id=$2 AND version=1",
+      [tenant, source, destination],
+    );
+    await seedUsageRules(migration, tenant, destination, "reconcile-admin");
+    await migration.query(
+      "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
+      [tenant, destination],
+    );
+    const holder = {
+      accountId: "citizen",
+      email: "citizen@example.test",
+      sessionId: "holder-session",
+      mfaVerifiedAt: null,
+    };
+    const manager = {
+      accountId: "reconcile-admin",
+      email: "reconcile-admin@example.test",
+      sessionId: "manager-session",
+      mfaVerifiedAt: new Date(),
+    };
+    const clock = { now: () => new Date("2030-04-02T00:00:00Z") };
+    const admin = new Client({
+      connectionString: administration.options.connectionString,
+    });
+    await admin.connect();
+    const run = () => reconcileRestore(admin, path.resolve("db/migrations"));
+    const corrupt = async (sql: string, values: unknown[] = []) => {
+      await admin.query("BEGIN");
+      try {
+        await admin.query("SET LOCAL session_replication_role=replica");
+        await admin.query(sql, values);
+        await admin.query("COMMIT");
+      } catch (error) {
+        await admin.query("ROLLBACK");
+        throw error;
+      }
+    };
+    const assertValid = async () => {
+      const report = await run();
+      assert.equal(report.status, "CHECKED_REQUIRES_REVIEW");
+      assert.ok(Object.values(report.checks).every((n) => n === 0));
+      assert.equal(report.reopeningAuthorized, false);
+    };
+    try {
+      for (const legacy of [false, true]) {
+        const day = legacy ? "10" : "03";
+        const interval = {
+          startsAt: `2030-04-${day}T10:00:00Z`,
+          endsAt: `2030-04-${day}T11:00:00Z`,
+        };
+        const created = (
+          await createReservation(
+            domain,
+            holder,
+            tenant,
+            `reconcile-create-${legacy}`,
+            { unitId: source, ...interval, acceptance: initialAcceptance },
+            randomUUID(),
+            3600,
+            clock,
+          )
+        ).result;
+        if (legacy) {
+          await corrupt(
+            "UPDATE domain.reservation SET usage_rules_unit_id=NULL,usage_rules_version=NULL,rules_accepted_at=NULL,booking_policy_version=NULL,conditions_accepted_at=NULL,non_cancellable_accepted=NULL WHERE id=$1",
+            [created.id],
+          );
+          await corrupt(
+            "UPDATE domain.reservation_event e SET after_state=domain.reservation_snapshot(r) FROM domain.reservation r WHERE r.id=$1 AND e.reservation_id=r.id",
+            [created.id],
+          );
+        }
+        const moved = (
+          await modifyReservation(
+            domain,
+            manager,
+            tenant,
+            created.id,
+            `reconcile-move-${legacy}`,
+            {
+              expectedRevision: 1,
+              unitId: destination,
+              ...interval,
+              administrative: true,
+              reason: "Synthetic recovery relocation",
+            },
+            randomUUID(),
+            3600,
+            clock,
+          )
+        ).result;
+        assert.equal(moved.pendingUsageRulesVersion, 1);
+        assert.equal(moved.usageRulesUnitId, legacy ? null : source);
+        await assertValid();
+        const originalSnapshot = (
+          await admin.query(
+            "SELECT after_state FROM domain.reservation_event WHERE reservation_id=$1 AND revision=2",
+            [created.id],
+          )
+        ).rows[0].after_state;
+        await corrupt(
+          "UPDATE domain.reservation_event SET after_state=after_state-ARRAY['usageRulesUnitId','pendingUsageRulesVersion'] WHERE reservation_id=$1 AND revision=2",
+          [created.id],
+        );
+        assert.equal((await run()).checks.reservationSnapshots, 1);
+        await corrupt(
+          "UPDATE domain.reservation_event SET after_state=$2 WHERE reservation_id=$1 AND revision=2",
+          [created.id, originalSnapshot],
+        );
+        const pendingRules = (
+          await admin.query(
+            "SELECT to_jsonb(u) AS value FROM domain.unit_usage_rules u WHERE tenant_id=$1 AND unit_id=$2 AND version=1",
+            [tenant, destination],
+          )
+        ).rows[0].value;
+        await corrupt(
+          "DELETE FROM domain.unit_usage_rules WHERE tenant_id=$1 AND unit_id=$2",
+          [tenant, destination],
+        );
+        assert.ok(((await run()).checks.reservationAcceptance ?? 0) > 0);
+        await admin.query(
+          "INSERT INTO domain.unit_usage_rules SELECT * FROM jsonb_populate_record(NULL::domain.unit_usage_rules,$1::jsonb)",
+          [pendingRules],
+        );
+        const beforeMail = (
+          await admin.query(
+            "SELECT to_jsonb(e) AS row FROM domain.reservation_email e ORDER BY event_id",
+          )
+        ).rows;
+        const accepted = (
+          await acceptReservationUsageRules(
+            domain,
+            holder,
+            tenant,
+            created.id,
+            `reconcile-accept-${legacy}`,
+            {
+              expectedRevision: 2,
+              unitId: destination,
+              usageRulesVersion: 1,
+            },
+            randomUUID(),
+            3600,
+            clock,
+          )
+        ).result;
+        assert.equal(accepted.revision, 3);
+        assert.equal(accepted.usageRulesUnitId, destination);
+        assert.equal(accepted.pendingUsageRulesVersion, null);
+        assert.equal(accepted.bookingPolicyVersion, legacy ? null : 1);
+        assert.equal(
+          accepted.conditionsAcceptedAt,
+          legacy ? null : created.conditionsAcceptedAt,
+        );
+        await assertValid();
+        assert.deepEqual(
+          (
+            await admin.query(
+              "SELECT to_jsonb(e) AS row FROM domain.reservation_email e ORDER BY event_id",
+            )
+          ).rows,
+          beforeMail,
+        );
+      }
     } finally {
       await admin.end();
     }

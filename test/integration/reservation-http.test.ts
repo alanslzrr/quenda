@@ -431,11 +431,13 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         )
       ).rows;
       const oldEvidence = {
+        usageRulesUnitId: null,
         usageRulesVersion: null,
         rulesAcceptedAt: null,
         bookingPolicyVersion: null,
         conditionsAcceptedAt: null,
         nonCancellableAccepted: null,
+        pendingUsageRulesVersion: null,
       };
       const legacyCommand = (
         await migration.query(
@@ -946,7 +948,7 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         ),
       );
       assert.equal(exportData.format, "quenda.reservations");
-      assert.equal(exportData.version, 2);
+      assert.equal(exportData.version, 3);
       assert.equal(exportData.tenantId, tenant);
       assert.equal(exportData.unitId, null);
       assert.deepEqual(exportData.entities, ["reservations"]);
@@ -959,6 +961,9 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(exportData.reservations.length, 2);
       for (const reservation of exportData.reservations) {
         assert.equal(reservation.usageRulesVersion, null);
+        assert.equal(reservation.usageRulesUnitId, null);
+        assert.equal(reservation.pendingUsageRulesVersion, null);
+        assert.equal(reservation.pendingUsageRulesText, null);
         assert.equal(reservation.usageRulesText, null);
         assert.equal(reservation.rulesAcceptedAt, null);
         assert.equal(reservation.bookingPolicyVersion, null);
@@ -1024,7 +1029,7 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(downloaded.headers["cache-control"], "no-store");
       assert.equal(
         downloaded.headers["content-disposition"],
-        'attachment; filename="quenda-reservations-v2.json"',
+        'attachment; filename="quenda-reservations-v3.json"',
       );
       assert.equal(downloaded.json().reservations.length, 4);
       const rows = downloaded.json().reservations as Array<{

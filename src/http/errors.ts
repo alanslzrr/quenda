@@ -18,12 +18,12 @@ const messages = {
     gl: "As condicións cambiaron. Revisa e acepta as condicións vixentes. A reserva non se cambiou.",
   },
   HOLDER_ACCEPTANCE_REQUIRED: {
-    es: "Este cambio requiere que el titular acepte las normas aplicables. Debe modificar la reserva desde su cuenta. La reserva actual no se ha cambiado.",
-    gl: "Este cambio require que o titular acepte as normas aplicables. Debe modificar a reserva desde a súa conta. A reserva actual non se cambiou.",
+    es: "Solo el titular puede aceptar las normas desde su cuenta. La intervención administrativa no puede incluir una aceptación en su nombre.",
+    gl: "Só o titular pode aceptar as normas desde a súa conta. A intervención administrativa non pode incluír unha aceptación no seu nome.",
   },
   RESERVATION_DEADLINE_PASSED: {
-    es: "El plazo para modificar o cancelar esta reserva ha vencido. La reserva se mantiene; puedes contactar con el ayuntamiento.",
-    gl: "O prazo para modificar ou cancelar esta reserva venceu. A reserva mantense; podes contactar co concello.",
+    es: "El plazo para realizar esta operación ha vencido. La reserva se mantiene; puedes contactar con el ayuntamiento.",
+    gl: "O prazo para realizar esta operación venceu. A reserva mantense; podes contactar co concello.",
   },
   ACCOUNT_HAS_FUTURE_RESERVATIONS: {
     es: "No puedes dar de baja la cuenta mientras tengas reservas futuras confirmadas. Consulta tus reservas o contacta con el ayuntamiento.",

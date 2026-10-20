@@ -2,6 +2,7 @@ export const moduleDefinition = {
   name: "reservations",
   dependencies: ["identity", "catalog", "collaboration"],
 } as const;
+export { acceptReservationUsageRules } from "./accept-usage-rules.ts";
 export { createBlock, releaseBlock } from "./blocks.ts";
 export { cancelReservation } from "./cancel.ts";
 export { createReservation } from "./create.ts";

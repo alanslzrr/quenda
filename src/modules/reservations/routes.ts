@@ -5,6 +5,7 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
+import { registerUsageRulesAcceptanceRoute } from "./accept-usage-rules-route.ts";
 import { acceptanceProperties, acceptanceSchema } from "./acceptance.ts";
 import { registerBlockRoutes } from "./block-routes.ts";
 import { registerCancellationRoute } from "./cancel-routes.ts";
@@ -27,6 +28,13 @@ export async function registerReservations(
   await registerBlockRoutes(app, pool, auth, config, retentionSeconds);
   await registerModificationRoute(app, pool, auth, config, retentionSeconds);
   await registerCancellationRoute(app, pool, auth, config, retentionSeconds);
+  await registerUsageRulesAcceptanceRoute(
+    app,
+    pool,
+    auth,
+    config,
+    retentionSeconds,
+  );
   app.post<{
     Params: { tenantId: string };
     Headers: { "idempotency-key": string };

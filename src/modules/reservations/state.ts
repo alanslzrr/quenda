@@ -10,6 +10,8 @@ export interface Reservation {
   calendar_version: number;
   cancellation_minutes: number;
   timezone: string;
+  usage_rules_unit_id: string | null;
+  pending_usage_rules_version: number | null;
   usage_rules_version: number | null;
   rules_accepted_at: Date | null;
   booking_policy_version: number | null;
@@ -27,6 +29,8 @@ export const present = (row: Omit<Reservation, "account_id">) => ({
   calendarVersion: row.calendar_version,
   cancellationMinutes: row.cancellation_minutes,
   timeZone: row.timezone,
+  usageRulesUnitId: row.usage_rules_unit_id ?? null,
+  pendingUsageRulesVersion: row.pending_usage_rules_version ?? null,
   usageRulesVersion: row.usage_rules_version ?? null,
   rulesAcceptedAt: row.rules_accepted_at?.toISOString() ?? null,
   bookingPolicyVersion: row.booking_policy_version ?? null,

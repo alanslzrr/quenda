@@ -110,19 +110,14 @@ export async function modifyReservation(
             now > deadline
           )
             throw new HttpError("RESERVATION_DEADLINE_PASSED");
+          if (administrative && normalized.acceptance)
+            throw new HttpError("HOLDER_ACCEPTANCE_REQUIRED");
           if (
             reservation.unit_id === normalized.unitId &&
             reservation.starts_at.toISOString() === normalized.startsAt &&
             reservation.ends_at.toISOString() === normalized.endsAt
           )
             return present(reservation);
-          if (
-            administrative &&
-            (normalized.acceptance ||
-              !reservation.usage_rules_version ||
-              reservation.unit_id !== normalized.unitId)
-          )
-            throw new HttpError("HOLDER_ACCEPTANCE_REQUIRED");
           const policy = await validateReservableInterval(
             client,
             tenantId,
@@ -145,8 +140,9 @@ export async function modifyReservation(
             "UPDATE domain.occupancy SET released_at=clock_timestamp() WHERE tenant_id=$1 AND reservation_id=$2 AND released_at IS NULL",
             [tenantId, reservationId],
           );
+          // Reused evidence stays in PostgreSQL: pg Date values lose microseconds.
           const updated = await client.query<Reservation>(
-            `UPDATE domain.reservation SET unit_id=$3,starts_at=$4,ends_at=$5,calendar_version=$6,cancellation_minutes=$7,timezone=$8,usage_rules_version=$9,rules_accepted_at=$10,booking_policy_version=$11,conditions_accepted_at=$12,non_cancellable_accepted=$13,revision=revision+1 WHERE tenant_id=$1 AND id=$2 RETURNING *`,
+            `UPDATE domain.reservation SET unit_id=$3,starts_at=$4,ends_at=$5,calendar_version=$6,cancellation_minutes=$7,timezone=$8,usage_rules_version=$9,rules_accepted_at=CASE WHEN $16 THEN rules_accepted_at ELSE $10 END,booking_policy_version=$11,conditions_accepted_at=CASE WHEN $16 THEN conditions_accepted_at ELSE $12 END,non_cancellable_accepted=$13,usage_rules_unit_id=$14,pending_usage_rules_version=$15,revision=revision+1 WHERE tenant_id=$1 AND id=$2 RETURNING *`,
             [
               tenantId,
               reservationId,
@@ -161,6 +157,9 @@ export async function modifyReservation(
               accepted.bookingPolicyVersion,
               accepted.conditionsAcceptedAt,
               accepted.nonCancellableAccepted,
+              accepted.usageRulesUnitId,
+              accepted.pendingUsageRulesVersion,
+              administrative || normalized.acceptance === null,
             ],
           );
           await client.query(

@@ -14,6 +14,8 @@ const event: ReservationMailEvent = {
   startsAt: "2030-10-27T00:30:00Z",
   endsAt: "2030-10-27T01:30:00Z",
   timeZone: "Europe/Madrid",
+  unitId: "00000000-0000-4000-8000-000000000003",
+  pendingUsageRulesVersion: null,
 };
 test("reservation messages localize all events and distinguish history from current state", () => {
   for (const locale of ["es", "gl"] as const)
@@ -50,6 +52,7 @@ test("reservation messages localize all events and distinguish history from curr
       assert.match(message.text, /GMT\+02:00/);
       assert.match(message.text, /GMT\+01:00/);
       assert.ok(!("html" in message));
+      assert.doesNotMatch(message.text, /Normas (pendientes|pendentes)/);
     }
 });
 test("reservation mail rejects invalid origins, recipients and event payloads", () => {
@@ -73,6 +76,10 @@ test("reservation mail rejects invalid origins, recipients and event payloads", 
     { startsAt: "2030-10-27T00:30:00" },
     { endsAt: event.startsAt },
     { tenantId: "../other" },
+    { unitId: "../other" },
+    { pendingUsageRulesVersion: 0 },
+    { pendingUsageRulesVersion: 1.5 },
+    { pendingUsageRulesVersion: Number.MAX_SAFE_INTEGER + 1 },
   ])
     assert.throws(() =>
       reservationMail("user@example.test", "https://quenda.test", "es", {
@@ -80,6 +87,31 @@ test("reservation mail rejects invalid origins, recipients and event payloads", 
         ...patch,
       }),
     );
+});
+
+test("relocation mail identifies pending rules without treating them as accepted", () => {
+  for (const locale of ["es", "gl"] as const) {
+    const data = { ...event, pendingUsageRulesVersion: 7 };
+    const before = structuredClone(data);
+    const message = reservationMail(
+      "citizen@example.test",
+      "https://quenda.test",
+      locale,
+      data,
+    );
+    assert.deepEqual(data, before);
+    assert.match(message.text, /Normas (pendientes|pendentes) de aceptación/);
+    assert.ok(message.text.includes(`: ${event.unitId}`));
+    assert.match(message.text, /Versión (de las|das) normas: 7/);
+    assert.doesNotMatch(message.text, /normas aceptadas|reserva pendiente/i);
+    const cancelled = reservationMail(
+      "citizen@example.test",
+      "https://quenda.test",
+      locale,
+      { ...data, kind: "CANCELADA" },
+    );
+    assert.doesNotMatch(cancelled.text, /Normas (pendientes|pendentes)/);
+  }
 });
 
 test("rendered reservation messages use the existing private local transport", async () => {

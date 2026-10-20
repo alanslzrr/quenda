@@ -69,8 +69,8 @@ export async function createReservation(
           );
           const id = randomUUID();
           await client.query(
-            `INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,cancellation_minutes,timezone,usage_rules_version,rules_accepted_at,booking_policy_version,conditions_accepted_at,non_cancellable_accepted)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+            `INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,cancellation_minutes,timezone,usage_rules_version,rules_accepted_at,booking_policy_version,conditions_accepted_at,non_cancellable_accepted,usage_rules_unit_id)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
             [
               tenantId,
               id,
@@ -86,6 +86,7 @@ export async function createReservation(
               accepted.bookingPolicyVersion,
               accepted.conditionsAcceptedAt,
               accepted.nonCancellableAccepted,
+              accepted.usageRulesUnitId,
             ],
           );
           await client.query(
@@ -120,6 +121,8 @@ export async function createReservation(
             revision: 1,
             calendarVersion: policy.calendarVersion,
             cancellationMinutes: accepted.cancellationMinutes,
+            usageRulesUnitId: accepted.usageRulesUnitId,
+            pendingUsageRulesVersion: null,
             usageRulesVersion: accepted.usageRulesVersion,
             rulesAcceptedAt: accepted.rulesAcceptedAt?.toISOString() ?? null,
             bookingPolicyVersion: accepted.bookingPolicyVersion,

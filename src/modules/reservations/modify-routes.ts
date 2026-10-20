@@ -29,7 +29,7 @@ export async function registerModificationRoute(
         operationId: "modifyReservation",
         tags: ["Reservations"],
         security: [{ quendaSession: [] }],
-        description: `Modifica unidad e intervalo dentro del mismo municipio, sin cambiar titular. Exige expectedRevision, plazo de origen y reglas vigentes del destino. administrative=true requiere permiso sobre origen y destino, MFA reciente y motivo; nunca permite cambios tras el inicio. Cambiar de unidad o normas, cambiar la política o entrar por primera vez fuera del plazo exige acceptance expresa del titular. La intervención administrativa conserva la aceptación anterior y no puede cambiar unidad ni versión de normas, ni aceptar en nombre del titular. Una petición sin cambios no genera evento ni aceptación. Retención idempotente: ${retentionSeconds} segundos.`,
+        description: `Modifica unidad e intervalo dentro del mismo municipio, sin cambiar titular. Exige expectedRevision, plazo de origen y reglas vigentes del destino. administrative=true requiere permiso sobre origen y destino, MFA reciente y motivo; nunca permite cambios tras el inicio. Cambiar de unidad o normas, cambiar la política o entrar por primera vez fuera del plazo exige acceptance expresa del titular. La intervención administrativa ejecuta la reubicación inmediatamente y conserva las condiciones de cancelación anteriores. Si la unidad y versión aplicables no están aceptadas, registra aceptación pendiente sin aceptar en nombre del titular ni crear otro estado de reserva. Una petición sin cambios no genera evento ni aceptación. Retención idempotente: ${retentionSeconds} segundos.`,
         params: {
           type: "object",
           additionalProperties: false,

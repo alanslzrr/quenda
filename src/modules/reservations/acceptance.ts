@@ -20,6 +20,8 @@ export const acceptanceSchema = {
   },
 } as const;
 export const acceptanceProperties = {
+  usageRulesUnitId: { type: "string", format: "uuid", nullable: true },
+  pendingUsageRulesVersion: { type: "integer", minimum: 1, nullable: true },
   usageRulesVersion: { type: "integer", minimum: 1, nullable: true },
   rulesAcceptedAt: { type: "string", format: "date-time", nullable: true },
   bookingPolicyVersion: { type: "integer", minimum: 1, nullable: true },
@@ -65,21 +67,17 @@ export async function acceptConditions(
       cancellation_minutes: number;
     }>("SELECT * FROM domain.reservation_conditions($1,$2)", [tenantId, unitId])
   ).rows[0];
-  if (!current)
-    throw new HttpError(
-      administrative
-        ? "HOLDER_ACCEPTANCE_REQUIRED"
-        : "CONDITIONS_ACCEPTANCE_REQUIRED",
-    );
+  if (!current) throw new HttpError("CONDITIONS_ACCEPTANCE_REQUIRED");
   if (administrative) {
-    if (
-      acceptance ||
-      !previous?.usage_rules_version ||
-      previous.unit_id !== unitId ||
-      previous.usage_rules_version !== current.usage_rules_version
-    )
+    if (acceptance || !previous)
       throw new HttpError("HOLDER_ACCEPTANCE_REQUIRED");
     return {
+      usageRulesUnitId: previous.usage_rules_unit_id,
+      pendingUsageRulesVersion:
+        previous.usage_rules_unit_id === unitId &&
+        previous.usage_rules_version === current.usage_rules_version
+          ? null
+          : current.usage_rules_version,
       usageRulesVersion: previous.usage_rules_version,
       bookingPolicyVersion: previous.booking_policy_version,
       cancellationMinutes: previous.cancellation_minutes,
@@ -95,12 +93,16 @@ export async function acceptConditions(
     if (
       !previous ||
       previous.unit_id !== unitId ||
+      previous.usage_rules_unit_id !== unitId ||
+      previous.pending_usage_rules_version !== null ||
       previous.usage_rules_version !== current.usage_rules_version ||
       previous.booking_policy_version !== current.booking_policy_version ||
       (nonCancellable && !previous.non_cancellable_accepted)
     )
       throw new HttpError("CONDITIONS_ACCEPTANCE_REQUIRED");
     return {
+      usageRulesUnitId: previous.usage_rules_unit_id,
+      pendingUsageRulesVersion: null,
       usageRulesVersion: previous.usage_rules_version,
       bookingPolicyVersion: previous.booking_policy_version,
       cancellationMinutes: previous.cancellation_minutes,
@@ -120,6 +122,8 @@ export async function acceptConditions(
   ).rows[0]?.at;
   if (!recordedAt) throw new Error("Missing database time");
   return {
+    usageRulesUnitId: unitId,
+    pendingUsageRulesVersion: null,
     usageRulesVersion: current.usage_rules_version,
     bookingPolicyVersion: current.booking_policy_version,
     cancellationMinutes: current.cancellation_minutes,
@@ -132,6 +136,8 @@ export async function acceptConditions(
 // Cached results created before explicit acceptance contain no such evidence.
 // Complete their representation without inferring acceptance or consulting newer state.
 interface AcceptanceEvidence {
+  usageRulesUnitId: string | null;
+  pendingUsageRulesVersion: number | null;
   usageRulesVersion: number | null;
   rulesAcceptedAt: string | null;
   bookingPolicyVersion: number | null;
@@ -141,7 +147,14 @@ interface AcceptanceEvidence {
 export function completeAcceptanceEvidence<T extends object>(
   value: T,
 ): Omit<T, keyof AcceptanceEvidence> & AcceptanceEvidence {
+  // Before 0066 the FK tied every genuine acceptance to the result's unit.
+  const old = value as Partial<AcceptanceEvidence> & { unitId?: string };
   return {
+    usageRulesUnitId:
+      old.usageRulesVersion && old.rulesAcceptedAt
+        ? (old.unitId ?? null)
+        : null,
+    pendingUsageRulesVersion: null,
     usageRulesVersion: null,
     rulesAcceptedAt: null,
     bookingPolicyVersion: null,

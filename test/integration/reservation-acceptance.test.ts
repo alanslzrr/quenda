@@ -112,6 +112,8 @@ test("explicit acceptance preserves legacy evidence and accepted cancellation co
     const original = (await create({ ...input, acceptance })).result;
     assert.equal(original.cancellationMinutes, 1440);
     assert.equal(original.usageRulesVersion, 1);
+    assert.equal(original.usageRulesUnitId, unitId);
+    assert.equal(original.pendingUsageRulesVersion, null);
     assert.ok(original.rulesAcceptedAt);
     const reservationId = original.id;
     const modify = (body: Parameters<typeof modifyReservation>[5]) =>
@@ -215,7 +217,7 @@ test("explicit acceptance preserves legacy evidence and accepted cancellation co
         [legacy, randomUUID(), randomUUID()],
       );
       await client.query(
-        "UPDATE domain.reservation_event SET after_state=after_state-ARRAY['usageRulesVersion','rulesAcceptedAt','bookingPolicyVersion','conditionsAcceptedAt','nonCancellableAccepted'],administrative=NULL WHERE tenant_id=$1 AND reservation_id=$2",
+        "UPDATE domain.reservation_event SET after_state=after_state-ARRAY['usageRulesUnitId','usageRulesVersion','rulesAcceptedAt','bookingPolicyVersion','conditionsAcceptedAt','nonCancellableAccepted','pendingUsageRulesVersion'],administrative=NULL WHERE tenant_id=$1 AND reservation_id=$2",
         [tenantId, legacy],
       );
       await client.query("COMMIT");

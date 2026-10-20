@@ -31,6 +31,11 @@ export async function registerCommunications(
     startsAt: instant,
     endsAt: instant,
     timeZone: { type: "string" },
+    pendingUsageRulesVersion: {
+      type: "integer",
+      minimum: 1,
+      nullable: true,
+    },
     reservationPath: { type: "string" },
   };
   app.get<{ Querystring: { after?: string } }>(
@@ -41,7 +46,7 @@ export async function registerCommunications(
         tags: ["Communications"],
         security: [{ quendaSession: [] }],
         description:
-          "Avisos internos del usuario entre municipios. Páginas de 20 por identificador de evento y municipio, no por fecha. Cada aviso describe el evento histórico y enlaza al estado actual; no representa el estado del correo. No expone actor, motivo administrativo ni correlación.",
+          "Avisos internos del usuario entre municipios. Páginas de 20 por identificador de evento y municipio, no por fecha. Cada aviso describe el evento histórico y enlaza al estado actual; no representa el estado del correo. pendingUsageRulesVersion identifica las normas de unitId pendientes de aceptación en ese evento, no una aceptación ni el estado actual. No expone actor, motivo administrativo ni correlación.",
         querystring: {
           type: "object",
           additionalProperties: false,

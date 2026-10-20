@@ -10,6 +10,8 @@ export interface ReservationMailEvent {
   startsAt: string;
   endsAt: string;
   timeZone: string;
+  unitId: string;
+  pendingUsageRulesVersion: number | null;
 }
 const copy = {
   es: {
@@ -25,6 +27,11 @@ const copy = {
     historical:
       "Este mensaje describe el evento indicado. La reserva puede haber cambiado posteriormente.",
     current: "Consultar el estado actual",
+    pendingRules: "Normas pendientes de aceptación en este cambio",
+    rulesUnit: "Unidad de las normas",
+    rulesVersion: "Versión de las normas",
+    reviewRules:
+      "Consulta el estado actual de la reserva para revisar y aceptar las normas que sigan pendientes.",
   },
   gl: {
     CONFIRMADA: "Reserva confirmada",
@@ -39,6 +46,11 @@ const copy = {
     historical:
       "Esta mensaxe describe o evento indicado. A reserva pode ter cambiado posteriormente.",
     current: "Consultar o estado actual",
+    pendingRules: "Normas pendentes de aceptación neste cambio",
+    rulesUnit: "Unidade das normas",
+    rulesVersion: "Versión das normas",
+    reviewRules:
+      "Consulta o estado actual da reserva para revisar e aceptar as normas que sigan pendentes.",
   },
 } as const;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -76,6 +88,10 @@ export function reservationMail(
     !["CONFIRMADA", "MODIFICADA", "CANCELADA"].includes(event.kind) ||
     !uuid.test(event.tenantId) ||
     !uuid.test(event.reservationId) ||
+    !uuid.test(event.unitId) ||
+    (event.pendingUsageRulesVersion !== null &&
+      (!Number.isSafeInteger(event.pendingUsageRulesVersion) ||
+        event.pendingUsageRulesVersion < 1)) ||
     !Number.isSafeInteger(event.revision) ||
     event.revision < 1
   )
@@ -117,6 +133,15 @@ export function reservationMail(
       `${label.start}: ${format.format(new Date(event.startsAt))}`,
       `${label.end}: ${format.format(new Date(event.endsAt))}`,
       `${label.zone}: ${event.timeZone}`,
+      ...(event.kind === "MODIFICADA" && event.pendingUsageRulesVersion !== null
+        ? [
+            "",
+            `${label.pendingRules}:`,
+            `${label.rulesUnit}: ${event.unitId}`,
+            `${label.rulesVersion}: ${event.pendingUsageRulesVersion}`,
+            label.reviewRules,
+          ]
+        : []),
       "",
       label.historical,
       `${label.current}: ${href}`,

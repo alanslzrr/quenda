@@ -2,11 +2,22 @@ const uuid = { type: "string", format: "uuid" };
 const date = { type: "string", format: "date" };
 const instant = { type: "string", format: "date-time" };
 const reservation = {
+  usageRulesUnitId: {
+    description:
+      "Unidad de las normas aceptadas; puede diferir de unitId después de una reubicación.",
+    anyOf: [uuid, { type: "null" }],
+  },
   usageRulesText: { anyOf: [{ type: "string" }, { type: "null" }] },
   usageRulesVersion: {
     anyOf: [{ type: "integer", minimum: 1 }, { type: "null" }],
   },
   rulesAcceptedAt: { anyOf: [instant, { type: "null" }] },
+  pendingUsageRulesVersion: {
+    description:
+      "Versión de las normas de unitId pendiente de aceptación; no modifica el estado de la reserva.",
+    anyOf: [{ type: "integer", minimum: 1 }, { type: "null" }],
+  },
+  pendingUsageRulesText: { anyOf: [{ type: "string" }, { type: "null" }] },
   bookingPolicyVersion: {
     anyOf: [{ type: "integer", minimum: 1 }, { type: "null" }],
   },
@@ -25,7 +36,7 @@ const reservation = {
 };
 export const reservationExportSchema = {
   $schema: "http://json-schema.org/draft-07/schema#",
-  title: "Quenda reservation export v2",
+  title: "Quenda reservation export v3",
   type: "object",
   additionalProperties: false,
   required: [
@@ -40,7 +51,7 @@ export const reservationExportSchema = {
   ],
   properties: {
     format: { type: "string", const: "quenda.reservations" },
-    version: { type: "integer", const: 2 },
+    version: { type: "integer", const: 3 },
     tenantId: uuid,
     unitId: { anyOf: [uuid, { type: "null" }] },
     generatedAt: instant,
@@ -75,7 +86,7 @@ export const reservationExportSchema = {
 };
 export const reservationExportExample = {
   format: "quenda.reservations",
-  version: 2,
+  version: 3,
   tenantId: "00000000-0000-4000-8000-000000000001",
   unitId: null,
   generatedAt: "2030-01-02T00:00:00Z",
@@ -91,9 +102,12 @@ export const reservationExportExample = {
       id: "00000000-0000-4000-8000-000000000002",
       unitId: "00000000-0000-4000-8000-000000000003",
       accountId: "synthetic-account",
+      usageRulesUnitId: null,
       usageRulesText: null,
       usageRulesVersion: null,
       rulesAcceptedAt: null,
+      pendingUsageRulesVersion: null,
+      pendingUsageRulesText: null,
       bookingPolicyVersion: null,
       conditionsAcceptedAt: null,
       nonCancellableAccepted: null,

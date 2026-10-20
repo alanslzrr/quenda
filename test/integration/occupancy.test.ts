@@ -68,7 +68,7 @@ test("database occupancy invariants cover reservations, blocks and concurrent ov
       unitId = unit,
     ) => {
       await c.query(
-        "INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,cancellation_minutes,timezone,usage_rules_version,rules_accepted_at,booking_policy_version,conditions_accepted_at,non_cancellable_accepted) VALUES($1,$2,'citizen',$3,1,$4,$5,0,'Europe/Madrid',1,clock_timestamp(),1,clock_timestamp(),false)",
+        "INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,cancellation_minutes,timezone,usage_rules_unit_id,usage_rules_version,rules_accepted_at,booking_policy_version,conditions_accepted_at,non_cancellable_accepted) VALUES($1,$2,'citizen',$3,1,$4,$5,0,'Europe/Madrid',$3,1,clock_timestamp(),1,clock_timestamp(),false)",
         [tenant, id, unitId, start, end],
       );
       return id;

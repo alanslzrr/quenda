@@ -1461,13 +1461,16 @@ test("reservation confirmation validates real calendars and commits every effect
           )
         ).rows[0];
         assert.deepEqual(before, { revision: 1, unit_id: unit });
-        await assert.rejects(move("requires-titular"), {
-          code: "HOLDER_ACCEPTANCE_REQUIRED",
-        });
-        const sameUnitTarget = { ...target, unitId: unit };
-        const changed = await move("authorized-move", sameUnitTarget);
-        assert.equal(changed.result.unitId, unit);
+        const changed = await move("authorized-move");
+        assert.equal(changed.result.unitId, draft);
         assert.equal(changed.result.revision, 2);
+        assert.equal(changed.result.usageRulesUnitId, unit);
+        assert.equal(changed.result.usageRulesVersion, 1);
+        assert.equal(changed.result.pendingUsageRulesVersion, 1);
+        assert.equal(
+          changed.result.rulesAcceptedAt,
+          booking.result.rulesAcceptedAt,
+        );
         const event = (
           await migration.query(
             "SELECT actor_id,reason FROM domain.reservation_event WHERE reservation_id=$1 AND kind='MODIFICADA'",
@@ -1497,7 +1500,7 @@ test("reservation confirmation validates real calendars and commits every effect
           2,
         );
         await revokeManager(domain, admin, tenant, both, "Remove permission");
-        await assert.rejects(move("authorized-move", sameUnitTarget), {
+        await assert.rejects(move("authorized-move"), {
           code: "NOT_FOUND",
         });
       },

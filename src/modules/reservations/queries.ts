@@ -132,6 +132,13 @@ export async function readReservation(
       return {
         ...current(row, clock.now().getTime()),
         accountId: row.account_id,
+        pendingUsageRulesText:
+          (
+            await client.query<{ text: string | null }>(
+              "SELECT domain.pending_usage_rules($1) AS text",
+              [reservationId],
+            )
+          ).rows[0]?.text ?? null,
         usageRulesText:
           (
             await client.query<{ text: string | null }>(

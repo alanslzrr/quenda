@@ -41,7 +41,13 @@ export async function processReservationEmail(
     revision: number;
     kind: ReservationMailEvent["kind"];
     occurred_at: Date;
-    after_state: { startsAt: string; endsAt: string; timezone: string };
+    after_state: {
+      startsAt: string;
+      endsAt: string;
+      timezone: string;
+      unitId: string;
+      pendingUsageRulesVersion?: number | null;
+    };
   }>("SELECT * FROM domain.claim_reservation_email($1,$2)", [
     options.leaseSeconds,
     options.maxAttempts,
@@ -64,6 +70,9 @@ export async function processReservationEmail(
           startsAt: job.after_state.startsAt,
           endsAt: job.after_state.endsAt,
           timeZone: job.after_state.timezone,
+          unitId: job.after_state.unitId,
+          pendingUsageRulesVersion:
+            job.after_state.pendingUsageRulesVersion ?? null,
         },
       ),
     );

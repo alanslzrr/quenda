@@ -31,7 +31,7 @@ export async function registerExportRoutes(
         tags: ["Communications"],
         security: [{ quendaSession: [] }],
         description:
-          "JSON quenda.reservations v2. DATA_EXPORT y RESERVATION_READ o RESERVATION_MANAGE sobre el mismo ámbito; MFA de los últimos cinco minutos. Sin unitId exige permisos municipales. Fechas locales [from,to), hasta 366 días: incluye reservas que se solapan, conservando intervalos completos. Máximo 10000 reservas; si se supera rechaza sin truncar. Incluye identificadores de titulares, nunca credenciales ni datos de otros municipios.",
+          "JSON quenda.reservations v3. DATA_EXPORT y RESERVATION_READ o RESERVATION_MANAGE sobre el mismo ámbito; MFA de los últimos cinco minutos. Sin unitId exige permisos municipales. Fechas locales [from,to), hasta 366 días: incluye reservas que se solapan, conservando intervalos completos. Máximo 10000 reservas; si se supera rechaza sin truncar. usageRulesUnitId y usageRulesVersion identifican las normas aceptadas; pendingUsageRulesVersion corresponde a unitId y no acredita aceptación. Incluye identificadores de titulares, nunca credenciales ni datos de otros municipios.",
         params: {
           type: "object",
           additionalProperties: false,
@@ -72,7 +72,7 @@ export async function registerExportRoutes(
         .header("cache-control", "no-store")
         .header(
           "content-disposition",
-          'attachment; filename="quenda-reservations-v2.json"',
+          'attachment; filename="quenda-reservations-v3.json"',
         )
         .send(document);
     },
