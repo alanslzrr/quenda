@@ -6,8 +6,12 @@ import test from "node:test";
 import { promisify } from "node:util";
 import { Client } from "pg";
 import { createBackup } from "../../scripts/lib/backup.ts";
+import { reconcileRestore } from "../../scripts/lib/reconcile.ts";
 import { restoreBackup } from "../../scripts/lib/restore.ts";
-import { createReservation } from "../../src/modules/reservations/index.ts";
+import {
+  cancelReservation,
+  createReservation,
+} from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 import { recoveryFixture } from "../helpers/recovery-fixture.ts";
 
@@ -120,6 +124,16 @@ test("restored database reconciliation is read-only, detects inconsistent occupa
           assert.equal(broken.reopeningAuthorized, false);
           return true;
         });
+        await admin.query("DELETE FROM domain.agreement_consumption");
+        await assert.rejects(run(), (error: unknown) => {
+          const failure = error as { code: number; stdout: string };
+          assert.equal(failure.code, 2);
+          assert.equal(
+            JSON.parse(failure.stdout).checks.missingConsumptions,
+            1,
+          );
+          return true;
+        });
         assert.deepEqual(await snapshot(), before);
         assert.equal(
           (
@@ -148,4 +162,69 @@ test("restored database reconciliation is read-only, detects inconsistent occupa
       }
     },
   );
+});
+
+test("reconciliation retains released consumption history and detects missing evidence", {
+  timeout: 60000,
+}, async () => {
+  await withDatabase(async ({ auth, migration, domain, administration }) => {
+    const { tenants, units } = await recoveryFixture(auth, migration);
+    const actor = {
+      accountId: "citizen",
+      email: "citizen@example.test",
+      sessionId: "fixture",
+      mfaVerifiedAt: null,
+    };
+    const clock = { now: () => new Date("2030-04-02T00:00:00Z") };
+    const booking = await createReservation(
+      domain,
+      actor,
+      tenants[0],
+      "history-booking",
+      {
+        unitId: units[0],
+        startsAt: "2030-04-03T10:00:00Z",
+        endsAt: "2030-04-03T11:00:00Z",
+      },
+      randomUUID(),
+      3600,
+      clock,
+    );
+    await cancelReservation(
+      domain,
+      actor,
+      tenants[0],
+      booking.result.id,
+      "history-cancel",
+      { expectedRevision: 1 },
+      randomUUID(),
+      3600,
+      clock,
+    );
+    const client = new Client({
+      connectionString: administration.options.connectionString,
+    });
+    await client.connect();
+    try {
+      const directory = path.resolve("db/migrations");
+      const valid = await reconcileRestore(client, directory);
+      assert.equal(valid.status, "CHECKED_REQUIRES_REVIEW");
+      assert.ok(Object.values(valid.checks).every((n) => n === 0));
+      assert.equal(
+        (
+          await client.query(
+            "SELECT released FROM domain.agreement_consumption",
+          )
+        ).rows[0].released,
+        true,
+      );
+      await client.query("DELETE FROM domain.agreement_consumption_event");
+      const broken = await reconcileRestore(client, directory);
+      assert.equal(broken.status, "INCONSISTENT");
+      assert.equal(broken.checks.missingConsumptionEvidence, 1);
+      assert.equal(broken.reopeningAuthorized, false);
+    } finally {
+      await client.end();
+    }
+  });
 });

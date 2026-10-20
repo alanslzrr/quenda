@@ -38,6 +38,22 @@ export async function reconcileRestore(client: Client, directory: string) {
       blockOccupancy: `SELECT count(*)::int AS n FROM domain.schedule_block b WHERE
         (b.released_at IS NULL AND (SELECT count(*) FROM domain.occupancy o WHERE (o.tenant_id,o.block_id)=(b.tenant_id,b.id) AND o.released_at IS NULL AND o.unit_id=b.unit_id AND o.period=tstzrange(b.starts_at,b.ends_at,'[)'))<>1)
         OR (b.released_at IS NOT NULL AND EXISTS(SELECT 1 FROM domain.occupancy o WHERE (o.tenant_id,o.block_id)=(b.tenant_id,b.id) AND o.released_at IS NULL))`,
+      missingAssignedConsumptions: `SELECT count(*)::int AS n FROM (
+        SELECT DISTINCT a.agreement_id,r.tenant_id,r.id FROM domain.reservation r
+        JOIN domain.agreement_assignment a ON (a.tenant_id,a.unit_id)=(r.tenant_id,r.unit_id)
+        WHERE r.status='CONFIRMADA' AND upper(a.effective_period)>transaction_timestamp()
+          AND a.effective_period @> tstzrange(r.starts_at,r.ends_at,'[)')
+          AND NOT EXISTS(SELECT 1 FROM domain.agreement_consumption c
+            WHERE (c.agreement_id,c.tenant_id,c.reservation_id)=(a.agreement_id,r.tenant_id,r.id) AND NOT c.released)
+      ) missing`,
+      missingConsumptions: `SELECT count(*)::int AS n FROM (
+        SELECT DISTINCT e.agreement_id,e.tenant_id,e.reservation_id FROM domain.agreement_consumption_event e
+        WHERE NOT EXISTS(SELECT 1 FROM domain.agreement_consumption c
+          WHERE (c.agreement_id,c.tenant_id,c.reservation_id)=(e.agreement_id,e.tenant_id,e.reservation_id))
+      ) missing`,
+      missingConsumptionEvidence: `SELECT count(*)::int AS n FROM domain.agreement_consumption c
+        WHERE NOT EXISTS(SELECT 1 FROM domain.agreement_consumption_event e
+          WHERE (e.agreement_id,e.tenant_id,e.reservation_id)=(c.agreement_id,c.tenant_id,c.reservation_id))`,
       consumptionConsistency: `SELECT count(*)::int AS n FROM domain.agreement_consumption c
         JOIN domain.reservation r ON (r.tenant_id,r.id)=(c.tenant_id,c.reservation_id)
         JOIN domain.agreement_subject s ON (s.agreement_id,s.id)=(c.agreement_id,c.subject_id)
