@@ -2,11 +2,13 @@ import { buildApp } from "./app.ts";
 import { ConfigurationError, readConfig } from "./config.ts";
 import { createDatabases } from "./database/pools.ts";
 import { startDatabaseReporting } from "./database/reporting.ts";
+import { loadSourceOffer } from "./http/source-offer.ts";
 import { createMailTransport } from "./mail/transport.ts";
 import { createAuthentication } from "./modules/identity/index.ts";
 
 async function start(): Promise<void> {
   const config = readConfig(process.env);
+  const sourceOffer = await loadSourceOffer(process.env);
   const database = createDatabases(config);
   const identityConfig = {
     origin: config.authOrigin,
@@ -19,6 +21,7 @@ async function start(): Promise<void> {
   );
   const app = await buildApp({
     database,
+    ...(sourceOffer ? { sourceOffer } : {}),
     domain: database.domain,
     idempotencyRetentionSeconds: config.idempotencyRetentionSeconds,
     logLevel: config.logLevel,

@@ -137,17 +137,24 @@ test("errors use stable codes; unknown routes and internal failures disclose no 
   }
 });
 
-test("OpenAPI is generated from implemented health routes, including response schemas", async () => {
+test("OpenAPI includes implemented operational and source-download response schemas", async () => {
   const app = await buildApp({ database, logLevel: "silent" });
   try {
     await app.ready();
     const spec = app.swagger();
     assert.equal(spec.info.license?.name, "AGPL-3.0-only");
+    const sourceResponse =
+      spec.paths?.["/legal/source"]?.get?.responses?.["200"];
+    assert.ok(sourceResponse && "content" in sourceResponse);
+    assert.deepEqual(Object.keys(sourceResponse.content ?? {}), [
+      "application/gzip",
+    ]);
     assert.ok(spec.paths?.["/health/ready"]?.get?.responses?.["503"]);
     assert.ok(spec.paths?.["/health/live"]?.get?.responses?.["200"]);
     assert.deepEqual(Object.keys(spec.paths ?? {}).sort(), [
       "/health/live",
       "/health/ready",
+      "/legal/source",
     ]);
   } finally {
     await app.close();
