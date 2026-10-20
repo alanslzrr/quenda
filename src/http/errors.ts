@@ -114,6 +114,22 @@ export function registerErrors(
   audit?: (request: FastifyRequest, code: ErrorCode) => Promise<void>,
 ): void {
   app.addSchema(errorSchema);
+  app.addHook("onRoute", (route) => {
+    if (!route.schema || route.schema.hide) return;
+    // These failures can originate before the route handler or while auditing
+    // a rejection. Keep the shared error handler and its public contract aligned.
+    route.schema.response = {
+      ...Object.fromEntries(
+        [400, 413, 415, 500, 503].map((status) => [
+          status,
+          { $ref: "ErrorResponse#" },
+        ]),
+      ),
+      ...(typeof route.schema.response === "object"
+        ? route.schema.response
+        : {}),
+    };
+  });
   app.setNotFoundHandler(() => {
     throw new HttpError("NOT_FOUND");
   });
