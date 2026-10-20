@@ -22,6 +22,10 @@ import {
   readReservation,
 } from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
+import {
+  initialAcceptance,
+  seedUsageRules,
+} from "../helpers/usage-rules-fixture.ts";
 
 test("real booking commands enforce shared eligibility and quota in one transaction", {
   timeout: 60000,
@@ -36,7 +40,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
     for (let i = 0; i < 2; i++) {
       const facility = randomUUID();
       await migration.query(
-        "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Synthetic','Europe/Madrid')",
+        "INSERT INTO domain.municipality(id,name,timezone,cancellation_minutes) VALUES($1,'Synthetic','Europe/Madrid',0)",
         [tenants[i]],
       );
       await migration.query(
@@ -60,6 +64,12 @@ test("real booking commands enforce shared eligibility and quota in one transact
             })),
           ),
         ],
+      );
+      await seedUsageRules(
+        migration,
+        tenants[i] as string,
+        units[i] as string,
+        "citizen",
       );
       await migration.query(
         "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
@@ -118,7 +128,10 @@ test("real booking commands enforce shared eligibility and quota in one transact
         actor,
         tenants[i] as string,
         key,
-        input(i, day),
+        {
+          acceptance: initialAcceptance,
+          ...input(i, day),
+        },
         randomUUID(),
         3600,
         clock,
@@ -209,7 +222,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
           tenants[winner] as string,
           booking,
           "next-week",
-          { ...input(winner, 10), expectedRevision: 1 },
+          {
+            acceptance: initialAcceptance,
+            ...input(winner, 10),
+            expectedRevision: 1,
+          },
           randomUUID(),
           3600,
           clock,
@@ -228,7 +245,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
             tenants[winner] as string,
             booking,
             "back-to-full-week",
-            { ...input(winner, 5), expectedRevision: 2 },
+            {
+              acceptance: initialAcceptance,
+              ...input(winner, 5),
+              expectedRevision: 2,
+            },
             randomUUID(),
             3600,
             clock,
@@ -343,6 +364,12 @@ test("real booking commands enforce shared eligibility and quota in one transact
           "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason) SELECT tenant_id,$3,1,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,'citizen','Fixture' FROM domain.unit_calendar_version WHERE tenant_id=$1 AND unit_id=$2 AND version=1",
           [tenants[winner], units[winner], publicUnit],
         );
+        await seedUsageRules(
+          migration,
+          tenants[winner] as string,
+          publicUnit,
+          "citizen",
+        );
         await migration.query(
           "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
           [tenants[winner], publicUnit],
@@ -354,7 +381,12 @@ test("real booking commands enforce shared eligibility and quota in one transact
             tenants[winner] as string,
             booking,
             "suspended-to-public",
-            { ...input(winner, 11), unitId: publicUnit, expectedRevision: 2 },
+            {
+              acceptance: initialAcceptance,
+              ...input(winner, 11),
+              unitId: publicUnit,
+              expectedRevision: 2,
+            },
             randomUUID(),
             3600,
             clock,
@@ -367,7 +399,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
           tenants[winner] as string,
           booking,
           "noop",
-          { ...input(winner, 10), expectedRevision: 2 },
+          {
+            acceptance: initialAcceptance,
+            ...input(winner, 10),
+            expectedRevision: 2,
+          },
           randomUUID(),
           3600,
           clock,
@@ -747,7 +783,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
                     tenant,
                     booked.result.id,
                     "lock-order-modify-command",
-                    { ...input(winner, 23), expectedRevision: 1 },
+                    {
+                      acceptance: initialAcceptance,
+                      ...input(winner, 23),
+                      expectedRevision: 1,
+                    },
                     randomUUID(),
                     3600,
                     clock,
@@ -837,7 +877,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
             tenant,
             retained.result.id,
             "change-after-expiry",
-            { ...input(winner, 16), expectedRevision: 1 },
+            {
+              acceptance: initialAcceptance,
+              ...input(winner, 16),
+              expectedRevision: 1,
+            },
             randomUUID(),
             3600,
             clock,
@@ -974,7 +1018,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
                 actor,
                 tenant,
                 `before-activation-${day}`,
-                { ...input(winner, day), unitId: publicUnit },
+                {
+                  acceptance: initialAcceptance,
+                  ...input(winner, day),
+                  unitId: publicUnit,
+                },
                 randomUUID(),
                 3600,
                 clock,
@@ -1164,7 +1212,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
             actor,
             tenant,
             "over-reconciled-quota",
-            { ...input(winner, 20), unitId: publicUnit },
+            {
+              acceptance: initialAcceptance,
+              ...input(winner, 20),
+              unitId: publicUnit,
+            },
             randomUUID(),
             3600,
             clock,
@@ -1305,7 +1357,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
             actor,
             tenant,
             "no-quota-reset",
-            { ...input(winner, 20), unitId: publicUnit },
+            {
+              acceptance: initialAcceptance,
+              ...input(winner, 20),
+              unitId: publicUnit,
+            },
             randomUUID(),
             3600,
             clock,
@@ -1382,7 +1438,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
               actor,
               tenant,
               "remaining-quota",
-              { ...input(winner, 20), unitId: publicUnit },
+              {
+                acceptance: initialAcceptance,
+                ...input(winner, 20),
+                unitId: publicUnit,
+              },
               randomUUID(),
               3600,
               clock,
@@ -1399,6 +1459,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason) SELECT tenant_id,$3,1,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,'citizen','Fixture' FROM domain.unit_calendar_version WHERE tenant_id=$1 AND unit_id=$2 AND version=1",
           [tenant, publicUnit, replacementUnit],
         );
+        await seedUsageRules(migration, tenant, replacementUnit, "citizen");
         await migration.query(
           "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
           [tenant, replacementUnit],
@@ -1458,7 +1519,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
             actor,
             tenant,
             "removed-unit",
-            { ...input(winner, 21), unitId: publicUnit },
+            {
+              acceptance: initialAcceptance,
+              ...input(winner, 21),
+              unitId: publicUnit,
+            },
             randomUUID(),
             3600,
             clock,
@@ -1471,7 +1536,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
             actor,
             tenant,
             "retained-quota",
-            { ...input(winner, 21), unitId: replacementUnit },
+            {
+              acceptance: initialAcceptance,
+              ...input(winner, 21),
+              unitId: replacementUnit,
+            },
             randomUUID(),
             3600,
             clock,
@@ -1498,7 +1567,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
               actor,
               tenant,
               "quota-after-cancel",
-              { ...input(winner, 21), unitId: replacementUnit },
+              {
+                acceptance: initialAcceptance,
+                ...input(winner, 21),
+                unitId: replacementUnit,
+              },
               randomUUID(),
               3600,
               clock,
@@ -1515,6 +1588,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason) SELECT tenant_id,$3,1,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,'citizen','Fixture' FROM domain.unit_calendar_version WHERE tenant_id=$1 AND unit_id=$2 AND version=1",
           [tenant, replacementUnit, destinationUnit],
         );
+        await seedUsageRules(migration, tenant, destinationUnit, "citizen");
         await migration.query(
           "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
           [tenant, destinationUnit],
@@ -1568,7 +1642,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
             actor,
             tenant,
             "destination-quota-holder",
-            { ...input(winner, 20), unitId: destinationUnit },
+            {
+              acceptance: initialAcceptance,
+              ...input(winner, 20),
+              unitId: destinationUnit,
+            },
             randomUUID(),
             3600,
             clock,
@@ -1580,7 +1658,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
             actor,
             tenant,
             "quota-after-cancel",
-            { ...input(winner, 21), unitId: replacementUnit },
+            {
+              acceptance: initialAcceptance,
+              ...input(winner, 21),
+              unitId: replacementUnit,
+            },
             randomUUID(),
             3600,
             clock,
@@ -1602,6 +1684,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             movable.id,
             "move-to-full-destination",
             {
+              acceptance: initialAcceptance,
               ...input(winner, 21),
               unitId: destinationUnit,
               expectedRevision: 1,
@@ -1639,6 +1722,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           movable.id,
           "move-agreements",
           {
+            acceptance: initialAcceptance,
             ...input(winner, 21),
             unitId: destinationUnit,
             expectedRevision: 1,
@@ -1690,7 +1774,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
           actor,
           tenant,
           "origin-quota-reused",
-          { ...input(winner, 21), unitId: replacementUnit },
+          {
+            acceptance: initialAcceptance,
+            ...input(winner, 21),
+            unitId: replacementUnit,
+          },
           randomUUID(),
           3600,
           clock,
@@ -1781,7 +1869,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
           actor,
           tenant,
           "public-after-release",
-          { ...input(winner, 22), unitId: publicUnit },
+          {
+            acceptance: initialAcceptance,
+            ...input(winner, 22),
+            unitId: publicUnit,
+          },
           randomUUID(),
           3600,
           clock,
@@ -1793,7 +1885,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
             actor,
             tenant,
             "occupied-after-release",
-            { ...input(winner, 22), unitId: publicUnit },
+            {
+              acceptance: initialAcceptance,
+              ...input(winner, 22),
+              unitId: publicUnit,
+            },
             randomUUID(),
             3600,
             clock,
@@ -2106,7 +2202,12 @@ test("real booking commands enforce shared eligibility and quota in one transact
               tenant,
               retained.id,
               "retained-noop",
-              { ...input(winner, 19), unitId: publicUnit, expectedRevision: 1 },
+              {
+                acceptance: initialAcceptance,
+                ...input(winner, 19),
+                unitId: publicUnit,
+                expectedRevision: 1,
+              },
               randomUUID(),
               3600,
               clock,
@@ -2118,7 +2219,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
                 actor,
                 tenant,
                 "successor-excess-quota",
-                { ...input(winner, 21), unitId: publicUnit },
+                {
+                  acceptance: initialAcceptance,
+                  ...input(winner, 21),
+                  unitId: publicUnit,
+                },
                 randomUUID(),
                 3600,
                 clock,
@@ -2221,7 +2326,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
                 actor,
                 tenant,
                 "quota-disabled-booking",
-                { ...input(winner, 21), unitId: publicUnit },
+                {
+                  acceptance: initialAcceptance,
+                  ...input(winner, 21),
+                  unitId: publicUnit,
+                },
                 randomUUID(),
                 3600,
                 clock,
@@ -2237,7 +2346,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
                 actor,
                 tenant,
                 "quota-restored-excess",
-                { ...input(winner, 18), unitId: publicUnit },
+                {
+                  acceptance: initialAcceptance,
+                  ...input(winner, 18),
+                  unitId: publicUnit,
+                },
                 randomUUID(),
                 3600,
                 clock,
@@ -2261,7 +2374,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
                 actor,
                 tenant,
                 "quota-still-full",
-                { ...input(winner, 18), unitId: publicUnit },
+                {
+                  acceptance: initialAcceptance,
+                  ...input(winner, 18),
+                  unitId: publicUnit,
+                },
                 randomUUID(),
                 3600,
                 clock,
@@ -2389,7 +2506,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
                   actor,
                   tenant,
                   `replacement-${action}-booking`,
-                  { ...input(winner, 25 + offset * 2), unitId: publicUnit },
+                  {
+                    acceptance: initialAcceptance,
+                    ...input(winner, 25 + offset * 2),
+                    unitId: publicUnit,
+                  },
                   randomUUID(),
                   3600,
                   clock,
@@ -2426,6 +2547,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
                         booked.id,
                         "replacement-modify",
                         {
+                          acceptance: initialAcceptance,
                           ...input(winner, 26),
                           unitId: publicUnit,
                           expectedRevision: 1,
@@ -2499,7 +2621,11 @@ test("real booking commands enforce shared eligibility and quota in one transact
                   actor,
                   tenant,
                   `before-replacement-${action}-booking`,
-                  { ...input(winner, 28 + offset * 2), unitId: publicUnit },
+                  {
+                    acceptance: initialAcceptance,
+                    ...input(winner, 28 + offset * 2),
+                    unitId: publicUnit,
+                  },
                   randomUUID(),
                   3600,
                   clock,
@@ -2528,6 +2654,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
                         booked.id,
                         "modify-before-replacement",
                         {
+                          acceptance: initialAcceptance,
                           ...input(winner, 29),
                           unitId: publicUnit,
                           expectedRevision: 1,
@@ -2601,5 +2728,112 @@ test("real booking commands enforce shared eligibility and quota in one transact
         );
       },
     );
+  });
+});
+
+test("late cancellation and modification keep shared quota and every reservation effect unchanged", {
+  timeout: 60000,
+}, async () => {
+  await withDatabase(async ({ domain, auth, migration }) => {
+    const { recoveryFixture } = await import("../helpers/recovery-fixture.ts");
+    const { tenants, units } = await recoveryFixture(auth, migration);
+    await migration.query(
+      "UPDATE domain.municipality SET cancellation_minutes=1440 WHERE id=$1",
+      [tenants[0]],
+    );
+    const actor = {
+      accountId: "citizen",
+      email: "citizen@example.test",
+      sessionId: "fixture",
+      mfaVerifiedAt: null,
+    };
+    const input = {
+      unitId: units[0],
+      startsAt: "2030-04-03T10:00:00Z",
+      endsAt: "2030-04-03T11:00:00Z",
+      acceptance: initialAcceptance,
+    };
+    const booking = await createReservation(
+      domain,
+      actor,
+      tenants[0],
+      "late-quota-booking",
+      input,
+      randomUUID(),
+      3600,
+      { now: () => new Date("2030-04-02T00:00:00Z") },
+    );
+    assert.equal(booking.result.cancellationMinutes, 1440);
+    const tables = [
+      "reservation",
+      "occupancy",
+      "agreement_consumption",
+      "reservation_event",
+      "reservation_notice",
+      "reservation_email",
+      "idempotent_command",
+    ];
+    const snapshot = async () =>
+      Promise.all(
+        tables.map(
+          async (table) =>
+            (
+              await migration.query(
+                `SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text),'[]'::jsonb) AS rows FROM domain.${table} r`,
+              )
+            ).rows[0].rows,
+        ),
+      );
+    const before = await snapshot();
+    const late = { now: () => new Date("2030-04-02T10:00:00.001Z") };
+    await assert.rejects(
+      cancelReservation(
+        domain,
+        actor,
+        tenants[0],
+        booking.result.id,
+        "late-quota-cancel",
+        { expectedRevision: 1 },
+        randomUUID(),
+        3600,
+        late,
+      ),
+      { code: "RESERVATION_DEADLINE_PASSED" },
+    );
+    assert.deepEqual(await snapshot(), before);
+    await assert.rejects(
+      modifyReservation(
+        domain,
+        actor,
+        tenants[0],
+        booking.result.id,
+        "late-quota-move",
+        {
+          ...input,
+          startsAt: "2030-04-04T10:00:00Z",
+          endsAt: "2030-04-04T11:00:00Z",
+          expectedRevision: 1,
+        },
+        randomUUID(),
+        3600,
+        late,
+      ),
+      { code: "RESERVATION_DEADLINE_PASSED" },
+    );
+    assert.deepEqual(await snapshot(), before);
+    await assert.rejects(
+      createReservation(
+        domain,
+        actor,
+        tenants[1],
+        "quota-still-consumed",
+        { ...input, unitId: units[1] },
+        randomUUID(),
+        3600,
+        late,
+      ),
+      { code: "CONFLICT" },
+    );
+    assert.deepEqual(await snapshot(), before);
   });
 });

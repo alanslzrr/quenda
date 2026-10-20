@@ -5,6 +5,7 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
+import { acceptanceProperties, acceptanceSchema } from "./acceptance.ts";
 import { registerBlockRoutes } from "./block-routes.ts";
 import { registerCancellationRoute } from "./cancel-routes.ts";
 import { type CreateReservationInput, createReservation } from "./create.ts";
@@ -37,7 +38,7 @@ export async function registerReservations(
         operationId: "createReservation",
         tags: ["Reservations"],
         security: [{ quendaSession: [] }],
-        description: `Confirma una reserva del usuario autenticado. Idempotency-Key se delimita por usuario, municipio y operación; retención de esta instancia: ${retentionSeconds} segundos. Repetir clave y contenido recupera el resultado original sin duplicar efectos. Contenido distinto o contención prolongada devuelve 409. Requiere Origin autorizado.`,
+        description: `Confirma una reserva del usuario autenticado. acceptance expresa la aceptación de versiones vigentes de normas y política y es obligatoria para crear una reserva nueva. Su omisión solo permite recuperar un comando anterior sin aceptación cuyo resultado siga retenido; no autoriza nuevas reservas y devuelve 409 CONDITIONS_ACCEPTANCE_REQUIRED si debe ejecutarse un alta. nonCancellable debe coincidir con el vencimiento del plazo al ejecutar; true reconoce que no podrá modificar ni cancelar por sí mismo. Versiones obsoletas requieren revisión; no se sustituyen silenciosamente. Idempotency-Key se delimita por usuario, municipio y operación; retención de esta instancia: ${retentionSeconds} segundos. Repetir clave y contenido recupera el resultado original sin duplicar efectos. Contenido distinto o contención prolongada devuelve 409. Requiere Origin autorizado.`,
         params: {
           type: "object",
           additionalProperties: false,
@@ -57,6 +58,11 @@ export async function registerReservations(
         body: {
           examples: [
             {
+              acceptance: {
+                usageRulesVersion: 1,
+                bookingPolicyVersion: 1,
+                nonCancellable: false,
+              },
               unitId: "00000000-0000-4000-8000-000000000001",
               startsAt: "2030-01-02T10:00:00Z",
               endsAt: "2030-01-02T11:00:00Z",
@@ -65,7 +71,16 @@ export async function registerReservations(
           type: "object",
           additionalProperties: false,
           required: ["unitId", "startsAt", "endsAt"],
-          properties: { unitId: uuid, startsAt: instant, endsAt: instant },
+          properties: {
+            unitId: uuid,
+            startsAt: instant,
+            endsAt: instant,
+            acceptance: {
+              ...acceptanceSchema,
+              description:
+                "Obligatoria para una reserva nueva. Solo puede omitirse al recuperar un comando anterior sin aceptación cuyo resultado siga retenido.",
+            },
+          },
         },
         response: {
           ...Object.fromEntries(
@@ -105,6 +120,7 @@ export async function registerReservations(
               "calendarVersion",
               "cancellationMinutes",
               "timeZone",
+              ...Object.keys(acceptanceProperties),
             ],
             properties: {
               tenantId: uuid,
@@ -117,6 +133,7 @@ export async function registerReservations(
               calendarVersion: { type: "integer", minimum: 1 },
               cancellationMinutes: { type: "integer", minimum: 0 },
               timeZone: { type: "string" },
+              ...acceptanceProperties,
             },
           },
         },

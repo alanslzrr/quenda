@@ -6,6 +6,7 @@ import { idempotentCommand } from "../../src/database/idempotency.ts";
 import { transaction } from "../../src/database/transaction.ts";
 import { appendReservationEvent } from "../../src/modules/reservations/events.ts";
 import { withDatabase } from "../helpers/postgres.ts";
+import { seedUsageRules } from "../helpers/usage-rules-fixture.ts";
 
 test("database occupancy invariants cover reservations, blocks and concurrent overlap", {
   // Raw exclusion inserts may form successive deadlocks under contention.
@@ -28,7 +29,7 @@ test("database occupancy invariants cover reservations, blocks and concurrent ov
       [foreignTenant, foreignUnit],
     ]) {
       await migration.query(
-        "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Synthetic','Europe/Madrid')",
+        "INSERT INTO domain.municipality(id,name,timezone,cancellation_minutes) VALUES($1,'Synthetic','Europe/Madrid',0)",
         [tenantId],
       );
       await migration.query(
@@ -36,7 +37,7 @@ test("database occupancy invariants cover reservations, blocks and concurrent ov
         [tenantId],
       );
       await migration.query(
-        "INSERT INTO domain.facility(tenant_id,id,name) VALUES($1,$2,'Facility')",
+        "INSERT INTO domain.facility(tenant_id,id,name,published_at) VALUES($1,$2,'Facility',now())",
         [tenantId, facility],
       );
       await migration.query(
@@ -45,6 +46,16 @@ test("database occupancy invariants cover reservations, blocks and concurrent ov
       );
       await migration.query(
         "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason) VALUES($1,$2,1,30,120,30,'[]','[]','citizen','Fixture')",
+        [tenantId, unitId],
+      );
+      await seedUsageRules(
+        migration,
+        tenantId as string,
+        unitId as string,
+        "citizen",
+      );
+      await migration.query(
+        "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
         [tenantId, unitId],
       );
     }
@@ -57,7 +68,7 @@ test("database occupancy invariants cover reservations, blocks and concurrent ov
       unitId = unit,
     ) => {
       await c.query(
-        "INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,cancellation_minutes,timezone) VALUES($1,$2,'citizen',$3,1,$4,$5,0,'Europe/Madrid')",
+        "INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,cancellation_minutes,timezone,usage_rules_version,rules_accepted_at,booking_policy_version,conditions_accepted_at,non_cancellable_accepted) VALUES($1,$2,'citizen',$3,1,$4,$5,0,'Europe/Madrid',1,clock_timestamp(),1,clock_timestamp(),false)",
         [tenant, id, unitId, start, end],
       );
       return id;
@@ -511,7 +522,7 @@ test("database occupancy invariants cover reservations, blocks and concurrent ov
               ),
             context,
           ),
-          { code: "23503" },
+          { code: "23514" },
         );
         assert.equal(
           (await domain.query("SELECT * FROM domain.reservation")).rowCount,

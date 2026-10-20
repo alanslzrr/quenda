@@ -5,6 +5,7 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
+import { acceptanceProperties } from "./acceptance.ts";
 import {
   listMunicipalReservations,
   listOwnReservations,
@@ -49,6 +50,7 @@ export async function registerReservationQueries(
               "id",
               "tenantId",
               "accountId",
+              "usageRulesText",
               "unitId",
               "startsAt",
               "endsAt",
@@ -57,11 +59,13 @@ export async function registerReservationQueries(
               "calendarVersion",
               "cancellationMinutes",
               "timeZone",
+              ...Object.keys(acceptanceProperties),
             ],
             properties: {
               id: uuid,
               tenantId: uuid,
               accountId: { type: "string" },
+              usageRulesText: { type: "string", nullable: true },
               unitId: uuid,
               startsAt: instant,
               endsAt: instant,
@@ -73,6 +77,7 @@ export async function registerReservationQueries(
               calendarVersion: { type: "integer" },
               cancellationMinutes: { type: "integer" },
               timeZone: { type: "string" },
+              ...acceptanceProperties,
             },
           },
         },
@@ -157,6 +162,7 @@ export async function registerReservationQueries(
                       "calendarVersion",
                       "cancellationMinutes",
                       "timeZone",
+                      ...Object.keys(acceptanceProperties),
                       ...Object.keys(extra),
                     ],
                     properties: {
@@ -173,6 +179,7 @@ export async function registerReservationQueries(
                       calendarVersion: { type: "integer" },
                       cancellationMinutes: { type: "integer" },
                       timeZone: { type: "string" },
+                      ...acceptanceProperties,
                       ...extra,
                     },
                   },

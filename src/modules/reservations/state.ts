@@ -10,6 +10,11 @@ export interface Reservation {
   calendar_version: number;
   cancellation_minutes: number;
   timezone: string;
+  usage_rules_version: number | null;
+  rules_accepted_at: Date | null;
+  booking_policy_version: number | null;
+  conditions_accepted_at: Date | null;
+  non_cancellable_accepted: boolean | null;
 }
 export const present = (row: Omit<Reservation, "account_id">) => ({
   id: row.id,
@@ -22,4 +27,9 @@ export const present = (row: Omit<Reservation, "account_id">) => ({
   calendarVersion: row.calendar_version,
   cancellationMinutes: row.cancellation_minutes,
   timeZone: row.timezone,
+  usageRulesVersion: row.usage_rules_version ?? null,
+  rulesAcceptedAt: row.rules_accepted_at?.toISOString() ?? null,
+  bookingPolicyVersion: row.booking_policy_version ?? null,
+  conditionsAcceptedAt: row.conditions_accepted_at?.toISOString() ?? null,
+  nonCancellableAccepted: row.non_cancellable_accepted ?? null,
 });

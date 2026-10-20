@@ -14,6 +14,7 @@ import {
 } from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 import { recoveryFixture } from "../helpers/recovery-fixture.ts";
+import { initialAcceptance } from "../helpers/usage-rules-fixture.ts";
 
 const execute = promisify(execFile);
 test("restored database reconciliation is read-only, detects inconsistent occupancy and keeps mail closed", {
@@ -33,6 +34,7 @@ test("restored database reconciliation is read-only, detects inconsistent occupa
         tenants[0],
         "reconcile-booking",
         {
+          acceptance: initialAcceptance,
           unitId: units[0],
           startsAt: "2030-04-03T10:00:00Z",
           endsAt: "2030-04-03T11:00:00Z",
@@ -182,6 +184,7 @@ test("reconciliation retains released consumption history and detects missing ev
       tenants[0],
       "history-booking",
       {
+        acceptance: initialAcceptance,
         unitId: units[0],
         startsAt: "2030-04-03T10:00:00Z",
         endsAt: "2030-04-03T11:00:00Z",
@@ -225,6 +228,125 @@ test("reconciliation retains released consumption history and detects missing ev
       assert.equal(broken.reopeningAuthorized, false);
     } finally {
       await client.end();
+    }
+  });
+});
+
+test("reconciliation checks acceptance evidence, legacy snapshots and sessions of deactivated accounts", {
+  timeout: 60000,
+}, async () => {
+  await withDatabase(async ({ auth, migration, domain, administration }) => {
+    const { tenants, units } = await recoveryFixture(auth, migration);
+    const booking = await createReservation(
+      domain,
+      {
+        accountId: "citizen",
+        email: "citizen@example.test",
+        sessionId: "fixture",
+        mfaVerifiedAt: null,
+      },
+      tenants[0],
+      "acceptance-reconcile",
+      {
+        acceptance: initialAcceptance,
+        unitId: units[0],
+        startsAt: "2030-04-03T10:00:00Z",
+        endsAt: "2030-04-03T11:00:00Z",
+      },
+      randomUUID(),
+      3600,
+      { now: () => new Date("2030-04-02T00:00:00Z") },
+    );
+    const admin = new Client({
+      connectionString: administration.options.connectionString,
+    });
+    await admin.connect();
+    const run = () => reconcileRestore(admin, path.resolve("db/migrations"));
+    try {
+      // The report must not depend on the operator connection's timezone.
+      await admin.query("SET TIME ZONE 'Pacific/Auckland'");
+      const valid = await run();
+      assert.ok(Object.values(valid.checks).every((n) => n === 0));
+      const original = (
+        await admin.query(
+          "SELECT after_state FROM domain.reservation_event WHERE reservation_id=$1",
+          [booking.result.id],
+        )
+      ).rows[0].after_state;
+      const corrupt = async (sql: string, values: unknown[] = []) => {
+        await admin.query("BEGIN");
+        try {
+          await admin.query("SET LOCAL session_replication_role=replica");
+          await admin.query(sql, values);
+          await admin.query("COMMIT");
+        } catch (error) {
+          await admin.query("ROLLBACK");
+          throw error;
+        }
+      };
+      await corrupt(
+        "UPDATE domain.reservation_event SET after_state=jsonb_set(after_state,'{rulesAcceptedAt}','null'::jsonb) WHERE reservation_id=$1",
+        [booking.result.id],
+      );
+      const changed = await run();
+      assert.equal(changed.checks.reservationSnapshots, 1);
+      assert.equal(changed.checks.reservationAcceptance, 0);
+      await corrupt(
+        "UPDATE domain.reservation_event SET after_state=$2 WHERE reservation_id=$1",
+        [booking.result.id, original],
+      );
+      const originalRules = (
+        await admin.query(
+          "SELECT to_jsonb(u) AS value FROM domain.unit_usage_rules u WHERE tenant_id=$1 AND unit_id=$2",
+          [tenants[0], units[0]],
+        )
+      ).rows[0].value;
+      await corrupt(
+        "DELETE FROM domain.unit_usage_rules WHERE tenant_id=$1 AND unit_id=$2",
+        [tenants[0], units[0]],
+      );
+      const missingRules = await run();
+      assert.equal(missingRules.checks.reservationAcceptance, 1);
+      assert.equal(missingRules.reopeningAuthorized, false);
+      await admin.query(
+        "INSERT INTO domain.unit_usage_rules SELECT * FROM jsonb_populate_record(NULL::domain.unit_usage_rules,$1::jsonb)",
+        [originalRules],
+      );
+      // A legacy record may lack all acceptance fields; its historical snapshot
+      // remains valid without rewriting it to manufacture null-valued evidence.
+      await corrupt(
+        "UPDATE domain.reservation SET usage_rules_version=NULL,rules_accepted_at=NULL,booking_policy_version=NULL,conditions_accepted_at=NULL,non_cancellable_accepted=NULL WHERE id=$1",
+        [booking.result.id],
+      );
+      await corrupt(
+        "UPDATE domain.reservation_event SET after_state=after_state-ARRAY['usageRulesVersion','rulesAcceptedAt','bookingPolicyVersion','conditionsAcceptedAt','nonCancellableAccepted'] WHERE reservation_id=$1",
+        [booking.result.id],
+      );
+      const legacy = await run();
+      assert.equal(legacy.checks.reservationAcceptance, 0);
+      assert.equal(legacy.checks.reservationSnapshots, 0);
+      assert.equal(legacy.status, "CHECKED_REQUIRES_REVIEW");
+      await corrupt(
+        `INSERT INTO auth.session(id,token,"userId","expiresAt","createdAt","updatedAt") VALUES('retained-session','synthetic-token','citizen',now()+interval '1 day',now(),now())`,
+      );
+      await corrupt(
+        "UPDATE auth.account_lifecycle SET deactivated_at=now() WHERE account_id='citizen'",
+      );
+      const inactive = await run();
+      assert.equal(inactive.checks.inactiveAccountSessions, 1);
+      assert.equal(inactive.status, "INCONSISTENT");
+      assert.ok(!JSON.stringify(inactive).includes("synthetic-token"));
+      assert.ok(!JSON.stringify(inactive).includes("citizen"));
+      assert.equal(
+        (
+          await admin.query(
+            "SELECT count(*)::int AS n FROM auth.session WHERE id='retained-session'",
+          )
+        ).rows[0].n,
+        1,
+      );
+    } finally {
+      await admin.end();
     }
   });
 });

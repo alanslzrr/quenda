@@ -8,13 +8,15 @@ export async function appendReservationEvent(
   reservationId: string,
   correlationId: string,
   reason: string | null = null,
+  administrative = false,
 ): Promise<string> {
   const eventId = randomUUID();
-  await client.query("SELECT domain.append_reservation_event($1,$2,$3,$4)", [
+  await client.query("SELECT domain.append_reservation_event($1,$2,$3,$4,$5)", [
     reservationId,
     eventId,
     correlationId,
     reason,
+    administrative,
   ]);
   return eventId;
 }

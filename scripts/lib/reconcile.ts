@@ -6,6 +6,8 @@ import type { Client } from "pg";
 export async function reconcileRestore(client: Client, directory: string) {
   await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
   try {
+    // Event snapshots are serialized in UTC by the transactional audit functions.
+    await client.query("SET LOCAL TIME ZONE 'UTC'");
     const role = await client.query(
       "SELECT rolsuper FROM pg_roles WHERE rolname=current_user",
     );
@@ -60,6 +62,24 @@ export async function reconcileRestore(client: Client, directory: string) {
         JOIN domain.agreement a ON a.id=c.agreement_id
         WHERE s.account_id<>r.account_id OR c.week_start<>date_trunc('week',c.starts_at AT TIME ZONE a.timezone)::date
         OR (NOT c.released AND (r.status<>'CONFIRMADA' OR (c.unit_id,c.starts_at,c.ends_at) IS DISTINCT FROM (r.unit_id,r.starts_at,r.ends_at)))`,
+      reservationAcceptance: `SELECT count(*)::int AS n FROM domain.reservation r WHERE NOT (
+        (r.usage_rules_version IS NULL AND r.rules_accepted_at IS NULL AND r.booking_policy_version IS NULL
+          AND r.conditions_accepted_at IS NULL AND r.non_cancellable_accepted IS NULL)
+        OR (r.usage_rules_version IS NOT NULL AND r.rules_accepted_at IS NOT NULL AND r.booking_policy_version IS NOT NULL
+          AND r.conditions_accepted_at IS NOT NULL AND r.non_cancellable_accepted IS NOT NULL
+          AND r.usage_rules_version>0 AND r.booking_policy_version>0 AND isfinite(r.rules_accepted_at) AND isfinite(r.conditions_accepted_at)
+          AND EXISTS(SELECT 1 FROM domain.unit_usage_rules u WHERE (u.tenant_id,u.unit_id,u.version)=(r.tenant_id,r.unit_id,r.usage_rules_version)
+            AND u.text_content ~ '[^[:space:]]')))
+      `,
+      reservationSnapshots: `SELECT count(*)::int AS n FROM domain.reservation r
+        CROSS JOIN LATERAL (SELECT e.revision,e.after_state FROM domain.reservation_event e
+          WHERE (e.tenant_id,e.reservation_id)=(r.tenant_id,r.id) ORDER BY e.revision DESC LIMIT 1) latest
+        WHERE latest.revision<>r.revision OR latest.after_state IS DISTINCT FROM
+          CASE WHEN NOT latest.after_state ? 'usageRulesVersion' AND r.usage_rules_version IS NULL
+            THEN domain.reservation_snapshot(r)-ARRAY['usageRulesVersion','rulesAcceptedAt','bookingPolicyVersion','conditionsAcceptedAt','nonCancellableAccepted']
+            ELSE domain.reservation_snapshot(r) END`,
+      inactiveAccountSessions: `SELECT count(*)::int AS n FROM auth.session s JOIN auth.account_lifecycle a ON a.account_id=s."userId"
+        WHERE a.deactivated_at IS NOT NULL`,
       reservationEvents: `SELECT count(*)::int AS n FROM domain.reservation r WHERE
         (SELECT count(*) FROM domain.reservation_event e WHERE (e.tenant_id,e.reservation_id)=(r.tenant_id,r.id))<>r.revision
         OR NOT EXISTS(SELECT 1 FROM domain.reservation_event e WHERE (e.tenant_id,e.reservation_id,e.revision)=(r.tenant_id,r.id,r.revision)

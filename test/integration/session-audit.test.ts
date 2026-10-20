@@ -93,7 +93,11 @@ test("session audit is atomic, restricted and excludes session credentials", {
         "DROP TRIGGER fail_session_audit_fixture ON auth.session_event; DROP FUNCTION auth.fail_session_audit_fixture()",
       );
     }
-    await auth.query('DELETE FROM auth."user" WHERE id=$1', [account]);
+    // Logical deactivation retains the identity and audit; runtime deletion is blocked.
+    await assert.rejects(
+      auth.query('DELETE FROM auth."user" WHERE id=$1', [account]),
+      { code: "23503" },
+    );
     assert.equal((await events()).length, 3);
   });
 });

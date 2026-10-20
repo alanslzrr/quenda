@@ -116,6 +116,8 @@ export async function registerPublicCatalog(
       onRequest: limit,
       schema: {
         operationId: "publicUnitCalendar",
+        description:
+          "Devuelve el calendario y las versiones vigentes de normas y condiciones de cancelación. La reserva debe aceptar esas versiones; el servidor rechaza la operación si cambian antes de confirmarla.",
         tags: ["Public catalog"],
         security: [],
         params: params({ unitId: uuid }),
@@ -131,6 +133,8 @@ export async function registerPublicCatalog(
               "timeZone",
               "municipalAdvanceDays",
               "cancellationMinutes",
+              "bookingPolicyVersion",
+              "usageRulesVersion",
               "calendarVersion",
               "calendar",
             ],
@@ -141,6 +145,8 @@ export async function registerPublicCatalog(
               timeZone: text,
               municipalAdvanceDays: { type: "integer" },
               cancellationMinutes: { type: "integer" },
+              bookingPolicyVersion: { type: "integer", minimum: 1 },
+              usageRulesVersion: { type: "integer", minimum: 1 },
               calendarVersion: { type: "integer" },
               calendar: calendarSchema,
             },

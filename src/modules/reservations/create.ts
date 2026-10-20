@@ -8,11 +8,13 @@ import type { AuthenticatedAccount } from "../identity/index.ts";
 import {
   type CreateReservationInput,
   normalizeReservationInput,
+  reservationCommandInput,
 } from "./input.ts";
 
 export type { CreateReservationInput } from "./input.ts";
 
 import { syncReservationConsumption } from "../collaboration/index.ts";
+import { acceptConditions, completeAcceptanceEvidence } from "./acceptance.ts";
 import { appendReservationEvent } from "./events.ts";
 
 export async function createReservation(
@@ -33,7 +35,7 @@ export async function createReservation(
       {
         operation: "reservation.create",
         key,
-        input: normalized,
+        input: reservationCommandInput(normalized),
         retentionSeconds,
         authorize: async (client) => {
           // The verified account may reserve for itself. Publication is a creation
@@ -53,14 +55,22 @@ export async function createReservation(
             normalized.endsAt,
             clock.now().toISOString(),
           );
+          const accepted = await acceptConditions(
+            client,
+            tenantId,
+            normalized.unitId,
+            normalized.startsAt,
+            clock,
+            normalized.acceptance,
+          );
           await client.query(
             "INSERT INTO domain.municipal_profile(tenant_id,account_id) VALUES($1,$2) ON CONFLICT DO NOTHING",
             [tenantId, actor.accountId],
           );
           const id = randomUUID();
           await client.query(
-            `INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,cancellation_minutes,timezone)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+            `INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,cancellation_minutes,timezone,usage_rules_version,rules_accepted_at,booking_policy_version,conditions_accepted_at,non_cancellable_accepted)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
             [
               tenantId,
               id,
@@ -69,8 +79,13 @@ export async function createReservation(
               policy.calendarVersion,
               normalized.startsAt,
               normalized.endsAt,
-              policy.cancellationMinutes,
+              accepted.cancellationMinutes,
               policy.timeZone,
+              accepted.usageRulesVersion,
+              accepted.rulesAcceptedAt,
+              accepted.bookingPolicyVersion,
+              accepted.conditionsAcceptedAt,
+              accepted.nonCancellableAccepted,
             ],
           );
           await client.query(
@@ -86,6 +101,15 @@ export async function createReservation(
           );
           await syncReservationConsumption(client, id, correlationId);
           await appendReservationEvent(client, id, correlationId);
+          const confirmedAt = clock.now().getTime();
+          if (
+            confirmedAt >= Date.parse(normalized.startsAt) ||
+            (!accepted.nonCancellableAccepted &&
+              confirmedAt >
+                Date.parse(normalized.startsAt) -
+                  accepted.cancellationMinutes * 60000)
+          )
+            throw new HttpError("CONDITIONS_CHANGED");
           return {
             tenantId,
             id,
@@ -95,12 +119,21 @@ export async function createReservation(
             status: "CONFIRMADA",
             revision: 1,
             calendarVersion: policy.calendarVersion,
-            cancellationMinutes: policy.cancellationMinutes,
+            cancellationMinutes: accepted.cancellationMinutes,
+            usageRulesVersion: accepted.usageRulesVersion,
+            rulesAcceptedAt: accepted.rulesAcceptedAt?.toISOString() ?? null,
+            bookingPolicyVersion: accepted.bookingPolicyVersion,
+            conditionsAcceptedAt:
+              accepted.conditionsAcceptedAt?.toISOString() ?? null,
+            nonCancellableAccepted: accepted.nonCancellableAccepted,
             timeZone: policy.timeZone,
           };
         },
       },
-    );
+    ).then((response) => ({
+      ...response,
+      result: completeAcceptanceEvidence(response.result),
+    }));
   } catch (error) {
     if (
       error instanceof DatabaseError &&

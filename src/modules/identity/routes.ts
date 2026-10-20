@@ -248,6 +248,10 @@ export async function authenticationSchema(auth: Authentication) {
 }
 
 const errorMessages: Record<string, [string, string]> = {
+  ACCOUNT_INACTIVE: [
+    "La cuenta está dada de baja.",
+    "A conta está dada de baixa.",
+  ],
   INVALID_EMAIL_OR_PASSWORD: [
     "Correo o contraseña incorrectos.",
     "Correo ou contrasinal incorrectos.",

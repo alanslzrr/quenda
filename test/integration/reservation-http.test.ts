@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
 import test from "node:test";
 import { buildApp } from "../../src/app.ts";
+import { commandFingerprint } from "../../src/database/idempotency.ts";
 import { transaction } from "../../src/database/transaction.ts";
 import { processReservationEmail } from "../../src/modules/communications/index.ts";
 import { exportReservations } from "../../src/modules/communications/reservation-export.ts";
@@ -10,6 +11,10 @@ import type { MailMessage } from "../../src/shared/mail.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 import { verifyProductResponses } from "../helpers/response-contract.ts";
+import {
+  initialAcceptance,
+  seedUsageRules,
+} from "../helpers/usage-rules-fixture.ts";
 
 test("reservation HTTP uses verified sessions, origin checks and replay across replicas", {
   timeout: 60000,
@@ -53,7 +58,7 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         facility = randomUUID(),
         unit = randomUUID();
       await migration.query(
-        "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Synthetic','Europe/Madrid')",
+        "INSERT INTO domain.municipality(id,name,timezone,cancellation_minutes) VALUES($1,'Synthetic','Europe/Madrid',0)",
         [tenant],
       );
       await migration.query(
@@ -80,6 +85,7 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
           accountId,
         ],
       );
+      await seedUsageRules(migration, tenant, unit, accountId);
       await migration.query(
         "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
         [tenant, unit],
@@ -88,6 +94,7 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       start.setUTCDate(start.getUTCDate() + 1);
       start.setUTCHours(10, 0, 0, 0);
       const body = {
+        acceptance: initialAcceptance,
         unitId: unit,
         startsAt: start.toISOString(),
         endsAt: new Date(start.getTime() + 3600000).toISOString(),
@@ -191,6 +198,9 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         (await domain.query("SELECT * FROM domain.account_preferences"))
           .rowCount,
         0,
+      );
+      await auth.query(
+        "INSERT INTO auth.\"user\"(id,name,email,\"emailVerified\") VALUES('different-account','Different','different@example.test',true)",
       );
       await assert.rejects(
         transaction(
@@ -303,6 +313,10 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(detail.statusCode, 200, detail.body);
       assert.equal(detail.json().status, "CANCELADA");
       assert.equal(detail.json().revision, 3);
+      assert.equal(detail.json().usageRulesVersion, 1);
+      assert.equal(detail.json().usageRulesText, "Synthetic fixture rules");
+      assert.ok(detail.json().rulesAcceptedAt);
+      assert.ok(detail.json().conditionsAcceptedAt);
       const snapshots = (
         await migration.query(
           "SELECT e.revision,q.locale FROM domain.reservation_email q JOIN domain.reservation_event e ON (e.tenant_id,e.id)=(q.tenant_id,q.event_id) WHERE e.reservation_id=$1 ORDER BY e.revision",
@@ -399,6 +413,223 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(cancelReplay.statusCode, 200, cancelReplay.body);
       assert.deepEqual(cancelReplay.json(), cancelled.json());
       assert.equal(cancelReplay.headers["idempotency-replayed"], "true");
+      // An upgrade can retain a completed pre-acceptance cancellation result.
+      // Its missing evidence must not cause serialization failure or be filled
+      // from the newer reservation state, which has genuine acceptance here.
+      const reservationBeforeLegacyReplay = (
+        await migration.query(
+          "SELECT * FROM domain.reservation WHERE tenant_id=$1 AND id=$2",
+          [tenant, created.json().id],
+        )
+      ).rows;
+      assert.equal(reservationBeforeLegacyReplay[0].usage_rules_version, 1);
+      assert.ok(reservationBeforeLegacyReplay[0].rules_accepted_at);
+      const eventsBeforeLegacyReplay = (
+        await migration.query(
+          "SELECT * FROM domain.reservation_event WHERE tenant_id=$1 AND reservation_id=$2 ORDER BY revision",
+          [tenant, created.json().id],
+        )
+      ).rows;
+      const oldEvidence = {
+        usageRulesVersion: null,
+        rulesAcceptedAt: null,
+        bookingPolicyVersion: null,
+        conditionsAcceptedAt: null,
+        nonCancellableAccepted: null,
+      };
+      const legacyCommand = (
+        await migration.query(
+          "UPDATE domain.idempotent_command SET result=result-$3::text[] WHERE tenant_id=$1 AND actor_id=$2 AND operation='reservation.cancel' AND key='http-cancel' RETURNING *",
+          [tenant, accountId, Object.keys(oldEvidence)],
+        )
+      ).rows;
+      assert.equal(legacyCommand.length, 1);
+      assert.equal(
+        Object.hasOwn(legacyCommand[0].result, "usageRulesVersion"),
+        false,
+      );
+      const legacyReplay = await replica.inject({
+        method: "POST",
+        url: cancelUrl,
+        payload: { expectedRevision: 2 },
+        headers: {
+          origin: config.origin,
+          cookie: client.cookie(),
+          "idempotency-key": "http-cancel",
+        },
+      });
+      assert.equal(legacyReplay.statusCode, 200, legacyReplay.body);
+      assert.equal(legacyReplay.headers["idempotency-replayed"], "true");
+      assert.deepEqual(legacyReplay.json(), {
+        ...cancelled.json(),
+        ...oldEvidence,
+      });
+      assert.deepEqual(
+        (
+          await migration.query(
+            "SELECT * FROM domain.reservation WHERE tenant_id=$1 AND id=$2",
+            [tenant, created.json().id],
+          )
+        ).rows,
+        reservationBeforeLegacyReplay,
+      );
+      assert.deepEqual(
+        (
+          await migration.query(
+            "SELECT * FROM domain.reservation_event WHERE tenant_id=$1 AND reservation_id=$2 ORDER BY revision",
+            [tenant, created.json().id],
+          )
+        ).rows,
+        eventsBeforeLegacyReplay,
+      );
+      assert.deepEqual(
+        (
+          await migration.query(
+            "SELECT * FROM domain.idempotent_command WHERE tenant_id=$1 AND actor_id=$2 AND operation='reservation.cancel' AND key='http-cancel'",
+            [tenant, accountId],
+          )
+        ).rows,
+        legacyCommand,
+      );
+      const legacyCreateBody = {
+        unitId: body.unitId,
+        startsAt: body.startsAt,
+        endsAt: body.endsAt,
+      };
+      // Legacy create/modify commands omitted acceptance entirely; adding
+      // acceptance:null to their fingerprint would reject a genuine replay.
+      for (const entry of [
+        {
+          operation: "reservation.create",
+          key: "http-create",
+          url,
+          body: legacyCreateBody,
+          fingerprintInput: legacyCreateBody,
+          status: 201,
+          original: created.json(),
+        },
+        {
+          operation: "reservation.modify",
+          key: "http-modify",
+          url: modifyUrl,
+          body: changedBody,
+          fingerprintInput: {
+            ...changedBody,
+            reservationId: created.json().id,
+            administrative: false,
+            reason: null,
+          },
+          status: 200,
+          original: modified.json(),
+        },
+      ]) {
+        const retained = (
+          await migration.query(
+            "UPDATE domain.idempotent_command SET fingerprint=$5,result=result-$6::text[] WHERE tenant_id=$1 AND actor_id=$2 AND operation=$3 AND key=$4 RETURNING *",
+            [
+              tenant,
+              accountId,
+              entry.operation,
+              entry.key,
+              commandFingerprint(entry.fingerprintInput),
+              Object.keys(oldEvidence),
+            ],
+          )
+        ).rows;
+        assert.equal(retained.length, 1);
+        const oldReplay = await replica.inject({
+          method: "POST",
+          url: entry.url,
+          payload: entry.body,
+          headers: {
+            origin: config.origin,
+            cookie: client.cookie(),
+            "idempotency-key": entry.key,
+          },
+        });
+        assert.equal(oldReplay.statusCode, entry.status, oldReplay.body);
+        assert.equal(oldReplay.headers["idempotency-replayed"], "true");
+        assert.equal(
+          oldReplay.headers["idempotency-expires-at"],
+          retained[0].expires_at.toISOString(),
+        );
+        assert.deepEqual(oldReplay.json(), {
+          ...entry.original,
+          ...oldEvidence,
+        });
+        // An explicit acceptance is different input, never an alias for the
+        // legacy command's absent evidence.
+        const changedAcceptance = await client.request(
+          entry.url,
+          { ...entry.body, acceptance: initialAcceptance },
+          { "idempotency-key": entry.key },
+        );
+        assert.equal(changedAcceptance.statusCode, 409, changedAcceptance.body);
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT * FROM domain.idempotent_command WHERE tenant_id=$1 AND actor_id=$2 AND operation=$3 AND key=$4",
+              [tenant, accountId, entry.operation, entry.key],
+            )
+          ).rows,
+          retained,
+        );
+      }
+      const newWithoutAcceptance = await client.request(url, legacyCreateBody, {
+        "idempotency-key": "fresh-without-acceptance",
+      });
+      assert.equal(
+        newWithoutAcceptance.statusCode,
+        409,
+        newWithoutAcceptance.body,
+      );
+      assert.equal(
+        newWithoutAcceptance.json().error.code,
+        "CONDITIONS_ACCEPTANCE_REQUIRED",
+      );
+      assert.equal(
+        (
+          await migration.query(
+            "SELECT 1 FROM domain.idempotent_command WHERE tenant_id=$1 AND actor_id=$2 AND key='fresh-without-acceptance'",
+            [tenant, accountId],
+          )
+        ).rowCount,
+        0,
+      );
+      assert.deepEqual(
+        (
+          await migration.query(
+            "SELECT * FROM domain.reservation WHERE tenant_id=$1 AND id=$2",
+            [tenant, created.json().id],
+          )
+        ).rows,
+        reservationBeforeLegacyReplay,
+      );
+      assert.equal(
+        (
+          await migration.query(
+            "SELECT count(*)::int AS n FROM domain.reservation",
+          )
+        ).rows[0].n,
+        1,
+      );
+      assert.deepEqual(
+        (
+          await migration.query(
+            "SELECT * FROM domain.reservation_event WHERE tenant_id=$1 AND reservation_id=$2 ORDER BY revision",
+            [tenant, created.json().id],
+          )
+        ).rows,
+        eventsBeforeLegacyReplay,
+      );
+      assert.equal(
+        (
+          await migration.query(
+            "SELECT count(*)::int AS n FROM domain.occupancy WHERE released_at IS NULL",
+          )
+        ).rows[0].n,
+        0,
+      );
       const second = await client.request(url, body, {
         "idempotency-key": "after-cancel",
       });
@@ -670,7 +901,7 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       const emptyTenant = randomUUID(),
         emptyInvitation = randomUUID();
       await migration.query(
-        "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Empty','Europe/Madrid')",
+        "INSERT INTO domain.municipality(id,name,timezone,cancellation_minutes) VALUES($1,'Empty','Europe/Madrid',0)",
         [emptyTenant],
       );
       await migration.query(
@@ -715,7 +946,7 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         ),
       );
       assert.equal(exportData.format, "quenda.reservations");
-      assert.equal(exportData.version, 1);
+      assert.equal(exportData.version, 2);
       assert.equal(exportData.tenantId, tenant);
       assert.equal(exportData.unitId, null);
       assert.deepEqual(exportData.entities, ["reservations"]);
@@ -726,6 +957,14 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
         selection: "overlap",
       });
       assert.equal(exportData.reservations.length, 2);
+      for (const reservation of exportData.reservations) {
+        assert.equal(reservation.usageRulesVersion, null);
+        assert.equal(reservation.usageRulesText, null);
+        assert.equal(reservation.rulesAcceptedAt, null);
+        assert.equal(reservation.bookingPolicyVersion, null);
+        assert.equal(reservation.conditionsAcceptedAt, null);
+        assert.equal(reservation.nonCancellableAccepted, null);
+      }
       assert.ok(
         exportData.reservations.every(
           (r: { unitId: string; accountId: string }) =>
@@ -785,7 +1024,7 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(downloaded.headers["cache-control"], "no-store");
       assert.equal(
         downloaded.headers["content-disposition"],
-        'attachment; filename="quenda-reservations-v1.json"',
+        'attachment; filename="quenda-reservations-v2.json"',
       );
       assert.equal(downloaded.json().reservations.length, 4);
       const rows = downloaded.json().reservations as Array<{

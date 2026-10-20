@@ -958,6 +958,17 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             ).statusCode,
             200,
           );
+          const rules = await app.inject({
+            method: "PUT",
+            url: `/api/municipalities/${tenantId}/units/${unit.json().unitId}/usage-rules`,
+            headers: { cookie: client.cookie(), origin: config.origin },
+            payload: {
+              expectedVersion: 0,
+              text: "Normas sintéticas",
+              reason: "Preparar publicación",
+            },
+          });
+          assert.equal(rules.statusCode, 200, rules.body);
           const publishedUnit = await client.request(
             `/api/municipalities/${tenantId}/units/${unit.json().unitId}/publish`,
             {

@@ -16,6 +16,7 @@ import {
   createReservation,
 } from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
+import { seedUsageRules } from "../helpers/usage-rules-fixture.ts";
 
 test("municipal booking policy is versioned, scoped and audited atomically", {
   timeout: 60000,
@@ -62,7 +63,7 @@ test("municipal booking policy is versioned, scoped and audited atomically", {
       tenantId,
       version: 1,
       advanceDays: 30,
-      cancellationMinutes: 0,
+      cancellationMinutes: 1440,
     });
     for (const who of [
       actor("operator"),
@@ -169,6 +170,7 @@ test("municipal booking policy is versioned, scoped and audited atomically", {
           ),
         ],
       );
+      await seedUsageRules(client, tenantId, unit, "administrator");
       await client.query(
         "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
         [tenantId, unit],
@@ -180,13 +182,18 @@ test("municipal booking policy is versioned, scoped and audited atomically", {
     );
     assert.deepEqual(await readBookingPolicy(domain, admin, tenantId), current);
     const clock = { now: () => new Date("2030-01-01T12:00:00Z") };
-    const book = (hour: number) =>
+    const book = (hour: number, version: number, nonCancellable = false) =>
       createReservation(
         domain,
         admin,
         tenantId,
         `policy-book-${hour}`,
         {
+          acceptance: {
+            usageRulesVersion: 1,
+            bookingPolicyVersion: version,
+            nonCancellable,
+          },
           unitId: unit,
           startsAt: `2030-01-02T${hour}:00:00Z`,
           endsAt: `2030-01-02T${hour + 1}:00:00Z`,
@@ -195,7 +202,7 @@ test("municipal booking policy is versioned, scoped and audited atomically", {
         3600,
         clock,
       );
-    const old = await book(10);
+    const old = await book(10, 2);
     assert.equal(old.result.cancellationMinutes, 60);
     await save({
       ...input,
@@ -203,7 +210,7 @@ test("municipal booking policy is versioned, scoped and audited atomically", {
       advanceDays: 10,
       cancellationMinutes: 1440,
     });
-    const fresh = await book(11);
+    const fresh = await book(11, 3, true);
     assert.equal(fresh.result.cancellationMinutes, 1440);
     const cancel = (id: string) =>
       cancelReservation(
@@ -218,7 +225,9 @@ test("municipal booking policy is versioned, scoped and audited atomically", {
         clock,
       );
     assert.equal((await cancel(old.result.id)).result.status, "CANCELADA");
-    await assert.rejects(cancel(fresh.result.id), { code: "CONFLICT" });
+    await assert.rejects(cancel(fresh.result.id), {
+      code: "RESERVATION_DEADLINE_PASSED",
+    });
     await assert.rejects(
       createReservation(
         domain,
@@ -226,6 +235,11 @@ test("municipal booking policy is versioned, scoped and audited atomically", {
         tenantId,
         "beyond-policy",
         {
+          acceptance: {
+            usageRulesVersion: 1,
+            bookingPolicyVersion: 3,
+            nonCancellable: false,
+          },
           unitId: unit,
           startsAt: "2030-01-12T10:00:00Z",
           endsAt: "2030-01-12T11:00:00Z",

@@ -5,6 +5,7 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
+import { acceptanceProperties } from "./acceptance.ts";
 import { type CancelReservationInput, cancelReservation } from "./cancel.ts";
 
 export async function registerCancellationRoute(
@@ -85,6 +86,7 @@ export async function registerCancellationRoute(
               "calendarVersion",
               "cancellationMinutes",
               "timeZone",
+              ...Object.keys(acceptanceProperties),
             ],
             properties: {
               id: uuid,
@@ -97,6 +99,7 @@ export async function registerCancellationRoute(
               calendarVersion: { type: "integer", minimum: 1 },
               cancellationMinutes: { type: "integer", minimum: 0 },
               timeZone: { type: "string" },
+              ...acceptanceProperties,
             },
           },
         },

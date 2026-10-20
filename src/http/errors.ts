@@ -1,6 +1,39 @@
 import type { FastifyError, FastifyInstance, FastifyRequest } from "fastify";
 
 const messages = {
+  ACCOUNT_HANDOVER_REQUIRED: {
+    es: "Debes transferir la última responsabilidad administrativa antes de dar de baja la cuenta.",
+    gl: "Debes transferir a última responsabilidade administrativa antes de dar de baixa a conta.",
+  },
+  USAGE_RULES_REQUIRED: {
+    es: "Añade las normas de uso para publicar esta unidad.",
+    gl: "Engade as normas de uso para publicar esta unidade.",
+  },
+  CONDITIONS_ACCEPTANCE_REQUIRED: {
+    es: "Debes revisar y aceptar las condiciones vigentes antes de confirmar. Si el plazo ya ha vencido, no podrás cancelar ni modificar la reserva por tu cuenta.",
+    gl: "Debes revisar e aceptar as condicións vixentes antes de confirmar. Se o prazo xa venceu, non poderás cancelar nin modificar a reserva pola túa conta.",
+  },
+  CONDITIONS_CHANGED: {
+    es: "Las condiciones han cambiado. Revisa y acepta las condiciones vigentes. La reserva no se ha cambiado.",
+    gl: "As condicións cambiaron. Revisa e acepta as condicións vixentes. A reserva non se cambiou.",
+  },
+  HOLDER_ACCEPTANCE_REQUIRED: {
+    es: "Este cambio requiere que el titular acepte las normas aplicables. Debe modificar la reserva desde su cuenta. La reserva actual no se ha cambiado.",
+    gl: "Este cambio require que o titular acepte as normas aplicables. Debe modificar a reserva desde a súa conta. A reserva actual non se cambiou.",
+  },
+  RESERVATION_DEADLINE_PASSED: {
+    es: "El plazo para modificar o cancelar esta reserva ha vencido. La reserva se mantiene; puedes contactar con el ayuntamiento.",
+    gl: "O prazo para modificar ou cancelar esta reserva venceu. A reserva mantense; podes contactar co concello.",
+  },
+  ACCOUNT_HAS_FUTURE_RESERVATIONS: {
+    es: "No puedes dar de baja la cuenta mientras tengas reservas futuras confirmadas. Consulta tus reservas o contacta con el ayuntamiento.",
+    gl: "Non podes dar de baixa a conta mentres teñas reservas futuras confirmadas. Consulta as túas reservas ou contacta co concello.",
+  },
+  ACCOUNT_INACTIVE: {
+    es: "La cuenta está dada de baja.",
+    gl: "A conta está dada de baixa.",
+  },
+
   INVALID_INPUT: {
     es: "La solicitud contiene datos no válidos.",
     gl: "A solicitude contén datos non válidos.",
@@ -45,6 +78,15 @@ const messages = {
 } as const;
 
 const statuses = {
+  ACCOUNT_HANDOVER_REQUIRED: 409,
+  USAGE_RULES_REQUIRED: 409,
+  CONDITIONS_ACCEPTANCE_REQUIRED: 409,
+  CONDITIONS_CHANGED: 409,
+  HOLDER_ACCEPTANCE_REQUIRED: 409,
+  RESERVATION_DEADLINE_PASSED: 409,
+  ACCOUNT_HAS_FUTURE_RESERVATIONS: 409,
+  ACCOUNT_INACTIVE: 403,
+
   INVALID_INPUT: 400,
   PAYLOAD_TOO_LARGE: 413,
   UNSUPPORTED_MEDIA_TYPE: 415,

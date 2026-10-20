@@ -10,6 +10,7 @@ import {
   type AuthenticatedAccount,
   requirePermission,
 } from "../identity/index.ts";
+import { completeAcceptanceEvidence } from "./acceptance.ts";
 import { appendReservationEvent } from "./events.ts";
 import { present, type Reservation } from "./state.ts";
 
@@ -86,8 +87,12 @@ export async function cancelReservation(
           const deadline =
             reservation.starts_at.getTime() -
             (administrative ? 0 : reservation.cancellation_minutes * 60000);
-          if (!Number.isFinite(now) || now >= deadline)
-            throw new HttpError("CONFLICT");
+          if (
+            !Number.isFinite(now) ||
+            now >= reservation.starts_at.getTime() ||
+            now > deadline
+          )
+            throw new HttpError("RESERVATION_DEADLINE_PASSED");
           const updated = await client.query<Reservation>(
             "UPDATE domain.reservation SET status='CANCELADA',revision=revision+1 WHERE tenant_id=$1 AND id=$2 RETURNING *",
             [tenantId, reservationId],
@@ -106,11 +111,21 @@ export async function cancelReservation(
             reservationId,
             correlationId,
             reason,
+            administrative,
           );
+          const confirmedAt = clock.now().getTime();
+          if (
+            confirmedAt >= reservation.starts_at.getTime() ||
+            confirmedAt > deadline
+          )
+            throw new HttpError("RESERVATION_DEADLINE_PASSED");
           return present(updated.rows[0] as Reservation);
         },
       },
-    );
+    ).then((response) => ({
+      ...response,
+      result: completeAcceptanceEvidence(response.result),
+    }));
   } catch (error) {
     if (
       error instanceof DatabaseError &&

@@ -117,7 +117,11 @@ test("credential audit records changes atomically without copying secrets", {
         "subject_id",
       ]);
     assert.ok(!JSON.stringify(rows).includes("secret"));
-    await auth.query('DELETE FROM auth."user" WHERE id=$1', [user]);
+    // Logical deactivation retains the identity and audit; runtime deletion is blocked.
+    await assert.rejects(
+      auth.query('DELETE FROM auth."user" WHERE id=$1', [user]),
+      { code: "23503" },
+    );
     assert.equal((await operations()).length, 8);
   });
 });

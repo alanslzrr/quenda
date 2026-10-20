@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { createReservation } from "../../src/modules/reservations/index.ts";
+import {
+  initialAcceptance,
+  seedUsageRules,
+} from "../helpers/usage-rules-fixture.ts";
 
 export async function performanceFixture(
   pools: { migration: Pool; domain: Pool },
@@ -13,7 +17,7 @@ export async function performanceFixture(
     const tenant = randomUUID(),
       facility = randomUUID();
     await pools.migration.query(
-      "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Performance fixture','UTC')",
+      "INSERT INTO domain.municipality(id,name,timezone,cancellation_minutes) VALUES($1,'Performance fixture','UTC',0)",
       [tenant],
     );
     await pools.migration.query(
@@ -40,6 +44,12 @@ export async function performanceFixture(
           ),
           accounts[0],
         ],
+      );
+      await seedUsageRules(
+        pools.migration,
+        tenant,
+        unit,
+        accounts[0] as string,
       );
       await pools.migration.query(
         "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
@@ -69,6 +79,7 @@ export async function performanceFixture(
       unit.tenantId,
       `historical-${i}`,
       {
+        acceptance: initialAcceptance,
         unitId: unit.unitId,
         startsAt: start.toISOString(),
         endsAt: new Date(start.getTime() + 3600000).toISOString(),

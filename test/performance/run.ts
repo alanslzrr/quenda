@@ -11,6 +11,7 @@ import { createAuthentication } from "../../src/modules/identity/index.ts";
 import type { MailMessage } from "../../src/shared/mail.ts";
 import { browser } from "../helpers/auth-client.ts";
 import { freePort, withDatabase } from "../helpers/postgres.ts";
+import { initialAcceptance } from "../helpers/usage-rules-fixture.ts";
 import { performanceFixture } from "./fixture.ts";
 import {
   acceptanceLoad,
@@ -137,6 +138,7 @@ async function main() {
           headers["idempotency-key"] = `load-${index}`;
           headers["content-type"] = "application/json";
           body = JSON.stringify({
+            acceptance: initialAcceptance,
             unitId: unit.unitId,
             startsAt: start.toISOString(),
             endsAt: new Date(start.getTime() + 3600000).toISOString(),

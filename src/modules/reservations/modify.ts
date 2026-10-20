@@ -12,10 +12,12 @@ import {
   type AuthenticatedAccount,
   requirePermission,
 } from "../identity/index.ts";
+import { acceptConditions, completeAcceptanceEvidence } from "./acceptance.ts";
 import { appendReservationEvent } from "./events.ts";
 import {
   type CreateReservationInput,
   normalizeReservationInput,
+  reservationCommandInput,
 } from "./input.ts";
 import { present, type Reservation } from "./state.ts";
 
@@ -54,7 +56,7 @@ export async function modifyReservation(
         operation: "reservation.modify",
         key,
         input: {
-          ...normalized,
+          ...reservationCommandInput(normalized),
           reservationId,
           expectedRevision: input.expectedRevision,
           administrative,
@@ -102,14 +104,25 @@ export async function modifyReservation(
           const deadline =
             reservation.starts_at.getTime() -
             (administrative ? 0 : reservation.cancellation_minutes * 60000);
-          if (!Number.isFinite(now) || now >= deadline)
-            throw new HttpError("CONFLICT");
+          if (
+            !Number.isFinite(now) ||
+            now >= reservation.starts_at.getTime() ||
+            now > deadline
+          )
+            throw new HttpError("RESERVATION_DEADLINE_PASSED");
           if (
             reservation.unit_id === normalized.unitId &&
             reservation.starts_at.toISOString() === normalized.startsAt &&
             reservation.ends_at.toISOString() === normalized.endsAt
           )
             return present(reservation);
+          if (
+            administrative &&
+            (normalized.acceptance ||
+              !reservation.usage_rules_version ||
+              reservation.unit_id !== normalized.unitId)
+          )
+            throw new HttpError("HOLDER_ACCEPTANCE_REQUIRED");
           const policy = await validateReservableInterval(
             client,
             tenantId,
@@ -118,12 +131,22 @@ export async function modifyReservation(
             normalized.endsAt,
             new Date(now).toISOString(),
           );
+          const accepted = await acceptConditions(
+            client,
+            tenantId,
+            normalized.unitId,
+            normalized.startsAt,
+            clock,
+            normalized.acceptance,
+            reservation,
+            administrative,
+          );
           await client.query(
             "UPDATE domain.occupancy SET released_at=clock_timestamp() WHERE tenant_id=$1 AND reservation_id=$2 AND released_at IS NULL",
             [tenantId, reservationId],
           );
           const updated = await client.query<Reservation>(
-            `UPDATE domain.reservation SET unit_id=$3,starts_at=$4,ends_at=$5,calendar_version=$6,cancellation_minutes=$7,timezone=$8,revision=revision+1 WHERE tenant_id=$1 AND id=$2 RETURNING *`,
+            `UPDATE domain.reservation SET unit_id=$3,starts_at=$4,ends_at=$5,calendar_version=$6,cancellation_minutes=$7,timezone=$8,usage_rules_version=$9,rules_accepted_at=$10,booking_policy_version=$11,conditions_accepted_at=$12,non_cancellable_accepted=$13,revision=revision+1 WHERE tenant_id=$1 AND id=$2 RETURNING *`,
             [
               tenantId,
               reservationId,
@@ -131,8 +154,13 @@ export async function modifyReservation(
               normalized.startsAt,
               normalized.endsAt,
               policy.calendarVersion,
-              policy.cancellationMinutes,
+              accepted.cancellationMinutes,
               policy.timeZone,
+              accepted.usageRulesVersion,
+              accepted.rulesAcceptedAt,
+              accepted.bookingPolicyVersion,
+              accepted.conditionsAcceptedAt,
+              accepted.nonCancellableAccepted,
             ],
           );
           await client.query(
@@ -156,11 +184,30 @@ export async function modifyReservation(
             reservationId,
             correlationId,
             reason,
+            administrative,
           );
+          const confirmedAt = clock.now().getTime();
+          if (
+            confirmedAt >= reservation.starts_at.getTime() ||
+            confirmedAt >= Date.parse(normalized.startsAt) ||
+            confirmedAt > deadline
+          )
+            throw new HttpError("RESERVATION_DEADLINE_PASSED");
+          if (
+            !administrative &&
+            !accepted.nonCancellableAccepted &&
+            confirmedAt >
+              Date.parse(normalized.startsAt) -
+                accepted.cancellationMinutes * 60000
+          )
+            throw new HttpError("CONDITIONS_CHANGED");
           return present(updated.rows[0] as Reservation);
         },
       },
-    );
+    ).then((response) => ({
+      ...response,
+      result: completeAcceptanceEvidence(response.result),
+    }));
   } catch (error) {
     if (
       error instanceof DatabaseError &&

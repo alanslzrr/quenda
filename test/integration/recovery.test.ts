@@ -15,6 +15,7 @@ import {
 } from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 import { recoveryFixture } from "../helpers/recovery-fixture.ts";
+import { initialAcceptance } from "../helpers/usage-rules-fixture.ts";
 
 const execute = promisify(execFile);
 const snapshot = async (pool: Pool) => {
@@ -67,7 +68,10 @@ test("independent-cluster restore preserves bookings, quotas and evidence withou
       actor,
       tenants[0],
       "before-backup",
-      input(3),
+      {
+        acceptance: initialAcceptance,
+        ...input(3),
+      },
       randomUUID(),
       3600,
       clock,
@@ -103,7 +107,14 @@ test("independent-cluster restore preserves bookings, quotas and evidence withou
       actor,
       tenants[0],
       "after-backup",
-      input(10),
+      {
+        acceptance: {
+          usageRulesVersion: 1,
+          bookingPolicyVersion: 2,
+          nonCancellable: false,
+        },
+        ...input(10),
+      },
       randomUUID(),
       3600,
       clock,
@@ -148,7 +159,10 @@ test("independent-cluster restore preserves bookings, quotas and evidence withou
           actor,
           tenants[0],
           "before-backup",
-          input(3),
+          {
+            acceptance: initialAcceptance,
+            ...input(3),
+          },
           randomUUID(),
           3600,
           clock,

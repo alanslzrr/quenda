@@ -21,6 +21,7 @@ import {
   saveUnitCalendar,
   withdrawCatalogResource,
 } from "../../src/modules/catalog/index.ts";
+import { saveUsageRules } from "../../src/modules/catalog/usage-rules.ts";
 import {
   acceptAdministratorInvitation,
   acceptManager,
@@ -2488,6 +2489,18 @@ test("municipal creation and first administrator acceptance are atomic and isola
           f.facilityId,
           { name: "Unidad" },
         );
+        await saveUsageRules(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          u.unitId,
+          {
+            expectedVersion: 0,
+            text: "Synthetic rules",
+            reason: "Publication fixture",
+          },
+          randomUUID(),
+        );
         const declaration = {
           reason: "Apertura",
           calendarVersion: 1,
@@ -2752,6 +2765,18 @@ test("municipal creation and first administrator acceptance are atomic and isola
           f.facilityId,
           { name: "Pista" },
         );
+        await saveUsageRules(
+          domain,
+          account("admin-a"),
+          tenant.tenantId,
+          u.unitId,
+          {
+            expectedVersion: 0,
+            text: "Synthetic rules",
+            reason: "Publication fixture",
+          },
+          randomUUID(),
+        );
         assert.deepEqual(await publicFacilities(domain, tenant.tenantId), {
           items: [],
           nextCursor: null,
@@ -2811,6 +2836,8 @@ test("municipal creation and first administrator acceptance are atomic and isola
           u.unitId,
         );
         assert.equal(metadata.calendarVersion, 1);
+        assert.equal(metadata.usageRulesVersion, 1);
+        assert.equal(metadata.bookingPolicyVersion, 1);
         assert.doesNotMatch(
           JSON.stringify(metadata),
           /actorId|reason|admin-a|Motivo privado/,

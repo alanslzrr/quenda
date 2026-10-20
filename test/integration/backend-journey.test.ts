@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { cp, mkdtemp, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -14,6 +14,7 @@ import type { MailMessage } from "../../src/shared/mail.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 import { verifyProductResponses } from "../helpers/response-contract.ts";
+import { initialAcceptance } from "../helpers/usage-rules-fixture.ts";
 
 for (const upgrade of [false, true]) {
   test(`backend HTTP journey including shared quota: ${upgrade ? "upgrade from preceding schema" : "clean database"}`, {
@@ -31,6 +32,104 @@ for (const upgrade of [false, true]) {
       for (const filename of deferred) await rm(path.join(directory, filename));
     try {
       await withDatabase(async ({ auth, domain, migration, worker }) => {
+        if (upgrade) {
+          const legacy = {
+            tenant: randomUUID(),
+            facility: randomUUID(),
+            unit: randomUUID(),
+            reservation: randomUUID(),
+          };
+          await auth.query(
+            `INSERT INTO auth."user"(id,name,email,"emailVerified") VALUES('legacy-user','Legacy','legacy@example.test',true)`,
+          );
+          const client = await migration.connect();
+          try {
+            await client.query("BEGIN");
+            await client.query(
+              "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Legacy municipality','UTC')",
+              [legacy.tenant],
+            );
+            await client.query(
+              "INSERT INTO domain.municipal_profile(tenant_id,account_id) VALUES($1,'legacy-user')",
+              [legacy.tenant],
+            );
+            await client.query(
+              "INSERT INTO domain.facility(tenant_id,id,name,published_at) VALUES($1,$2,'Legacy facility',now())",
+              [legacy.tenant, legacy.facility],
+            );
+            await client.query(
+              "INSERT INTO domain.reservable_unit(tenant_id,id,facility_id,name) VALUES($1,$2,$3,'Legacy unit')",
+              [legacy.tenant, legacy.unit, legacy.facility],
+            );
+            await client.query(
+              "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason) VALUES($1,$2,1,60,60,60,'[]','[]','legacy-user','Legacy fixture')",
+              [legacy.tenant, legacy.unit],
+            );
+            await client.query(
+              "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
+              [legacy.tenant, legacy.unit],
+            );
+            await client.query(
+              "INSERT INTO domain.reservation(tenant_id,id,account_id,unit_id,calendar_version,starts_at,ends_at,cancellation_minutes,timezone) VALUES($1,$2,'legacy-user',$3,1,'2030-01-01T10:00:00Z','2030-01-01T11:00:00Z',0,'UTC')",
+              [legacy.tenant, legacy.reservation, legacy.unit],
+            );
+            await client.query(
+              "INSERT INTO domain.occupancy(tenant_id,id,unit_id,reservation_id,period) VALUES($1,$2,$3,$4,'[2030-01-01T10:00:00Z,2030-01-01T11:00:00Z)')",
+              [legacy.tenant, randomUUID(), legacy.unit, legacy.reservation],
+            );
+            await client.query("COMMIT");
+            assert.equal(
+              (
+                await client.query(
+                  "SELECT to_regclass('domain.reservation_read_event') AS relation",
+                )
+              ).rows[0].relation,
+              null,
+            );
+            assert.deepEqual(
+              await migrate(client, path.resolve("db/migrations")),
+              deferred,
+            );
+            assert.deepEqual(
+              await migrate(client, path.resolve("db/migrations")),
+              [],
+            );
+            assert.deepEqual(
+              (
+                await client.query(
+                  "SELECT status,usage_rules_version,rules_accepted_at,cancellation_minutes FROM domain.reservation WHERE id=$1",
+                  [legacy.reservation],
+                )
+              ).rows[0],
+              {
+                status: "CONFIRMADA",
+                usage_rules_version: null,
+                rules_accepted_at: null,
+                cancellation_minutes: 0,
+              },
+            );
+            assert.deepEqual(
+              (
+                await client.query(
+                  "SELECT * FROM domain.public_units($1,$2,NULL)",
+                  [legacy.tenant, legacy.facility],
+                )
+              ).rows,
+              [],
+            );
+            assert.equal(
+              (
+                await client.query(
+                  "SELECT count(*)::int AS count FROM domain.occupancy WHERE reservation_id=$1 AND released_at IS NULL",
+                  [legacy.reservation],
+                )
+              ).rows[0].count,
+              1,
+            );
+          } finally {
+            client.release();
+          }
+        }
         const messages: MailMessage[] = [];
         const mail = {
           send: async (message: MailMessage) => {
@@ -187,6 +286,23 @@ for (const upgrade of [false, true]) {
                 { reason: "Open facility" },
               ),
             );
+            const rulesPath = `${base}/units/${unit.unitId}/usage-rules`;
+            const rulesInput = {
+              expectedVersion: 0,
+              text: "Respete el horario reservado.",
+              reason: "Normas de uso",
+            };
+            const rules = ok(
+              await app.inject({
+                method: "PUT",
+                url: rulesPath,
+                headers: {
+                  cookie: admin.client.cookie(),
+                  origin: config.origin,
+                },
+                payload: rulesInput,
+              }),
+            );
             ok(
               await admin.client.request(
                 `${base}/units/${unit.unitId}/publish`,
@@ -240,9 +356,10 @@ for (const upgrade of [false, true]) {
               }),
             );
             assert.equal(ok(await app.inject(publicPath)).items.length, 1);
-            return { municipality, base, unit };
+            return { municipality, base, unit, rules, rulesPath, rulesInput };
           };
-          const { municipality, base, unit } = await setupMunicipality(admin);
+          const { municipality, base, unit, rules, rulesPath, rulesInput } =
+            await setupMunicipality(admin);
           const start = new Date();
           start.setUTCDate(start.getUTCDate() + 2);
           start.setUTCHours(10, 0, 0, 0);
@@ -253,6 +370,7 @@ for (const upgrade of [false, true]) {
             ) as string[];
           assert.ok((await available()).includes(start.toISOString()));
           const input = {
+            acceptance: initialAcceptance,
             unitId: unit.unitId,
             startsAt: start.toISOString(),
             endsAt: new Date(start.getTime() + 3600000).toISOString(),
@@ -299,46 +417,6 @@ for (const upgrade of [false, true]) {
             to = new Date(start.getTime() + 86400000)
               .toISOString()
               .slice(0, 10);
-          if (upgrade) {
-            const upgradeClient = new Client({
-              connectionString: migration.options.connectionString,
-            });
-            await upgradeClient.connect();
-            try {
-              assert.equal(
-                (
-                  await upgradeClient.query(
-                    "SELECT to_regclass('domain.reservation_read_event') AS relation",
-                  )
-                ).rows[0].relation,
-                null,
-              );
-              assert.deepEqual(
-                await migrate(upgradeClient, path.resolve("db/migrations")),
-                deferred,
-              );
-              assert.deepEqual(
-                await migrate(upgradeClient, path.resolve("db/migrations")),
-                [],
-              );
-            } finally {
-              await upgradeClient.end();
-            }
-          }
-          const rulesPath = `${base}/units/${unit.unitId}/usage-rules`;
-          const rulesInput = {
-            expectedVersion: 0,
-            text: "Respete el horario reservado.",
-            reason: "Normas de uso",
-          };
-          const rules = ok(
-            await app.inject({
-              method: "PUT",
-              url: rulesPath,
-              headers: { cookie: admin.client.cookie(), origin: config.origin },
-              payload: rulesInput,
-            }),
-          );
           assert.equal(rules.version, 1);
           assert.deepEqual(
             ok(await admin.client.request(`${rulesPath}?version=1`)),
@@ -370,7 +448,7 @@ for (const upgrade of [false, true]) {
             tenantId: municipality.tenantId,
             version: 1,
             advanceDays: 30,
-            cancellationMinutes: 0,
+            cancellationMinutes: 1440,
           });
           const policyInput = {
             expectedVersion: 1,
@@ -404,7 +482,7 @@ for (const upgrade of [false, true]) {
           );
           assert.equal(
             ok(await admin.client.request(reservation)).cancellationMinutes,
-            0,
+            1440,
           );
           const administrativeRead = ok(
             await admin.client.request(reservation),
@@ -527,9 +605,16 @@ for (const upgrade of [false, true]) {
             "ACTIVADO",
           );
           const firstQuota = ok(
-            await citizen.client.request(`${base}/reservations`, input, {
-              "idempotency-key": "journey-quota-first",
-            }),
+            await citizen.client.request(
+              `${base}/reservations`,
+              {
+                ...input,
+                acceptance: { ...input.acceptance, bookingPolicyVersion: 3 },
+              },
+              {
+                "idempotency-key": "journey-quota-first",
+              },
+            ),
             201,
           );
           const secondInput = { ...input, unitId: second.unit.unitId };

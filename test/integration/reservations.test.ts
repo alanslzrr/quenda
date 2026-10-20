@@ -26,6 +26,10 @@ import {
   releaseBlock,
 } from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
+import {
+  initialAcceptance,
+  seedUsageRules,
+} from "../helpers/usage-rules-fixture.ts";
 
 test("reservation confirmation validates real calendars and commits every effect once", {
   timeout: 60000,
@@ -41,7 +45,7 @@ test("reservation confirmation validates real calendars and commits every effect
       unit = randomUUID(),
       draft = randomUUID();
     await migration.query(
-      "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Synthetic','Europe/Madrid')",
+      "INSERT INTO domain.municipality(id,name,timezone,cancellation_minutes) VALUES($1,'Synthetic','Europe/Madrid',0)",
       [tenant],
     );
     await migration.query(
@@ -68,6 +72,8 @@ test("reservation confirmation validates real calendars and commits every effect
         [tenant, id],
       );
     }
+    for (const id of [unit, draft])
+      await seedUsageRules(migration, tenant, id, "citizen");
     await migration.query(
       "UPDATE domain.reservable_unit SET published_at=now() WHERE tenant_id=$1 AND id=$2",
       [tenant, unit],
@@ -90,7 +96,10 @@ test("reservation confirmation validates real calendars and commits every effect
         who,
         tenant,
         key,
-        data,
+        {
+          acceptance: initialAcceptance,
+          ...data,
+        },
         randomUUID(),
         3600,
         clock,
@@ -278,7 +287,11 @@ test("reservation confirmation validates real calendars and commits every effect
             tenant,
             booking.result.id,
             key,
-            { ...data, expectedRevision: revision },
+            {
+              acceptance: initialAcceptance,
+              ...data,
+              expectedRevision: revision,
+            },
             randomUUID(),
             3600,
             { now: () => new Date(now) },
@@ -296,8 +309,8 @@ test("reservation confirmation validates real calendars and commits every effect
           code: "CONFLICT",
         });
         await assert.rejects(
-          modify("late", destination, 1, "2030-01-09T09:00:00Z"),
-          { code: "CONFLICT" },
+          modify("late", destination, 1, "2030-01-09T09:00:00.001Z"),
+          { code: "RESERVATION_DEADLINE_PASSED" },
         );
         await assert.rejects(modify("stale", original, 2), {
           code: "CONFLICT",
@@ -434,11 +447,12 @@ test("reservation confirmation validates real calendars and commits every effect
             { now: () => new Date(now) },
           );
         await assert.rejects(cancel("stale", 2), { code: "CONFLICT" });
-        await assert.rejects(cancel("deadline", 1, "2030-01-06T09:00:00Z"), {
-          code: "CONFLICT",
-        });
+        await assert.rejects(
+          cancel("deadline", 1, "2030-01-06T09:00:00.001Z"),
+          { code: "RESERVATION_DEADLINE_PASSED" },
+        );
         await assert.rejects(cancel("started", 1, "2030-01-06T10:00:00Z"), {
-          code: "CONFLICT",
+          code: "RESERVATION_DEADLINE_PASSED",
         });
         await assert.rejects(
           cancel("other", 1, undefined, { ...actor, accountId: "newcomer" }),
@@ -525,7 +539,7 @@ test("reservation confirmation validates real calendars and commits every effect
         });
         await assert.rejects(
           cancel("already-started", "2030-01-07T10:00:00Z"),
-          { code: "CONFLICT" },
+          { code: "RESERVATION_DEADLINE_PASSED" },
         );
         const result = await cancel("admin-cancel");
         assert.equal(result.result.status, "CANCELADA");
@@ -571,7 +585,9 @@ test("reservation confirmation validates real calendars and commits every effect
         ) => createBlock(domain, who, tenant, key, data, randomUUID(), 3600);
         await assert.rejects(block("no-mfa", actor), { code: "FORBIDDEN" });
         const booking = await create("block-conflict", data);
-        await assert.rejects(block("over-booking"), { code: "CONFLICT" });
+        await assert.rejects(block("over-booking"), {
+          code: "CONFLICT",
+        });
         assert.equal(
           (
             await migration.query(
@@ -594,7 +610,9 @@ test("reservation confirmation validates real calendars and commits every effect
         const saved = await block("block");
         assert.equal(saved.result.releasedAt, null);
         assert.deepEqual((await block("block")).result, saved.result);
-        await assert.rejects(block("over-block"), { code: "CONFLICT" });
+        await assert.rejects(block("over-block"), {
+          code: "CONFLICT",
+        });
         await assert.rejects(create("booking-over-block", data), {
           code: "CONFLICT",
         });
@@ -681,6 +699,7 @@ test("reservation confirmation validates real calendars and commits every effect
           booking.result.id,
           "availability-move",
           {
+            acceptance: initialAcceptance,
             expectedRevision: 1,
             unitId: unit,
             startsAt: b,
@@ -952,7 +971,7 @@ test("reservation confirmation validates real calendars and commits every effect
           otherFacility = randomUUID(),
           otherUnit = randomUUID();
         await migration.query(
-          "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Second municipality','Europe/Madrid')",
+          "INSERT INTO domain.municipality(id,name,timezone,cancellation_minutes) VALUES($1,'Second municipality','Europe/Madrid',0)",
           [otherTenant],
         );
         await migration.query(
@@ -967,6 +986,7 @@ test("reservation confirmation validates real calendars and commits every effect
           "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason) VALUES($1,$2,1,30,120,30,$3,'[]','citizen','Fixture')",
           [otherTenant, otherUnit, JSON.stringify(weekly)],
         );
+        await seedUsageRules(migration, otherTenant, otherUnit, "citizen");
         await migration.query(
           "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",
           [otherTenant, otherUnit],
@@ -977,6 +997,7 @@ test("reservation confirmation validates real calendars and commits every effect
           otherTenant,
           "other-municipality",
           {
+            acceptance: initialAcceptance,
             unitId: otherUnit,
             startsAt: "2030-01-14T10:00:00Z",
             endsAt: "2030-01-14T11:00:00Z",
@@ -1431,7 +1452,7 @@ test("reservation confirmation validates real calendars and commits every effect
         });
         await assert.rejects(
           move("already-started", target, 1, "2030-01-18T10:00:00Z"),
-          { code: "CONFLICT" },
+          { code: "RESERVATION_DEADLINE_PASSED" },
         );
         const before = (
           await migration.query(
@@ -1440,8 +1461,12 @@ test("reservation confirmation validates real calendars and commits every effect
           )
         ).rows[0];
         assert.deepEqual(before, { revision: 1, unit_id: unit });
-        const changed = await move("authorized-move");
-        assert.equal(changed.result.unitId, draft);
+        await assert.rejects(move("requires-titular"), {
+          code: "HOLDER_ACCEPTANCE_REQUIRED",
+        });
+        const sameUnitTarget = { ...target, unitId: unit };
+        const changed = await move("authorized-move", sameUnitTarget);
+        assert.equal(changed.result.unitId, unit);
         assert.equal(changed.result.revision, 2);
         const event = (
           await migration.query(
@@ -1451,7 +1476,7 @@ test("reservation confirmation validates real calendars and commits every effect
         ).rows[0];
         assert.deepEqual(event, { actor_id: "newcomer", reason: "Relocation" });
         const occupied = {
-          unitId: draft,
+          unitId: unit,
           startsAt: "2030-01-18T12:00:00Z",
           endsAt: "2030-01-18T13:00:00Z",
         };
@@ -1472,7 +1497,9 @@ test("reservation confirmation validates real calendars and commits every effect
           2,
         );
         await revokeManager(domain, admin, tenant, both, "Remove permission");
-        await assert.rejects(move("authorized-move"), { code: "NOT_FOUND" });
+        await assert.rejects(move("authorized-move", sameUnitTarget), {
+          code: "NOT_FOUND",
+        });
       },
     );
     await t.test(

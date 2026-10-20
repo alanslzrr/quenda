@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { transaction } from "../../src/database/transaction.ts";
+import { seedUsageRules } from "./usage-rules-fixture.ts";
 
 export async function recoveryFixture(auth: Pool, migration: Pool) {
   await auth.query(
@@ -12,7 +13,7 @@ export async function recoveryFixture(auth: Pool, migration: Pool) {
   for (let i = 0; i < 2; i++) {
     const facility = randomUUID();
     await migration.query(
-      "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Synthetic','Europe/Madrid')",
+      "INSERT INTO domain.municipality(id,name,timezone,cancellation_minutes) VALUES($1,'Synthetic','Europe/Madrid',0)",
       [tenants[i]],
     );
     await migration.query(
@@ -36,6 +37,12 @@ export async function recoveryFixture(auth: Pool, migration: Pool) {
           })),
         ),
       ],
+    );
+    await seedUsageRules(
+      migration,
+      tenants[i] as string,
+      units[i] as string,
+      "citizen",
     );
     await migration.query(
       "UPDATE domain.reservable_unit SET calendar_version=1,published_at=now() WHERE tenant_id=$1 AND id=$2",

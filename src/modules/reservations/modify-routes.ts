@@ -5,6 +5,7 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
+import { acceptanceProperties, acceptanceSchema } from "./acceptance.ts";
 import { type ModifyReservationInput, modifyReservation } from "./modify.ts";
 
 export async function registerModificationRoute(
@@ -28,7 +29,7 @@ export async function registerModificationRoute(
         operationId: "modifyReservation",
         tags: ["Reservations"],
         security: [{ quendaSession: [] }],
-        description: `Modifica unidad e intervalo dentro del mismo municipio, sin cambiar titular. Exige expectedRevision, plazo de origen y reglas vigentes del destino. administrative=true requiere permiso sobre origen y destino, MFA reciente y motivo; nunca permite cambios tras el inicio. Una petición sin cambios no genera evento. Retención idempotente: ${retentionSeconds} segundos.`,
+        description: `Modifica unidad e intervalo dentro del mismo municipio, sin cambiar titular. Exige expectedRevision, plazo de origen y reglas vigentes del destino. administrative=true requiere permiso sobre origen y destino, MFA reciente y motivo; nunca permite cambios tras el inicio. Cambiar de unidad o normas, cambiar la política o entrar por primera vez fuera del plazo exige acceptance expresa del titular. La intervención administrativa conserva la aceptación anterior y no puede cambiar unidad ni versión de normas, ni aceptar en nombre del titular. Una petición sin cambios no genera evento ni aceptación. Retención idempotente: ${retentionSeconds} segundos.`,
         params: {
           type: "object",
           additionalProperties: false,
@@ -58,6 +59,7 @@ export async function registerModificationRoute(
           additionalProperties: false,
           required: ["expectedRevision", "unitId", "startsAt", "endsAt"],
           properties: {
+            acceptance: acceptanceSchema,
             unitId: uuid,
             startsAt: instant,
             endsAt: instant,
@@ -95,6 +97,7 @@ export async function registerModificationRoute(
               "calendarVersion",
               "cancellationMinutes",
               "timeZone",
+              ...Object.keys(acceptanceProperties),
             ],
             properties: {
               id: uuid,
@@ -107,6 +110,7 @@ export async function registerModificationRoute(
               calendarVersion: { type: "integer", minimum: 1 },
               cancellationMinutes: { type: "integer", minimum: 0 },
               timeZone: { type: "string" },
+              ...acceptanceProperties,
             },
           },
         },

@@ -89,6 +89,23 @@ export function authOptions(
       ipAddress: { ipAddressHeaders: ["x-quenda-client-ip"] },
     },
     rateLimit: { enabled: true, storage: "database" as const },
+    databaseHooks: {
+      session: {
+        create: {
+          before: async (session: { userId: string }) => {
+            const active = await pool.query(
+              "SELECT 1 FROM auth.account_lifecycle WHERE account_id=$1 AND deactivated_at IS NULL",
+              [session.userId],
+            );
+            if (!active.rowCount)
+              throw new APIError("FORBIDDEN", {
+                code: "ACCOUNT_INACTIVE",
+                message: "Account inactive",
+              });
+          },
+        },
+      },
+    },
     plugins: [
       twoFactor({ issuer: "Quenda" }),
       openAPI({ disableDefaultReference: true }),
@@ -163,7 +180,7 @@ export function createAuthentication(
         verified: Date | null;
         enabled: boolean;
       }>(
-        'SELECT s."mfaVerifiedAt" AS verified, u."twoFactorEnabled" AS enabled FROM auth.session s JOIN auth."user" u ON u.id = s."userId" WHERE s.id = $1 AND s."userId" = $2 AND s."expiresAt" > now()',
+        'SELECT s."mfaVerifiedAt" AS verified, u."twoFactorEnabled" AS enabled FROM auth.session s JOIN auth."user" u ON u.id = s."userId" JOIN auth.account_lifecycle l ON l.account_id=u.id AND l.deactivated_at IS NULL WHERE s.id = $1 AND s."userId" = $2 AND s."expiresAt" > now()',
         [result.session.id, result.user.id],
       );
       if (!proof.rows[0]) return null;

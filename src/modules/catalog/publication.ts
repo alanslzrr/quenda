@@ -64,6 +64,13 @@ export async function publishCatalogResource(
       const resource = result.rows[0];
       if (!resource) throw new HttpError("NOT_FOUND");
       if (kind === "unit") {
+        const rules = await client.query(
+          `SELECT 1 FROM domain.unit_usage_rules v JOIN domain.reservable_unit u
+           ON (u.tenant_id,u.id,u.usage_rules_version)=(v.tenant_id,v.unit_id,v.version)
+           WHERE u.tenant_id=$1 AND u.id=$2 AND v.text_content ~ '[^[:space:]]'`,
+          [tenantId, id],
+        );
+        if (!rules.rowCount) throw new HttpError("USAGE_RULES_REQUIRED");
         if (resource.calendar_version !== input.calendarVersion)
           throw new HttpError("CONFLICT");
         const configuration = await client.query(

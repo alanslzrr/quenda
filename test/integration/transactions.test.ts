@@ -11,7 +11,12 @@ const scope = { accountId: "account-a", tenantId: tenantA };
 test("transaction context and bounded full-command retries", {
   timeout: 60000,
 }, async (t) => {
-  await withDatabase(async ({ domain, migration }) => {
+  await withDatabase(async ({ domain, migration, auth }) => {
+    for (const id of ["account-a", "account-b"])
+      await auth.query(
+        'INSERT INTO auth."user"(id,name,email,"emailVerified") VALUES($1,$1,$2,true)',
+        [id, `${id}@example.test`],
+      );
     // A fixture tests the infrastructure contract, not municipal authorization.
     await migration.query(`
       CREATE TABLE domain.context_probe (tenant_id uuid, account_id text, value integer NOT NULL, PRIMARY KEY(tenant_id, account_id));

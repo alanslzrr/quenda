@@ -55,6 +55,8 @@ export async function publicUnitCalendar(
     timezone: string;
     municipal_advance_days: number;
     cancellation_minutes: number;
+    booking_policy_version: number;
+    usage_rules_version: number;
     version: number;
     calendar: UnitCalendarInput;
   }>("SELECT * FROM domain.public_unit_calendar($1,$2)", [tenantId, unitId]);
@@ -67,6 +69,8 @@ export async function publicUnitCalendar(
     timeZone: row.timezone,
     municipalAdvanceDays: row.municipal_advance_days,
     cancellationMinutes: row.cancellation_minutes,
+    bookingPolicyVersion: row.booking_policy_version,
+    usageRulesVersion: row.usage_rules_version,
     calendarVersion: row.version,
     calendar: row.calendar,
   };

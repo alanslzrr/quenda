@@ -12,6 +12,7 @@ import {
 } from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 import { recoveryFixture } from "../helpers/recovery-fixture.ts";
+import { initialAcceptance } from "../helpers/usage-rules-fixture.ts";
 
 test("failed release retains its committed migration prefix and recovers forward without losing bookings", {
   timeout: 60000,
@@ -32,6 +33,7 @@ test("failed release retains its committed migration prefix and recovers forward
         tenants[0],
         "before-release",
         {
+          acceptance: initialAcceptance,
           unitId: units[0],
           startsAt: "2030-04-03T10:00:00.000Z",
           endsAt: "2030-04-03T11:00:00.000Z",

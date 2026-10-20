@@ -15,6 +15,7 @@ export type {
   Authentication,
 } from "./auth.ts";
 export { authOptions, createAuthentication } from "./auth.ts";
+export { deactivateAccount } from "./deactivation.ts";
 export {
   inviteAdministrator,
   listOwnAdministratorInvitations,

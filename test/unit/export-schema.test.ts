@@ -25,7 +25,7 @@ test("reservation export schema validates the example and rejects incompatible d
       });
     assert.equal((await validate(reservationExportExample)).statusCode, 200);
     for (const payload of [
-      { ...reservationExportExample, version: 2 },
+      { ...reservationExportExample, version: 3 },
       { ...reservationExportExample, password: "secret" },
       { ...reservationExportExample, tenantId: "invalid" },
       { ...reservationExportExample, entities: ["users"] },
