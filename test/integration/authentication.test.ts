@@ -101,8 +101,10 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
       email: string,
     ) => {
       const url = await link(email, "verify-email");
+      url.searchParams.set("callbackURL", `${config.origin}/verified`);
       const response = await client.request(`${url.pathname}${url.search}`);
-      assert.ok([200, 302].includes(response.statusCode), response.body);
+      assert.equal(response.statusCode, 302, response.body);
+      assert.equal(response.headers.location, `${config.origin}/verified`);
     };
     try {
       await t.test(
@@ -115,6 +117,13 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           const schema = response.json();
           assert.ok(schema.paths["/sign-in/email"]);
           assert.ok(schema.paths["/reset-password/{token}"]);
+          for (const route of ["/verify-email", "/reset-password/{token}"]) {
+            assert.equal(
+              schema.paths[route].get.responses["302"].headers.Location.schema
+                .type,
+              "string",
+            );
+          }
           assert.equal(schema.paths["/delete-user"], undefined);
           const profileSchema =
             schema.paths["/update-user"].post.requestBody.content[
@@ -309,6 +318,112 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
         },
       );
       await t.test(
+        "account security operations publish valid contracts and revoke actual sessions",
+        async () => {
+          const client = browser(app, "192.0.2.120");
+          const second = browser(replica, "192.0.2.121");
+          const email = "security-contract@example.test";
+          const ok = (response: Awaited<ReturnType<typeof client.request>>) => {
+            assert.equal(response.statusCode, 200, response.body);
+            return response.json();
+          };
+          await signup(client, email);
+          ok(
+            await client.request("/api/auth/send-verification-email", {
+              email,
+              callbackURL: `${config.origin}/verified`,
+            }),
+          );
+          await verify(client, email);
+          ok(
+            await client.request("/api/auth/sign-in/email", {
+              email,
+              password,
+            }),
+          );
+          const otherSession = ok(
+            await second.request("/api/auth/sign-in/email", {
+              email,
+              password,
+            }),
+          );
+          const sessions = ok(await client.request("/api/auth/list-sessions"));
+          assert.equal(sessions.length, 2);
+          assert.ok(
+            sessions.some(
+              (item: { token: string }) => item.token === otherSession.token,
+            ),
+          );
+          ok(
+            await client.request("/api/auth/revoke-session", {
+              token: otherSession.token,
+            }),
+          );
+          assert.equal((await second.request("/api/me")).statusCode, 401);
+          assert.equal(
+            ok(await client.request("/api/auth/list-sessions")).length,
+            1,
+          );
+          const newPassword = "Updated-contract-password-9876!";
+          ok(
+            await client.request("/api/auth/change-password", {
+              currentPassword: password,
+              newPassword,
+              revokeOtherSessions: true,
+            }),
+          );
+          assert.equal(
+            (
+              await second.request("/api/auth/sign-in/email", {
+                email,
+                password,
+              })
+            ).statusCode,
+            401,
+          );
+          ok(
+            await second.request("/api/auth/sign-in/email", {
+              email,
+              password: newPassword,
+            }),
+          );
+          const enrolled = ok(
+            await client.request("/api/auth/two-factor/enable", {
+              password: newPassword,
+            }),
+          );
+          const uri = ok(
+            await client.request("/api/auth/two-factor/get-totp-uri", {
+              password: newPassword,
+            }),
+          );
+          assert.equal(uri.totpURI, enrolled.totpURI);
+          const secret = new URL(uri.totpURI).searchParams.get("secret");
+          assert.ok(secret);
+          ok(
+            await client.request("/api/auth/two-factor/verify-totp", {
+              code: totp(secret),
+            }),
+          );
+          const regenerated = ok(
+            await client.request("/api/auth/two-factor/generate-backup-codes", {
+              password: newPassword,
+            }),
+          );
+          assert.ok(regenerated.backupCodes.length > 0);
+          assert.notDeepEqual(regenerated.backupCodes, enrolled.backupCodes);
+          ok(
+            await client.request("/api/auth/two-factor/disable", {
+              password: newPassword,
+            }),
+          );
+          assert.equal(ok(await client.request("/api/me")).mfaVerified, false);
+          ok(await client.request("/api/auth/revoke-sessions", {}));
+          assert.equal((await client.request("/api/me")).statusCode, 401);
+          assert.equal((await second.request("/api/me")).statusCode, 401);
+        },
+      );
+      await t.test(
         "password reset delivers a private link, revokes all sessions and cannot be reused",
         async () => {
           const client = browser(app, "192.0.2.20");
@@ -339,9 +454,10 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           // Better Auth redirects from the emailed path to the trusted callback,
           // carrying the reset token as a query parameter.
           assert.equal(redirect.statusCode, 302, redirect.body);
-          const token = new URL(
-            String(redirect.headers.location),
-          ).searchParams.get("token");
+          const target = new URL(String(redirect.headers.location));
+          assert.equal(target.origin, config.origin);
+          assert.equal(target.pathname, "/password-reset");
+          const token = target.searchParams.get("token");
           assert.ok(token);
           const newPassword = "New-synthetic-password-5678!";
           assert.equal(
@@ -1211,6 +1327,27 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
       );
     } finally {
       await Promise.all([app.close(), replica.close()]);
+      const successes = new Set(
+        authContracts.flatMap((contract) =>
+          [...contract.checked]
+            .filter((key) => / 2\d\d$/.test(key))
+            .map((key) => key.replace(/ \d+$/, "")),
+        ),
+      );
+      const redirectOnly = new Set([
+        "get /verify-email",
+        "get /reset-password/{token}",
+      ]);
+      for (const [route, operations] of Object.entries(authSchema.paths)) {
+        for (const method of Object.keys(operations)) {
+          const key = `${method} ${route}`;
+          if (!redirectOnly.has(key))
+            assert.ok(
+              successes.has(key),
+              `Missing authentication success contract: ${key}`,
+            );
+        }
+      }
       assert.deepEqual(
         [...contracts, ...authContracts].flatMap(
           (contract) => contract.failures,

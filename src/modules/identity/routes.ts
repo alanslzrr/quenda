@@ -110,6 +110,22 @@ export async function authenticationSchema(auth: Authentication) {
                     : [{ quendaSession: [] }],
                 responses: {
                   ...operation.responses,
+                  ...(["/verify-email", "/reset-password/{token}"].includes(
+                    path,
+                  )
+                    ? {
+                        "302": {
+                          description: "Redirección al destino autorizado",
+                          headers: {
+                            Location: {
+                              description:
+                                "Destino de retorno autorizado; recuperación incluye el token en la consulta.",
+                              schema: { type: "string" },
+                            },
+                          },
+                        },
+                      }
+                    : {}),
                   ...(challenge
                     ? {
                         "200": {
