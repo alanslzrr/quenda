@@ -32,6 +32,7 @@ export async function withDatabase<T>(
     auth: Pool;
     migration: Pool;
     worker: Pool;
+    administration: Pool;
   }) => Promise<T>,
 ): Promise<T> {
   const bin = process.env.PG_BIN;
@@ -110,6 +111,7 @@ export async function withDatabase<T>(
       domain: pool("quenda_domain", passwords.domain),
       auth: pool("quenda_auth", passwords.auth),
       worker: pool("quenda_worker", passwords.worker),
+      administration: pool("quenda_bootstrap", adminPassword),
       migration: pool("quenda_migrator", passwords.migration),
     });
   } finally {
