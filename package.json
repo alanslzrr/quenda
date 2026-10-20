@@ -17,6 +17,7 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "test": "node --test test/unit/*.test.ts test/http/*.test.ts",
+    "test:oci": "node --test test/oci/*.test.ts",
     "test:integration": "pnpm build && node --test test/integration/*.test.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "db:migrate": "node --env-file=.env.migration.local scripts/migrate.ts",

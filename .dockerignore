@@ -1,0 +1,14 @@
+*
+!Dockerfile
+!.npmrc
+!package.json
+!pnpm-lock.yaml
+!tsconfig.json
+!tsconfig.build.json
+!LICENSE
+!src/
+!src/**
+!scripts/
+!scripts/**
+!db/
+!db/**
