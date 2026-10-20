@@ -13,6 +13,7 @@ import { createAuthentication } from "../../src/modules/identity/index.ts";
 import type { MailMessage } from "../../src/shared/mail.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
 import { withDatabase } from "../helpers/postgres.ts";
+import { verifyProductResponses } from "../helpers/response-contract.ts";
 
 for (const upgrade of [false, true]) {
   test(`backend HTTP journey including shared quota: ${upgrade ? "upgrade from preceding schema" : "clean database"}`, {
@@ -49,6 +50,7 @@ for (const upgrade of [false, true]) {
             config,
           },
         });
+        const contracts = verifyProductResponses(app);
         const ok = (
           response: Awaited<ReturnType<ReturnType<typeof browser>["request"]>>,
           expected = 200,
@@ -484,6 +486,10 @@ for (const upgrade of [false, true]) {
             messages
               .slice(sharedMail)
               .every((item) => item.to === "citizen@example.test"),
+          );
+          assert.ok(
+            contracts.successes.size >= 15,
+            "validate integrated product responses",
           );
         } finally {
           await app.close();
