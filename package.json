@@ -33,7 +33,8 @@
     "reports:prepare": "node --env-file=.env.worker.local src/monthly-report-worker.ts",
     "db:reconcile": "node scripts/reconcile.ts",
     "licenses:inventory": "node scripts/license-inventory.ts",
-    "source:archive": "node scripts/source-archive.ts"
+    "source:archive": "node scripts/source-archive.ts",
+    "image:build": "node scripts/build-image.ts"
   },
   "dependencies": {
     "@fastify/swagger": "9.9.2",

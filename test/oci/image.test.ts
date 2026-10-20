@@ -31,14 +31,22 @@ test("OCI runtime contains production artifacts and runs without root or writabl
     assert.notEqual(process.getuid(), 0);
     assert.equal(process.env.NODE_ENV, 'production');
     assert.equal(process.version, 'v24.21.0');
-    assert.deepEqual(readdirSync('/app').sort(), ['LICENSE','db','dist','node_modules','package.json','scripts']);
+    assert.deepEqual(readdirSync('/app').sort(), ['LICENSE','db','dist','node_modules','package.json','scripts','source']);
     assert.equal(existsSync('/app/node_modules/typescript'), false);
     assert.equal(existsSync('/app/node_modules/@biomejs/biome'), false);
     for (const file of ['dist/server.js','dist/email-worker.js','dist/monthly-report-worker.js','scripts/migrate.ts']) assert.ok(existsSync(file));
+    const { loadSourceOffer } = await import('./dist/http/source-offer.js');
+    const offer = await loadSourceOffer(process.env);
+    assert.ok(offer);
     const { buildApp } = await import('./dist/app.js');
-    const app = await buildApp({ database: { check: async () => {}, close: async () => {} }, logLevel: 'silent' });
+    const app = await buildApp({ sourceOffer: offer, database: { check: async () => {}, close: async () => {} }, logLevel: 'silent' });
     await app.ready();
     assert.equal((await app.inject({ url: '/health/live' })).statusCode, 200);
+    const source = await app.inject({ url: '/legal/source' });
+    assert.equal(source.statusCode, 200);
+    assert.deepEqual(source.rawPayload, offer.bytes);
+    assert.equal(source.headers['x-source-revision'], process.env.SOURCE_REVISION);
+    assert.equal(source.headers['x-source-sha256'], process.env.SOURCE_ARCHIVE_SHA256);
     await app.close();
     console.log('OCI runtime verified');
   `,

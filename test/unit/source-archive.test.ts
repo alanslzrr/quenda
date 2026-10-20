@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
+import { prepareImageContext } from "../../scripts/lib/image-context.ts";
 import { sourceArchive } from "../../scripts/lib/source-archive.ts";
 
 const execute = promisify(execFile);
@@ -75,6 +76,19 @@ test("source archive is revision-bound, complete, repeatable and refuses dirty o
       (await sourceArchive(repository, path.join(root, "second.tar.gz")))
         .sha256,
       result.sha256,
+    );
+    const buildDirectory = path.join(root, "build");
+    await mkdir(buildDirectory);
+    const prepared = await prepareImageContext(repository, buildDirectory);
+    assert.equal(prepared.revision, result.revision);
+    assert.equal(prepared.sha256, result.sha256);
+    assert.equal(
+      await readFile(path.join(prepared.context, "main.ts"), "utf8"),
+      "export const fixture = true;",
+    );
+    assert.deepEqual(
+      await readFile(path.join(prepared.context, ".source", "source.tar.gz")),
+      await readFile(destination),
     );
     await assert.rejects(sourceArchive(repository, destination), {
       code: "EEXIST",

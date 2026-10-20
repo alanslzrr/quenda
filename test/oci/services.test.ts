@@ -191,6 +191,25 @@ test("one OCI artifact migrates and runs isolated shared and dedicated installat
         ).stdout.trim(),
         "false",
       );
+      await docker(
+        "exec",
+        api,
+        "node",
+        "--input-type=module",
+        "-e",
+        `
+        import assert from 'node:assert/strict';
+        import { readFileSync } from 'node:fs';
+        import { createHash } from 'node:crypto';
+        const response = await fetch('http://127.0.0.1:3000/legal/source');
+        assert.equal(response.status, 200);
+        const bytes = Buffer.from(await response.arrayBuffer());
+        assert.deepEqual(bytes, readFileSync(process.env.SOURCE_ARCHIVE_PATH));
+        assert.equal(createHash('sha256').update(bytes).digest('hex'), process.env.SOURCE_ARCHIVE_SHA256);
+        assert.equal(response.headers.get('x-source-revision'), process.env.SOURCE_REVISION);
+        assert.ok(response.headers.get('link').includes('/legal/source'));
+      `,
+      );
       const workerEnv = await envFile(`worker-${index}`, {
         ...mail,
         WORKER_DATABASE_URL: url("quenda_worker", passwords.worker),
