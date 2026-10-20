@@ -428,6 +428,53 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
     await migration.query(
       "DROP TRIGGER fail_monthly_delivery_fixture ON domain.monthly_report_delivery; DROP FUNCTION domain.fail_monthly_delivery_fixture()",
     );
+    const alternativeAgreement = randomUUID();
+    await transaction(migration, async (c) => {
+      await c.query(
+        "INSERT INTO domain.agreement(id,name,timezone,created_by,created_by_tenant) SELECT $2,'Alternative fixture',timezone,created_by,created_by_tenant FROM domain.agreement WHERE id=$1",
+        [agreement, alternativeAgreement],
+      );
+      await c.query(
+        "INSERT INTO domain.agreement_version(agreement_id,version,status,starts_at,ends_at,purpose,legal_basis,responsibilities,retention_policy,eligibility,aggregate_reports,created_by,correlation_id) SELECT $2,1,status,starts_at,ends_at,purpose,legal_basis,responsibilities,retention_policy,eligibility,true,created_by,correlation_id FROM domain.agreement_version WHERE agreement_id=$1 AND version=1",
+        [agreement, alternativeAgreement],
+      );
+      await c.query(
+        "INSERT INTO domain.agreement_participant SELECT $2,1,tenant_id,accreditation_issuer FROM domain.agreement_participant WHERE agreement_id=$1 AND version=1",
+        [agreement, alternativeAgreement],
+      );
+      await c.query(
+        "INSERT INTO domain.agreement_activation SELECT $2,1,effective_period,activated_by,activated_at,correlation_id FROM domain.agreement_activation WHERE agreement_id=$1 AND version=1",
+        [agreement, alternativeAgreement],
+      );
+      await c.query(
+        "INSERT INTO domain.monthly_assessment(agreement_id,month_start,revision,cutoff,control_version,source_digest,participants,status,reservations,reserved_minutes) SELECT $2,month_start,1,cutoff,control_version,source_digest,participants,status,reservations,reserved_minutes FROM domain.monthly_assessment WHERE agreement_id=$1 AND revision=2",
+        [agreement, alternativeAgreement],
+      );
+    });
+    const alternativeInput = {
+      ...reviewInput,
+      revision: 1,
+      correctionReference: null,
+    };
+    for (const tenant of tenants)
+      await reviewMonthlyAssessment(
+        domain,
+        reviewer,
+        tenant!,
+        alternativeAgreement,
+        "alternative-before",
+        alternativeInput,
+        randomUUID(),
+        3600,
+      );
+    const alternativeDelivery = () =>
+      deliverMonthlyReport(
+        domain,
+        recipientActor,
+        reviewerTenant,
+        alternativeAgreement,
+        "2024-03",
+      );
     const published = JSON.parse(JSON.stringify(await deliver()));
     assert.equal(published.status, "PUBLISHABLE");
     assert.equal(published.reservations, 20);
@@ -437,6 +484,76 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
     assert.ok(!JSON.stringify(published).includes("report-"));
     assert.ok(
       tenants.every((tenant) => !JSON.stringify(published).includes(tenant)),
+    );
+    assert.deepEqual(await alternativeDelivery(), {
+      status: "NOT_PUBLISHABLE",
+    });
+    assert.equal(
+      (
+        await migration.query(
+          "SELECT count(*)::integer AS n FROM domain.monthly_report_delivery WHERE agreement_id=$1",
+          [alternativeAgreement],
+        )
+      ).rows[0].n,
+      0,
+    );
+    const afterOriginalHistory = await context();
+    for (const tenant of tenants)
+      await reviewMonthlyAssessment(
+        domain,
+        reviewer,
+        tenant!,
+        alternativeAgreement,
+        "alternative-after",
+        { ...alternativeInput, expectedHistoryDigest: afterOriginalHistory },
+        randomUUID(),
+        3600,
+      );
+    assert.equal(
+      JSON.parse(JSON.stringify(await alternativeDelivery())).status,
+      "PUBLISHABLE",
+    );
+    const raceHistory = await context();
+    for (const month of ["2024-04", "2024-05"]) {
+      await migration.query(
+        "INSERT INTO domain.monthly_assessment(agreement_id,month_start,revision,cutoff,control_version,source_digest,participants,status,reservations,reserved_minutes) SELECT agreement_id,$2::date,1,cutoff,control_version,source_digest,participants,status,reservations,reserved_minutes FROM domain.monthly_assessment WHERE agreement_id=$1 AND month_start='2024-03-01' AND revision=1",
+        [alternativeAgreement, `${month}-01`],
+      );
+      for (const tenant of tenants)
+        await reviewMonthlyAssessment(
+          domain,
+          reviewer,
+          tenant!,
+          alternativeAgreement,
+          `race-${month}`,
+          { ...alternativeInput, month, expectedHistoryDigest: raceHistory },
+          randomUUID(),
+          3600,
+        );
+    }
+    const distinctReleases = await Promise.all(
+      ["2024-04", "2024-05"].map((month) =>
+        deliverMonthlyReport(
+          domain,
+          recipientActor,
+          reviewerTenant,
+          alternativeAgreement,
+          month,
+        ),
+      ),
+    );
+    assert.deepEqual(
+      distinctReleases.map((r) => JSON.parse(JSON.stringify(r)).status).sort(),
+      ["NOT_PUBLISHABLE", "PUBLISHABLE"],
+    );
+    assert.equal(
+      (
+        await migration.query(
+          "SELECT count(*)::integer AS n FROM domain.monthly_report_delivery WHERE agreement_id=$1 AND month_start IN ('2024-04-01','2024-05-01')",
+          [alternativeAgreement],
+        )
+      ).rows[0].n,
+      1,
     );
     const repeats = await Promise.all([deliver(), deliver()]);
     assert.ok(
@@ -599,6 +716,64 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
     await migration.query(
       "UPDATE domain.agreement_version SET aggregate_reports=false WHERE agreement_id=$1",
       [agreement],
+    );
+    assert.deepEqual(
+      (await assessPersistedMonthlyAggregate(worker, agreement, "2024-03"))
+        .assessment,
+      { status: "NOT_PUBLISHABLE" },
+    );
+    await transaction(migration, async (c) => {
+      await c.query(
+        "UPDATE domain.agreement_version SET aggregate_reports=true WHERE agreement_id=$1",
+        [agreement],
+      );
+      await c.query(
+        "INSERT INTO domain.agreement_version(agreement_id,version,status,starts_at,ends_at,purpose,legal_basis,responsibilities,retention_policy,eligibility,weekly_limit,aggregate_reports,created_by,correlation_id) SELECT agreement_id,2,'ACTIVADO','2024-03-10T09:30:00Z','2040-01-01T00:00:00Z',purpose,legal_basis,responsibilities,retention_policy,eligibility,NULL,true,created_by,correlation_id FROM domain.agreement_version WHERE agreement_id=$1 AND version=1",
+        [agreement],
+      );
+      await c.query(
+        "INSERT INTO domain.agreement_participant SELECT agreement_id,2,tenant_id,accreditation_issuer FROM domain.agreement_participant WHERE agreement_id=$1 AND version=1",
+        [agreement],
+      );
+      await c.query(
+        "INSERT INTO domain.agreement_unit SELECT agreement_id,2,tenant_id,unit_id FROM domain.agreement_unit WHERE agreement_id=$1 AND version=1",
+        [agreement],
+      );
+      await c.query(
+        "INSERT INTO domain.agreement_activation(agreement_id,version,effective_period,activated_by,correlation_id) VALUES($1,2,'[2024-03-10T09:30:00Z,2040-01-01T00:00:00Z)','report-0',$2)",
+        [agreement, randomUUID()],
+      );
+      await c.query(
+        "INSERT INTO domain.agreement_assignment SELECT agreement_id,2,tenant_id,unit_id,'[2024-03-10T09:30:00Z,2040-01-01T00:00:00Z)'::tstzrange FROM domain.agreement_assignment WHERE agreement_id=$1 AND version=1",
+        [agreement],
+      );
+      await c.query(
+        "UPDATE domain.agreement SET latest_version=2 WHERE id=$1",
+        [agreement],
+      );
+    });
+    assert.deepEqual(
+      (await assessPersistedMonthlyAggregate(worker, agreement, "2024-03"))
+        .assessment,
+      { status: "THRESHOLD_MET", reservations: 20, reservedMinutes: 1200 },
+    );
+    assert.deepEqual(
+      (
+        await migration.query(
+          "SELECT DISTINCT attribution_version FROM domain.agreement_consumption WHERE agreement_id=$1",
+          [agreement],
+        )
+      ).rows,
+      [{ attribution_version: 1 }],
+    );
+    const emptyParticipant = randomUUID();
+    await migration.query(
+      "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'No activity','Europe/Madrid')",
+      [emptyParticipant],
+    );
+    await migration.query(
+      "INSERT INTO domain.agreement_participant VALUES($1,2,$2,false)",
+      [agreement, emptyParticipant],
     );
     assert.deepEqual(
       (await assessPersistedMonthlyAggregate(worker, agreement, "2024-03"))

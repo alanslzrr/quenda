@@ -135,3 +135,45 @@ test("corrections require fresh unanimous evidence about differences, not inheri
     "PUBLISHABLE",
   );
 });
+
+test("risk rejection suppresses an aggregate even when thresholds pass but auxiliary knowledge isolates one subject", () => {
+  const input = fixture();
+  // Ten subjects per municipality can pass the threshold while the recipient
+  // knows its own 600 minutes and nine foreign subjects' 540 minutes.
+  const knownMinutes = 600 + 9 * 60;
+  assert.equal(1200 - knownMinutes, 60);
+  const reviews = input.reviews.map((review) => ({
+    ...review,
+    decision: "REJECT" as const,
+    ownDataReference: "risk/municipal-600-minutes",
+    auxiliaryReference: "risk/nine-known-foreign-subjects",
+  }));
+  assert.deepEqual(authorizeMonthlyPublication({ ...input, reviews }), {
+    status: "NOT_PUBLISHABLE",
+  });
+  // A correction attributable to that same subject must not inherit approval.
+  const corrected = {
+    ...input,
+    candidate: {
+      ...input.candidate,
+      revision: 2,
+      assessment: {
+        status: "THRESHOLD_MET" as const,
+        reservations: 20,
+        reservedMinutes: 1260,
+      },
+    },
+  };
+  assert.equal(1260 - 1200, 60);
+  assert.deepEqual(
+    authorizeMonthlyPublication({
+      ...corrected,
+      reviews: reviews.map((review) => ({
+        ...review,
+        revision: 2,
+        correctionReference: "risk/single-subject-difference",
+      })),
+    }),
+    { status: "NOT_PUBLISHABLE" },
+  );
+});
