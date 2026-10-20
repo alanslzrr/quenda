@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { Ajv } from "ajv";
+import addFormats from "ajv-formats";
 import { Pool } from "pg";
 import { buildApp } from "../../src/app.ts";
 
@@ -46,6 +48,39 @@ test("all product operations declare shared failures, unique IDs and complete pa
       }
     };
     checkReferences(spec);
+    const validator = new Ajv({ strict: false, allErrors: true });
+    addFormats.default(validator);
+    validator.addSchema({ ...spec, $id: "urn:quenda:examples" });
+    let examples = 0;
+    const validateExamples = (value: unknown, pointer = ""): void => {
+      if (!value || typeof value !== "object") return;
+      const object = value as Record<string, unknown>;
+      if (
+        "example" in object &&
+        ("type" in object || "$ref" in object || "schema" in object)
+      ) {
+        const check = validator.compile({
+          $ref: `urn:quenda:examples#${pointer}${"schema" in object ? "/schema" : ""}`,
+        });
+        assert.ok(
+          check(object.example),
+          `${pointer}: ${validator.errorsText(check.errors)}`,
+        );
+        examples++;
+      }
+      for (const [key, child] of Object.entries(object)) {
+        if (key === "example") continue;
+        validateExamples(
+          child,
+          `${pointer}/${key.replaceAll("~", "~0").replaceAll("/", "~1")}`,
+        );
+      }
+    };
+    validateExamples(spec);
+    assert.ok(
+      examples >= 4,
+      "reservation commands and shared error have validated examples",
+    );
     const ids = new Set<string>();
     let operations = 0;
     for (const [path, item] of Object.entries(spec.paths ?? {})) {

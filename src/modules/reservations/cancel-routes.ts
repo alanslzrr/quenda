@@ -46,6 +46,7 @@ export async function registerCancellationRoute(
           },
         },
         body: {
+          examples: [{ expectedRevision: 2 }],
           type: "object",
           additionalProperties: false,
           required: ["expectedRevision"],

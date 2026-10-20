@@ -83,6 +83,15 @@ export function language(header: string | undefined): "es" | "gl" {
 
 export const errorSchema = {
   $id: "ErrorResponse",
+  examples: [
+    {
+      error: {
+        code: "CONFLICT",
+        message: "La operación entra en conflicto con el estado actual.",
+      },
+      requestId: "00000000-0000-4000-8000-000000000002",
+    },
+  ],
   type: "object",
   additionalProperties: false,
   required: ["error", "requestId"],

@@ -55,6 +55,13 @@ export async function registerReservations(
           },
         },
         body: {
+          examples: [
+            {
+              unitId: "00000000-0000-4000-8000-000000000001",
+              startsAt: "2030-01-02T10:00:00Z",
+              endsAt: "2030-01-02T11:00:00Z",
+            },
+          ],
           type: "object",
           additionalProperties: false,
           required: ["unitId", "startsAt", "endsAt"],

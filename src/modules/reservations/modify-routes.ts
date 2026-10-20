@@ -46,6 +46,14 @@ export async function registerModificationRoute(
           },
         },
         body: {
+          examples: [
+            {
+              expectedRevision: 1,
+              unitId: "00000000-0000-4000-8000-000000000001",
+              startsAt: "2030-01-02T11:00:00Z",
+              endsAt: "2030-01-02T12:00:00Z",
+            },
+          ],
           type: "object",
           additionalProperties: false,
           required: ["expectedRevision", "unitId", "startsAt", "endsAt"],
