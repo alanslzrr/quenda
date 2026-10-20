@@ -325,6 +325,47 @@ for (const upgrade of [false, true]) {
               await upgradeClient.end();
             }
           }
+          const policyPath = `${base}/booking-policy`;
+          assert.deepEqual(ok(await admin.client.request(policyPath)), {
+            tenantId: municipality.tenantId,
+            version: 1,
+            advanceDays: 30,
+            cancellationMinutes: 0,
+          });
+          const policyInput = {
+            expectedVersion: 1,
+            advanceDays: 5,
+            cancellationMinutes: 60,
+            reason: "Municipal policy update",
+          };
+          const updatePolicy = (cookie: string, input = policyInput) =>
+            app.inject({
+              method: "PUT",
+              url: policyPath,
+              headers: { origin: config.origin, cookie },
+              payload: input,
+            });
+          assert.equal(
+            (await updatePolicy(citizen.client.cookie())).statusCode,
+            403,
+          );
+          const updatedPolicy = ok(await updatePolicy(admin.client.cookie()));
+          assert.equal(updatedPolicy.version, 2);
+          assert.equal(
+            (await updatePolicy(admin.client.cookie())).statusCode,
+            409,
+          );
+          ok(
+            await updatePolicy(admin.client.cookie(), {
+              ...policyInput,
+              expectedVersion: 2,
+              cancellationMinutes: 0,
+            }),
+          );
+          assert.equal(
+            ok(await admin.client.request(reservation)).cancellationMinutes,
+            0,
+          );
           const administrativeRead = ok(
             await admin.client.request(reservation),
           );
