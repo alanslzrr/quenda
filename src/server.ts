@@ -1,7 +1,7 @@
 import { buildApp } from "./app.ts";
 import { ConfigurationError, readConfig } from "./config.ts";
-import { databaseMetrics } from "./database/metrics.ts";
 import { createDatabases } from "./database/pools.ts";
+import { startDatabaseReporting } from "./database/reporting.ts";
 import { createMailTransport } from "./mail/transport.ts";
 import { createAuthentication } from "./modules/identity/index.ts";
 
@@ -24,18 +24,9 @@ async function start(): Promise<void> {
     logLevel: config.logLevel,
     identity: { authentication, config: identityConfig },
   });
-  const metricsTimer = setInterval(() => {
-    app.log.info(
-      {
-        event: "DATABASE_METRICS",
-        domain: databaseMetrics(database.domain),
-        auth: databaseMetrics(database.auth),
-      },
-      "Database metrics",
-    );
-  }, 30000).unref();
+  const stopMetrics = startDatabaseReporting(database, app.log);
   app.addHook("onClose", async () => {
-    clearInterval(metricsTimer);
+    stopMetrics();
   });
   try {
     await database.check();

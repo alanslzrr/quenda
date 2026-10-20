@@ -59,6 +59,7 @@ test("command metrics count retries, terminal failures and concurrent activity w
         retries: 4,
         serializationFailures: 2,
         deadlocks: 3,
+        retryExhaustions: 1,
         totalDurationMs: 0,
         maximumDurationMs: 0,
       },

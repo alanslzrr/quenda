@@ -8,6 +8,7 @@ interface CommandMetrics {
   retries: number;
   serializationFailures: number;
   deadlocks: number;
+  retryExhaustions: number;
   totalDurationMs: number;
   maximumDurationMs: number;
 }
@@ -23,6 +24,7 @@ function counters(pool: Pool): CommandMetrics {
       retries: 0,
       serializationFailures: 0,
       deadlocks: 0,
+      retryExhaustions: 0,
       totalDurationMs: 0,
       maximumDurationMs: 0,
     };
@@ -40,6 +42,7 @@ export function beginCommandMeasurement(pool: Pool) {
       if (code === "40001") value.serializationFailures++;
       if (code === "40P01") value.deadlocks++;
       if (retry) value.retries++;
+      else if (code === "40001" || code === "40P01") value.retryExhaustions++;
     },
     finish(committed: boolean) {
       value.active--;
