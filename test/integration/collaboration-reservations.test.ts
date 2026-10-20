@@ -15,6 +15,7 @@ import {
   cancelReservation,
   createReservation,
   modifyReservation,
+  readReservation,
 } from "../../src/modules/reservations/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
@@ -424,6 +425,168 @@ test("real booking commands enforce shared eligibility and quota in one transact
         await assert.rejects(create(winner, "no-public-fallback", 14), {
           code: "CONFLICT",
         });
+      },
+    );
+    await t.test(
+      "expired effective periods block new bookings and changes without a status worker or public fallback",
+      async () => {
+        await migration.query(
+          "UPDATE domain.agreement_activation SET effective_period='[2020-01-01T00:00:00Z,2040-01-01T00:00:00Z)' WHERE agreement_id=$1",
+          [agreement],
+        );
+        await migration.query(
+          "UPDATE domain.agreement_version SET status='ACTIVADO',eligibility='acceso_abierto',weekly_limit=NULL WHERE agreement_id=$1",
+          [agreement],
+        );
+        const retained = await create(winner, "before-expiry", 15);
+        const tenant = tenants[winner] as string;
+        const before = await readReservation(
+          domain,
+          actor,
+          tenant,
+          retained.result.id,
+          clock,
+        );
+        // Move the effective end into the past; no lifecycle worker changes status.
+        await migration.query(
+          "UPDATE domain.agreement_activation SET effective_period=tstzrange(lower(effective_period),clock_timestamp()-interval '1 second','[)') WHERE agreement_id=$1",
+          [agreement],
+        );
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT v.status,a.effective_period @> clock_timestamp() AS effective,isempty(a.effective_period) AS empty FROM domain.agreement_version v JOIN domain.agreement_activation a USING(agreement_id,version) WHERE v.agreement_id=$1",
+              [agreement],
+            )
+          ).rows[0],
+          { status: "ACTIVADO", effective: false, empty: false },
+        );
+        await assert.rejects(create(winner, "after-expiry", 16), {
+          code: "CONFLICT",
+        });
+        await assert.rejects(
+          modifyReservation(
+            domain,
+            actor,
+            tenant,
+            retained.result.id,
+            "change-after-expiry",
+            { ...input(winner, 16), expectedRevision: 1 },
+            randomUUID(),
+            3600,
+            clock,
+          ),
+          { code: "CONFLICT" },
+        );
+        assert.deepEqual(
+          await readReservation(
+            domain,
+            actor,
+            tenant,
+            retained.result.id,
+            clock,
+          ),
+          before,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT released FROM domain.agreement_consumption WHERE agreement_id=$1 AND reservation_id=$2",
+              [agreement, retained.result.id],
+            )
+          ).rows[0].released,
+          false,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::integer AS n FROM domain.unit_agreement_gate WHERE agreement_id=$1",
+              [agreement],
+            )
+          ).rows[0].n,
+          2,
+        );
+        await cancel(winner, retained.result.id, 1, "cancel-expired");
+        assert.equal(
+          (
+            await readReservation(
+              domain,
+              actor,
+              tenant,
+              retained.result.id,
+              clock,
+            )
+          ).status,
+          "CANCELADA",
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT released FROM domain.agreement_consumption WHERE agreement_id=$1 AND reservation_id=$2",
+              [agreement, retained.result.id],
+            )
+          ).rows[0].released,
+          true,
+        );
+        await assert.rejects(create(winner, "still-not-public", 15), {
+          code: "CONFLICT",
+        });
+      },
+    );
+    await t.test(
+      "technical consumption failures roll back booking, occupancy, notices and idempotency before retry",
+      async () => {
+        await migration.query(
+          "UPDATE domain.agreement_activation SET effective_period='[2020-01-01T00:00:00Z,2040-01-01T00:00:00Z)' WHERE agreement_id=$1",
+          [agreement],
+        );
+        const counts = async () => {
+          const result: Record<string, number> = {};
+          for (const table of [
+            "reservation",
+            "occupancy",
+            "reservation_event",
+            "reservation_notice",
+            "reservation_email",
+            "agreement_consumption",
+            "agreement_consumption_event",
+            "idempotent_command",
+          ])
+            result[table] = (
+              await migration.query(
+                `SELECT count(*)::integer AS n FROM domain.${table}`,
+              )
+            ).rows[0].n;
+          return result;
+        };
+        const before = await counts();
+        await migration.query(
+          "CREATE FUNCTION domain.fail_consumption_fixture() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Fixture unavailable' USING ERRCODE='XX000'; END $$",
+        );
+        await migration.query(
+          "CREATE TRIGGER fail_consumption_fixture BEFORE INSERT ON domain.agreement_consumption_event FOR EACH ROW EXECUTE FUNCTION domain.fail_consumption_fixture()",
+        );
+        try {
+          await assert.rejects(
+            create(winner, "technical-consumption-retry", 16),
+            { code: "XX000" },
+          );
+          assert.deepEqual(await counts(), before);
+        } finally {
+          await migration.query(
+            "DROP TRIGGER fail_consumption_fixture ON domain.agreement_consumption_event; DROP FUNCTION domain.fail_consumption_fixture()",
+          );
+        }
+        const retried = await create(winner, "technical-consumption-retry", 16);
+        assert.equal(retried.replayed, false);
+        const after = await counts();
+        for (const table of Object.keys(before))
+          assert.equal(after[table], before[table]! + 1, table);
+        await cancel(winner, retried.result.id, 1, "cancel-technical-retry");
+        await migration.query(
+          "UPDATE domain.agreement_activation SET effective_period='empty' WHERE agreement_id=$1",
+          [agreement],
+        );
       },
     );
     await t.test(
