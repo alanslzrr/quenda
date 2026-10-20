@@ -11,6 +11,7 @@ Cada instalación y unidad reservable tiene un único municipio gestor, aunque p
 | Asignación de rol | Permisos de una cuenta sobre un municipio y, cuando corresponda, unidades reservables concretas. |
 | Instalación / Unidad reservable | Centro deportivo, espacios reservables y publicación del catálogo. |
 | Regla horaria / Excepción | Aperturas regulares y cambios fechados del calendario. |
+| Normas de uso | Texto versionado por unidad reservable; las versiones aceptadas se conservan sin sobrescribir. |
 | Política de reserva | Condiciones versionadas que se aplican al crear o modificar una reserva. |
 | Reserva | Titular, unidad reservable, estado y versión de concurrencia. |
 | Bloqueo | Cierre de una unidad reservable, con responsable y motivo. |
@@ -115,3 +116,11 @@ stateDiagram-v2
 La cancelación aplica las condiciones aceptadas de la reserva. La modificación comprueba las reglas vigentes y conserva en el historial las versiones anterior y nueva. Puede cambiar la unidad reservable dentro del mismo municipio, pero no el titular ni el municipio.
 
 Un cierre o cambio de calendario incompatible con reservas confirmadas se rechaza hasta resolverlas mediante operaciones explícitas. Retirar una unidad del catálogo impide nuevas reservas y mantiene las existentes y su historial.
+
+## Normas de uso y aceptación
+
+Cada unidad reservable tiene un texto de normas versionado. Crear una versión conserva las anteriores y registra autor, fecha, motivo y correlación. El usuario acepta expresamente la versión vigente al reservar. La reserva identifica la unidad y la versión aceptada; una modificación que cambie las normas aplicables requiere una nueva aceptación expresa. Actualizar las normas no modifica las aceptaciones anteriores.
+
+## Baja de cuenta
+
+La baja es lógica: revoca todas las sesiones e impide nuevas operaciones de la cuenta. Se rechaza si existen reservas futuras confirmadas en cualquier municipio de la instancia. La comprobación y la baja son atómicas frente a nuevas reservas. Se conservan las reservas y la auditoría; la baja no ejecuta la eliminación de datos personales, sujeta a la política de conservación aprobada.

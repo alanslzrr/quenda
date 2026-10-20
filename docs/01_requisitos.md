@@ -26,7 +26,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-08 | Crear instalaciones | El administrador o gestor municipal autorizado registra instalaciones de su municipio. |
 | RF-09 | Mantener el catálogo | El sistema permite modificar o retirar instalaciones y unidades reservables sin borrar reservas ni alterar su historial. |
 | RF-10 | Configurar horarios | El sistema calcula la disponibilidad con los horarios, excepciones y cierres vigentes. |
-| RF-11 | Gestionar normas de uso | El usuario puede consultar las normas aplicables antes de confirmar la reserva; el sistema conserva la versión aceptada. |
+| RF-11 | Gestionar normas de uso | El usuario consulta y acepta expresamente la versión vigente de las normas de la unidad al reservar. Al modificar, vuelve a aceptarlas si cambia la versión aplicable. El sistema conserva cada versión aceptada. |
 | RF-12 | Consultar indicadores municipales | Los resultados reproducen las [fórmulas de reservas y ocupación](03_procesos_y_secuencias.md#indicadores-municipales) para el municipio y periodo seleccionados. |
 | RF-13 | Incorporar municipios | El operador de plataforma da de alta un municipio mediante configuración, sin modificar el código. |
 | RF-14 | Gestionar cuentas y sesiones | El usuario crea una cuenta, inicia sesión y la cierra sin obtener permisos municipales automáticamente. |
