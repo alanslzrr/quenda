@@ -17,47 +17,30 @@ import { withDatabase } from "../helpers/postgres.ts";
 import { recoveryFixture } from "../helpers/recovery-fixture.ts";
 
 const execute = promisify(execFile);
-const tables = [
-  'auth."user"',
-  "auth.session",
-  "auth.account",
-  "auth.session_event",
-  "auth.credential_event",
-  "auth.request_event",
-  "domain.municipality",
-  "domain.facility",
-  "domain.reservable_unit",
-  "domain.unit_calendar_version",
-  "domain.reservation",
-  "domain.occupancy",
-  "domain.reservation_event",
-  "domain.reservation_notice",
-  "domain.reservation_email",
-  "domain.idempotent_command",
-  "domain.agreement",
-  "domain.agreement_version",
-  "domain.agreement_participant",
-  "domain.agreement_activation",
-  "domain.agreement_assignment",
-  "domain.unit_agreement_gate",
-  "domain.agreement_subject",
-  "domain.agreement_consumption",
-  "domain.agreement_consumption_event",
-  "quenda_meta.migrations",
-];
-const snapshot = async (pool: Pool) =>
-  Object.fromEntries(
+const snapshot = async (pool: Pool) => {
+  const tables = (
+    await pool.query<{ schema_name: string; table_name: string }>(
+      `SELECT schemaname AS schema_name,tablename AS table_name FROM pg_catalog.pg_tables
+     WHERE schemaname IN ('auth','domain','quenda_meta') ORDER BY schemaname,tablename`,
+    )
+  ).rows;
+  const quote = (name: string) => `"${name.replaceAll('"', '""')}"`;
+  return Object.fromEntries(
     await Promise.all(
-      tables.map(async (table) => [
-        table,
-        (
-          await pool.query(
-            `SELECT to_jsonb(t) AS row FROM ${table} t ORDER BY to_jsonb(t)::text`,
-          )
-        ).rows,
-      ]),
+      tables.map(async ({ schema_name, table_name }) => {
+        const table = `${quote(schema_name)}.${quote(table_name)}`;
+        return [
+          table,
+          (
+            await pool.query(
+              `SELECT to_jsonb(t) AS row FROM ${table} t ORDER BY to_jsonb(t)::text`,
+            )
+          ).rows,
+        ];
+      }),
     ),
   );
+};
 
 test("independent-cluster restore preserves bookings, quotas and evidence without copying role passwords", {
   timeout: 90000,
@@ -89,7 +72,27 @@ test("independent-cluster restore preserves bookings, quotas and evidence withou
       3600,
       clock,
     );
+    // Non-empty fixtures for the latest audit tables guard against silently
+    // omitting newly added data from the restore comparison.
+    await source.migration.query(
+      "UPDATE domain.municipality SET booking_policy_version=2,advance_days=20 WHERE id=$1",
+      [tenants[0]],
+    );
+    await source.migration.query(
+      `INSERT INTO domain.municipal_booking_policy_event(tenant_id,actor_id,version,previous_advance_days,advance_days,previous_cancellation_minutes,cancellation_minutes,reason,correlation_id)
+      VALUES($1,'citizen',2,30,20,0,0,'Recovery fixture',$2)`,
+      [tenants[0], randomUUID()],
+    );
+    await source.migration.query(
+      "INSERT INTO domain.reservation_read_event(tenant_id,reservation_id,actor_id,operation,correlation_id) VALUES($1,$2,'citizen','DETAIL',$3)",
+      [tenants[0], booking.result.id, randomUUID()],
+    );
     const expected = await snapshot(source.administration);
+    assert.equal(
+      expected['"domain"."municipal_booking_policy_event"']?.length,
+      1,
+    );
+    assert.equal(expected['"domain"."reservation_read_event"']?.length, 1);
     const backup = await createBackup(
       source.administration.options.connectionString as string,
       path.join(source.root, "recovery.dump"),
