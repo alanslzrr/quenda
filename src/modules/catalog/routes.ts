@@ -14,6 +14,7 @@ import {
 import { registerPublicCatalog } from "./public-routes.ts";
 import { publishCatalogResource } from "./publication.ts";
 import { listCatalogResources } from "./queries.ts";
+import { registerUsageRulesRoutes } from "./usage-rules-routes.ts";
 import { withdrawCatalogResource } from "./withdrawal.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
@@ -37,6 +38,7 @@ export async function registerCatalog(
 ) {
   const actor = createRequestActor(pool, auth, config);
   await registerCalendarRoutes(app, pool, auth, config);
+  await registerUsageRulesRoutes(app, pool, auth, config);
   await registerPublicCatalog(app, pool, config.secret);
   app.post<{ Params: { tenantId: string }; Body: { name: string } }>(
     "/api/municipalities/:tenantId/facilities",

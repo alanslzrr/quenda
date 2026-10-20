@@ -325,6 +325,46 @@ for (const upgrade of [false, true]) {
               await upgradeClient.end();
             }
           }
+          const rulesPath = `${base}/units/${unit.unitId}/usage-rules`;
+          const rulesInput = {
+            expectedVersion: 0,
+            text: "Respete el horario reservado.",
+            reason: "Normas de uso",
+          };
+          const rules = ok(
+            await app.inject({
+              method: "PUT",
+              url: rulesPath,
+              headers: { cookie: admin.client.cookie(), origin: config.origin },
+              payload: rulesInput,
+            }),
+          );
+          assert.equal(rules.version, 1);
+          assert.deepEqual(
+            ok(await admin.client.request(`${rulesPath}?version=1`)),
+            rules,
+          );
+          const publicRules = ok(
+            await app.inject({
+              method: "GET",
+              url: `/api/public/municipalities/${municipality.tenantId}/units/${unit.unitId}/usage-rules`,
+            }),
+          );
+          assert.deepEqual(publicRules, {
+            tenantId: municipality.tenantId,
+            unitId: unit.unitId,
+            version: 1,
+            text: rulesInput.text,
+          });
+          ok(
+            await app.inject({
+              method: "PUT",
+              url: rulesPath,
+              headers: { cookie: admin.client.cookie(), origin: config.origin },
+              payload: rulesInput,
+            }),
+            409,
+          );
           const policyPath = `${base}/booking-policy`;
           assert.deepEqual(ok(await admin.client.request(policyPath)), {
             tenantId: municipality.tenantId,
