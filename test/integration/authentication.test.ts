@@ -281,7 +281,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
         async () => {
           const client = browser(app, "192.0.2.20");
           const email = "recovery@example.test";
-          await signup(client, email);
+          const accountId = await signup(client, email);
           await verify(client, email);
           assert.equal(
             (
@@ -356,6 +356,18 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
               })
             ).statusCode,
             200,
+          );
+          assert.deepEqual(
+            (
+              await migration.query(
+                "SELECT operation FROM auth.credential_event WHERE subject_id=$1 ORDER BY occurred_at,id",
+                [accountId],
+              )
+            ).rows,
+            [
+              { operation: "PASSWORD_CREATED" },
+              { operation: "PASSWORD_CHANGED" },
+            ],
           );
         },
       );
@@ -448,6 +460,14 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             true,
           );
           const accountId = (await client.request("/api/me")).json().accountId;
+          const securityOperations = (
+            await migration.query(
+              "SELECT operation FROM auth.credential_event WHERE subject_id=$1",
+              [accountId],
+            )
+          ).rows.map((row) => row.operation);
+          assert.ok(securityOperations.includes("MFA_MATERIAL_CREATED"));
+          assert.ok(securityOperations.includes("MFA_ENABLED"));
           const migrationUrl = migration.options.connectionString;
           assert.ok(migrationUrl);
           const initialized = await promisify(execFile)(
