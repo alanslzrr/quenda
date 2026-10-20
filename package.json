@@ -34,7 +34,8 @@
     "db:reconcile": "node scripts/reconcile.ts",
     "licenses:inventory": "node scripts/license-inventory.ts",
     "source:archive": "node scripts/source-archive.ts",
-    "image:build": "node scripts/build-image.ts"
+    "image:build": "node scripts/build-image.ts",
+    "test:performance": "node test/performance/run.ts"
   },
   "dependencies": {
     "@fastify/swagger": "9.9.2",
