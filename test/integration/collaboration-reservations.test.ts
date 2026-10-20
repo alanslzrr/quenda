@@ -2159,6 +2159,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             const changeLimit = async (
               expectedVersion: number,
               weeklyLimit: number | null,
+              activate = true,
             ) => {
               const version = expectedVersion + 1;
               await createAgreementVersion(
@@ -2192,6 +2193,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
                 randomUUID(),
                 3600,
               );
+              if (!activate) return;
               await activateAgreement(
                 domain,
                 admin,
@@ -2372,6 +2374,229 @@ test("real booking commands enforce shared eligibility and quota in one transact
               ).rows[0].version,
               4,
             );
+
+            // Hold the real replacement transaction after reconciliation, not a
+            // synthetic agreement-only lock. Booking commands must retry against
+            // the committed version without losing the reconciled consumption.
+            await changeLimit(4, null);
+            for (const [offset, action] of (
+              ["modify", "cancel"] as const
+            ).entries()) {
+              const version = 6 + offset;
+              const booked = (
+                await createReservation(
+                  domain,
+                  actor,
+                  tenant,
+                  `replacement-${action}-booking`,
+                  { ...input(winner, 25 + offset * 2), unitId: publicUnit },
+                  randomUUID(),
+                  3600,
+                  clock,
+                )
+              ).result;
+              await changeLimit(version - 1, null, false);
+              const holder = await domain.connect();
+              let pending: Promise<unknown> | undefined;
+              try {
+                await holder.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+                await setTransactionContext(holder, {
+                  accountId: actor.accountId,
+                  tenantId: tenant,
+                });
+                const pid = (
+                  await holder.query("SELECT pg_backend_pid() AS pid")
+                ).rows[0].pid as number;
+                await holder.query(
+                  "SELECT domain.activate_agreement($1,$2,$3,$4,$5)",
+                  [
+                    successor,
+                    version,
+                    evidence.legalReviewReference,
+                    null,
+                    randomUUID(),
+                  ],
+                );
+                pending =
+                  action === "modify"
+                    ? modifyReservation(
+                        domain,
+                        actor,
+                        tenant,
+                        booked.id,
+                        "replacement-modify",
+                        {
+                          ...input(winner, 26),
+                          unitId: publicUnit,
+                          expectedRevision: 1,
+                        },
+                        randomUUID(),
+                        3600,
+                        clock,
+                      )
+                    : cancelReservation(
+                        domain,
+                        actor,
+                        tenant,
+                        booked.id,
+                        "replacement-cancel",
+                        { expectedRevision: 1 },
+                        randomUUID(),
+                        3600,
+                        clock,
+                      );
+                void pending.catch(() => {});
+                await blockedBy(pid);
+                await holder.query("COMMIT");
+                await pending;
+                const rows = await migration.query(
+                  "SELECT c.attribution_version,c.released,c.starts_at=r.starts_at AND c.ends_at=r.ends_at AS matches,r.status,r.revision FROM domain.agreement_consumption c JOIN domain.reservation r ON r.tenant_id=c.tenant_id AND r.id=c.reservation_id WHERE c.agreement_id=$1 AND c.tenant_id=$2 AND c.reservation_id=$3",
+                  [successor, tenant, booked.id],
+                );
+                assert.deepEqual(rows.rows, [
+                  {
+                    attribution_version: version,
+                    released: action === "cancel",
+                    matches: true,
+                    status: action === "cancel" ? "CANCELADA" : "CONFIRMADA",
+                    revision: 2,
+                  },
+                ]);
+                assert.equal(
+                  (
+                    await migration.query(
+                      "SELECT count(*)::int AS n FROM domain.agreement_lifecycle_event WHERE agreement_id=$1 AND version=$2 AND action='ACTIVATED'",
+                      [successor, version],
+                    )
+                  ).rows[0].n,
+                  1,
+                );
+                if (action === "modify")
+                  await cancelReservation(
+                    domain,
+                    actor,
+                    tenant,
+                    booked.id,
+                    "replacement-modify-cleanup",
+                    { expectedRevision: 2 },
+                    randomUUID(),
+                    3600,
+                    clock,
+                  );
+              } finally {
+                await holder.query("ROLLBACK");
+                holder.release();
+                if (pending) await Promise.allSettled([pending]);
+              }
+            }
+            for (const [offset, action] of (
+              ["modify", "cancel"] as const
+            ).entries()) {
+              const version = 8 + offset;
+              const booked = (
+                await createReservation(
+                  domain,
+                  actor,
+                  tenant,
+                  `before-replacement-${action}-booking`,
+                  { ...input(winner, 28 + offset * 2), unitId: publicUnit },
+                  randomUUID(),
+                  3600,
+                  clock,
+                )
+              ).result;
+              await changeLimit(version - 1, null, false);
+              const gate = await migration.connect();
+              let bookingAttempt: Promise<unknown> | undefined;
+              let activationAttempt: Promise<unknown> | undefined;
+              try {
+                const pid = (await gate.query("SELECT pg_backend_pid() AS pid"))
+                  .rows[0].pid as number;
+                await gate.query("SELECT pg_advisory_lock(9057)");
+                await migration.query(
+                  "CREATE FUNCTION domain.pause_existing_booking_fixture() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_advisory_xact_lock(9057); RETURN NEW; END $$",
+                );
+                await migration.query(
+                  "CREATE TRIGGER pause_existing_booking_fixture BEFORE INSERT ON domain.reservation_event FOR EACH ROW EXECUTE FUNCTION domain.pause_existing_booking_fixture()",
+                );
+                bookingAttempt =
+                  action === "modify"
+                    ? modifyReservation(
+                        domain,
+                        actor,
+                        tenant,
+                        booked.id,
+                        "modify-before-replacement",
+                        {
+                          ...input(winner, 29),
+                          unitId: publicUnit,
+                          expectedRevision: 1,
+                        },
+                        randomUUID(),
+                        3600,
+                        clock,
+                      )
+                    : cancelReservation(
+                        domain,
+                        actor,
+                        tenant,
+                        booked.id,
+                        "cancel-before-replacement",
+                        { expectedRevision: 1 },
+                        randomUUID(),
+                        3600,
+                        clock,
+                      );
+                void bookingAttempt.catch(() => {});
+                const bookingPid = await blockedBy(pid);
+                activationAttempt = activateAgreement(
+                  domain,
+                  admin,
+                  tenant,
+                  successor,
+                  `activation-after-${action}`,
+                  { ...evidence, version },
+                  randomUUID(),
+                  3600,
+                );
+                void activationAttempt.catch(() => {});
+                await blockedBy(bookingPid);
+                await gate.query("SELECT pg_advisory_unlock(9057)");
+                await Promise.all([bookingAttempt, activationAttempt]);
+                assert.deepEqual(
+                  (
+                    await migration.query(
+                      "SELECT c.attribution_version,c.released,c.starts_at=r.starts_at AND c.ends_at=r.ends_at AS matches,r.status,r.revision FROM domain.agreement_consumption c JOIN domain.reservation r ON r.tenant_id=c.tenant_id AND r.id=c.reservation_id WHERE c.agreement_id=$1 AND c.tenant_id=$2 AND c.reservation_id=$3",
+                      [successor, tenant, booked.id],
+                    )
+                  ).rows,
+                  [
+                    {
+                      attribution_version:
+                        action === "modify" ? version : version - 1,
+                      released: action === "cancel",
+                      matches: true,
+                      status: action === "cancel" ? "CANCELADA" : "CONFIRMADA",
+                      revision: 2,
+                    },
+                  ],
+                );
+              } finally {
+                await gate.query("SELECT pg_advisory_unlock(9057)");
+                gate.release();
+                await Promise.allSettled(
+                  [bookingAttempt, activationAttempt].filter(
+                    (p) => p !== undefined,
+                  ),
+                );
+                await migration.query(
+                  "DROP TRIGGER IF EXISTS pause_existing_booking_fixture ON domain.reservation_event",
+                );
+                await migration.query(
+                  "DROP FUNCTION IF EXISTS domain.pause_existing_booking_fixture()",
+                );
+              }
+            }
           },
         );
       },
