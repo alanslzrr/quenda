@@ -11,12 +11,16 @@ export function ActionForm({
   label,
   success,
   danger = false,
+  resetOnSuccess = true,
+  disabled = false,
 }: {
   children?: ReactNode;
   submit: (data: FormData) => Promise<void>;
   label: string;
   success?: string;
   danger?: boolean;
+  resetOnSuccess?: boolean;
+  disabled?: boolean;
 }) {
   const lock = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -24,7 +28,7 @@ export function ActionForm({
   const [done, setDone] = useState(false);
   async function run(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (lock.current) return;
+    if (lock.current || disabled) return;
     lock.current = true;
     const form = event.currentTarget;
     const data = new FormData(form);
@@ -34,7 +38,7 @@ export function ActionForm({
     try {
       await submit(data);
       setDone(true);
-      form.reset();
+      if (resetOnSuccess) form.reset();
     } catch (failure) {
       setError(failure);
     } finally {
@@ -57,7 +61,7 @@ export function ActionForm({
         type="submit"
         variant={danger ? "danger" : "primary"}
         loading={busy}
-        disabled={busy}
+        disabled={busy || disabled}
       >
         {label}
       </Button>
