@@ -6,10 +6,19 @@ import { buildApp } from "../../src/app.ts";
 import { localMail } from "../../src/mail/local.ts";
 import { createAuthentication } from "../../src/modules/identity/index.ts";
 import { withDatabase } from "./postgres.ts";
+import { browserCatalog, seedWebCatalog } from "./web-catalog.ts";
 
 // Browser tests own an ephemeral database and local mail sink. No production
 // credentials, external mail delivery or debug HTTP endpoints are involved.
-await withDatabase(async ({ auth, domain }) => {
+await withDatabase(async ({ auth, domain, migration }) => {
+  for (let index = 1; index <= 4; index++) {
+    const catalog = browserCatalog(index);
+    await seedWebCatalog(auth, migration, catalog);
+    await migration.query(
+      "UPDATE domain.municipality SET name=$2 WHERE id=$1",
+      [catalog.tenant, `Oleiros de proba ${index}`],
+    );
+  }
   const config = {
     origin: "http://127.0.0.1:5173",
     secret: randomBytes(32).toString("hex"),
