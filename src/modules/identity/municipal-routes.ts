@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { registerAdministratorQueryRoutes } from "./administrator-query-routes.ts";
+import { registerAppearanceRoutes } from "./appearance-routes.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
 import { registerBookingPolicyRoutes } from "./booking-policy-routes.ts";
 import { registerConservationRoutes } from "./conservation-routes.ts";
@@ -46,6 +47,7 @@ export async function registerMunicipalIdentity(
 ) {
   const actor = createRequestActor(pool, auth, config);
   await registerNavigationRoutes(app, pool, auth, config);
+  await registerAppearanceRoutes(app, pool, auth, config);
   await registerPrivacyPermissionRoutes(app, pool, auth, config);
   await registerConservationRoutes(app, pool, auth, config);
   await registerPersonalDataRoutes(app, pool, auth, config);
