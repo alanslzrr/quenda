@@ -16,7 +16,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 
 | ID | Función | Criterio de aceptación |
 |---|---|---|
-| RF-01 | Consultar instalaciones | El usuario ve las instalaciones publicadas del municipio seleccionado. |
+| RF-01 | Consultar instalaciones | El usuario selecciona un municipio o accede mediante su enlace y consulta sus instalaciones publicadas. |
 | RF-02 | Consultar disponibilidad | El sistema muestra los intervalos admitidos y comprueba de nuevo su disponibilidad al confirmar. |
 | RF-03 | Crear una reserva | El usuario acepta las condiciones vigentes y recibe confirmación o rechazo con motivo. Si el plazo de cancelación ya ha vencido, acepta expresamente que no podrá cancelarla por sí mismo. |
 | RF-04 | Modificar una reserva | La modificación del titular comprueba el plazo aceptado de origen y las condiciones del destino; aplica el cambio atómicamente o conserva la reserva anterior. |
@@ -45,6 +45,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-27 | Facilitar acceso a datos personales | El usuario descarga sus datos accesibles de la instancia. La vía administrativa atiende otros supuestos, incluidas cuentas inactivas, con autorización y alcance delimitados. La descarga identifica restricciones y no se presenta como respuesta completa al derecho de acceso. |
 | RF-28 | Ejecutar actuaciones individuales de privacidad | El personal con permiso específico registra autorización y motivo para suprimir o bloquear un conjunto admitido. El sistema distingue actuación realizada, conflicto y ausencia; conserva auditoría sin eliminar datos de otro ámbito. |
 | RF-29 | Cambiar el correo global | El usuario confirma contraseña y MFA cuando corresponda, autoriza desde el correo actual y verifica el nuevo antes del cambio. La pérdida del correo anterior requiere recuperación asistida verificada; un permiso municipal no habilita esta operación. |
+| RF-30 | Configurar apariencia municipal | El administrador selecciona combinaciones predefinidas para claro y oscuro, previsualiza, guarda o restaura los valores. Se aplican únicamente a la interfaz pública de su municipio, sin colores libres ni estilos por componente. |
 
 ## Requisitos no funcionales
 
@@ -64,7 +65,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RNF-12 | Licencia libre | El código utiliza AGPL-3.0-only, con dependencias y atribuciones compatibles y acceso al código fuente correspondiente cuando lo exige la licencia. |
 | RNF-13 | Rendimiento | El sistema cumple los umbrales del [escenario de aceptación](06_decisiones_y_validacion.md#escenario-de-rendimiento). |
 | RNF-14 | Operabilidad | Los procedimientos permiten instalar, migrar, verificar, restaurar y revertir despliegues. |
-| RNF-15 | Localización | Los flujos, errores y avisos están disponibles en gallego y castellano, con formatos de fecha coherentes. |
+| RNF-15 | Localización | Los flujos, errores y avisos están disponibles en gallego y castellano, con formatos de fecha coherentes. La interfaz utiliza la preferencia explícita del usuario; sin ella, detecta un idioma admitido del navegador y utiliza gallego como alternativa. |
 
 Las obligaciones de la convocatoria se recogen en las [bases oficiales, §1.1, §1.2 y §8](https://www.agasol.gal/wp-content/uploads/2026/10/Bases_I_Certame_GOBTEC_2026.pdf) y en la [descripción del reto](https://www.agasol.gal/i-certame-gobtec/#reto). Las ampliaciones valorables del §1.3 no son requisitos mínimos del certamen.
 

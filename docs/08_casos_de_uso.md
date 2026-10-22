@@ -33,10 +33,10 @@ Una persona puede ejercer varias funciones, sin que una amplíe los permisos de 
 
 - **Actor:** usuario, con o sin sesión.
 - **Objetivo:** encontrar una unidad y un intervalo reservables.
-- **Precondiciones:** municipio seleccionado.
+- **Precondiciones:** acceso a la interfaz pública.
 
 **Flujo principal**
-1. El usuario consulta las instalaciones. Quenda muestra únicamente el catálogo publicado.
+1. El usuario selecciona un municipio o abre su enlace directo. Quenda muestra únicamente sus instalaciones publicadas.
 2. Selecciona una unidad, fecha y duración. Quenda muestra las franjas admitidas en hora local y sus condiciones.
 3. El usuario elige una franja para continuar en CU-02; la consulta no la reserva.
 
@@ -287,7 +287,7 @@ Una persona puede ejercer varias funciones, sin que una amplíe los permisos de 
 - **Precondiciones:** cuenta habilitada; el cambio de correo exige contraseña actual y MFA reciente si está habilitado.
 
 **Flujo principal**
-1. El usuario comunica los cambios en sus campos permitidos. Quenda los valida sin alterar identificadores ni evidencias históricas.
+1. El usuario comunica los cambios en sus campos permitidos. Quenda los valida sin alterar identificadores ni evidencias históricas. Puede cambiar idioma y claro/oscuro desde su perfil o el menú superior de ajustes; ambos accesos utilizan las mismas preferencias.
 2. Para cambiar el correo, confirma sus credenciales, autoriza desde el buzón actual y verifica el nuevo.
 3. Quenda sustituye el correo, registra la operación y revoca las sesiones. El usuario debe iniciar sesión de nuevo.
 
@@ -486,5 +486,26 @@ Una persona puede ejercer varias funciones, sin que una amplíe los permisos de 
 **Resultado esperado:** instancia recuperada y revisada, o acceso bloqueado hasta resolver los impedimentos.
 
 **Fundamento:** [RNF-10 y RNF-14](01_requisitos.md#requisitos-no-funcionales), [conservación en restauraciones](05_seguridad_y_cumplimiento.md#conservación-en-copias-y-restauraciones) y [requisitos de implantación](06_decisiones_y_validacion.md#requisitos-de-implantación). Recuperar disponibilidad no permite rehabilitar datos suprimidos o restringidos.
+
+## CU-23 — Configurar la apariencia pública
+
+- **Actor:** administrador municipal.
+- **Objetivo:** aplicar la identidad visual permitida a la interfaz pública de su municipio.
+- **Precondiciones:** permiso vigente y MFA reciente para guardar.
+
+**Flujo principal**
+1. El administrador abre «Apariencia», selecciona una combinación predefinida para cada modo y el modo inicial.
+2. Quenda muestra una vista previa sin modificar la interfaz publicada.
+3. Al guardar, comprueba permisos y revisión, persiste la configuración y registra la actuación.
+
+**Alternativas y excepciones**
+- Restaurar aplica la combinación neutra en ambos modos y el modo claro mediante la misma operación de guardado.
+- Una revisión obsoleta exige consultar la configuración actual; no sobrescribe el cambio de otro administrador.
+- La elección personal de claro/oscuro prevalece sobre el modo inicial del municipio.
+- La administración conserva el tema de Quenda. No se admiten colores libres ni estilos por componente.
+
+**Resultado esperado:** apariencia pública persistida únicamente en el municipio autorizado.
+
+**Fundamento:** [RF-30](01_requisitos.md#requisitos-funcionales), [RNF-02 y RNF-04](01_requisitos.md#requisitos-no-funcionales) y [apariencia y preferencias](02_modelo_dominio.md#apariencia-y-preferencias). Las combinaciones cerradas mantienen contraste y coherencia sin exponer un editor de estilos.
 
 Referencia de estructura: [IBM — Use case specification outline](https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/doors-next/7.2.0?topic=cases-use-case-specification-outline).

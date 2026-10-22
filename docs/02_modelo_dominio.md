@@ -220,3 +220,13 @@ La retirada de identidad exige una cuenta dada de baja y las comprobaciones de p
 Quenda no considera anónimo un historial por sustituir nombres o identificadores. Los agregados de colaboración mantienen sus [controles de publicación](07_identidad_y_colaboracion.md#c-03-informes-agregados).
 
 Las solicitudes y su valoración jurídica se tramitan por los canales administrativos existentes, sin tickets ni expedientes nuevos en Quenda. Los mecanismos técnicos no sustituyen la identificación del responsable, la aprobación de los plazos ni la resolución del derecho. Las reservas protegidas pueden impedir una supresión concreta, no denegar indiscriminadamente acceso o rectificación.
+
+## Apariencia y preferencias
+
+Cada municipio configura una combinación predefinida para el modo claro, otra para el oscuro y un modo inicial. Las combinaciones determinan acento, fondo y texto; los componentes conservan sus colores semánticos y estados accesibles. No se admite CSS, colores libres ni ajustes individuales de componentes.
+
+La configuración pública comienza con la combinación neutra en ambos modos y el modo claro. Guardar o restaurar exige administrador municipal, MFA reciente y la revisión consultada; conserva auditoría y rechaza una revisión obsoleta sin sobrescribir el cambio anterior. La vista previa no modifica la configuración publicada.
+
+El modo elegido por el usuario prevalece sobre el predeterminado municipal. La administración conserva la identidad visual de Quenda en ambos modos. Cambiar de municipio no copia su apariencia al siguiente.
+
+Idioma y modo se gestionan desde el menú superior de ajustes o el perfil, con una única preferencia por cuenta. Sin sesión, la elección se conserva en el navegador. Sin idioma explícito, la interfaz selecciona el primer idioma admitido del navegador —gallego o castellano— y utiliza gallego como alternativa. La preferencia explícita de idioma también se aplica a nuevos avisos; no reescribe mensajes ya generados.
