@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { once } from "node:events";
+import { mkdir, writeFile } from "node:fs/promises";
 import { isIP } from "node:net";
 import path from "node:path";
 import { buildApp } from "../../src/app.ts";
@@ -7,6 +8,7 @@ import { localMail } from "../../src/mail/local.ts";
 import { createAuthentication } from "../../src/modules/identity/index.ts";
 import { withDatabase } from "./postgres.ts";
 import { browserCatalog, seedWebCatalog } from "./web-catalog.ts";
+import { seedMunicipalBrowser } from "./web-municipal.ts";
 
 // Browser tests own an ephemeral database and local mail sink. No production
 // credentials, external mail delivery or debug HTTP endpoints are involved.
@@ -50,6 +52,16 @@ await withDatabase(async ({ auth, domain, migration }) => {
     )
       Object.defineProperty(request, "ip", { value: client });
   });
+  const municipalFixtures = [];
+  for (let index = 1; index <= 10; index++)
+    municipalFixtures.push(
+      await seedMunicipalBrowser(app, auth, domain, migration, index),
+    );
+  await mkdir("web/test-results", { recursive: true });
+  await writeFile(
+    "web/test-results/municipal-fixtures.json",
+    JSON.stringify(municipalFixtures),
+  );
   await app.listen({ host: "127.0.0.1", port: 3000 });
   try {
     await Promise.race([once(process, "SIGTERM"), once(process, "SIGINT")]);

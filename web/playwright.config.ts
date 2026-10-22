@@ -26,6 +26,7 @@ export default defineConfig({
       url: "http://127.0.0.1:3000/health/ready",
       reuseExistingServer: false,
       timeout: 60000,
+      gracefulShutdown: { signal: "SIGTERM", timeout: 10000 },
     },
     {
       command: "pnpm dev",
