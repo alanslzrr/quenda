@@ -32,6 +32,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   });
   const previousAccount = useRef<string | undefined>(undefined);
   useEffect(() => {
+    if (query.data === null) forgetCommand();
     const current = query.data?.accountId;
     const previous = previousAccount.current;
     previousAccount.current = current;
@@ -40,7 +41,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       void client.cancelQueries({ queryKey: ["private", previous] });
       client.removeQueries({ queryKey: ["private", previous] });
     }
-  }, [client, query.data?.accountId]);
+  }, [client, query.data]);
   async function refresh() {
     await client.cancelQueries({ queryKey: ["session"] });
     const next = await api<Account>("/api/me");

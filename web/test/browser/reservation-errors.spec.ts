@@ -344,3 +344,34 @@ test("a deadline rejection leaves the reservation confirmed and never invents a 
   await expect(page.getByText("Confirmada", { exact: true })).toBeVisible();
   await expect(page.getByText("Cancelada", { exact: true })).toHaveCount(0);
 });
+
+test("an expired session removes the pending private command before returning to sign-in", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "quenda.reservation-command",
+      JSON.stringify({
+        owner: "ana",
+        key: "pending",
+        body: "{}",
+        path: "/api/municipalities/00000000-0000-4000-8000-000000000001/reservations",
+        createdAt: Date.now(),
+        retentionSeconds: 3600,
+      }),
+    ),
+  );
+  await page.route("**/api/me", (r) =>
+    r.fulfill({
+      status: 401,
+      json: { error: { code: "UNAUTHENTICATED", message: "Sesión requerida" } },
+    }),
+  );
+  await page.goto("/reservas/recuperacion");
+  await expect(page).toHaveURL(/\/acceso\?returnTo=/);
+  await expect
+    .poll(() =>
+      page.evaluate(() => sessionStorage.getItem("quenda.reservation-command")),
+    )
+    .toBeNull();
+});
