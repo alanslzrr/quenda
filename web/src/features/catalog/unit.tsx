@@ -12,7 +12,7 @@ import { calendarLabel } from "../../ui/lib/calendar-labels";
 import { calendarDate, civilDate, municipalToday, slotLabel } from "./dates";
 import styles from "./unit.module.css";
 
-interface Unit {
+export interface Unit {
   id: string;
   name: string;
   timeZone: string;
@@ -34,7 +34,7 @@ interface Instant {
   offset: string;
   timeZone: string;
 }
-interface Availability {
+export interface Availability {
   unitId: string;
   date: string;
   timeZone: string;
@@ -74,16 +74,21 @@ export function UnitPage() {
     />
   );
 }
-function UnitAvailability({
+export function UnitAvailability({
   tenantId,
   unit,
+  reservationId,
+  owner,
 }: {
   tenantId: string;
   unit: Unit;
+  reservationId?: string;
+  owner?: string;
 }) {
   const { locale, t } = usePreferences();
   const [date, setDate] = useState(() => municipalToday(unit.timeZone));
   const [duration, setDuration] = useState(unit.calendar.minimumMinutes);
+  const Heading = reservationId ? "h2" : "h1";
   const today = calendarDate(municipalToday(unit.timeZone));
   const maximum = new Date(today);
   maximum.setDate(
@@ -97,7 +102,8 @@ function UnitAvailability({
     duration % unit.calendar.stepMinutes === 0;
   const availability = useQuery({
     queryKey: [
-      "public",
+      ...(reservationId ? ["private", owner] : ["public"]),
+      reservationId,
       tenantId,
       unit.id,
       "availability",
@@ -108,7 +114,9 @@ function UnitAvailability({
     enabled: valid,
     queryFn: ({ signal }) =>
       api<Availability>(
-        `/api/public/municipalities/${tenantId}/units/${unit.id}/availability?date=${date}&durationMinutes=${duration}`,
+        reservationId
+          ? `/api/municipalities/${tenantId}/reservations/${reservationId}/availability?unitId=${unit.id}&date=${date}&durationMinutes=${duration}`
+          : `/api/public/municipalities/${tenantId}/units/${unit.id}/availability?date=${date}&durationMinutes=${duration}`,
         { signal },
         locale,
       ),
@@ -122,7 +130,7 @@ function UnitAvailability({
         <p className={layout.eyebrow} style={{ marginTop: "2rem" }}>
           {t("Disponibilidad", "Dispoñibilidade")}
         </p>
-        <h1 className={layout.title}>{unit.name}</h1>
+        <Heading className={layout.title}>{unit.name}</Heading>
         <p className={layout.description}>
           {t(
             "Horarios en la zona del municipio:",
@@ -182,11 +190,18 @@ function UnitAvailability({
               <ul className={styles.slots}>
                 {availability.data.slots.map((slot) => (
                   <li key={slot.start.utc}>
-                    <span className={styles.slot}>
+                    <Link
+                      className={styles.slot}
+                      to={
+                        reservationId
+                          ? `/reservas/${tenantId}/${reservationId}/confirmar?unidad=${unit.id}&inicio=${encodeURIComponent(slot.start.utc)}&fin=${encodeURIComponent(slot.end.utc)}`
+                          : `/municipios/${tenantId}/unidades/${unit.id}/reservar?inicio=${encodeURIComponent(slot.start.utc)}&fin=${encodeURIComponent(slot.end.utc)}`
+                      }
+                    >
                       {slotLabel(slot.start.utc, unit.timeZone, locale)} —{" "}
                       {slotLabel(slot.end.utc, unit.timeZone, locale)}
                       <small>UTC{slot.start.offset}</small>
-                    </span>
+                    </Link>
                   </li>
                 ))}
               </ul>

@@ -17,6 +17,8 @@
   gap: 0.75rem;
 }
 .slot {
+  color: var(--foreground);
+  text-decoration: none;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -36,4 +38,9 @@
   .controls {
     max-width: 100%;
   }
+}
+
+.slot:hover {
+  background: var(--surface-muted);
+  border-color: var(--border-strong);
 }
