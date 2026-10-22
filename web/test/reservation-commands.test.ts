@@ -1,0 +1,172 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  forgetCommand,
+  type PendingCommand,
+  pendingKey,
+  readCommand,
+  retryAllowed,
+  sendCommand,
+} from "../src/features/reservations/commands.ts";
+
+const storage = () => {
+  const values = new Map<string, string>();
+  return {
+    getItem: (k: string) => values.get(k) ?? null,
+    setItem: (k: string, v: string) => {
+      values.set(k, v);
+    },
+    removeItem: (k: string) => {
+      values.delete(k);
+    },
+    clear: () => values.clear(),
+    key: () => null,
+    get length() {
+      return values.size;
+    },
+  } satisfies Storage;
+};
+const command = (): PendingCommand => ({
+  owner: "ana",
+  path: "/api/municipalities/00000000-0000-4000-8000-000000000101/reservations",
+  key: "single-key",
+  body: JSON.stringify({
+    unitId: "unit",
+    acceptance: { usageRulesVersion: 1 },
+  }),
+  createdAt: Date.now(),
+  retentionSeconds: 3600,
+});
+test("uncertain commands survive reload and replay exactly once with the original key and body", async () => {
+  const saved = storage();
+  const item = command();
+  const original = globalThis.fetch;
+  const sent: RequestInit[] = [];
+  globalThis.fetch = async (path, options) => {
+    if (String(path).endsWith("command-policy"))
+      return Response.json({
+        retentionSeconds: 3600,
+        serverTime: new Date().toISOString(),
+      });
+    assert.ok(options);
+    sent.push(options);
+    if (sent.length === 1) throw new TypeError("Connection lost after commit");
+    return Response.json({ id: "same-reservation" });
+  };
+  try {
+    await assert.rejects(sendCommand(item, "es", false, saved));
+    assert.deepEqual(readCommand("ana", saved), item);
+    assert.equal(sent.length, 1);
+    assert.equal(readCommand("other", saved), null);
+    assert.deepEqual(await sendCommand(item, "es", true, saved), {
+      id: "same-reservation",
+    });
+    assert.equal(sent.length, 2);
+    assert.equal(
+      new Headers(sent[0].headers).get("Idempotency-Key"),
+      new Headers(sent[1].headers).get("Idempotency-Key"),
+    );
+    assert.equal(sent[0].body, sent[1].body);
+    assert.equal(readCommand("ana", saved), null);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+test("expired or shortened retention never sends a mutation", async () => {
+  const saved = storage();
+  const item = command();
+  item.createdAt -= 100000;
+  const original = globalThis.fetch;
+  let posts = 0;
+  globalThis.fetch = async (_path, options) => {
+    if (options?.method === "POST") posts++;
+    return Response.json({
+      retentionSeconds: 10,
+      serverTime: new Date().toISOString(),
+    });
+  };
+  try {
+    await assert.rejects(
+      sendCommand(item, "es", true, saved),
+      /plazo de reintento/,
+    );
+    assert.equal(posts, 0);
+    assert.equal(retryAllowed(item, item.createdAt - 1), false);
+    assert.equal(retryAllowed(item, item.createdAt + 3600000), false);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+test("definitive rejection clears a new command but an in-flight replay conflict retains its evidence", async () => {
+  const saved = storage();
+  const original = globalThis.fetch;
+  globalThis.fetch = async (path) =>
+    String(path).endsWith("command-policy")
+      ? Response.json({
+          retentionSeconds: 3600,
+          serverTime: new Date().toISOString(),
+        })
+      : Response.json(
+          { error: { code: "CONFLICT", message: "Conflict" } },
+          { status: 409 },
+        );
+  try {
+    await assert.rejects(sendCommand(command(), "es", false, saved));
+    assert.equal(saved.length, 0);
+    await assert.rejects(sendCommand(command(), "es", true, saved));
+    assert.ok(readCommand("ana", saved));
+    forgetCommand(saved);
+    assert.equal(saved.length, 0);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+test("malformed stored paths cannot send arbitrary authenticated requests", () => {
+  const saved = storage();
+  saved.setItem(
+    pendingKey,
+    JSON.stringify({ ...command(), path: "/api/auth/delete-user" }),
+  );
+  assert.equal(readCommand("ana", saved), null);
+});
+
+test("a second form cannot overwrite an in-flight or uncertain command", async () => {
+  const saved = storage();
+  const first = command();
+  const second = { ...command(), key: "second-key" };
+  const original = globalThis.fetch;
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let posts = 0;
+  globalThis.fetch = async (path) => {
+    if (String(path).endsWith("command-policy"))
+      return Response.json({
+        retentionSeconds: 3600,
+        serverTime: new Date().toISOString(),
+      });
+    posts++;
+    await gate;
+    throw new TypeError("Unknown outcome");
+  };
+  try {
+    const running = sendCommand(first, "es", false, saved);
+    await assert.rejects(
+      sendCommand(second, "es", false, saved),
+      /operación anterior/,
+    );
+    release();
+    await assert.rejects(running);
+    assert.equal(posts, 1);
+    assert.equal(readCommand("ana", saved)?.key, first.key);
+    await assert.rejects(
+      sendCommand(second, "es", false, saved),
+      /operación anterior/,
+    );
+    assert.equal(readCommand("ana", saved)?.key, first.key);
+  } finally {
+    release();
+    globalThis.fetch = original;
+  }
+});

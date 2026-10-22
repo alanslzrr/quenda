@@ -1,0 +1,134 @@
+import { ApiError, api } from "../../app/api.ts";
+export const pendingKey = "quenda.reservation-command";
+export interface PendingCommand {
+  owner: string;
+  path: string;
+  key: string;
+  body: string;
+  createdAt: number;
+  retentionSeconds: number;
+}
+export interface CommandPolicy {
+  retentionSeconds: number;
+  serverTime: string;
+}
+export function readCommand(
+  owner: string,
+  storage: Storage = sessionStorage,
+): PendingCommand | null {
+  try {
+    const value = storage.getItem(pendingKey);
+    if (!value) return null;
+    const item = JSON.parse(value) as PendingCommand;
+    if (item.owner !== owner) return null;
+    if (
+      !/^\/api\/municipalities\/[\da-f-]+\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?$/.test(
+        item.path,
+      ) ||
+      typeof item.body !== "string" ||
+      typeof item.key !== "string" ||
+      !Number.isFinite(item.createdAt) ||
+      !Number.isFinite(item.retentionSeconds)
+    )
+      throw new Error("Invalid command");
+    return item;
+  } catch {
+    forgetCommand(storage);
+    return null;
+  }
+}
+export function forgetCommand(storage: Storage = sessionStorage) {
+  try {
+    storage.removeItem(pendingKey);
+  } catch {
+    /* No stored command when storage is unavailable. */
+  }
+}
+export function retryAllowed(
+  item: PendingCommand,
+  now = Date.now(),
+  retention = item.retentionSeconds,
+) {
+  // Keep a margin before server expiry; expired keys may execute a new command.
+  return (
+    now >= item.createdAt &&
+    now <
+      item.createdAt + Math.min(retention, item.retentionSeconds) * 1000 - 5000
+  );
+}
+let inFlight = false;
+export async function sendCommand<T>(
+  item: PendingCommand,
+  locale: "es" | "gl",
+  retry = false,
+  storage: Storage = sessionStorage,
+): Promise<T> {
+  const busy = () =>
+    new ApiError(
+      0,
+      "COMMAND_PENDING",
+      locale === "es"
+        ? "Comprueba la operación anterior antes de enviar otra."
+        : "Comproba a operación anterior antes de enviar outra.",
+    );
+  if (inFlight) throw busy();
+  inFlight = true;
+  try {
+    const existing = readCommand(item.owner, storage);
+    if (
+      existing &&
+      (existing.key !== item.key ||
+        existing.body !== item.body ||
+        existing.path !== item.path)
+    )
+      throw busy();
+    const policy = await api<CommandPolicy>(
+      "/api/public/reservation-command-policy",
+      {},
+      locale,
+    );
+    if (
+      !retryAllowed(
+        item,
+        Date.parse(policy.serverTime),
+        policy.retentionSeconds,
+      )
+    )
+      throw new ApiError(
+        0,
+        "RETRY_EXPIRED",
+        locale === "es"
+          ? "El plazo de reintento ha terminado. Comprueba el resultado en tus reservas."
+          : "O prazo de reintento rematou. Comproba o resultado nas túas reservas.",
+      );
+    storage.setItem(pendingKey, JSON.stringify(item));
+    try {
+      const result = await api<T>(
+        item.path,
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": item.key },
+          body: item.body,
+          signal: AbortSignal.timeout(15000),
+        },
+        locale,
+      );
+      if (readCommand(item.owner, storage)?.key === item.key)
+        forgetCommand(storage);
+      return result;
+    } catch (error) {
+      // A timeout or 5xx does not prove rollback. Keep exactly the same command.
+      if (
+        error instanceof ApiError &&
+        error.status >= 400 &&
+        error.status < 500 &&
+        !(retry && error.code === "CONFLICT") &&
+        readCommand(item.owner, storage)?.key === item.key
+      )
+        forgetCommand(storage);
+      throw error;
+    }
+  } finally {
+    inFlight = false;
+  }
+}
