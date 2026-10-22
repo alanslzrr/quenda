@@ -104,7 +104,12 @@ export async function registerReservationQueries(
       : { accountId: { type: "string" } };
     app.get<{
       Params: { tenantId: string };
-      Querystring: { after?: string; unitId?: string; tenantId?: string };
+      Querystring: {
+        after?: string;
+        unitId?: string;
+        tenantId?: string;
+        date?: string;
+      };
     }>(
       own
         ? "/api/me/reservations"
@@ -116,7 +121,7 @@ export async function registerReservationQueries(
           security: [{ quendaSession: [] }],
           description: own
             ? "Reservas del usuario autenticado entre municipios de esta instancia, incluidas unidades retiradas. tenantId filtra un municipio sin ampliar el acceso. Páginas de 20, orden estable por ID y municipio. Mantener el filtro al continuar con nextCursor; al cambiarlo, iniciar sin cursor. El cursor no identifica otro usuario."
-            : "Reservas del municipio incluidas en los permisos RESERVATION_READ o RESERVATION_MANAGE. Requiere MFA. Páginas de 20 por ID; unitId filtra una unidad sin ampliar permisos.",
+            : "Reservas del municipio incluidas en los permisos RESERVATION_READ o RESERVATION_MANAGE. Requiere MFA. Páginas de 20 por ID; unitId filtra una unidad sin ampliar permisos. date selecciona intervalos que se solapan con ese día en la zona municipal antes de paginar; incluye reservas canceladas.",
           ...(!own
             ? {
                 params: {
@@ -132,7 +137,11 @@ export async function registerReservationQueries(
             additionalProperties: false,
             properties: own
               ? { after: { type: "string", maxLength: 73 }, tenantId: uuid }
-              : { after: uuid, unitId: uuid },
+              : {
+                  after: uuid,
+                  unitId: uuid,
+                  date: { type: "string", format: "date" },
+                },
           },
           response: {
             ...Object.fromEntries(

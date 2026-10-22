@@ -66,7 +66,11 @@ export async function listMunicipalReservations(
   pool: Pool,
   actor: AuthenticatedAccount,
   tenantId: string,
-  options: { after?: string | null; unitId?: string | null } = {},
+  options: {
+    after?: string | null;
+    unitId?: string | null;
+    date?: string;
+  } = {},
   clock: Clock = systemClock,
   correlationId: string = randomUUID(),
 ) {
@@ -85,9 +89,10 @@ export async function listMunicipalReservations(
       const result = await client.query<Reservation>(
         `SELECT r.* FROM domain.reservation r WHERE r.tenant_id=$1
    AND ($2::uuid IS NULL OR r.id>$2) AND ($3::uuid IS NULL OR r.unit_id=$3)
+   AND ($4::date IS NULL OR (r.starts_at < (($4::date+1)::timestamp AT TIME ZONE (SELECT timezone FROM domain.municipality WHERE id=$1)) AND r.ends_at > ($4::date::timestamp AT TIME ZONE (SELECT timezone FROM domain.municipality WHERE id=$1))))
    AND (domain.lock_permission('RESERVATION_READ',r.unit_id) OR domain.lock_permission('RESERVATION_MANAGE',r.unit_id))
    ORDER BY r.id LIMIT 21`,
-        [tenantId, after, unitId],
+        [tenantId, after, unitId, options.date ?? null],
       );
       const page = result.rows.slice(0, 20),
         now = clock.now().getTime();
