@@ -269,7 +269,7 @@ export function SortableDataTable<T extends Record<string, unknown>>({ rows, col
   return <div data-lumen="" className={styles.wrapper} onKeyDown={onKeyDown}>
     <div className={styles.scroller}>
       {band ? <span className={styles.band} style={{ left: band.left, width: band.width }} aria-hidden="true" /> : null}
-      <table ref={tableRef} role="table" className={styles.table} data-fixed={widths ? "" : undefined} data-selectable={selectable || undefined}>
+      <table data-static={columns.every(column => column.sortable === false) || undefined} ref={tableRef} role="table" className={styles.table} data-fixed={widths ? "" : undefined} data-selectable={selectable || undefined}>
         <caption>{caption}</caption>
         <colgroup>
           {selectable ? <col className={styles.selectCol} /> : null}
