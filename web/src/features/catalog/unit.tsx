@@ -141,6 +141,7 @@ function UnitAvailability({
           className={styles.controls}
         >
           <Calendar
+            today={today}
             locale={locale}
             value={calendarDate(date)}
             onChange={(value) => setDate(civilDate(value))}

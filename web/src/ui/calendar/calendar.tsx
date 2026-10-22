@@ -21,6 +21,8 @@ export interface CalendarProps {
   maxDate?: Date;
   disabledDates?: CalendarDateMatcher;
   locale?: string;
+  /** Civil date used for the current-day marker when the service timezone differs. */
+  today?: Date;
   className?: string;
   /** Adds a Today button that slides back to the current month and selects today when it is available. */
   showToday?: boolean;
@@ -104,6 +106,7 @@ function MonthPane({ index, position, present, children }: { index: number; posi
 }
 
 export function Calendar({
+  today: serviceToday,
   value,
   onChange,
   month: controlledMonth,
@@ -116,7 +119,8 @@ export function Calendar({
   showToday = false,
 }: CalendarProps) {
   const titleId = useId();
-  const today = useToday();
+  const browserToday = useToday();
+  const today = serviceToday ?? browserToday;
   // Motion preference only counts after hydration, so server and client markup agree.
   const hydrated = useSyncExternalStore(subscribeNothing, clientSnapshot, serverSnapshot);
   const reducedMotion = (useReducedMotion() ?? false) && hydrated;

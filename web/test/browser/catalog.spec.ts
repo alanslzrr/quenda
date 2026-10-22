@@ -1,6 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
+test.use({ timezoneId: "America/Los_Angeles" });
+
 const tenant = "00000000-0000-4000-8000-000000000001";
 const facility = "00000000-0000-4000-8000-000000000002";
 const unit = "00000000-0000-4000-8000-000000000003";
@@ -206,4 +208,20 @@ test("public navigation and date controls fit a narrow viewport", async ({
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+});
+
+test("current-day marker follows the municipality rather than browser timezone", async ({
+  page,
+}, info) => {
+  await page.clock.setFixedTime(new Date("2026-10-22T22:30:00Z"));
+  await page.goto(`/municipios/${tenant}/unidades/${unit}`);
+  await expect(
+    page.getByRole("gridcell", {
+      name:
+        info.project.use.locale === "gl-ES"
+          ? "venres, 23 de outubro de 2026"
+          : "viernes, 23 de octubre de 2026",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-current", "date");
 });
