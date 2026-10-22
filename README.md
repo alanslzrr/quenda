@@ -39,7 +39,11 @@ pnpm --dir web exec playwright install chromium
 PG_BIN=/ruta/a/postgresql-17.11/bin pnpm --dir web test:browser
 ```
 
-`build` comprueba tipos y genera archivos estáticos en `web/dist`. Las pruebas de navegador del catálogo utilizan respuestas controladas para comprobar presentación, errores, preferencias y accesibilidad. Las de autenticación utilizan Better Auth, una base PostgreSQL temporal y correo local, sin credenciales de la instancia de desarrollo. Requieren los puertos 3000 y 5173 libres. Las pruebas PostgreSQL verifican los contratos y el aislamiento. Las fuentes conservan sus avisos en `web/public/licenses`; la compilación añade las [licencias de las dependencias empaquetadas](https://vite.dev/config/build-options.html#build-license) en `web/dist/licenses/dependencies.md`.
+`build` comprueba tipos y genera archivos estáticos en `web/dist`. Las pruebas de navegador del catálogo utilizan respuestas controladas para comprobar presentación, errores, preferencias y accesibilidad. Las de cuenta y reservas utilizan Better Auth, una base PostgreSQL temporal, municipios sintéticos aislados y correo local, sin credenciales de la instancia de desarrollo. Las respuestas controladas verifican también cambios de normas, cuotas, recuperación de respuestas perdidas y aceptación pendiente. Requieren los puertos 3000 y 5173 libres. Las pruebas PostgreSQL verifican los contratos y el aislamiento. Las fuentes conservan sus avisos en `web/public/licenses`; la compilación añade las [licencias de las dependencias empaquetadas](https://vite.dev/config/build-options.html#build-license) en `web/dist/licenses/dependencies.md`.
+
+La cuenta ofrece datos personales, preferencias, contraseña, MFA, sesiones, invitaciones, descarga de datos y baja. Los enlaces de recuperación, reactivación y cambio de correo requieren una acción expresa; abrirlos no ejecuta la operación.
+
+Las reservas incluyen confirmación de condiciones, historial por municipio, modificación, cancelación, aceptación de normas pendientes y avisos. Una respuesta incierta conserva en la pestaña la clave y el contenido del comando para su comprobación expresa, dentro del plazo publicado por la API. No se reenvía automáticamente ni se conserva después de cerrar sesión.
 
 ## Autenticación local
 
@@ -176,9 +180,13 @@ Enviar `acceptance` expresa la aceptación de esas versiones. `nonCancellable` d
 
 La respuesta `201` contiene la reserva y sus condiciones aceptadas. Repetir la misma clave y contenido devuelve el resultado original, también con `201`; cambiar el contenido devuelve `409`. Las cabeceras `Idempotency-Replayed` e `Idempotency-Expires-At` indican recuperación y vencimiento. `Idempotency-Retention-Seconds` publica la configuración para comandos nuevos: `IDEMPOTENCY_RETENTION_SECONDS`, 86.400 segundos por defecto. El vencimiento ya guardado no cambia al repetir una petición ni al cambiar esa configuración. Una clave caducada puede ejecutar un comando nuevo; no debe reutilizarse para recuperar resultados fuera de su ventana.
 
+`GET /api/public/reservation-command-policy` devuelve `retentionSeconds` y `serverTime`, sin caché. El cliente obtiene la ventana de recuperación antes de enviar un comando y vuelve a comprobarla antes de repetir un resultado incierto. Fuera de esa ventana, consulta el estado actual en vez de reenviar la clave caducada.
+
 La creación valida las reglas vigentes y confirma reserva, ocupación, evento, avisos y resultado idempotente en una sola transacción. Un conflicto no deja cambios parciales. El correo queda pendiente para su entrega por el worker. La disponibilidad pública descuenta las ocupaciones confirmadas, pero no garantiza que una franja siga libre al reservar.
 
 ## Modificación de reservas
+
+Con sesión del titular, `GET /api/municipalities/{tenantId}/reservations/{reservationId}/availability?unitId=UUID&date=AAAA-MM-DD&durationMinutes=N` calcula franjas para una modificación dentro del plazo aceptado. Excluye solo la ocupación de esa reserva, mantiene las demás reservas y bloqueos y exige una unidad pública del mismo municipio. Consultar no libera ni garantiza la franja.
 
 `POST /api/municipalities/{tenantId}/reservations/{reservationId}/modify` recibe `expectedRevision`, `unitId`, `startsAt` y `endsAt`, con la misma autenticación e idempotencia que la confirmación. Devuelve `200`. No cambia el titular ni el municipio.
 

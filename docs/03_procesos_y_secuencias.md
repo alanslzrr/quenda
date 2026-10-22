@@ -146,6 +146,8 @@ Todas las operaciones de la transacción utilizan el mismo cliente del pool de c
 
 ## Modificación y cancelación
 
+Al elegir un nuevo horario, la consulta del titular excluye únicamente la ocupación de su reserva. Conserva las demás reservas y bloqueos, no libera la franja actual y vuelve a comprobar el plazo de modificación. La disponibilidad pública mantiene todas las ocupaciones.
+
 El comando incluye la versión conocida de la reserva. El sistema comprueba autorización e idempotencia antes de evaluar esa versión. Una versión obsoleta exige consultar de nuevo la reserva. Si una cancelación autorizada encuentra la reserva ya cancelada, devuelve ese estado sin repetir sus efectos.
 
 Una modificación sin cambios de unidad o intervalo conserva la atribución de cuota y no genera un evento de cambio. Las demás modificaciones revalidan destino, horario y convenio; liberan el consumo anterior y registran el nuevo en la misma transacción. Un error conserva tanto la reserva como su consumo.
