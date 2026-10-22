@@ -10,14 +10,14 @@
 | CU-04 | Un administrador o gestor autorizado mantiene el catálogo y calendario. | Configuración persistida y auditada, sin invalidar reservas confirmadas. |
 | CU-05 | Un gestor autorizado consulta indicadores o exporta datos. | Resultados del municipio y periodo permitidos. |
 | CU-06 | Un operador de plataforma da de alta un municipio. | Configuración inicial e invitación a su primer administrador. |
-| CU-07 | Un usuario crea una cuenta o un perfil municipal. | Cuenta global y relación con el servicio municipal. |
+| CU-07 | Un usuario crea una cuenta y utiliza un servicio municipal. | Cuenta global y relación automática con el municipio al reservar. |
 | CU-08 | Un usuario consulta su historial. | Reservas propias de la instancia, filtrables por municipio. |
 | CU-09 | Un usuario inicia o cierra sesión. | Sesión validada o revocada por Better Auth. |
 | CU-10 | Los administradores participantes gestionan un convenio. | Capacidades y unidades reservables autorizadas según su versión y vigencia. |
 
 ## Registro y administración
 
-El usuario crea una cuenta, verifica su correo y completa los datos mínimos del servicio municipal antes de reservar. Consultar el catálogo no crea un perfil municipal.
+El usuario crea una cuenta y verifica su correo antes de reservar. Al confirmar una reserva, Quenda crea la relación cuenta–municipio si no existe; el usuario no cumplimenta un perfil municipal adicional. Consultar el catálogo no crea esa relación.
 
 El operador de plataforma crea el municipio e invita a su primer administrador. El administrador municipal configura el catálogo y asigna permisos mediante invitaciones vinculadas a cuenta, municipio, rol, vigencia y unidades reservables, cuando el ámbito esté limitado. La aceptación exige autenticar al destinatario y comprobar que la invitación sigue vigente; no permite ampliar sus permisos.
 

@@ -104,7 +104,7 @@ export async function registerReservationQueries(
       : { accountId: { type: "string" } };
     app.get<{
       Params: { tenantId: string };
-      Querystring: { after?: string; unitId?: string };
+      Querystring: { after?: string; unitId?: string; tenantId?: string };
     }>(
       own
         ? "/api/me/reservations"
@@ -115,7 +115,7 @@ export async function registerReservationQueries(
           tags: ["Reservations"],
           security: [{ quendaSession: [] }],
           description: own
-            ? "Reservas del usuario autenticado entre municipios de esta instancia, incluidas unidades retiradas. Páginas de 20, orden estable por ID y municipio. El cursor no identifica otro usuario."
+            ? "Reservas del usuario autenticado entre municipios de esta instancia, incluidas unidades retiradas. tenantId filtra un municipio sin ampliar el acceso. Páginas de 20, orden estable por ID y municipio. Mantener el filtro al continuar con nextCursor; al cambiarlo, iniciar sin cursor. El cursor no identifica otro usuario."
             : "Reservas del municipio incluidas en los permisos RESERVATION_READ o RESERVATION_MANAGE. Requiere MFA. Páginas de 20 por ID; unitId filtra una unidad sin ampliar permisos.",
           ...(!own
             ? {
@@ -131,7 +131,7 @@ export async function registerReservationQueries(
             type: "object",
             additionalProperties: false,
             properties: own
-              ? { after: { type: "string", maxLength: 73 } }
+              ? { after: { type: "string", maxLength: 73 }, tenantId: uuid }
               : { after: uuid, unitId: uuid },
           },
           response: {
@@ -195,7 +195,7 @@ export async function registerReservationQueries(
         const account = await actor(request, reply);
         reply.header("cache-control", "no-store");
         return own
-          ? listOwnReservations(pool, account, request.query.after ?? null)
+          ? listOwnReservations(pool, account, request.query)
           : listMunicipalReservations(
               pool,
               account,

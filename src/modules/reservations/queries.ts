@@ -26,10 +26,13 @@ function current(row: Omit<Reservation, "account_id">, now: number) {
 export async function listOwnReservations(
   pool: Pool,
   actor: AuthenticatedAccount,
-  after: string | null = null,
+  options: { after?: string | null; tenantId?: string | null } = {},
   clock: Clock = systemClock,
 ) {
-  const cursor = ownCursor(after);
+  const cursor = ownCursor(options.after ?? null);
+  const tenantId = options.tenantId ?? null;
+  if (tenantId !== null && !uuid.test(tenantId))
+    throw new HttpError("INVALID_INPUT");
   return command(
     pool,
     { accountId: actor.accountId, tenantId: null },
@@ -39,7 +42,10 @@ export async function listOwnReservations(
           municipality: string;
           unit_name: string;
         }
-      >("SELECT * FROM domain.own_reservations($1,$2)", cursor);
+      >("SELECT * FROM domain.own_reservations($1,$2,$3)", [
+        ...cursor,
+        tenantId,
+      ]);
       const page = result.rows.slice(0, 20),
         now = clock.now().getTime();
       return {

@@ -13,6 +13,7 @@ Quenda gestiona la consulta y reserva de instalaciones deportivas municipales. E
 | [05 Seguridad y cumplimiento](05_seguridad_y_cumplimiento.md) | Autorización, aislamiento, privacidad y accesibilidad. |
 | [06 Validación](06_decisiones_y_validacion.md) | Pruebas de aceptación, rendimiento y requisitos de implantación. |
 | [07 Identidad y colaboración](07_identidad_y_colaboracion.md) | Cuenta global, convenios, acreditaciones, cuotas e informes. |
+| [08 Casos de uso](08_casos_de_uso.md) | Actores, objetivos, flujos, excepciones y resultados de las interacciones. |
 
 ## Terminología
 

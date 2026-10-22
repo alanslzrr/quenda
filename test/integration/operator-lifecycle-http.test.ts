@@ -11,7 +11,7 @@ import { verifyProductResponses } from "../helpers/response-contract.ts";
 
 test("operator handover works through Better Auth email verification and real MFA without server access", {
   timeout: 60000,
-}, async () => {
+}, async (t) => {
   await withDatabase(async ({ auth, domain, migration }) => {
     const messages: MailMessage[] = [];
     const config = {
@@ -150,6 +150,133 @@ test("operator handover works through Better Auth email verification and real MF
           )
         ).rows[0].twoFactorEnabled,
         true,
+      );
+      await t.test(
+        "global suspension HTTP verifies session, origin, permission, fresh MFA and response contract",
+        async () => {
+          const url = `/api/platform/accounts/${first.id}/suspend`;
+          const body = {
+            reason: "Verified compromise requiring global containment",
+          };
+          assert.equal(
+            (
+              await app.inject({
+                method: "POST",
+                url,
+                payload: body,
+                headers: { origin: config.origin },
+              })
+            ).statusCode,
+            401,
+          );
+          assert.equal((await first.client.request(url, body)).statusCode, 403);
+          assert.equal(
+            (
+              await app.inject({
+                method: "POST",
+                url,
+                payload: body,
+                headers: { cookie: second.client.cookie() },
+              })
+            ).statusCode,
+            403,
+          );
+          assert.equal(
+            (
+              await second.client.request(url, body, {
+                origin: "https://external.test",
+              })
+            ).statusCode,
+            403,
+          );
+          assert.equal(
+            (
+              await second.client.request(url, body, {
+                "sec-fetch-site": "cross-site",
+              })
+            ).statusCode,
+            403,
+          );
+          for (const invalid of [
+            {},
+            { reason: "" },
+            { reason: " " },
+            { reason: "x".repeat(501) },
+            { ...body, accountId: second.id },
+          ])
+            assert.equal(
+              (await second.client.request(url, invalid)).statusCode,
+              400,
+            );
+          assert.equal(
+            (
+              await second.client.request(
+                "/api/platform/accounts/unknown-account/suspend",
+                body,
+              )
+            ).statusCode,
+            404,
+          );
+          await auth.query(
+            'UPDATE auth.session SET "mfaVerifiedAt"=now()-interval \'6 minutes\' WHERE "userId"=$1',
+            [second.id],
+          );
+          const stale = await second.client.request(url, body);
+          assert.equal(stale.statusCode, 403, stale.body);
+          assert.equal(stale.json().error.code, "REAUTHENTICATION_REQUIRED");
+          assert.equal(
+            ok(await first.client.request("/api/auth/get-session")).user.id,
+            first.id,
+          );
+          assert.equal(
+            (
+              await migration.query(
+                "SELECT 1 FROM auth.account_security_event WHERE subject_id=$1 AND operation='SUSPEND_ACCOUNT'",
+                [first.id],
+              )
+            ).rowCount,
+            0,
+          );
+          await auth.query(
+            'UPDATE auth.session SET "mfaVerifiedAt"=now() WHERE "userId"=$1',
+            [second.id],
+          );
+          const response = await second.client.request(url, body);
+          const suspended = ok(response);
+          assert.deepEqual(Object.keys(suspended).sort(), [
+            "accountId",
+            "suspendedAt",
+          ]);
+          assert.equal(suspended.accountId, first.id);
+          assert.ok(Number.isFinite(Date.parse(suspended.suspendedAt)));
+          assert.equal(response.headers["cache-control"], "no-store");
+          assert.equal(
+            (await first.client.request("/api/me/reservations")).statusCode,
+            401,
+          );
+          assert.equal(
+            (
+              await migration.query(
+                'SELECT 1 FROM auth.session WHERE "userId"=$1',
+                [first.id],
+              )
+            ).rowCount,
+            0,
+          );
+          const audit = (
+            await migration.query(
+              "SELECT actor_id,reason FROM auth.account_security_event WHERE subject_id=$1 AND operation='SUSPEND_ACCOUNT'",
+              [first.id],
+            )
+          ).rows;
+          assert.deepEqual(audit, [
+            { actor_id: second.id, reason: body.reason },
+          ]);
+          assert.equal(
+            ok(await second.client.request("/api/auth/get-session")).user.id,
+            second.id,
+          );
+        },
       );
       contracts.assertValid();
     } finally {

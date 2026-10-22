@@ -7,7 +7,7 @@ Cada instalación y unidad reservable tiene un único municipio gestor, aunque p
 | Entidad | Responsabilidad |
 |---|---|
 | Cuenta | Identidad y sesiones gestionadas por Better Auth, comunes a la instancia. |
-| Perfil municipal | Relación única cuenta–municipio y datos necesarios para su servicio. |
+| Perfil municipal | Relación única entre una cuenta y un municipio. |
 | Asignación de rol | Permisos de una cuenta sobre un municipio y, cuando corresponda, unidades reservables concretas. |
 | Instalación / Unidad reservable | Centro deportivo, espacios reservables y publicación del catálogo. |
 | Regla horaria / Excepción | Aperturas regulares y cambios fechados del calendario. |

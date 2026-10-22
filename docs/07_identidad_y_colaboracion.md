@@ -2,7 +2,7 @@
 
 ## Identidad global
 
-Una cuenta Better Auth permite utilizar todos los municipios de la misma instancia. Cada perfil municipal mantiene sus datos y permisos. El usuario consulta sus reservas de cualquier municipio; el gestor municipal accede únicamente a las autorizadas por su función.
+Una cuenta Better Auth permite utilizar todos los municipios de la misma instancia. El perfil municipal vincula la cuenta con cada municipio; la actividad y los permisos mantienen su ámbito municipal. El usuario consulta sus reservas de cualquier municipio; el gestor municipal accede únicamente a las autorizadas por su función.
 
 La consulta del historial propio obtiene la cuenta de la sesión y no acepta otro titular como parámetro. Los municipios no disponen de una consulta administrativa global ni de un directorio compartido de usuarios.
 

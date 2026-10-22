@@ -11,7 +11,7 @@ import { verifyProductResponses } from "../helpers/response-contract.ts";
 
 test("agreement HTTP requires real sessions, MFA and version-specific approvals across replicas", {
   timeout: 60000,
-}, async () => {
+}, async (t) => {
   await withDatabase(async ({ domain, auth, migration }) => {
     const messages: MailMessage[] = [];
     const config = {
@@ -666,6 +666,135 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       assert.deepEqual((await client.request(monthlyUrl)).json(), {
         status: "NOT_PUBLISHABLE",
       });
+      await t.test(
+        "a non-administrator can receive a reviewed monthly report only while delegated REPORT_READ remains active",
+        async () => {
+          const manager = browser(app, "192.0.2.163");
+          const email = "report-manager@example.test";
+          const registered = await manager.request("/api/auth/sign-up/email", {
+            name: "Report manager",
+            email,
+            password,
+          });
+          assert.equal(registered.statusCode, 200, registered.body);
+          const managerId = registered.json().user.id;
+          const verification = messages.find(
+            (m) => m.to === email && m.text.includes("verify-email"),
+          );
+          assert.ok(verification);
+          const link = new URL(
+            verification.text.trim().split("\n").at(-1) ?? "",
+          );
+          assert.ok(
+            [200, 302].includes(
+              (await manager.request(link.pathname + link.search)).statusCode,
+            ),
+          );
+          assert.equal(
+            (
+              await manager.request("/api/auth/sign-in/email", {
+                email,
+                password,
+              })
+            ).statusCode,
+            200,
+          );
+          const enrollment = await manager.request(
+            "/api/auth/two-factor/enable",
+            { password },
+          );
+          assert.equal(enrollment.statusCode, 200, enrollment.body);
+          const managerSecret = new URL(
+            enrollment.json().totpURI,
+          ).searchParams.get("secret");
+          assert.ok(managerSecret);
+          assert.equal(
+            (
+              await manager.request("/api/auth/two-factor/verify-totp", {
+                code: totp(managerSecret),
+              })
+            ).statusCode,
+            200,
+          );
+          assert.equal((await manager.request(monthlyUrl)).statusCode, 403);
+          const invitationPath = `/api/municipalities/${tenant}/manager-invitations`;
+          const invited = await client.request(invitationPath, {
+            accountId: managerId,
+            expiresAt: new Date(Date.now() + 86400000).toISOString(),
+            permissions: [{ operation: "REPORT_READ", unitId: null }],
+          });
+          assert.equal(invited.statusCode, 201, invited.body);
+          const grantPath = `${invitationPath}/${invited.json().invitationId}`;
+          assert.equal((await manager.request(monthlyUrl)).statusCode, 403);
+          const accepted = await manager.request(`${grantPath}/accept`, {});
+          assert.equal(accepted.statusCode, 200, accepted.body);
+          assert.equal(
+            (
+              await migration.query(
+                "SELECT 1 FROM domain.municipal_administrator WHERE tenant_id=$1 AND account_id=$2 AND revoked_at IS NULL",
+                [tenant, managerId],
+              )
+            ).rowCount,
+            0,
+          );
+          const unreviewed = await manager.request(monthlyUrl);
+          assert.equal(unreviewed.statusCode, 200, unreviewed.body);
+          assert.deepEqual(unreviewed.json(), { status: "NOT_PUBLISHABLE" });
+          const managerContextUrl = `${monthlyUrl}/review-context?revision=1&recipientTenantId=${tenant}&recipientAccountId=${encodeURIComponent(managerId)}`;
+          assert.equal(
+            (await manager.request(managerContextUrl)).statusCode,
+            403,
+          );
+          const managerContext = await client.request(managerContextUrl);
+          assert.equal(managerContext.statusCode, 200, managerContext.body);
+          const reviewedManager = await client.request(
+            reviewUrl,
+            {
+              ...reviewBody,
+              recipientAccountId: managerId,
+              expectedHistoryDigest: managerContext.json().historyDigest,
+            },
+            { "idempotency-key": "monthly-manager-review" },
+          );
+          assert.equal(reviewedManager.statusCode, 200, reviewedManager.body);
+          const managerReport = await replica.inject({
+            url: monthlyUrl,
+            headers: { cookie: manager.cookie() },
+          });
+          assert.equal(managerReport.statusCode, 200, managerReport.body);
+          assert.equal(managerReport.json().status, "PUBLISHABLE");
+          assert.equal(managerReport.json().reservations, 20);
+          assert.equal(managerReport.json().reservedMinutes, 1200);
+          assert.equal(managerReport.headers["cache-control"], "no-store");
+          const deliveries = () =>
+            migration.query(
+              "SELECT * FROM domain.monthly_report_delivery WHERE recipient_account_id=$1",
+              [managerId],
+            );
+          const beforeRevocation = (await deliveries()).rows;
+          assert.equal(beforeRevocation.length, 1);
+          const revokedGrant = await client.request(`${grantPath}/revoke`, {
+            reason: "Reporting responsibility ended",
+          });
+          assert.equal(revokedGrant.statusCode, 200, revokedGrant.body);
+          const denied = await replica.inject({
+            url: monthlyUrl,
+            headers: { cookie: manager.cookie() },
+          });
+          assert.equal(denied.statusCode, 403, denied.body);
+          assert.equal(denied.json().error.code, "FORBIDDEN");
+          assert.deepEqual((await deliveries()).rows, beforeRevocation);
+          assert.equal(
+            (await manager.request("/api/auth/get-session")).json().user.id,
+            managerId,
+          );
+        },
+      );
+      // The following revocation checks run in a separate rate-limit window.
+      await migration.query(
+        "UPDATE domain.administrative_rate_limit SET window_started_at=now()-interval '1 minute' WHERE account_id=$1",
+        [accountId],
+      );
       await migration.query(
         "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1 AND account_id=$2",
         [tenant, accountId],

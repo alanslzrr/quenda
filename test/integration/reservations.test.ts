@@ -1043,9 +1043,14 @@ test("reservation confirmation validates real calendars and commits every effect
         const all = [];
         let after: string | null = null;
         do {
-          const page = await listOwnReservations(domain, actor, after, {
-            now: () => new Date("2031-01-01T00:00:00Z"),
-          });
+          const page = await listOwnReservations(
+            domain,
+            actor,
+            { after },
+            {
+              now: () => new Date("2031-01-01T00:00:00Z"),
+            },
+          );
           assert.ok(page.items.length <= 20);
           all.push(...page.items);
           after = page.nextCursor;
@@ -1130,13 +1135,18 @@ test("reservation confirmation validates real calendars and commits every effect
         assert.ok(own.items.length > 0);
         const exactEnd = own.items[0]?.endsAt;
         assert.ok(exactEnd);
-        const completed = await listOwnReservations(domain, newcomer, null, {
-          now: () => new Date(exactEnd),
-        });
+        const completed = await listOwnReservations(
+          domain,
+          newcomer,
+          {},
+          {
+            now: () => new Date(exactEnd),
+          },
+        );
         assert.equal(completed.items[0]?.status, "FINALIZADA");
         assert.ok(own.items.every((r) => !("accountId" in r)));
         await assert.rejects(
-          listOwnReservations(domain, actor, "invalid-cursor"),
+          listOwnReservations(domain, actor, { after: "invalid-cursor" }),
           { code: "INVALID_INPUT" },
         );
         assert.equal(
