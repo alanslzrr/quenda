@@ -7,6 +7,7 @@ import {
 } from "../identity/index.ts";
 import { registerUsageRulesAcceptanceRoute } from "./accept-usage-rules-route.ts";
 import { acceptanceProperties, acceptanceSchema } from "./acceptance.ts";
+import { registerAgendaRoutes } from "./agenda-routes.ts";
 import { registerReservationAvailability } from "./availability-routes.ts";
 import { registerBlockRoutes } from "./block-routes.ts";
 import { registerCancellationRoute } from "./cancel-routes.ts";
@@ -30,6 +31,7 @@ export async function registerReservations(
     config,
     retentionSeconds,
   );
+  await registerAgendaRoutes(app, pool, auth, config);
   const actor = createRequestActor(pool, auth, config);
   await registerReservationQueries(app, pool, auth, config);
   await registerBlockRoutes(app, pool, auth, config, retentionSeconds);
