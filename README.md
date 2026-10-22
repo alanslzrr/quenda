@@ -39,11 +39,13 @@ pnpm --dir web exec playwright install chromium
 PG_BIN=/ruta/a/postgresql-17.11/bin pnpm --dir web test:browser
 ```
 
-`build` comprueba tipos y genera archivos estáticos en `web/dist`. Las pruebas de navegador del catálogo utilizan respuestas controladas para comprobar presentación, errores, preferencias y accesibilidad. Las de cuenta y reservas utilizan Better Auth, una base PostgreSQL temporal, municipios sintéticos aislados y correo local, sin credenciales de la instancia de desarrollo. Las respuestas controladas verifican también cambios de normas, cuotas, recuperación de respuestas perdidas y aceptación pendiente. Requieren los puertos 3000 y 5173 libres. Las pruebas PostgreSQL verifican los contratos y el aislamiento. Las fuentes conservan sus avisos en `web/public/licenses`; la compilación añade las [licencias de las dependencias empaquetadas](https://vite.dev/config/build-options.html#build-license) en `web/dist/licenses/dependencies.md`.
+`build` comprueba tipos y genera archivos estáticos en `web/dist`. Las pruebas de navegador del catálogo utilizan respuestas controladas para comprobar presentación, errores, preferencias y accesibilidad. Las de cuenta, reservas y administración municipal utilizan Better Auth, una base PostgreSQL temporal, municipios sintéticos aislados y correo local, sin credenciales de la instancia de desarrollo. Las respuestas controladas verifican también cambios de normas, cuotas, recuperación de respuestas perdidas y aceptación pendiente. Requieren los puertos 3000 y 5173 libres. Las pruebas PostgreSQL verifican los contratos y el aislamiento. Las fuentes conservan sus avisos en `web/public/licenses`; la compilación añade las [licencias de las dependencias empaquetadas](https://vite.dev/config/build-options.html#build-license) en `web/dist/licenses/dependencies.md`.
 
 La cuenta ofrece datos personales, preferencias, contraseña, MFA, sesiones, invitaciones, descarga de datos y baja. Los enlaces de recuperación, reactivación y cambio de correo requieren una acción expresa; abrirlos no ejecuta la operación.
 
 Las reservas incluyen confirmación de condiciones, historial por municipio, modificación, cancelación, aceptación de normas pendientes y avisos. Una respuesta incierta conserva en la pestaña la clave y el contenido del comando para su comprobación expresa, dentro del plazo publicado por la API. No se reenvía automáticamente ni se conserva después de cerrar sesión.
+
+La administración municipal se abre desde la cuenta. Incluye instalaciones, unidades, normas versionadas, horarios y excepciones, condiciones de reserva, agenda diaria, bloqueos y reubicaciones con motivo. Los controles reflejan los permisos vigentes; la API autoriza cada operación. La apariencia municipal dispone de vista previa, guardado y restauración de paletas accesibles, sin modificar el tema de administración.
 
 ## Autenticación local
 
@@ -162,7 +164,7 @@ Estas consultas no crean cuentas ni perfiles. Los recursos no publicados o retir
 
 - `GET /api/municipalities/{tenantId}/reservations/{reservationId}`: estado actual de una reserva. Admite al titular sin MFA y al personal con permisos vigentes sobre la unidad y MFA. Un identificador de otro municipio o fuera del ámbito autorizado no revela la reserva.
 - `GET /api/me/reservations`: historial del usuario autenticado entre municipios de la instancia, incluidas reservas de unidades retiradas. Devuelve nombre municipal y de unidad, sin aceptar un identificador de otro usuario.
-- `GET /api/municipalities/{tenantId}/reservations`: requiere MFA y devuelve únicamente reservas cubiertas por `RESERVATION_READ` o `RESERVATION_MANAGE`. `?unitId=UUID` filtra sin ampliar permisos. Ser titular de una reserva no concede acceso al listado de gestión.
+- `GET /api/municipalities/{tenantId}/reservations`: requiere MFA y devuelve únicamente reservas cubiertas por `RESERVATION_READ` o `RESERVATION_MANAGE`. `?unitId=UUID` filtra sin ampliar permisos. `?date=AAAA-MM-DD` selecciona las reservas que se solapan con ese día municipal antes de paginar, incluidas las canceladas. Ser titular de una reserva no concede acceso al listado de gestión.
 
 Los listados devuelven `{ items, nextCursor }`, con hasta 20 elementos y `Cache-Control: no-store`. `?after=nextCursor` continúa el listado. El orden por identificadores es estable, no cronológico; el cursor propio combina reserva y municipio, y el municipal contiene el identificador de reserva. Los permisos se vuelven a comprobar en cada página.
 
@@ -186,7 +188,7 @@ La creación valida las reglas vigentes y confirma reserva, ocupación, evento, 
 
 ## Modificación de reservas
 
-Con sesión del titular, `GET /api/municipalities/{tenantId}/reservations/{reservationId}/availability?unitId=UUID&date=AAAA-MM-DD&durationMinutes=N` calcula franjas para una modificación dentro del plazo aceptado. Excluye solo la ocupación de esa reserva, mantiene las demás reservas y bloqueos y exige una unidad pública del mismo municipio. Consultar no libera ni garantiza la franja.
+Con sesión del titular, `GET /api/municipalities/{tenantId}/reservations/{reservationId}/availability?unitId=UUID&date=AAAA-MM-DD&durationMinutes=N` calcula franjas para una modificación dentro del plazo aceptado. Excluye solo la ocupación de esa reserva, mantiene las demás reservas y bloqueos y exige una unidad pública del mismo municipio. Consultar no libera ni garantiza la franja. Con `administrative=true`, exige `RESERVATION_MANAGE` en origen y destino y MFA reciente. Permite consultar antes del inicio sin aplicar el plazo ciudadano; no concede permiso para aceptar normas por el titular.
 
 `POST /api/municipalities/{tenantId}/reservations/{reservationId}/modify` recibe `expectedRevision`, `unitId`, `startsAt` y `endsAt`, con la misma autenticación e idempotencia que la confirmación. Devuelve `200`. No cambia el titular ni el municipio.
 
@@ -219,6 +221,10 @@ El titular cancela con `ahora ≤ inicio − plazo aceptado` y siempre `ahora < 
 Una reserva de última hora exige aceptar que no puede cancelarse por cuenta propia. Ante una excepción, el usuario contacta directamente con el municipio; no se crea un ticket. El titular conserva su responsabilidad y puede reorganizar participantes según las normas, sin transferir la reserva. La ausencia conserva tiempo reservado e historial, sin inferir asistencia ni generar automáticamente incidencias o penalizaciones.
 
 ## Bloqueos de unidades
+
+`GET /api/municipalities/{tenantId}/agenda/units` devuelve identificador y nombre de las unidades con `RESERVATION_READ`, `RESERVATION_MANAGE` o `UNIT_BLOCK`, incluidas las retiradas. Exige MFA y no concede permisos de catálogo. Devuelve páginas de 20 y `nextCursor`; `after` continúa la consulta.
+
+`GET /api/municipalities/{tenantId}/blocks` devuelve los bloqueos autorizados por `UNIT_BLOCK`, incluidos los liberados, con MFA reciente. Admite `date`, `unitId` y `after`; el filtro de día utiliza la zona municipal antes de paginar. No expone motivos de bloqueos ajenos.
 
 `POST /api/municipalities/{tenantId}/blocks` recibe `unitId`, `startsAt`, `endsAt` y `reason`. Exige `UNIT_BLOCK` sobre la unidad, MFA reciente, origen autorizado e `Idempotency-Key`; devuelve `201`. Los intervalos deben ser finitos y ordenados, sin aplicar al mantenimiento las reglas de duración o antelación de una reserva. Un solape con una reserva o bloqueo no liberado produce `409` sin cambios parciales. Las reservas afectadas deben resolverse mediante operaciones explícitas.
 

@@ -89,13 +89,13 @@ La aplicación web reside en `web/`, con compilación y dependencias separadas d
 
 Las consultas privadas identifican cuenta y ámbito municipal en su clave de caché. Cerrar sesión cancela las consultas y retira los datos privados. Las mutaciones no reintentan automáticamente ni presentan una reserva como confirmada antes de la respuesta del servidor.
 
-Los comandos de reserva conservan en `sessionStorage` la cuenta, ruta, clave idempotente y contenido enviados hasta conocer el resultado. Solo se recuperan mediante una acción expresa y dentro de la retención publicada por la API; después se consulta el estado actual. El cierre de sesión retira esta información.
+Los comandos de reserva y bloqueo conservan en `sessionStorage` la cuenta, ruta, clave idempotente y contenido enviados hasta conocer el resultado. Solo se recuperan mediante una acción expresa y dentro de la retención publicada por la API; después se consulta el estado actual. El cierre de sesión retira esta información.
 
 Los enlaces de recuperación y cambio de correo se leen una vez y se retiran de la URL. Sus tokens permanecen en memoria, no en almacenamiento persistente; abrir el enlace no ejecuta la confirmación.
 
 El selector público utiliza una proyección de identificador, nombre y zona horaria municipal. La navegación administrativa consulta únicamente los ámbitos y permisos propios; esa proyección no sustituye la autorización ni la comprobación de MFA de cada operación.
 
-La [apariencia municipal](02_modelo_dominio.md#apariencia-y-preferencias) utiliza variables CSS y combinaciones predefinidas verificadas. La vista pública muestra un calendario de fechas y franjas; la administración utiliza una agenda diaria. Los controles representan fechas civiles del municipio y conservan los instantes y desplazamientos UTC recibidos del servidor.
+La [apariencia municipal](02_modelo_dominio.md#apariencia-y-preferencias) utiliza variables CSS y combinaciones predefinidas verificadas. La vista pública muestra un calendario de fechas y franjas; la administración utiliza una agenda diaria. Los controles representan fechas civiles del municipio. Las franjas de reserva conservan los instantes y desplazamientos UTC recibidos del servidor; los bloqueos convierten la hora municipal, rechazan horas inexistentes y exigen elegir el desplazamiento cuando una hora se repite. La agenda filtra intervalos por día municipal antes de paginar, sin ampliar permisos.
 
 ## ADR-09 Entornos y versiones
 
