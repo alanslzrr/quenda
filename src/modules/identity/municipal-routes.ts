@@ -20,6 +20,7 @@ import {
   type MunicipalityInput,
   replaceInitialAdministratorInvitation,
 } from "./municipality.ts";
+import { registerNavigationRoutes } from "./navigation-routes.ts";
 import { registerOperatorLifecycleRoutes } from "./operator-lifecycle-routes.ts";
 import { registerPersonalDataRoutes } from "./personal-data-routes.ts";
 import { registerPreferenceRoutes } from "./preference-routes.ts";
@@ -44,6 +45,7 @@ export async function registerMunicipalIdentity(
   config: AuthConfiguration,
 ) {
   const actor = createRequestActor(pool, auth, config);
+  await registerNavigationRoutes(app, pool, auth, config);
   await registerPrivacyPermissionRoutes(app, pool, auth, config);
   await registerConservationRoutes(app, pool, auth, config);
   await registerPersonalDataRoutes(app, pool, auth, config);
