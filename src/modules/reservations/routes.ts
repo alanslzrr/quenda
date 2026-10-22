@@ -7,11 +7,11 @@ import {
 } from "../identity/index.ts";
 import { registerUsageRulesAcceptanceRoute } from "./accept-usage-rules-route.ts";
 import { acceptanceProperties, acceptanceSchema } from "./acceptance.ts";
+import { registerReservationAvailability } from "./availability-routes.ts";
 import { registerBlockRoutes } from "./block-routes.ts";
 import { registerCancellationRoute } from "./cancel-routes.ts";
 import { type CreateReservationInput, createReservation } from "./create.ts";
 import { registerModificationRoute } from "./modify-routes.ts";
-
 import { registerReservationQueries } from "./query-routes.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
@@ -23,6 +23,13 @@ export async function registerReservations(
   config: AuthConfiguration,
   retentionSeconds: number,
 ) {
+  await registerReservationAvailability(
+    app,
+    pool,
+    auth,
+    config,
+    retentionSeconds,
+  );
   const actor = createRequestActor(pool, auth, config);
   await registerReservationQueries(app, pool, auth, config);
   await registerBlockRoutes(app, pool, auth, config, retentionSeconds);
