@@ -45,6 +45,7 @@ export function Catalog() {
           <h2>{t("Nueva instalación", "Nova instalación")}</h2>
           <MunicipalForm
             path={`${endpoint(m.id)}/facilities`}
+            resetOnSuccess
             label={t("Crear instalación", "Crear instalación")}
             body={(d) => ({ name: textField(d, "name").trim() })}
           >
@@ -151,6 +152,7 @@ export function NewUnit() {
       <h1>{t("Nueva unidad reservable", "Nova unidade reservable")}</h1>
       <MunicipalForm
         path={`${endpoint(m.id)}/facilities/${resourceId}/units`}
+        resetOnSuccess
         label={t("Crear unidad", "Crear unidade")}
         body={(d) => ({ name: textField(d, "name").trim() })}
       >

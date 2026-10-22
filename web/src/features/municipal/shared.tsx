@@ -218,8 +218,8 @@ export function MunicipalLayout() {
               </>
             )}
           </nav>
-          <Link to="/perfil/seguridad">
-            {t("Verificar MFA", "Verificar MFA")}
+          <Link to="/perfil/seguridad" target="_blank" rel="noopener">
+            {t("Verificar MFA (nueva pestaña)", "Verificar MFA (nova pestana)")}
           </Link>
           <p>
             {t(
@@ -268,6 +268,7 @@ export function MunicipalForm({
   label,
   children,
   onSaved,
+  resetOnSuccess = false,
 }: {
   path: string;
   method?: string;
@@ -275,6 +276,7 @@ export function MunicipalForm({
   label: string;
   children?: ReactNode;
   onSaved?: (result: unknown) => void;
+  resetOnSuccess?: boolean;
 }) {
   const { locale, t } = usePreferences();
   const client = useQueryClient();
@@ -284,7 +286,7 @@ export function MunicipalForm({
     <>
       <ActionForm
         disabled={uncertain}
-        resetOnSuccess={false}
+        resetOnSuccess={resetOnSuccess}
         label={label}
         success={t("Cambios guardados.", "Cambios gardados.")}
         submit={async (data) => {
