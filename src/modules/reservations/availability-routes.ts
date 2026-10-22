@@ -54,7 +54,12 @@ export async function registerReservationAvailability(
   );
   app.get<{
     Params: { tenantId: string; reservationId: string };
-    Querystring: { unitId: string; date: string; durationMinutes: string };
+    Querystring: {
+      unitId: string;
+      date: string;
+      durationMinutes: string;
+      administrative?: string;
+    };
   }>(
     "/api/municipalities/:tenantId/reservations/:reservationId/availability",
     {
@@ -63,7 +68,7 @@ export async function registerReservationAvailability(
         tags: ["Reservations"],
         security: [{ quendaSession: [] }],
         description:
-          "Franjas para modificar una reserva propia futura dentro del plazo aceptado. Excluye únicamente su ocupación; conserva bloqueos y otras reservas. Solo admite unidades públicas del mismo municipio. Consultar no modifica ni garantiza disponibilidad al confirmar.",
+          "Franjas para modificar una reserva propia futura dentro del plazo aceptado. Excluye únicamente su ocupación; conserva bloqueos y otras reservas. Solo admite unidades públicas del mismo municipio. administrative=true exige RESERVATION_MANAGE en origen y destino y MFA reciente; permite consultar antes del inicio sin aplicar el plazo ciudadano. Consultar no modifica ni garantiza disponibilidad al confirmar.",
         params: {
           type: "object",
           additionalProperties: false,
@@ -77,6 +82,7 @@ export async function registerReservationAvailability(
           properties: {
             unitId: uuid,
             date: { type: "string", format: "date" },
+            administrative: { type: "string", enum: ["true", "false"] },
             durationMinutes: { type: "string", pattern: "^[1-9][0-9]{0,9}$" },
           },
         },
@@ -95,6 +101,8 @@ export async function registerReservationAvailability(
             request.query.unitId,
             request.query.date,
             Number(request.query.durationMinutes),
+            undefined,
+            request.query.administrative === "true",
           ),
         ),
   );
