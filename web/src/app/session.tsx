@@ -40,9 +40,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [client, query.data?.accountId]);
   async function refresh() {
-    await client.cancelQueries();
-    client.removeQueries({ queryKey: ["private"] });
+    await client.cancelQueries({ queryKey: ["session"] });
     const next = await api<Account>("/api/me");
+    const current = client.getQueryData<Account | null>(["session"]);
+    if (current?.accountId !== next.accountId) {
+      await client.cancelQueries({ queryKey: ["private"] });
+      client.removeQueries({ queryKey: ["private"] });
+    }
     client.setQueryData(["session"], next);
   }
   async function signOut() {
