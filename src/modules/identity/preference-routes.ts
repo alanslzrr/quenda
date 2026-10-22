@@ -6,6 +6,7 @@ import {
   saveAccountPreferences,
 } from "./preferences.ts";
 import { createRequestActor } from "./request-actor.ts";
+import { accountTheme, type ThemePreference } from "./theme-preferences.ts";
 export async function registerPreferenceRoutes(
   app: FastifyInstance,
   pool: Pool,
@@ -13,6 +14,47 @@ export async function registerPreferenceRoutes(
   config: AuthConfiguration,
 ) {
   const actor = createRequestActor(pool, auth, config);
+  const themeSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["theme"],
+    properties: {
+      theme: { type: "string", enum: ["light", "dark", null], nullable: true },
+    },
+  };
+  for (const method of ["GET", "PUT"] as const) {
+    app.route<{ Body: { theme: ThemePreference } }>({
+      method,
+      url: "/api/me/theme",
+      schema: {
+        operationId: method === "GET" ? "readAccountTheme" : "saveAccountTheme",
+        tags: ["Identity"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Preferencia personal de modo claro u oscuro. null utiliza el modo municipal predeterminado o el modo claro de Quenda. No modifica la apariencia municipal ni el idioma.",
+        ...(method === "PUT" ? { body: themeSchema } : {}),
+        response: {
+          ...Object.fromEntries(
+            [400, 401, 403, 429, 500, 503].map((status) => [
+              status,
+              { $ref: "ErrorResponse#" },
+            ]),
+          ),
+          200: themeSchema,
+        },
+      },
+      handler: async (request, reply) =>
+        reply
+          .header("cache-control", "no-store")
+          .send(
+            await accountTheme(
+              pool,
+              await actor(request, reply),
+              method === "PUT" ? request.body : undefined,
+            ),
+          ),
+    });
+  }
   const body = {
     type: "object",
     additionalProperties: false,
