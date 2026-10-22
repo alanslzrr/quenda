@@ -1,0 +1,63 @@
+/* Opt-in source baseline, isolated from the host application's typography and reset. */
+:where([data-lumen]) {
+  color: var(--foreground);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+  -webkit-font-smoothing: antialiased;
+}
+[data-lumen],
+[data-lumen] *,
+[data-lumen] *::before,
+[data-lumen] *::after {
+  box-sizing: border-box;
+}
+[data-lumen] :is(button, input, textarea, select) {
+  font-family: inherit;
+  letter-spacing: inherit;
+}
+[data-lumen] :focus:not(:focus-visible) {
+  outline: none;
+}
+[data-lumen]
+  :focus-visible:not(
+    [role="menuitem"],
+    [role="option"],
+    [tabindex="-1"],
+    [data-lumen-border-focus]
+  ) {
+  outline: var(--focus-outline-width, 2px) solid
+    var(
+      --focus-outline,
+      color-mix(in oklab, var(--accent-strong) 72%, transparent)
+    ) !important;
+  outline-offset: var(--focus-outline-offset, 2px) !important;
+}
+/* Source controls that communicate focus through their own fill/border must not inherit a host or UA outline. */
+[data-lumen] [data-lumen-border-focus]:focus {
+  outline: none !important;
+}
+
+/* Source disclosure headings inherit the display family without resetting host headings. */
+[data-lumen] [data-lumen-heading] {
+  font-size: inherit;
+  font-weight: 500;
+  line-height: 1.1;
+  font-family: var(--font-display);
+  letter-spacing: var(--tracking-display);
+}
+
+/* A portable native-control root needs the same family/focus baseline as controls nested inside an opt-in surface. */
+[data-lumen]:is(button, input, textarea, select) {
+  font-family: var(--font-body);
+  letter-spacing: var(--tracking-body);
+}
+[data-lumen]:focus:not(:focus-visible) { outline: none; }
+[data-lumen]:focus-visible:not([role="menuitem"], [role="option"], [tabindex="-1"], [data-lumen-border-focus]) {
+  outline: var(--focus-outline-width, 2px) solid var(--focus-outline, color-mix(in oklab, var(--accent-strong) 72%, transparent)) !important;
+  outline-offset: var(--focus-outline-offset, 2px) !important;
+}
+
+/* Native input reset is explicit; host inputs and authored control padding stay untouched. */
+[data-lumen] [data-lumen-reset-input] { margin: 0; padding: 0; }

@@ -1,0 +1,20 @@
+@font-face {
+  font-family: Geist;
+  src: url("./fonts/geist-variable.woff2") format("woff2");
+  font-display: swap;
+  font-weight: 100 900;
+}
+@font-face {
+  font-family: Inter;
+  src: url("./fonts/inter-variable.woff2") format("woff2");
+  font-display: swap;
+  font-weight: 100 900;
+}
+:root {
+  --font-geist: Geist, "Geist Fallback";
+  --font-inter: Inter, "Inter Fallback";
+}
+
+/* Source-compatible fallback metrics keep first-paint measurements aligned before the variable fonts arrive. */
+@font-face {font-family:"Geist Fallback";src:local("Arial");ascent-override:94.56%;descent-override:27.76%;line-gap-override:0%;size-adjust:106.28%;}
+@font-face {font-family:"Inter Fallback";src:local("Arial");ascent-override:89.79%;descent-override:22.36%;line-gap-override:0%;size-adjust:107.89%;}
