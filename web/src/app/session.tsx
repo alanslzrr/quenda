@@ -6,6 +6,7 @@ import {
   useEffect,
   useRef,
 } from "react";
+import { forgetCommand } from "../features/reservations/commands";
 import { type Account, ApiError, api } from "./api";
 
 const SessionContext = createContext<{
@@ -35,6 +36,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const previous = previousAccount.current;
     previousAccount.current = current;
     if (previous && previous !== current) {
+      forgetCommand();
       void client.cancelQueries({ queryKey: ["private", previous] });
       client.removeQueries({ queryKey: ["private", previous] });
     }
@@ -51,6 +53,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }
   async function signOut() {
     await api("/api/auth/sign-out", { method: "POST", body: "{}" });
+    forgetCommand();
     await client.cancelQueries();
     client.removeQueries({ queryKey: ["private"] });
     client.setQueryData(["session"], null);
