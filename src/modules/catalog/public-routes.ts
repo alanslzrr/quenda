@@ -158,38 +158,6 @@ export async function registerPublicCatalog(
       publicUnitCalendar(pool, request.params.tenantId, request.params.unitId),
   );
 
-  const availabilityResponse = {
-    type: "object",
-    additionalProperties: false,
-    required: [
-      "unitId",
-      "date",
-      "timeZone",
-      "calendarVersion",
-      "calculatedAt",
-      "slots",
-    ],
-    properties: {
-      unitId: uuid,
-      date: { type: "string", format: "date" },
-      timeZone: text,
-      calendarVersion: { type: "integer" },
-      calculatedAt: { type: "string", format: "date-time" },
-      slots: {
-        type: "array",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["start", "end", "durationMinutes"],
-          properties: {
-            start: instant,
-            end: instant,
-            durationMinutes: { type: "integer" },
-          },
-        },
-      },
-    },
-  };
   app.get<{
     Params: { tenantId: string; unitId: string };
     Querystring: { date: string; durationMinutes: string };
@@ -226,3 +194,36 @@ export async function registerPublicCatalog(
       ),
   );
 }
+
+export const availabilityResponse = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "unitId",
+    "date",
+    "timeZone",
+    "calendarVersion",
+    "calculatedAt",
+    "slots",
+  ],
+  properties: {
+    unitId: uuid,
+    date: { type: "string", format: "date" },
+    timeZone: text,
+    calendarVersion: { type: "integer" },
+    calculatedAt: { type: "string", format: "date-time" },
+    slots: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["start", "end", "durationMinutes"],
+        properties: {
+          start: instant,
+          end: instant,
+          durationMinutes: { type: "integer" },
+        },
+      },
+    },
+  },
+};

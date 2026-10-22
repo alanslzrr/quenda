@@ -84,16 +84,15 @@ export async function publicAvailability(
   clock: Clock = systemClock,
 ) {
   return transaction(pool, async (client) => {
-    const unit = await publicUnitCalendar(client, tenantId, unitId);
-    const now = clock.now().toISOString();
-    const candidates = calendarSlots({
-      calendar: unit.calendar,
+    const candidate = await candidateAvailability(
+      client,
+      tenantId,
+      unitId,
       date,
       durationMinutes,
-      timeZone: unit.timeZone,
-      municipalAdvanceDays: unit.municipalAdvanceDays,
-      now,
-    });
+      clock,
+    );
+    const candidates = candidate.slots;
     const available = await client.query<{ slot_index: number }>(
       "SELECT slot_index FROM domain.public_available_slots($1,$2,$3::timestamptz[],$4::timestamptz[])",
       [
@@ -105,12 +104,36 @@ export async function publicAvailability(
     );
     const positions = new Set(available.rows.map((row) => row.slot_index));
     return {
-      unitId,
-      date,
-      timeZone: unit.timeZone,
-      calendarVersion: unit.calendarVersion,
-      calculatedAt: now,
+      ...candidate,
       slots: candidates.filter((_, index) => positions.has(index + 1)),
     };
   });
+}
+
+// Calendar rules are shared by public browsing and authorized rescheduling.
+export async function candidateAvailability(
+  client: Pool | PoolClient,
+  tenantId: string,
+  unitId: string,
+  date: string,
+  durationMinutes: number,
+  clock: Clock = systemClock,
+) {
+  const unit = await publicUnitCalendar(client, tenantId, unitId);
+  const now = clock.now().toISOString();
+  return {
+    unitId,
+    date,
+    timeZone: unit.timeZone,
+    calendarVersion: unit.calendarVersion,
+    calculatedAt: now,
+    slots: calendarSlots({
+      calendar: unit.calendar,
+      date,
+      durationMinutes,
+      timeZone: unit.timeZone,
+      municipalAdvanceDays: unit.municipalAdvanceDays,
+      now,
+    }),
+  };
 }
