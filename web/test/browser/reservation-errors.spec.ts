@@ -1,0 +1,346 @@
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test } from "@playwright/test";
+
+const tenant = "00000000-0000-4000-8000-000000000001",
+  unit = "00000000-0000-4000-8000-000000000002",
+  id = "00000000-0000-4000-8000-000000000003",
+  other = "00000000-0000-4000-8000-000000000004";
+const startsAt = new Date(Date.now() + 3 * 86400000).toISOString(),
+  endsAt = new Date(Date.now() + 3 * 86400000 + 3600000).toISOString();
+const reservation = {
+  id,
+  tenantId: tenant,
+  accountId: "ana",
+  unitId: unit,
+  startsAt,
+  endsAt,
+  status: "CONFIRMADA",
+  revision: 1,
+  timeZone: "Europe/Madrid",
+  cancellationMinutes: 1440,
+  usageRulesUnitId: unit,
+  usageRulesVersion: 1,
+  rulesAcceptedAt: new Date().toISOString(),
+  usageRulesText: "Normas originales",
+  pendingUsageRulesVersion: null,
+  pendingUsageRulesText: null,
+  bookingPolicyVersion: 1,
+};
+const detail = `/reservas/${tenant}/${id}`,
+  path = `/api/municipalities/${tenant}/reservations`,
+  checkout = `/municipios/${tenant}/unidades/${unit}/reservar?inicio=${encodeURIComponent(startsAt)}&fin=${encodeURIComponent(endsAt)}`;
+test.beforeEach(async ({ page }, info) => {
+  await page.route("**/api/**", async (route) => {
+    const url = new URL(route.request().url());
+    let body: unknown = {};
+    if (url.pathname === "/api/me")
+      body = {
+        accountId: "ana",
+        email: "ana@example.test",
+        mfaVerified: false,
+      };
+    else if (url.pathname.endsWith("/preferences")) body = { locale: "es" };
+    else if (url.pathname.endsWith("/theme"))
+      body = { theme: info.project.name === "desktop" ? "light" : "dark" };
+    else if (url.pathname.endsWith("/appearance"))
+      body = {
+        version: 1,
+        lightPalette: "blue",
+        darkPalette: "green",
+        defaultTheme: "light",
+      };
+    else if (url.pathname.endsWith("/reservation-command-policy"))
+      body = { retentionSeconds: 3600, serverTime: new Date().toISOString() };
+    else if (url.pathname.endsWith(`/units/${unit}`))
+      body = {
+        id: unit,
+        name: "Pista 1",
+        timeZone: "Europe/Madrid",
+        cancellationMinutes: 1440,
+        usageRulesVersion: 1,
+        bookingPolicyVersion: 1,
+      };
+    else if (url.pathname.endsWith("/usage-rules"))
+      body = { version: 1, text: "Normas originales" };
+    else if (url.pathname === `${path}/${id}`) body = reservation;
+    else if (url.pathname === "/api/public/municipalities")
+      body = {
+        items: [
+          { id: tenant, name: "Oleiros", timeZone: "Europe/Madrid" },
+          { id: other, name: "A Coruña", timeZone: "Europe/Madrid" },
+        ],
+        nextCursor: null,
+      };
+    else if (url.pathname === "/api/me/reservations")
+      body = {
+        items: [
+          { ...reservation, municipality: "Oleiros", unitName: "Pista 1" },
+        ],
+        nextCursor: null,
+      };
+    await route.fulfill({ json: body });
+  });
+});
+test("changed conditions clear acceptance and require explicit review without confirming", async ({
+  page,
+}) => {
+  let version = 1,
+    posts = 0;
+  await page.route(
+    `**/api/public/municipalities/${tenant}/units/${unit}`,
+    (r) =>
+      r.fulfill({
+        json: {
+          id: unit,
+          name: "Pista 1",
+          timeZone: "Europe/Madrid",
+          cancellationMinutes: 1440,
+          usageRulesVersion: version,
+          bookingPolicyVersion: 1,
+        },
+      }),
+  );
+  await page.route("**/usage-rules", (r) =>
+    r.fulfill({ json: { version, text: `Normas vigentes ${version}` } }),
+  );
+  await page.route(`**${path}`, async (r) => {
+    posts++;
+    version = 2;
+    await r.fulfill({
+      status: 409,
+      json: {
+        error: {
+          code: "CONDITIONS_CHANGED",
+          message: "Las condiciones han cambiado. Revisa las nuevas normas.",
+        },
+      },
+    });
+  });
+  await page.goto(checkout);
+  await page.getByRole("checkbox", { name: /Acepto estas normas/ }).check();
+  await page
+    .getByRole("button", { name: "Confirmar reserva", exact: true })
+    .click();
+  await expect(
+    page.getByText("Las condiciones han cambiado. Revisa las nuevas normas."),
+  ).toBeVisible();
+  await expect(page.getByText("Normas vigentes 2")).toBeVisible();
+  await expect(
+    page.getByRole("checkbox", { name: /Acepto estas normas/ }),
+  ).not.toBeChecked();
+  expect(posts).toBe(1);
+  await expect(page).toHaveURL(/\/reservar\?/);
+});
+test("lost response survives reload and explicit replay retains its payload and key", async ({
+  page,
+}) => {
+  const requests: { key: string | undefined; body: string | null }[] = [];
+  await page.route(`**${path}`, async (r) => {
+    requests.push({
+      key: r.request().headers()["idempotency-key"],
+      body: r.request().postData(),
+    });
+    if (requests.length === 1) await r.abort("failed");
+    else await r.fulfill({ json: reservation });
+  });
+  await page.goto(checkout);
+  await page.getByRole("checkbox", { name: /Acepto estas normas/ }).check();
+  await page
+    .getByRole("button", { name: "Confirmar reserva", exact: true })
+    .click();
+  await page.getByRole("link", { name: /Hay una operación/ }).click();
+  await page.reload();
+  expect(requests).toHaveLength(1);
+  await page
+    .getByRole("button", { name: "Comprobar con la misma solicitud" })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`${detail}$`));
+  expect(requests).toHaveLength(2);
+  expect(requests[1]).toEqual(requests[0]);
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem("quenda.reservation-command"),
+    ),
+  ).toBeNull();
+});
+test("pending rules can be accepted near start without changing historical evidence or cancellation", async ({
+  page,
+}) => {
+  const soon = {
+    ...reservation,
+    startsAt: new Date(Date.now() + 3600000).toISOString(),
+    endsAt: new Date(Date.now() + 7200000).toISOString(),
+    rulesAcceptedAt: null,
+    usageRulesVersion: null,
+    usageRulesUnitId: null,
+    usageRulesText: null,
+    pendingUsageRulesVersion: 7,
+    pendingUsageRulesText: "Normas de la nueva pista",
+  };
+  let accepted = false;
+  await page.route(`**${path}/${id}`, (r) =>
+    r.fulfill({
+      json: accepted
+        ? {
+            ...soon,
+            revision: 2,
+            rulesAcceptedAt: new Date().toISOString(),
+            usageRulesUnitId: unit,
+            usageRulesVersion: 7,
+            usageRulesText: soon.pendingUsageRulesText,
+            pendingUsageRulesVersion: null,
+            pendingUsageRulesText: null,
+          }
+        : soon,
+    }),
+  );
+  await page.route(`**${path}/${id}/accept-usage-rules`, async (r) => {
+    expect(r.request().postDataJSON()).toEqual({
+      expectedRevision: 1,
+      unitId: unit,
+      usageRulesVersion: 7,
+    });
+    accepted = true;
+    await r.fulfill({ json: { ...soon, revision: 2 } });
+  });
+  await page.goto(detail);
+  await expect(
+    page.getByText("Sin aceptación registrada. La reserva conserva su estado."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Cancelar reserva", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("checkbox", { name: /Acepto las normas indicadas/ })
+    .check();
+  await page
+    .getByRole("button", { name: "Aceptar normas", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Normas pendientes de aceptación" }),
+  ).toHaveCount(0);
+  await expect(page.getByText("Confirmada", { exact: true })).toBeVisible();
+  await expect(page.getByText("Normas de la nueva pista")).toBeVisible();
+});
+test("history retains municipality on pagination and resets its cursor when scope changes", async ({
+  page,
+}) => {
+  const seen: URL[] = [];
+  await page.route("**/api/me/reservations?*", async (r) => {
+    const url = new URL(r.request().url());
+    seen.push(url);
+    await r.fulfill({
+      json: {
+        items: [
+          {
+            ...reservation,
+            id: url.searchParams.has("after") ? other : id,
+            municipality: "Oleiros",
+            unitName: "Pista 1",
+          },
+        ],
+        nextCursor: url.searchParams.has("after") ? null : `${id}:${tenant}`,
+      },
+    });
+  });
+  await page.goto("/reservas");
+  await page.getByRole("combobox", { name: "Municipio", exact: true }).click();
+  await page.getByRole("option", { name: "Oleiros", exact: true }).click();
+  await page.getByRole("button", { name: "Ver más reservas" }).click();
+  await expect
+    .poll(() =>
+      seen.some(
+        (u) =>
+          u.searchParams.get("tenantId") === tenant &&
+          u.searchParams.has("after"),
+      ),
+    )
+    .toBe(true);
+  await page.getByRole("combobox", { name: "Municipio", exact: true }).click();
+  await page.getByRole("option", { name: "A Coruña", exact: true }).click();
+  await expect
+    .poll(() => seen.at(-1)?.searchParams.get("tenantId"))
+    .toBe(other);
+  expect(seen.at(-1)?.searchParams.has("after")).toBe(false);
+});
+test("checkout remains accessible and a quota rejection never appears as a confirmed reservation", async ({
+  page,
+}) => {
+  await page.route(`**${path}`, (r) =>
+    r.fulfill({
+      status: 409,
+      json: {
+        error: {
+          code: "QUOTA_EXCEEDED",
+          message: "Has alcanzado el límite de reservas del convenio.",
+        },
+      },
+    }),
+  );
+  await page.goto(checkout);
+  await expect(
+    page.getByRole("heading", { name: "Confirmar reserva" }),
+  ).toBeVisible();
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `test-results/checkout-${test.info().project.name}.png`,
+    fullPage: true,
+  });
+  await page.getByRole("checkbox", { name: /Acepto estas normas/ }).check();
+  await page
+    .getByRole("button", { name: "Confirmar reserva", exact: true })
+    .click();
+  await expect(
+    page.getByText("Has alcanzado el límite de reservas del convenio."),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/reservar\?/);
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem("quenda.reservation-command"),
+    ),
+  ).toBeNull();
+});
+
+test("a deadline rejection leaves the reservation confirmed and never invents a cancellation", async ({
+  page,
+}) => {
+  await page.route(`**${path}/${id}/cancel`, (r) =>
+    r.fulfill({
+      status: 409,
+      json: {
+        error: {
+          code: "RESERVATION_DEADLINE_PASSED",
+          message:
+            "El plazo de cancelación ha terminado. La reserva no se ha cancelado.",
+        },
+      },
+    }),
+  );
+  await page.goto(detail);
+  await page
+    .getByRole("checkbox", {
+      name: "Quiero cancelar esta reserva y liberar la franja.",
+    })
+    .check();
+  await page
+    .getByRole("button", { name: "Cancelar reserva", exact: true })
+    .click();
+  await expect(
+    page.getByText(
+      "El plazo de cancelación ha terminado. La reserva no se ha cancelado.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText("Confirmada", { exact: true })).toBeVisible();
+  await expect(page.getByText("Cancelada", { exact: true })).toHaveCount(0);
+});
