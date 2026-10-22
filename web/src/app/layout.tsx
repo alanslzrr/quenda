@@ -56,6 +56,10 @@ export function Layout() {
         >
           {account ? (
             <>
+              <Link to="/reservas">
+                {t("Mis reservas", "As miñas reservas")}
+              </Link>
+              <Link to="/avisos">{t("Avisos", "Avisos")}</Link>
               <Link to="/perfil">{t("Mi cuenta", "A miña conta")}</Link>
               <Button
                 variant="ghost"

@@ -84,6 +84,36 @@ const Invitations = lazy(() =>
     default: m.Invitations,
   })),
 );
+const Checkout = lazy(() =>
+  import("./features/reservations/checkout").then((m) => ({
+    default: m.Checkout,
+  })),
+);
+const ReservationDetail = lazy(() =>
+  import("./features/reservations/detail").then((m) => ({
+    default: m.ReservationDetail,
+  })),
+);
+const ReservationHistory = lazy(() =>
+  import("./features/reservations/history").then((m) => ({
+    default: m.ReservationHistory,
+  })),
+);
+const Notices = lazy(() =>
+  import("./features/reservations/history").then((m) => ({
+    default: m.Notices,
+  })),
+);
+const ModifyReservation = lazy(() =>
+  import("./features/reservations/modify").then((m) => ({
+    default: m.ModifyReservation,
+  })),
+);
+const CommandRecovery = lazy(() =>
+  import("./features/reservations/shared").then((m) => ({
+    default: m.CommandRecovery,
+  })),
+);
 const client = createQueryClient();
 function Missing() {
   useMunicipalTheme(undefined);
@@ -163,6 +193,31 @@ createRoot(root).render(
                         }
                       />
                       <Route element={<RequireAccount />}>
+                        <Route
+                          path="municipios/:tenantId/unidades/:unitId/reservar"
+                          element={<Checkout />}
+                        />
+                        <Route
+                          path="reservas"
+                          element={<ReservationHistory />}
+                        />
+                        <Route path="avisos" element={<Notices />} />
+                        <Route
+                          path="reservas/recuperacion"
+                          element={<CommandRecovery />}
+                        />
+                        <Route
+                          path="reservas/:tenantId/:reservationId"
+                          element={<ReservationDetail />}
+                        />
+                        <Route
+                          path="reservas/:tenantId/:reservationId/modificar"
+                          element={<ModifyReservation />}
+                        />
+                        <Route
+                          path="reservas/:tenantId/:reservationId/confirmar"
+                          element={<Checkout />}
+                        />
                         <Route path="perfil" element={<AccountLayout />}>
                           <Route index element={<Profile />} />
                           <Route
