@@ -22,7 +22,7 @@ export function readCommand(
     const item = JSON.parse(value) as PendingCommand;
     if (item.owner !== owner) return null;
     if (
-      !/^\/api\/municipalities\/[\da-f-]+\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?$/.test(
+      !/^\/api\/municipalities\/[\da-f-]+(?:\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?|\/blocks(?:\/[\da-f-]+\/release)?)$/.test(
         item.path,
       ) ||
       typeof item.body !== "string" ||
@@ -31,6 +31,9 @@ export function readCommand(
       !Number.isFinite(item.retentionSeconds)
     )
       throw new Error("Invalid command");
+    const body = JSON.parse(item.body);
+    if (!body || typeof body !== "object" || Array.isArray(body))
+      throw new Error("Invalid body");
     return item;
   } catch {
     forgetCommand(storage);
@@ -98,8 +101,8 @@ export async function sendCommand<T>(
         0,
         "RETRY_EXPIRED",
         locale === "es"
-          ? "El plazo de reintento ha terminado. Comprueba el resultado en tus reservas."
-          : "O prazo de reintento rematou. Comproba o resultado nas túas reservas.",
+          ? "El plazo de reintento ha terminado. Comprueba el resultado antes de enviar otra operación."
+          : "O prazo de reintento rematou. Comproba o resultado antes de enviar outra operación.",
       );
     storage.setItem(pendingKey, JSON.stringify(item));
     try {
@@ -131,4 +134,23 @@ export async function sendCommand<T>(
   } finally {
     inFlight = false;
   }
+}
+
+export function commandReviewPath(item: PendingCommand) {
+  const tenant = item.path.split("/")[3];
+  const administrative =
+    item.path.includes("/blocks") ||
+    JSON.parse(item.body).administrative === true;
+  return administrative ? `/administracion/${tenant}/agenda` : "/reservas";
+}
+export function commandResultPath(
+  item: PendingCommand,
+  result: { tenantId: string; id: string },
+) {
+  const review = commandReviewPath(item);
+  if (review === "/reservas")
+    return `/reservas/${result.tenantId}/${result.id}`;
+  return item.path.includes("/blocks")
+    ? review
+    : `/administracion/${result.tenantId}/reservas/${result.id}`;
 }

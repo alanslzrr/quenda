@@ -14,6 +14,8 @@ import { PageTitle } from "../account/shared";
 import { calendarDate, municipalToday, slotLabel } from "../catalog/dates";
 import {
   type CommandPolicy,
+  commandResultPath,
+  commandReviewPath,
   forgetCommand,
   readCommand,
   retryAllowed,
@@ -183,8 +185,8 @@ export function CommandRecovery() {
   return (
     <>
       <PageTitle title={t("Revisar operación", "Revisar operación")} />
-      <Link to="/reservas">
-        {t("Consultar mis reservas", "Consultar as miñas reservas")}
+      <Link to={pending ? commandReviewPath(pending) : "/reservas"}>
+        {t("Consultar estado actual", "Consultar estado actual")}
       </Link>
       {!pending ? (
         <p>
@@ -197,8 +199,8 @@ export function CommandRecovery() {
         <section className={styles.section}>
           <p>
             {t(
-              "No se recibió una confirmación. La operación puede haberse completado. Consulta tus reservas antes de enviar otra solicitud.",
-              "Non se recibiu unha confirmación. A operación pode terse completado. Consulta as túas reservas antes de enviar outra solicitude.",
+              "No se recibió una confirmación. La operación puede haberse completado. Consulta el estado actual antes de enviar otra solicitud.",
+              "Non se recibiu unha confirmación. A operación pode terse completado. Consulta o estado actual antes de enviar outra solicitude.",
             )}
           </p>
           {policy.isPending ? (
@@ -222,7 +224,7 @@ export function CommandRecovery() {
                   true,
                 );
                 await client.invalidateQueries();
-                navigate(detailPath(result.tenantId, result.id), {
+                navigate(commandResultPath(pending, result), {
                   replace: true,
                 });
               }}
@@ -246,8 +248,8 @@ export function CommandRecovery() {
             <Checkbox
               required
               label={t(
-                "He comprobado el resultado en mis reservas o con el municipio.",
-                "Comprobei o resultado nas miñas reservas ou co municipio.",
+                "He comprobado el resultado en las reservas, la agenda o con el municipio.",
+                "Comprobei o resultado nas reservas, na axenda ou co municipio.",
               )}
             />
           </ActionForm>
