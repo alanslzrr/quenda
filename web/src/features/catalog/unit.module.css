@@ -1,0 +1,39 @@
+.grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: clamp(2rem, 6vw, 5rem);
+  align-items: start;
+}
+.controls {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 320px;
+}
+.slots {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+}
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.slot small {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .controls {
+    max-width: 100%;
+  }
+}
