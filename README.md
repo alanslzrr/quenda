@@ -248,6 +248,30 @@ La comprobación de arquitectura impide dependencias circulares y accesos a arch
 
 `pnpm build` genera `dist/`. Para comprobar el artefacto compilado con la configuración local: `node --env-file=.env.local dist/server.js`. En ejecución, `pnpm start` recibe las variables desde el entorno. SIGINT y SIGTERM cierran el servidor y sus pools.
 
+### Integración continua
+
+La configuración está en [ci/workflows/backend.yml](ci/workflows/backend.yml), fuera de `.github/workflows`: no se ejecuta en GitHub mientras permanezca en esa ubicación. Al activarla, comprueba cada pull request y los cambios incorporados a `main`, sin filtros de rutas que puedan omitir una regresión. También admite ejecución manual. [Ubicación y eventos de los workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax).
+
+| Comprobación | Contenido | Ejecución |
+|---|---|---|
+| `Backend checks` | `pnpm check`, compilación y generación de OpenAPI. Las pruebas existentes validan los contratos HTTP y de exportación. | Ordinaria. |
+| `Backend PostgreSQL` | Suite completa de integración, incluidas RLS, concurrencia, migraciones y recuperación. | Tras superar `Backend checks`. |
+| `Backend OCI` | Construcción desde la revisión examinada y pruebas de la imagen local, sin publicarla. | Tras superar `Backend checks`, en otro ejecutor. |
+| `Backend performance` | Escenario completo de diez minutos, sin abreviarlo ni modificar umbrales. | Manual con `extended=true`, tras superar las tres comprobaciones anteriores. |
+| `Backend licenses` | Inventario existente de dependencias y evidencias. `REVIEW_REQUIRED` hace fallar la comprobación; no se convierte en aprobación. | Manual con `extended=true`, tras superar las tres comprobaciones ordinarias. |
+
+Los ejecutores utilizan Ubuntu 24.04, Node de `.nvmrc` y pnpm de `package.json`. La instalación respeta el lockfile y no ejecuta scripts de dependencias. [La preparación de PostgreSQL](ci/setup-postgres.sh) compila la versión de `.postgres-version` y `btree_gist` desde fuentes oficiales verificadas con el [SHA-256 fijado](ci/postgresql-source.sha256). Los clústeres siguen siendo temporales y exclusivos de las pruebas; se ejecutan como máximo dos archivos de integración a la vez, sin cambiar sus límites de tiempo. [Compilación de PostgreSQL](https://www.postgresql.org/docs/17/install-make.html).
+
+Las acciones externas están fijadas por SHA, el token solo permite leer el repositorio y no se conserva en Git. No se utilizan secretos de aplicación, cachés compartidas, servicios reales ni credenciales cloud. Solo se conservan OpenAPI, la revisión y los informes de rendimiento o licencias durante siete días; no se suben bases, copias, correos ni archivos de credenciales. Los fallos detienen su comprobación. [Seguridad de GitHub Actions](https://docs.github.com/en/actions/reference/security/secure-use).
+
+Para activar la CI:
+
+1. Mover `ci/workflows/backend.yml` a `.github/workflows/backend.yml` y versionar el cambio; mantener `ci/actions/setup` y los archivos de preparación de PostgreSQL en sus ubicaciones. Desde ese momento se aplican los eventos configurados.
+2. Revisar la primera ejecución ordinaria. Solicitar `extended=true` desde Actions para obtener también rendimiento y licencias; sus resultados se revisan por separado. El inventario no sustituye la revisión de compatibilidad y atribuciones descrita en [licencias de dependencias](#inventario-de-licencias-de-dependencias).
+3. Exigir `Backend checks`, `Backend PostgreSQL` y `Backend OCI` para incorporar cambios a `main`, una vez validados en el ejecutor. Las comprobaciones ampliadas no se exigen en cada pull request.
+
+Al actualizar PostgreSQL, revisar conjuntamente `.postgres-version`, el checksum, la versión exigida por las pruebas y el digest OCI. El rendimiento se compara con mediciones del mismo entorno, no con tiempos de otro equipo. La configuración no despliega servicios ni ejecuta Terraform.
+
 ## Licencia
 
 Quenda utiliza **AGPL-3.0-only**, no «or later». El [texto íntegro](LICENSE) se distribuye con el proyecto. Los despliegues sujetos a sus obligaciones deben facilitar el código fuente correspondiente; las versiones modificadas accesibles por red deben ofrecerlo a sus usuarios conforme a la sección 13. [Identificador SPDX y términos](https://spdx.org/licenses/AGPL-3.0-only.html).

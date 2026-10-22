@@ -1,0 +1,20 @@
+name: Quenda Node and pnpm
+description: Instala las versiones del proyecto sin scripts de dependencias ni caché compartida.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version-file: .nvmrc
+        package-manager-cache: false
+    - name: Instalar pnpm y dependencias
+      shell: bash
+      run: |
+        set -euo pipefail
+        package_manager=$(node --input-type=module -e 'import fs from "node:fs"; console.log(JSON.parse(fs.readFileSync("package.json", "utf8")).packageManager)')
+        [[ "$package_manager" =~ ^pnpm@[0-9]+\.[0-9]+\.[0-9]+$ ]]
+        npm install --global --ignore-scripts "$package_manager"
+        test "$(pnpm --version)" = "${package_manager#pnpm@}"
+        pnpm install --frozen-lockfile --ignore-scripts
+        mkdir -p "$RUNNER_TEMP/quenda-ci"
+        git rev-parse HEAD > "$RUNNER_TEMP/quenda-ci/revision.txt"

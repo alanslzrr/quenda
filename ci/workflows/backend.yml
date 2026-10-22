@@ -1,0 +1,151 @@
+# Inactive here. GitHub only loads workflows from .github/workflows/.
+name: Backend CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      extended:
+        description: Incluir rendimiento completo e inventario de licencias
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: 'true'
+  TZ: UTC
+
+jobs:
+  checks:
+    name: Backend checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./ci/actions/setup
+      - name: Tipos, lint y pruebas unitarias y HTTP
+        run: pnpm check
+      - name: Compilar y generar OpenAPI
+        run: |
+          pnpm build
+          pnpm --silent openapi > "$RUNNER_TEMP/quenda-ci/openapi.json"
+      - name: Conservar contrato y revisión
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: backend-contract-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/quenda-ci/revision.txt
+            ${{ runner.temp }}/quenda-ci/openapi.json
+          if-no-files-found: error
+          retention-days: 7
+
+  integration:
+    name: Backend PostgreSQL
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./ci/actions/setup
+      - name: Preparar PostgreSQL y btree_gist
+        run: bash ci/setup-postgres.sh
+      - name: Compilar y ejecutar la suite de integración
+        run: |
+          pnpm build
+          # Same suite as test:integration; bound simultaneous temporary clusters.
+          node --test --test-concurrency=2 test/integration/*.test.ts
+
+  oci:
+    name: Backend OCI
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      QUENDA_IMAGE: quenda-backend:ci
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./ci/actions/setup
+      - name: Construir el artefacto de esta revisión
+        run: pnpm image:build "$QUENDA_IMAGE"
+      - name: Descargar la imagen PostgreSQL utilizada por las pruebas OCI
+        # Keep aligned with test/oci/services.test.ts; avoid pulling inside its timeout.
+        run: docker pull postgres:17.11@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3
+      - name: Verificar la imagen local
+        run: pnpm test:oci
+
+  performance:
+    name: Backend performance
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.extended }}
+    needs: [checks, integration, oci]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./ci/actions/setup
+      - name: Preparar PostgreSQL y btree_gist
+        run: bash ci/setup-postgres.sh
+      - name: Ejecutar el escenario completo de rendimiento
+        timeout-minutes: 20
+        env:
+          TMPDIR: ${{ runner.temp }}/quenda-performance
+        run: |
+          mkdir -p "$TMPDIR"
+          pnpm --silent test:performance > "$RUNNER_TEMP/quenda-ci/performance-summary.json"
+      - name: Conservar el resultado y su entorno
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: backend-performance-${{ github.run_id }}-${{ github.run_attempt }}
+          # Do not upload database directories, backups, mail or generated credentials.
+          path: |
+            ${{ runner.temp }}/quenda-ci/revision.txt
+            ${{ runner.temp }}/quenda-ci/performance-summary.json
+            ${{ runner.temp }}/quenda-performance/quenda-performance-*.json
+          if-no-files-found: error
+          retention-days: 7
+
+  licenses:
+    name: Backend licenses
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.extended }}
+    needs: [checks, integration, oci]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./ci/actions/setup
+      - name: Inventariar las evidencias de dependencias
+        # REVIEW_REQUIRED remains a failure; collecting a report is not approval.
+        run: pnpm --silent licenses:inventory > "$RUNNER_TEMP/quenda-ci/licenses.json"
+      - name: Conservar el inventario, incluido un resultado rechazado
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: backend-licenses-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/quenda-ci/revision.txt
+            ${{ runner.temp }}/quenda-ci/licenses.json
+          if-no-files-found: error
+          retention-days: 7
