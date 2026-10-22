@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { once } from "node:events";
+import { isIP } from "node:net";
 import path from "node:path";
 import { buildApp } from "../../src/app.ts";
 import { localMail } from "../../src/mail/local.ts";
@@ -28,6 +29,17 @@ await withDatabase(async ({ auth, domain }) => {
     domain,
     identity: { authentication, config },
     logLevel: "silent",
+  });
+  // Model separate browser clients without disabling authentication rate limits.
+  // This hook exists only in the isolated test process, never in buildApp.
+  app.addHook("onRequest", async (request) => {
+    const client = request.headers["x-quenda-test-client"];
+    if (
+      typeof client === "string" &&
+      client.startsWith("2001:db8:") &&
+      isIP(client) === 6
+    )
+      Object.defineProperty(request, "ip", { value: client });
   });
   await app.listen({ host: "127.0.0.1", port: 3000 });
   try {
