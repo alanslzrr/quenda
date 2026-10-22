@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate } from "react-router";
+import { Link, Navigate } from "react-router";
 import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
@@ -33,6 +33,9 @@ export function Profile() {
           )}
         </p>
       </div>
+      <Link to="/administracion">
+        {t("Administración municipal", "Administración municipal")}
+      </Link>
       <div className={styles.form}>
         <Select
           label={t("Idioma", "Idioma")}

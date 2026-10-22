@@ -114,6 +114,45 @@ const CommandRecovery = lazy(() =>
     default: m.CommandRecovery,
   })),
 );
+const Administration = lazy(() =>
+  import("./features/municipal/shared").then((m) => ({
+    default: m.Administration,
+  })),
+);
+const MunicipalLayout = lazy(() =>
+  import("./features/municipal/shared").then((m) => ({
+    default: m.MunicipalLayout,
+  })),
+);
+const Catalog = lazy(() =>
+  import("./features/municipal/catalog").then((m) => ({ default: m.Catalog })),
+);
+const ResourcePage = lazy(() =>
+  import("./features/municipal/catalog").then((m) => ({
+    default: m.ResourcePage,
+  })),
+);
+const NewUnit = lazy(() =>
+  import("./features/municipal/catalog").then((m) => ({ default: m.NewUnit })),
+);
+const BookingPolicy = lazy(() =>
+  import("./features/municipal/configuration").then((m) => ({
+    default: m.BookingPolicy,
+  })),
+);
+const MunicipalAppearance = lazy(() =>
+  import("./features/municipal/appearance").then((m) => ({
+    default: m.MunicipalAppearance,
+  })),
+);
+const Agenda = lazy(() =>
+  import("./features/municipal/agenda").then((m) => ({ default: m.Agenda })),
+);
+const AdministrativeReservation = lazy(() =>
+  import("./features/municipal/agenda").then((m) => ({
+    default: m.AdministrativeReservation,
+  })),
+);
 const client = createQueryClient();
 function Missing() {
   useMunicipalTheme(undefined);
@@ -193,6 +232,42 @@ createRoot(root).render(
                         }
                       />
                       <Route element={<RequireAccount />}>
+                        <Route
+                          path="administracion"
+                          element={<Administration />}
+                        />
+                        <Route
+                          path="administracion/:tenantId"
+                          element={<MunicipalLayout />}
+                        >
+                          <Route index element={<Catalog />} />
+                          <Route
+                            path="instalaciones/:resourceId"
+                            element={<ResourcePage />}
+                          />
+                          <Route
+                            path="instalaciones/:resourceId/nueva-unidad"
+                            element={<NewUnit />}
+                          />
+                          <Route
+                            path="unidades/:resourceId"
+                            element={<ResourcePage unit />}
+                          />
+                          <Route
+                            path="condiciones"
+                            element={<BookingPolicy />}
+                          />
+                          <Route
+                            path="apariencia"
+                            element={<MunicipalAppearance />}
+                          />
+                          <Route path="agenda" element={<Agenda />} />
+                          <Route
+                            path="reservas/:reservationId"
+                            element={<AdministrativeReservation />}
+                          />
+                        </Route>
+
                         <Route
                           path="municipios/:tenantId/unidades/:unitId/reservar"
                           element={<Checkout />}
