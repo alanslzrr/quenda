@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { publicRateLimit } from "../catalog/public-limit.ts";
+import { publicRateLimit } from "../../http/public-rate-limit.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
 import { operations } from "./manager.ts";
 import { accountNavigation, publicMunicipalities } from "./navigation.ts";
