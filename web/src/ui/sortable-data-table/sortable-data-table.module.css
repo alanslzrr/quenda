@@ -120,6 +120,7 @@
 /* Static paged results retain column labels when rows fold into mobile cards. */
 @media (max-width: 620px) {
   .table[data-static] thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .table[data-static] thead tr { overflow: visible; }
   .table[data-static] td:not([data-primary]) { flex-basis: 100%; }
   .table[data-static] td:not([data-primary])::before { content: attr(data-label) ": "; font-weight: 500; }
 }
