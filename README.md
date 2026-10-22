@@ -1,4 +1,4 @@
-# Quenda backend
+# Quenda
 
 API municipal con TypeScript, Fastify y PostgreSQL. [Especificación técnica](docs/README.md).
 
@@ -20,6 +20,26 @@ pnpm dev
 La API escucha en `127.0.0.1:3000`. `GET /health/live` comprueba el proceso; `GET /health/ready`, las conexiones y los privilegios de ejecución. No devuelven credenciales ni datos del dominio.
 
 El proceso web recibe exclusivamente la configuración de `.env.local`. Las credenciales de migración y administración permanecen en archivos separados. El runtime de autenticación no posee sus tablas; sus migraciones se ejecutan con el rol de migración.
+
+## Aplicación web
+
+`web/` contiene la SPA React. Utiliza las mismas versiones de Node.js y pnpm que el backend y conserva su propio archivo de dependencias bloqueadas.
+
+```sh
+pnpm --dir web install --frozen-lockfile --ignore-scripts
+pnpm --dir web dev
+```
+
+Vite escucha en `http://127.0.0.1:5173` y dirige `/api` al backend local en el puerto 3000. Para utilizar la interfaz local, `AUTH_ORIGIN` debe ser `http://127.0.0.1:5173`; no se reescribe el encabezado `Origin`. La aplicación utiliza rutas API relativas y cookies del mismo origen. Los secretos permanecen en el backend.
+
+```sh
+pnpm --dir web build
+pnpm --dir web test
+pnpm --dir web exec playwright install chromium
+PG_BIN=/ruta/a/postgresql-17.11/bin pnpm --dir web test:browser
+```
+
+`build` comprueba tipos y genera archivos estáticos en `web/dist`. Las pruebas de navegador del catálogo utilizan respuestas controladas para comprobar presentación, errores, preferencias y accesibilidad. Las de autenticación utilizan Better Auth, una base PostgreSQL temporal y correo local, sin credenciales de la instancia de desarrollo. Requieren los puertos 3000 y 5173 libres. Las pruebas PostgreSQL verifican los contratos y el aislamiento. Las fuentes conservan sus avisos en `web/public/licenses`; la compilación añade las [licencias de las dependencias empaquetadas](https://vite.dev/config/build-options.html#build-license) en `web/dist/licenses/dependencies.md`.
 
 ## Autenticación local
 

@@ -85,6 +85,14 @@ El frontend es una SPA con React 19, TypeScript y Vite. Utiliza React Router par
 
 React Router y TanStack Query cubren funciones que Vite no incluye. La integración continua ejecuta por separado la comprobación de tipos, ya que Vite transpila TypeScript sin comprobarlo. [React](https://react.dev/learn/build-a-react-app-from-scratch), [Vite](https://vite.dev/guide/features.html#typescript).
 
+La aplicación web reside en `web/`, con compilación y dependencias separadas del backend. Los componentes, estilos, helpers y fuentes son archivos locales; no dependen de otra biblioteca privada ni de su directorio de desarrollo. Las pantallas se cargan por ruta.
+
+Las consultas privadas identifican cuenta y ámbito municipal en su clave de caché. Cerrar sesión cancela las consultas y retira los datos privados. Las mutaciones no reintentan automáticamente ni presentan una reserva como confirmada antes de la respuesta del servidor.
+
+El selector público utiliza una proyección de identificador, nombre y zona horaria municipal. La navegación administrativa consulta únicamente los ámbitos y permisos propios; esa proyección no sustituye la autorización ni la comprobación de MFA de cada operación.
+
+La [apariencia municipal](02_modelo_dominio.md#apariencia-y-preferencias) utiliza variables CSS y combinaciones predefinidas verificadas. La vista pública muestra un calendario de fechas y franjas; la administración utiliza una agenda diaria. Los controles representan fechas civiles del municipio y conservan los instantes y desplazamientos UTC recibidos del servidor.
+
 ## ADR-09 Entornos y versiones
 
 `main` mantiene una única línea de producto. Cada versión se identifica por commit y genera artefactos que se promueven entre entornos. Frontend y API se sirven bajo el mismo origen. Configuración, secretos, datos y estado de infraestructura son independientes por entorno; la configuración pública no contiene secretos.

@@ -31,6 +31,7 @@ Cada prueba registra versión del sistema, datos, entorno, resultado y evidencia
 | T-23 | RF-23; RNF-01 | Dos municipios compiten por la última cuota de una cuenta: se admite como máximo un consumo. Se prueban semana, cancelación, cambio de unidad y reintentos. |
 | T-24 | RF-23; RNF-11 | Versionar o retirar unidades no reinicia consumos. Reprogramar del convenio A al B libera A y consume B; un comando sin cambios conserva la atribución. |
 | T-25 | RF-24; RNF-03 | Los controles detectan grupos pequeños y reconstrucciones en los casos de prueba mediante datos propios o entregas anteriores; suprimen los resultados inseguros sin representarlos como cero. |
+| T-26 | RF-30; RNF-02, RNF-04, RNF-05 y RNF-15 | Se verifican apariencia por municipio, revisión concurrente, restauración de valores, auditoría atómica, contraste de las combinaciones, cambio de ámbito y preferencias compartidas entre perfil y menú superior. |
 
 ## Escenario de rendimiento
 
