@@ -1,5 +1,5 @@
 import { type FormEvent, useRef, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 import { api } from "../../app/api";
 import { Failure } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
@@ -10,17 +10,21 @@ import { Alert } from "../../ui/alert/alert";
 import { Button } from "../../ui/button/button";
 import { Input } from "../../ui/input/input";
 import { PasswordField } from "../../ui/password-field/password-field";
+import { FactorField, verifyFactor } from "./security";
+import { safeReturnPath } from "./shared";
 export function SignIn({ register = false }: { register?: boolean }) {
   useMunicipalTheme(undefined);
   const { locale, t } = usePreferences();
   const { account, refresh } = useSession();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const returnTo = safeReturnPath(params.get("returnTo"));
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const [failure, setFailure] = useState<unknown>();
   const [challenge, setChallenge] = useState(false);
   const [registered, setRegistered] = useState(false);
-  if (account) return <Navigate to="/perfil" replace />;
+  if (account) return <Navigate to={returnTo} replace />;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (lock.current) return;
@@ -30,19 +34,9 @@ export function SignIn({ register = false }: { register?: boolean }) {
     const data = new FormData(event.currentTarget);
     try {
       if (challenge) {
-        await api(
-          "/api/auth/two-factor/verify-totp",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              code: data.get("code"),
-              trustDevice: false,
-            }),
-          },
-          locale,
-        );
+        await verifyFactor(data, locale);
         await refresh();
-        navigate("/perfil", { replace: true });
+        navigate(returnTo, { replace: true });
       } else if (register) {
         await api(
           "/api/auth/sign-up/email",
@@ -74,7 +68,7 @@ export function SignIn({ register = false }: { register?: boolean }) {
         if (result.twoFactorRedirect) setChallenge(true);
         else {
           await refresh();
-          navigate("/perfil", { replace: true });
+          navigate(returnTo, { replace: true });
         }
       }
     } catch (error) {
@@ -102,6 +96,30 @@ export function SignIn({ register = false }: { register?: boolean }) {
           )}
         </p>
       </div>
+      {params.get("notice") === "deactivated" && (
+        <Alert
+          tone="success"
+          title={t("Cuenta desactivada.", "Conta desactivada.")}
+        />
+      )}
+      {params.get("notice") === "email-changed" && (
+        <Alert
+          tone="success"
+          title={t(
+            "Correo actualizado. Inicia sesión con el nuevo correo.",
+            "Correo actualizado. Inicia sesión co novo correo.",
+          )}
+        />
+      )}
+      {params.has("error") && (
+        <Alert
+          tone="danger"
+          title={t(
+            "No se ha podido verificar el enlace. Solicita uno nuevo.",
+            "Non se puido verificar a ligazón. Solicita unha nova.",
+          )}
+        />
+      )}
       {registered ? (
         <Alert
           tone="success"
@@ -113,18 +131,7 @@ export function SignIn({ register = false }: { register?: boolean }) {
       ) : (
         <form className={styles.form} onSubmit={submit}>
           {challenge ? (
-            <Input
-              label={t(
-                "Código de tu aplicación de autenticación",
-                "Código da túa aplicación de autenticación",
-              )}
-              name="code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              pattern="[0-9]{6}"
-              maxLength={6}
-            />
+            <FactorField />
           ) : (
             <>
               {register && (
@@ -163,8 +170,26 @@ export function SignIn({ register = false }: { register?: boolean }) {
                 ? t("Crear cuenta", "Crear conta")
                 : t("Entrar", "Entrar")}
           </Button>
+          {!challenge && !register && (
+            <nav
+              className={styles.fields}
+              aria-label={t("Recuperación de acceso", "Recuperación de acceso")}
+            >
+              <Link to="/recuperar">
+                {t("He olvidado mi contraseña", "Esquecín o meu contrasinal")}
+              </Link>
+              <Link to="/verificar-correo">
+                {t("Reenviar verificación", "Reenviar verificación")}
+              </Link>
+              <Link to="/reactivar">
+                {t("Reactivar mi cuenta", "Reactivar a miña conta")}
+              </Link>
+            </nav>
+          )}
           {!challenge && (
-            <Link to={register ? "/acceso" : "/registro"}>
+            <Link
+              to={`${register ? "/acceso" : "/registro"}?returnTo=${encodeURIComponent(returnTo)}`}
+            >
               {register
                 ? t("Ya tengo una cuenta", "Xa teño unha conta")
                 : t("Crear una cuenta", "Crear unha conta")}

@@ -34,6 +34,56 @@ const Profile = lazy(() =>
 
 import { Loading } from "./app/feedback";
 
+const AccountLayout = lazy(() =>
+  import("./features/account/shared").then((m) => ({
+    default: m.AccountLayout,
+  })),
+);
+const RequireAccount = lazy(() =>
+  import("./features/account/shared").then((m) => ({
+    default: m.RequireAccount,
+  })),
+);
+const PersonalDetails = lazy(() =>
+  import("./features/account/personal").then((m) => ({
+    default: m.PersonalDetails,
+  })),
+);
+const AccountSecurity = lazy(() =>
+  import("./features/account/security").then((m) => ({
+    default: m.AccountSecurity,
+  })),
+);
+const AccountPrivacy = lazy(() =>
+  import("./features/account/privacy").then((m) => ({
+    default: m.AccountPrivacy,
+  })),
+);
+const RecoveryRequest = lazy(() =>
+  import("./features/account/recovery").then((m) => ({
+    default: m.RecoveryRequest,
+  })),
+);
+const ResetPassword = lazy(() =>
+  import("./features/account/recovery").then((m) => ({
+    default: m.ResetPassword,
+  })),
+);
+const ReactivateAccount = lazy(() =>
+  import("./features/account/recovery").then((m) => ({
+    default: m.ReactivateAccount,
+  })),
+);
+const EmailChangeConfirmation = lazy(() =>
+  import("./features/account/recovery").then((m) => ({
+    default: m.EmailChangeConfirmation,
+  })),
+);
+const Invitations = lazy(() =>
+  import("./features/account/invitations").then((m) => ({
+    default: m.Invitations,
+  })),
+);
 const client = createQueryClient();
 function Missing() {
   useMunicipalTheme(undefined);
@@ -72,7 +122,64 @@ createRoot(root).render(
                         path="registro"
                         element={<SignIn key="register" register />}
                       />
-                      <Route path="perfil" element={<Profile />} />
+                      <Route
+                        path="recuperar"
+                        element={<RecoveryRequest key="reset" kind="reset" />}
+                      />
+                      <Route
+                        path="reactivar"
+                        element={
+                          <RecoveryRequest key="reactivate" kind="reactivate" />
+                        }
+                      />
+                      <Route
+                        path="verificar-correo"
+                        element={<RecoveryRequest key="verify" kind="verify" />}
+                      />
+                      <Route
+                        path="account/reset-password"
+                        element={<ResetPassword />}
+                      />
+                      <Route
+                        path="account/reactivation"
+                        element={<ReactivateAccount />}
+                      />
+                      <Route
+                        path="account/email-change/approve"
+                        element={
+                          <EmailChangeConfirmation
+                            key="approve"
+                            step="approve"
+                          />
+                        }
+                      />
+                      <Route
+                        path="account/email-change/confirm"
+                        element={
+                          <EmailChangeConfirmation
+                            key="confirm"
+                            step="confirm"
+                          />
+                        }
+                      />
+                      <Route element={<RequireAccount />}>
+                        <Route path="perfil" element={<AccountLayout />}>
+                          <Route index element={<Profile />} />
+                          <Route
+                            path="invitaciones"
+                            element={<Invitations />}
+                          />
+                          <Route path="datos" element={<PersonalDetails />} />
+                          <Route
+                            path="seguridad"
+                            element={<AccountSecurity />}
+                          />
+                          <Route
+                            path="privacidad"
+                            element={<AccountPrivacy />}
+                          />
+                        </Route>
+                      </Route>
                       <Route path="*" element={<Missing />} />
                     </Route>
                   </Routes>
