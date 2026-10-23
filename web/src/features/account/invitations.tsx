@@ -7,6 +7,7 @@ import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { Button } from "../../ui/button/button";
+import { staffOperations } from "../municipal/staff-model";
 import { PageTitle } from "./shared";
 
 type Kind = "administrator" | "manager" | "operator" | "privacy";
@@ -20,20 +21,6 @@ interface Invitation {
   reason?: string;
   permissions?: (string | { operation: string; unitId: string | null })[];
 }
-const operations: Record<string, [string, string]> = {
-  CATALOG_CREATE: ["Crear catálogo", "Crear catálogo"],
-  CATALOG_MANAGE: ["Gestionar catálogo", "Xestionar catálogo"],
-  RESERVATION_READ: ["Consultar reservas", "Consultar reservas"],
-  RESERVATION_MANAGE: ["Gestionar reservas", "Xestionar reservas"],
-  UNIT_BLOCK: ["Bloquear unidades", "Bloquear unidades"],
-  REPORT_READ: ["Consultar indicadores", "Consultar indicadores"],
-  DATA_EXPORT: ["Exportar datos", "Exportar datos"],
-  PRIVACY_READ: ["Consultar datos personales", "Consultar datos persoais"],
-  PRIVACY_EXECUTE: [
-    "Ejecutar actuaciones de privacidad",
-    "Executar actuacións de privacidade",
-  ],
-};
 const statuses: Record<string, [string, string]> = {
   PENDING: ["Pendiente", "Pendente"],
   ACCEPTED: ["Aceptada", "Aceptada"],
@@ -139,7 +126,11 @@ function InvitationList({ kind, title }: { kind: Kind; title: string }) {
                           <li
                             key={`${code}-${typeof permission === "string" ? "global" : (permission.unitId ?? "municipal")}`}
                           >
-                            {t(...(operations[code] ?? [code, code]))}
+                            {t(
+                              ...(staffOperations[
+                                code as keyof typeof staffOperations
+                              ] ?? [code, code]),
+                            )}
                             {typeof permission !== "string" &&
                               ` · ${permission.unitId ? `${t("Unidad", "Unidade")} ${permission.unitId}` : t("Todo el municipio", "Todo o municipio")}`}
                           </li>
@@ -160,6 +151,13 @@ function InvitationList({ kind, title }: { kind: Kind; title: string }) {
                           locale,
                         );
                         await query.refetch();
+                        await client.invalidateQueries({
+                          queryKey: [
+                            "private",
+                            account?.accountId,
+                            "municipal-context",
+                          ],
+                        });
                         await client.invalidateQueries({
                           queryKey: [
                             "private",
