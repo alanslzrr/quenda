@@ -70,7 +70,7 @@ test("real reservation, overlapping reschedule, notices, history filter and canc
     ),
   ).toBe(true);
   await selectDay(page, day, info.project.name === "desktop" ? "es" : "gl");
-  await page.getByLabel("Duración en minutos", { exact: true }).fill("60");
+  await page.getByRole("button", { name: "1 h", exact: true }).click();
   const slot = await projection.json();
   const chosen = slot.slots.find(
     (s: { start: { utc: string } }) =>
@@ -151,4 +151,37 @@ test("late reservation requires its explicit restriction and cannot be cancelled
   await expect(
     page.getByText(/mantiene su ocupación|mantén a súa ocupación/),
   ).toBeVisible();
+});
+
+test("municipal search offers a ninety minute booking and keeps its context on review", async ({
+  page,
+}, info) => {
+  const { tenant } = catalog(info.project.name === "desktop" ? 1 : 2);
+  await createAccount(page);
+  await page.goto(`/municipios/${tenant}`);
+  const day = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
+  await page.getByLabel(/¿Qué día\?|Que día\?/).fill(day);
+  await page
+    .getByRole("combobox", { name: /tiempo necesitas|tempo precisas/ })
+    .click();
+  await page.getByRole("option", { name: "1 h 30 min", exact: true }).click();
+  const chosen = page.locator('a[href*="/reservar?"]').first();
+  await expect(chosen).toBeVisible();
+  const href = await chosen.getAttribute("href");
+  const params = new URL(href ?? "", "http://local").searchParams;
+  expect(
+    Date.parse(params.get("fin") ?? "") -
+      Date.parse(params.get("inicio") ?? ""),
+  ).toBe(90 * 60000);
+  await chosen.click();
+  await expect(
+    page.getByRole("heading", { name: "Confirmar reserva", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("1 h 30 min", { exact: true })).toBeVisible();
+  await page
+    .getByRole("link", { name: /Elegir otra franja|Escoller outra franxa/ })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "1 h 30 min", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
 });

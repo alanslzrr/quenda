@@ -161,8 +161,16 @@ async function fixture(page: Page) {
           bookingDate
             ? [
                 {
-                  start: { utc: start, offset: offset(start) },
-                  end: { utc: end, offset: offset(end) },
+                  start: {
+                    utc: start,
+                    local: `${bookingDate}T12:00`,
+                    offset: offset(start),
+                  },
+                  end: {
+                    utc: end,
+                    local: `${bookingDate}T13:00`,
+                    offset: offset(end),
+                  },
                   durationMinutes: 60,
                 },
               ]
@@ -301,14 +309,14 @@ test("booking composition exposes the real selection and explicit acceptance", a
       exact: true,
     })
     .click();
-  await expect(page.getByRole("link").filter({ hasText: "UTC" })).toHaveCount(
-    1,
-  );
+  await expect(
+    page.getByRole("link").filter({ hasText: "Elegir" }),
+  ).toHaveCount(1);
   for (const theme of ["light", "dark"] as const) {
     await appearance(page, theme);
     await audit(page, `availability-${info.project.name}-${theme}`);
   }
-  await page.getByRole("link").filter({ hasText: "UTC" }).first().click();
+  await page.getByRole("link").filter({ hasText: "Elegir" }).first().click();
   await expect(
     page.getByRole("heading", { name: "Confirmar reserva", exact: true }),
   ).toBeVisible();

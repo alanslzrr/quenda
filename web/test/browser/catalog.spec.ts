@@ -30,6 +30,10 @@ test.beforeEach(async ({ page }) => {
         darkPalette: "green",
         defaultTheme: "dark",
       };
+    else if (url.pathname.endsWith("/booking-durations"))
+      body = { durations: [60, 90, 120] };
+    else if (url.pathname.endsWith("/availability-search"))
+      body = { items: [], nextCursor: null };
     else if (url.pathname.endsWith("/facilities"))
       body = {
         items: [{ id: facility, name: "Centro deportivo" }],
@@ -88,6 +92,9 @@ test("public catalog uses municipal scope and restores Quenda theme on exit", as
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator("html")).toHaveAttribute("data-accent", "green");
   await page.clock.setFixedTime(new Date("2026-10-22T12:00:00Z"));
+  await page
+    .getByText(/Ver todas las instalaciones|Ver todas as instalacións/)
+    .click();
   await page.getByRole("link", { name: "Pista 1", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Pista 1", exact: true }),
