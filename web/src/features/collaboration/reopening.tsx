@@ -10,6 +10,7 @@ import {
   useMunicipality,
   useMunicipalQuery,
 } from "../municipal/shared";
+import { PendingLink } from "../reservations/shared";
 import { CollaborationAction } from "./action";
 import { agreementPath } from "./model";
 export function Reopening() {
@@ -37,6 +38,7 @@ function Restriction() {
       <Link to={agreementPath(m.id)}>{t("Convenios", "Convenios")}</Link>
       <h1>{t("Vinculación de la unidad", "Vinculación da unidade")}</h1>
       <p>{unitId}</p>
+      <PendingLink />
       <p>
         {t(
           "Retirar la vinculación no publica la unidad ni modifica horarios, reservas o bloqueos.",
