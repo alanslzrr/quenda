@@ -225,3 +225,42 @@
   border-radius: var(--radius-control);
   font-size: 0.9rem;
 }
+
+.workspaceMain {
+  min-width: 0;
+  flex: 1;
+  outline: none;
+}
+.product {
+  --radius-control: 10px;
+  --radius-surface: 16px;
+  --control-height-md: 40px;
+}
+.product .header {
+  min-height: 64px;
+  padding: 12px 28px;
+}
+.product .main {
+  width: min(100%, 1200px);
+  padding: 32px 28px 56px;
+}
+.product .actions {
+  gap: 16px;
+}
+@media (max-width: 600px) {
+  .product .header {
+    padding: 12px 16px;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .product .actions {
+    justify-content: flex-end;
+    gap: 8px 12px;
+  }
+  .product .actions a {
+    font-size: 12px;
+  }
+  .product .main {
+    padding: 24px 16px 40px;
+  }
+}

@@ -4,7 +4,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useState } from "react";
-import { Link, NavLink, Outlet, useParams } from "react-router";
+import { Link, NavLink, Outlet, useLocation, useParams } from "react-router";
 import { ActionForm } from "../../app/action";
 import { ApiError, api, type Navigation, type Page } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
@@ -14,8 +14,10 @@ import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Button } from "../../ui/button/button";
 import { Input } from "../../ui/input/input";
+import { MfaBoundary } from "../account/mfa-dialog";
 import { allowed, canEnter } from "../reporting/model";
 import styles from "./municipal.module.css";
+import { ResourceShell } from "./resource-shell";
 
 export type MunicipalContext = Navigation["municipalities"]["items"][number];
 export function permitted(
@@ -39,7 +41,11 @@ export function useMunicipality() {
 }
 export const municipalPath = (id: string) => `/administracion/${id}`;
 export const endpoint = (id: string) => `/api/municipalities/${id}`;
-export function useMunicipalQuery<T>(path: string, optional = false) {
+export function useMunicipalQuery<T>(
+  path: string,
+  optional = false,
+  refetchOnMount = true,
+) {
   const { account } = useSession();
   const { locale } = usePreferences();
   return useQuery({
@@ -54,6 +60,7 @@ export function useMunicipalQuery<T>(path: string, optional = false) {
       }
     },
     enabled: !!account,
+    refetchOnMount,
     retry: false,
   });
 }
@@ -167,6 +174,7 @@ export function Administration() {
   );
 }
 export function MunicipalLayout() {
+  const location = useLocation();
   useMunicipalTheme(undefined);
   const { tenantId = "" } = useParams();
   const { account } = useSession();
@@ -208,6 +216,16 @@ export function MunicipalLayout() {
   if (query.isError)
     return <Failure error={query.error} retry={() => void query.refetch()} />;
   const context = query.data;
+  if (/\/unidades\/[^/]+$/.test(location.pathname))
+    return (
+      <Context.Provider value={context}>
+        <MfaBoundary>
+          <ResourceShell municipality={context}>
+            <Outlet key={`${account?.accountId}:${tenantId}`} />
+          </ResourceShell>
+        </MfaBoundary>
+      </Context.Provider>
+    );
   const has = (...ops: string[]) =>
     context.administrator ||
     context.permissions.some((p) => ops.includes(p.operation));

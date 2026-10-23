@@ -34,67 +34,83 @@ export function Layout() {
       setBusy(false);
     }
   }
+  const resource = /^\/administracion\/[^/]+\/unidades\/[^/]+$/.test(
+    location.pathname,
+  );
+  const showcase =
+    resource ||
+    location.pathname === "/perfil/seguridad" ||
+    /^\/municipios\/[^/]+\/unidades\//.test(location.pathname);
   return (
-    <div className={styles.shell}>
+    <div className={`${styles.shell} ${showcase ? styles.product : ""}`}>
       <a className={styles.skip} href="#content">
         {t("Saltar al contenido", "Saltar ao contido")}
       </a>
-      <header className={styles.header}>
-        <Link
-          className={styles.brand}
-          to="/"
-          aria-label={t("Quenda, inicio", "Quenda, inicio")}
-        >
-          <span className={styles.brandMark} aria-hidden="true">
-            q
-          </span>
-          quenda
-        </Link>
-        <nav
-          className={styles.actions}
-          aria-label={t("Navegación principal", "Navegación principal")}
-        >
-          {account ? (
-            <>
-              <Link to="/reservas">
-                {t("Mis reservas", "As miñas reservas")}
-              </Link>
-              <Link to="/avisos">{t("Avisos", "Avisos")}</Link>
-              <Link to="/perfil">{t("Mi cuenta", "A miña conta")}</Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                loading={busy}
-                onClick={() => void leave()}
-              >
-                {t("Salir", "Saír")}
-              </Button>
-            </>
-          ) : (
-            <Link to="/acceso">{t("Acceder", "Acceder")}</Link>
-          )}
-          <SettingsMenu />
-        </nav>
-      </header>
-      <main id="content" ref={main} tabIndex={-1} className={styles.main}>
+      {!resource && (
+        <header className={styles.header}>
+          <Link
+            className={styles.brand}
+            to="/"
+            aria-label={t("Quenda, inicio", "Quenda, inicio")}
+          >
+            <span className={styles.brandMark} aria-hidden="true">
+              q
+            </span>
+            quenda
+          </Link>
+          <nav
+            className={styles.actions}
+            aria-label={t("Navegación principal", "Navegación principal")}
+          >
+            {account ? (
+              <>
+                <Link to="/reservas">
+                  {t("Mis reservas", "As miñas reservas")}
+                </Link>
+                <Link to="/avisos">{t("Avisos", "Avisos")}</Link>
+                <Link to="/perfil">{t("Mi cuenta", "A miña conta")}</Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  loading={busy}
+                  onClick={() => void leave()}
+                >
+                  {t("Salir", "Saír")}
+                </Button>
+              </>
+            ) : (
+              <Link to="/acceso">{t("Acceder", "Acceder")}</Link>
+            )}
+            <SettingsMenu />
+          </nav>
+        </header>
+      )}
+      <main
+        id="content"
+        ref={main}
+        tabIndex={-1}
+        className={resource ? styles.workspaceMain : styles.main}
+      >
         {failure !== undefined && <Failure error={failure} />}
         <Outlet />
       </main>
-      <footer className={styles.footer}>
-        <span>
-          Quenda ·{" "}
-          {t(
-            "Instalaciones deportivas municipales",
-            "Instalacións deportivas municipais",
-          )}
-        </span>
-        <span>
-          {t(
-            "Una cuenta, varios municipios.",
-            "Unha conta, varios municipios.",
-          )}
-        </span>
-      </footer>
+      {!resource && (
+        <footer className={styles.footer}>
+          <span>
+            Quenda ·{" "}
+            {t(
+              "Instalaciones deportivas municipales",
+              "Instalacións deportivas municipais",
+            )}
+          </span>
+          <span>
+            {t(
+              "Una cuenta, varios municipios.",
+              "Unha conta, varios municipios.",
+            )}
+          </span>
+        </footer>
+      )}
     </div>
   );
 }
