@@ -11,7 +11,7 @@ import { useMunicipalTheme } from "../../app/theme-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { calendarLabel } from "../../ui/lib/calendar-labels";
 import { PageTitle } from "../account/shared";
-import { calendarDate, municipalToday, slotLabel } from "../catalog/dates";
+import { calendarDate, localTimeLabel, municipalToday } from "../catalog/dates";
 import {
   type CommandPolicy,
   type CommandResult,
@@ -64,11 +64,7 @@ export function useReservation(tenant: string, id: string) {
 }
 export function dateTime(value: string, timeZone: string, locale: string) {
   const date = new Date(value);
-  const offset =
-    new Intl.DateTimeFormat("en", { timeZone, timeZoneName: "longOffset" })
-      .formatToParts(date)
-      .find((p) => p.type === "timeZoneName")?.value ?? "";
-  return `${calendarLabel(calendarDate(municipalToday(timeZone, date)), locale, "long")} · ${slotLabel(value, timeZone, locale)} ${offset.replace("GMT", "UTC")}`;
+  return `${calendarLabel(calendarDate(municipalToday(timeZone, date)), locale, "long")} · ${localTimeLabel(value, timeZone, locale)}`;
 }
 export function ReservationSummary({
   reservation: r,
@@ -80,8 +76,6 @@ export function ReservationSummary({
     <p>
       {dateTime(r.startsAt, r.timeZone, locale)} —{" "}
       {dateTime(r.endsAt, r.timeZone, locale)}
-      <br />
-      <small>{r.timeZone}</small>
     </p>
   );
 }

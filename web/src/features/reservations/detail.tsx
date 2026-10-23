@@ -1,5 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
+import { api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
@@ -20,6 +22,17 @@ export function ReservationDetail() {
   const { locale, t } = usePreferences();
   const { account } = useSession();
   const query = useReservation(tenantId, reservationId);
+  const unit = useQuery({
+    queryKey: ["public", tenantId, query.data?.unitId, "detail-name"],
+    enabled: !!query.data,
+    queryFn: ({ signal }) =>
+      api<{ name: string }>(
+        `/api/public/municipalities/${tenantId}/units/${query.data?.unitId}`,
+        { signal },
+        locale,
+      ),
+    retry: false,
+  });
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -56,7 +69,7 @@ export function ReservationDetail() {
         <p>
           {t("Unidad reservable", "Unidade reservable")}:{" "}
           <Link to={`/municipios/${tenantId}/unidades/${r.unitId}`}>
-            {r.unitId}
+            {unit.data?.name ?? t("Consultar unidad", "Consultar unidade")}
           </Link>
         </p>
         <p>

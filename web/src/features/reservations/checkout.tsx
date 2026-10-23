@@ -1,11 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  CalendarDays,
-  Clock3,
-  MapPin,
-  ShieldCheck,
-  TriangleAlert,
-} from "lucide-react";
+import { CalendarDays, Clock3, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { ApiError, type Appearance, api } from "../../app/api";
@@ -14,7 +8,11 @@ import { usePreferences } from "../../app/preferences-provider";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { BookingFrame } from "../../ui/blocks/multi-step-form/booking-frame";
 import { Checkbox } from "../../ui/checkbox/checkbox";
-import { slotLabel } from "../catalog/dates";
+import {
+  durationLabel,
+  localTimeLabel,
+  municipalToday,
+} from "../catalog/dates";
 import type { Unit } from "../catalog/unit";
 import booking from "../catalog/unit.module.css";
 import type { CommandPolicy } from "./commands";
@@ -38,6 +36,15 @@ export function Checkout() {
     const timer = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(timer);
   }, []);
+  const municipality = useQuery({
+    queryKey: ["public", tenantId, "municipality"],
+    queryFn: ({ signal }) =>
+      api<{ name: string }>(
+        `/api/public/municipalities/${tenantId}`,
+        { signal },
+        locale,
+      ),
+  });
   const original = useReservation(tenantId, reservationId);
   const unit = useQuery({
     queryKey: ["public", tenantId, unitId, "checkout", locale],
@@ -142,7 +149,7 @@ export function Checkout() {
         to={
           reservationId
             ? `/reservas/${tenantId}/${reservationId}/modificar`
-            : `/municipios/${tenantId}/unidades/${unitId}`
+            : `/municipios/${tenantId}/unidades/${unitId}?fecha=${municipalToday(unit.data.timeZone, new Date(startsAt))}&duracion=${(Date.parse(endsAt) - Date.parse(startsAt)) / 60000}`
         }
       >
         {t("Elegir otra franja", "Escoller outra franxa")}
@@ -174,6 +181,7 @@ export function Checkout() {
             className={booking.summary}
             aria-label={t("Resumen de la reserva", "Resumo da reserva")}
           >
+            <p className={booking.eyebrow}>{municipality.data?.name}</p>
             <h2>{unit.data.name}</h2>
             <dl>
               <div>
@@ -197,24 +205,18 @@ export function Checkout() {
                   {t("Horario", "Horario")}
                 </dt>
                 <dd>
-                  {slotLabel(startsAt, unit.data.timeZone, locale)} –{" "}
-                  {slotLabel(endsAt, unit.data.timeZone, locale)}
+                  {localTimeLabel(startsAt, unit.data.timeZone, locale)} –{" "}
+                  {localTimeLabel(endsAt, unit.data.timeZone, locale)}
                   <small>
-                    {(Date.parse(endsAt) - Date.parse(startsAt)) / 60000} min
-                  </small>
-                </dd>
-              </div>
-              <div>
-                <dt>
-                  <MapPin size={16} aria-hidden="true" />
-                  {t("Zona horaria", "Zona horaria")}
-                </dt>
-                <dd>
-                  {unit.data.timeZone}
-                  <small>
-                    {dateTime(startsAt, unit.data.timeZone, locale)}
-                    <br />
-                    {dateTime(endsAt, unit.data.timeZone, locale)}
+                    {durationLabel(
+                      (Date.parse(endsAt) - Date.parse(startsAt)) / 60000,
+                    )}
+                    {municipalToday(unit.data.timeZone, new Date(startsAt)) !==
+                      municipalToday(unit.data.timeZone, new Date(endsAt)) &&
+                      t(
+                        " · Termina al día siguiente",
+                        " · Remata ao día seguinte",
+                      )}
                   </small>
                 </dd>
               </div>
