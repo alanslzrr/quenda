@@ -22,7 +22,7 @@ export function readCommand(
     const item = JSON.parse(value) as PendingCommand;
     if (item.owner !== owner) return null;
     if (
-      !/^\/api\/municipalities\/[\da-f-]+(?:\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?|\/blocks(?:\/[\da-f-]+\/release)?|\/agreements(?:\/[\da-f-]+\/(?:versions|approve|activate|suspend))?|\/credentials(?:\/[\da-f-]+\/revoke)?|\/units\/[\da-f-]+\/agreement-restriction\/release)$/.test(
+      !/^\/api\/municipalities\/[\da-f-]+(?:\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?|\/blocks(?:\/[\da-f-]+\/release)?|\/agreements(?:\/[\da-f-]+\/(?:versions|approve|activate|suspend|reports\/\d{4}-(?:0[1-9]|1[0-2])\/reviews))?|\/credentials(?:\/[\da-f-]+\/revoke)?|\/units\/[\da-f-]+\/agreement-restriction\/release)$/.test(
         item.path,
       ) ||
       typeof item.body !== "string" ||
@@ -141,6 +141,8 @@ export function commandReviewPath(item: PendingCommand) {
   const parts = item.path.split("/");
   const tenant = parts[3];
   const body = JSON.parse(item.body);
+  if (parts[4] === "agreements" && parts[6] === "reports")
+    return `/administracion/${tenant}/informes/revision`;
   if (parts[4] === "agreements") {
     const version = body.version ?? body.expectedVersion;
     return `/administracion/${tenant}/convenios${parts[5] && Number.isSafeInteger(version) && version > 0 ? `/${parts[5]}/versiones/${version}` : ""}`;
@@ -157,11 +159,14 @@ export interface CommandResult {
   id?: string;
   agreementId?: string;
   version?: number;
+  reviewId?: string;
+  decision?: "APPROVE" | "REJECT";
   unitId?: string;
 }
 export function commandResultPath(item: PendingCommand, result: CommandResult) {
   const review = commandReviewPath(item);
   const parts = item.path.split("/");
+  if (parts[4] === "agreements" && parts[6] === "reports") return review;
   if (parts[4] === "agreements")
     return result.agreementId && result.version
       ? `/administracion/${parts[3]}/convenios/${result.agreementId}/versiones/${result.version}`

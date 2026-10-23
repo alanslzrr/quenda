@@ -266,3 +266,39 @@ test("replay authorization failures retain the original uncertain command until 
     globalThis.fetch = original;
   }
 });
+
+test("monthly review recovery accepts only exact review commands and never routes to an agreement version", () => {
+  const saved = storage(),
+    tenant = "00000000-0000-4000-8000-000000000101",
+    id = "00000000-0000-4000-8000-000000000102";
+  const item = {
+    ...command(),
+    path: `/api/municipalities/${tenant}/agreements/${id}/reports/2024-03/reviews`,
+    body: JSON.stringify({
+      revision: 2,
+      expectedHistoryDigest: "a".repeat(64),
+    }),
+  };
+  saved.setItem(pendingKey, JSON.stringify(item));
+  assert.deepEqual(readCommand("ana", saved), item);
+  assert.equal(
+    commandReviewPath(item),
+    `/administracion/${tenant}/informes/revision`,
+  );
+  assert.equal(
+    commandResultPath(item, {
+      agreementId: id,
+      reviewId: "12",
+      decision: "APPROVE",
+    }),
+    `/administracion/${tenant}/informes/revision`,
+  );
+  for (const path of [
+    item.path.replace("2024-03", "2024-13"),
+    item.path.replace("reviews", "review-context"),
+    item.path + "?revision=2",
+  ]) {
+    saved.setItem(pendingKey, JSON.stringify({ ...item, path }));
+    assert.equal(readCommand("ana", saved), null);
+  }
+});
