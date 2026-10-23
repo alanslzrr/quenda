@@ -1,0 +1,32 @@
+.surface {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.surface h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 4vw, 2.4rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+.surface p {
+  line-height: 1.6;
+}
+.surface dd {
+  white-space: pre-wrap;
+  margin: 0 0 0.75rem;
+}
+.surface a {
+  color: var(--foreground);
+  text-underline-offset: 4px;
+}
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 2rem 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.nav a[aria-current] {
+  font-weight: 600;
+}
