@@ -231,7 +231,7 @@ export function AnimatedCounter({
   }
   const parts = partsFor(value, decimals, locale);
   const text = `${prefix}${parts.map((part) => ("text" in part ? part.text : part.digit)).join("")}${suffix}`;
-  const armed = animateOnView && !inView;
+  const armed = animateOnView && !inView && !reduceMotion;
   return (
     <span data-lumen="" ref={ref} className={styles.counter}>
       {label && (

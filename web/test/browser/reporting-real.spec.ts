@@ -5,6 +5,26 @@ import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
 import { test } from "./fixtures";
 
+async function visibleNumbers(page: Page) {
+  const reduced = await page.evaluate(
+    () => matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  const counters = page.getByRole("article").locator('[class*="counter"]');
+  for (const counter of await counters.all()) {
+    // Reduced motion must show final digits even before entering the viewport.
+    if (!reduced) await counter.scrollIntoViewIfNeeded();
+    const expected = await counter.locator('[class*="srOnly"]').textContent();
+    await expect
+      .poll(async () =>
+        (await counter.locator('[aria-hidden="true"]').innerText()).replace(
+          /\s/g,
+          "",
+        ),
+      )
+      .toBe(expected?.replace(/\s/g, ""));
+  }
+}
+
 async function signin(
   page: Page,
   f: { email: string; password: string; secret: string },
@@ -131,6 +151,7 @@ test("real reporting preserves municipal exports and jointly reviewed monthly pu
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  await visibleNumbers(page);
   await page.screenshot({
     path: `test-results/reporting-indicators-${info.project.name}.png`,
     fullPage: true,
@@ -196,6 +217,7 @@ test("real reporting preserves municipal exports and jointly reviewed monthly pu
       page.getByRole("heading", { name: "Informe autorizado", exact: true }),
     ).toBeVisible();
     await expect(page.getByText("20", { exact: true })).toHaveCount(1);
+    await visibleNumbers(page);
     await page.screenshot({
       path: `test-results/reporting-monthly-${info.project.name}.png`,
       fullPage: true,
