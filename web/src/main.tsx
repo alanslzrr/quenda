@@ -188,6 +188,14 @@ const Reopening = lazy(() =>
     default: m.Reopening,
   })),
 );
+const MunicipalPrivacy = lazy(() =>
+  import("./features/privacy/page").then((m) => ({
+    default: m.MunicipalPrivacy,
+  })),
+);
+const GlobalPrivacy = lazy(() =>
+  import("./features/privacy/page").then((m) => ({ default: m.GlobalPrivacy })),
+);
 const client = createQueryClient();
 function Missing() {
   useMunicipalTheme(undefined);
@@ -268,6 +276,10 @@ createRoot(root).render(
                       />
                       <Route element={<RequireAccount />}>
                         <Route
+                          path="plataforma/privacidad/:section?"
+                          element={<GlobalPrivacy />}
+                        />
+                        <Route
                           path="administracion"
                           element={<Administration />}
                         />
@@ -276,6 +288,10 @@ createRoot(root).render(
                           element={<MunicipalLayout />}
                         >
                           <Route index element={<Catalog />} />
+                          <Route
+                            path="privacidad/:section?"
+                            element={<MunicipalPrivacy />}
+                          />
                           <Route
                             path="instalaciones/:resourceId"
                             element={<ResourcePage />}

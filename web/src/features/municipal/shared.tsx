@@ -120,6 +120,16 @@ export function Administration() {
         <Failure error={query.error} />
       ) : (
         <>
+          {query.data.pages[0]?.platform.permissions.some((p) =>
+            ["PRIVACY_READ", "PRIVACY_EXECUTE"].includes(p),
+          ) && (
+            <Link to="/plataforma/privacidad">
+              {t(
+                "Conservación y derechos globales",
+                "Conservación e dereitos globais",
+              )}
+            </Link>
+          )}
           <ul className={layout.list}>
             {query.data.pages
               .flatMap((p) => p.municipalities.items)
@@ -205,6 +215,15 @@ export function MunicipalLayout() {
             {has("RESERVATION_READ", "RESERVATION_MANAGE", "UNIT_BLOCK") && (
               <NavLink to={`${municipalPath(tenantId)}/agenda`}>
                 {t("Agenda diaria", "Axenda diaria")}
+              </NavLink>
+            )}
+            {context.permissions.some(
+              (p) =>
+                p.unitId === null &&
+                ["PRIVACY_READ", "PRIVACY_EXECUTE"].includes(p.operation),
+            ) && (
+              <NavLink to={`${municipalPath(tenantId)}/privacidad`}>
+                {t("Conservación y derechos", "Conservación e dereitos")}
               </NavLink>
             )}
             {context.administrator && (
