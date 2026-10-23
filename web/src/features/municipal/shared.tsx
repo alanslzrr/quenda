@@ -4,7 +4,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useState } from "react";
-import { Link, NavLink, Outlet, useLocation, useParams } from "react-router";
+import { Link, Outlet, useParams } from "react-router";
 import { ActionForm } from "../../app/action";
 import { ApiError, api, type Navigation, type Page } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
@@ -15,8 +15,6 @@ import { useMunicipalTheme } from "../../app/theme-provider";
 import { Button } from "../../ui/button/button";
 import { Input } from "../../ui/input/input";
 import { MfaBoundary } from "../account/mfa-dialog";
-import { allowed, canEnter } from "../reporting/model";
-import styles from "./municipal.module.css";
 import { ResourceShell } from "./resource-shell";
 
 export type MunicipalContext = Navigation["municipalities"]["items"][number];
@@ -174,7 +172,6 @@ export function Administration() {
   );
 }
 export function MunicipalLayout() {
-  const location = useLocation();
   useMunicipalTheme(undefined);
   const { tenantId = "" } = useParams();
   const { account } = useSession();
@@ -216,105 +213,17 @@ export function MunicipalLayout() {
   if (query.isError)
     return <Failure error={query.error} retry={() => void query.refetch()} />;
   const context = query.data;
-  if (/\/unidades\/[^/]+$/.test(location.pathname))
-    return (
-      <Context.Provider value={context}>
-        <MfaBoundary>
-          <ResourceShell municipality={context}>
-            <Outlet key={`${account?.accountId}:${tenantId}`} />
-          </ResourceShell>
-        </MfaBoundary>
-      </Context.Provider>
-    );
-  const has = (...ops: string[]) =>
-    context.administrator ||
-    context.permissions.some((p) => ops.includes(p.operation));
   return (
     <Context.Provider value={context}>
-      <div className={styles.workspace}>
-        <aside className={styles.sidebar}>
-          <Link to="/administracion">{t("Municipios", "Municipios")}</Link>
-          <h2>{context.name}</h2>
-          <nav aria-label={t("Gestión municipal", "Xestión municipal")}>
-            {has("CATALOG_CREATE", "CATALOG_MANAGE") && (
-              <NavLink end to={municipalPath(tenantId)}>
-                {t("Instalaciones y unidades", "Instalacións e unidades")}
-              </NavLink>
-            )}
-            {has("RESERVATION_READ", "RESERVATION_MANAGE", "UNIT_BLOCK") && (
-              <NavLink to={`${municipalPath(tenantId)}/agenda`}>
-                {t("Agenda diaria", "Axenda diaria")}
-              </NavLink>
-            )}
-            {canEnter(context) && (
-              <NavLink to={`${municipalPath(tenantId)}/indicadores`}>
-                {t("Indicadores", "Indicadores")}
-              </NavLink>
-            )}
-            {canEnter(context, true) && (
-              <NavLink to={`${municipalPath(tenantId)}/exportaciones`}>
-                {t("Exportar reservas", "Exportar reservas")}
-              </NavLink>
-            )}
-            {allowed(context, "REPORT_READ", null) && (
-              <NavLink end to={`${municipalPath(tenantId)}/informes`}>
-                {t("Informes conjuntos", "Informes conxuntos")}
-              </NavLink>
-            )}
-            {context.administrator && (
-              <NavLink to={`${municipalPath(tenantId)}/informes/revision`}>
-                {t("Revisar informes", "Revisar informes")}
-              </NavLink>
-            )}
-            {context.permissions.some(
-              (p) =>
-                p.unitId === null &&
-                ["PRIVACY_READ", "PRIVACY_EXECUTE"].includes(p.operation),
-            ) && (
-              <NavLink to={`${municipalPath(tenantId)}/privacidad`}>
-                {t("Conservación y derechos", "Conservación e dereitos")}
-              </NavLink>
-            )}
-            {context.administrator && (
-              <>
-                <NavLink to={`${municipalPath(tenantId)}/convenios`}>
-                  {t("Convenios", "Convenios")}
-                </NavLink>
-                <NavLink to={`${municipalPath(tenantId)}/acreditaciones`}>
-                  {t("Acreditaciones", "Acreditacións")}
-                </NavLink>
-                <NavLink to={`${municipalPath(tenantId)}/personal`}>
-                  {t("Personal y permisos", "Persoal e permisos")}
-                </NavLink>
-                <NavLink to={`${municipalPath(tenantId)}/condiciones`}>
-                  {t("Condiciones de reserva", "Condicións de reserva")}
-                </NavLink>
-                <NavLink to={`${municipalPath(tenantId)}/apariencia`}>
-                  {t("Apariencia", "Aparencia")}
-                </NavLink>
-              </>
-            )}
-          </nav>
-          <Link to="/perfil/seguridad" target="_blank" rel="noopener">
-            {t("Verificar MFA (nueva pestaña)", "Verificar MFA (nova pestana)")}
-          </Link>
-          <p>
-            {t(
-              "Las operaciones sensibles requieren MFA verificado en los últimos cinco minutos.",
-              "As operacións sensibles requiren MFA verificado nos últimos cinco minutos.",
-            )}
-          </p>
-        </aside>
-        <div
-          className={styles.content}
-          key={`${account?.accountId}:${tenantId}`}
-        >
-          <Outlet />
-        </div>
-      </div>
+      <MfaBoundary>
+        <ResourceShell municipality={context}>
+          <Outlet key={`${account?.accountId}:${tenantId}`} />
+        </ResourceShell>
+      </MfaBoundary>
     </Context.Provider>
   );
 }
+
 export function Denied() {
   const { t } = usePreferences();
   return (

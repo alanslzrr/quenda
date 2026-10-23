@@ -34,9 +34,7 @@ export function Layout() {
       setBusy(false);
     }
   }
-  const resource = /^\/administracion\/[^/]+\/unidades\/[^/]+$/.test(
-    location.pathname,
-  );
+  const resource = /^\/administracion\/[^/]+(?:\/|$)/.test(location.pathname);
   return (
     <div className={`${styles.shell} ${styles.product}`}>
       <a className={styles.skip} href="#content">

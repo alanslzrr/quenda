@@ -13,7 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { SettingsMenu } from "../../app/settings-menu";
@@ -32,6 +32,7 @@ export function ResourceShell({
   const { t } = usePreferences();
   const { account } = useSession();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const base = municipalPath(m.id);
   const has = (...ops: string[]) =>
     m.administrator || m.permissions.some((p) => ops.includes(p.operation));
@@ -147,7 +148,13 @@ export function ResourceShell({
   return (
     <SidebarRail
       sections={sections}
-      active={base}
+      active={
+        sections
+          .flatMap((section) => section.items)
+          .map((item) => item.id)
+          .filter((id) => pathname === id || pathname.startsWith(`${id}/`))
+          .sort((a, b) => b.length - a.length)[0] ?? base
+      }
       onSelect={navigate}
       municipality={m.name}
       email={account?.email ?? ""}
@@ -161,7 +168,7 @@ export function ResourceShell({
       }}
       toolbar={
         <>
-          <Link to={base}>{t("Catálogo", "Catálogo")}</Link>
+          <Link to={base}>{t("Volver al catálogo", "Volver ao catálogo")}</Link>
           <div style={{ display: "flex", gap: 8 }}>
             <MfaDialog />
             <SettingsMenu />
