@@ -22,7 +22,6 @@ export function Profile() {
   return (
     <>
       <div className={styles.hero}>
-        <p className={styles.eyebrow}>{account.email}</p>
         <h1 className={styles.title}>
           {t("Preferencias de tu cuenta", "Preferencias da túa conta")}
         </h1>

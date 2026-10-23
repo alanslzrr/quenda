@@ -100,3 +100,4 @@
 .navItem[aria-current=page] { background:var(--surface); box-shadow:var(--shadow-resting); }
 .scroller { height:auto; overflow:visible; padding:28px; }
 @container(max-width:719px) { .settings { height:auto; } .scroller { padding:20px 16px; } }
+@container(max-width:719px) { .account { display:flex; padding:8px 20px; margin:0; } .navItem { min-height:44px; } }
