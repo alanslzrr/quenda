@@ -189,6 +189,20 @@ async function appearance(page: Page, theme: "light" | "dark") {
   await expect(page.locator('[data-aria-hidden="true"]')).toHaveCount(0);
 }
 async function audit(page: Page, name: string) {
+  // Audit the settled state, not intermediate colors during the calendar handoff.
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        document
+          .getAnimations()
+          .every(
+            (animation) =>
+              animation.playState !== "running" ||
+              animation.effect?.getTiming().iterations === Infinity,
+          ),
+      ),
+    )
+    .toBe(true);
   await expect
     .poll(() =>
       page.evaluate(
