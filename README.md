@@ -55,6 +55,8 @@ La sección «Convenios» permite crear versiones, aprobar la participación mun
 
 La administración de plataforma permite incorporar municipios, sustituir su invitación inicial, recuperar responsables municipales, gestionar operadores y concesiones de privacidad global, y suspender identidades comprometidas. Exige permiso de operador y MFA reciente, sin acceso implícito a datos municipales ni de privacidad. Las invitaciones requieren aceptación desde el perfil; la recuperación municipal registra la referencia de verificación de autoridad. La inicialización del primer operador y la recuperación sin operadores habilitados requieren mantenimiento separado.
 
+«Indicadores» consulta el municipio completo o una unidad según los permisos vigentes. La ocupación sin oferta se muestra como «no aplicable». «Exportar reservas» descarga el JSON versionado del ámbito autorizado, sin truncar resultados ni conservar el archivo en el almacenamiento del navegador. «Informes conjuntos» entrega únicamente el mes autorizado para el destinatario; una publicación suprimida no muestra métricas ni causas. Los administradores participantes registran la revisión de riesgo sobre el contexto exacto del destinatario, con recuperación idempotente y nueva comprobación si cambia el historial.
+
 ## Autenticación local
 
 Better Auth utiliza el esquema `auth`, con migraciones ejecutadas fuera del proceso web. Kysely configura su adaptador PostgreSQL con transacciones; las consultas del dominio utilizan `pg`.
