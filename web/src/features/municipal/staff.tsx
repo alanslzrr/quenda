@@ -19,6 +19,7 @@ import {
   useMunicipality,
   useMunicipalPages,
 } from "./shared";
+import staffStyles from "./staff.module.css";
 import { StaffInvite, useAuthoritySaved } from "./staff-forms";
 import {
   type Administrator,
@@ -35,10 +36,10 @@ export function MunicipalStaff() {
   if (!m.administrator) return <Denied />;
   const base = `${municipalPath(m.id)}/personal`;
   return (
-    <>
+    <div className={staffStyles.staff}>
       <h1>{t("Personal y permisos", "Persoal e permisos")}</h1>
       <nav
-        className={styles.row}
+        className={staffStyles.navigation}
         aria-label={t("Personal municipal", "Persoal municipal")}
       >
         <NavLink end to={base}>
@@ -66,7 +67,7 @@ export function MunicipalStaff() {
           {t("Volver al personal municipal", "Volver ao persoal municipal")}
         </Link>
       )}
-    </>
+    </div>
   );
 }
 function Administrators() {
@@ -110,7 +111,9 @@ function Administrators() {
                     variant="ghost"
                     onClick={() => setSelected(r.accountId)}
                   >
-                    {r.accountId}
+                    <span className={staffStyles.identifier}>
+                      {r.accountId}
+                    </span>
                     {r.accountId === account?.accountId
                       ? t(" (tu cuenta)", " (a túa conta)")
                       : ""}
@@ -270,7 +273,9 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
                       setReplacing(false);
                     }}
                   >
-                    {r.accountId}
+                    <span className={staffStyles.identifier}>
+                      {r.accountId}
+                    </span>
                   </Button>
                 ),
               },

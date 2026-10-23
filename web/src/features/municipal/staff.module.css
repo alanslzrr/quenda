@@ -1,0 +1,44 @@
+.staff {
+  overflow-wrap: anywhere;
+}
+.navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1.5rem;
+}
+.navigation a {
+  padding: 0.7rem;
+  border-radius: var(--radius-control);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+.navigation a[aria-current] {
+  background: var(--surface-muted);
+  font-weight: 600;
+}
+.identifier {
+  display: block;
+  max-width: 13rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.permissions {
+  min-width: 0;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  display: grid;
+  gap: 1rem;
+}
+.permissions legend {
+  padding: 0 0.4rem;
+  font-weight: 500;
+}
+.permissions p,
+.permissions ul {
+  margin: 0;
+}

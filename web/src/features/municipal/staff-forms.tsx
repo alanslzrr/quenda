@@ -20,6 +20,7 @@ import {
   useMunicipality,
   useMunicipalPages,
 } from "./shared";
+import staffStyles from "./staff.module.css";
 import {
   municipalOnly,
   type Operation,
@@ -120,7 +121,7 @@ function PermissionEditor({
   );
   const all = units.data?.pages.flatMap((p) => p.items) ?? [];
   return (
-    <fieldset className={styles.section}>
+    <fieldset className={staffStyles.permissions}>
       <legend>{t("Permisos", "Permisos")}</legend>
       <p>
         {t(
