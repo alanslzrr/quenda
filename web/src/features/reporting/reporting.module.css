@@ -1,0 +1,13 @@
+.surface {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.surface p {
+  line-height: 1.6;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
