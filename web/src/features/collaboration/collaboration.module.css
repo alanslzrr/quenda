@@ -1,0 +1,35 @@
+.surface {
+  overflow-wrap: anywhere;
+}
+.text {
+  white-space: pre-wrap;
+}
+.participant {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 1rem;
+  margin: 1rem 0;
+  display: grid;
+  gap: 1rem;
+}
+.participant legend {
+  padding: 0 0.4rem;
+  font-weight: 500;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.actions a {
+  color: var(--foreground);
+  text-underline-offset: 4px;
+}
+
+.dates {
+  display: grid;
+  gap: 1.4rem;
+  min-width: 0;
+}
