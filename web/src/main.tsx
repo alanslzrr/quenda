@@ -158,6 +158,36 @@ const MunicipalStaff = lazy(() =>
     default: m.MunicipalStaff,
   })),
 );
+const Agreements = lazy(() =>
+  import("./features/collaboration/agreements").then((m) => ({
+    default: m.Agreements,
+  })),
+);
+const NewAgreement = lazy(() =>
+  import("./features/collaboration/agreements").then((m) => ({
+    default: m.NewAgreement,
+  })),
+);
+const AgreementPage = lazy(() =>
+  import("./features/collaboration/agreements").then((m) => ({
+    default: m.AgreementPage,
+  })),
+);
+const Credentials = lazy(() =>
+  import("./features/collaboration/credentials").then((m) => ({
+    default: m.Credentials,
+  })),
+);
+const IssueCredential = lazy(() =>
+  import("./features/collaboration/credentials").then((m) => ({
+    default: m.IssueCredential,
+  })),
+);
+const Reopening = lazy(() =>
+  import("./features/collaboration/reopening").then((m) => ({
+    default: m.Reopening,
+  })),
+);
 const client = createQueryClient();
 function Missing() {
   useMunicipalTheme(undefined);
@@ -265,6 +295,31 @@ createRoot(root).render(
                           <Route
                             path="apariencia"
                             element={<MunicipalAppearance />}
+                          />
+                          <Route path="convenios" element={<Agreements />} />
+                          <Route
+                            path="convenios/nuevo"
+                            element={<NewAgreement />}
+                          />
+                          <Route
+                            path="convenios/:agreementId/versiones/:version"
+                            element={<AgreementPage />}
+                          />
+                          <Route
+                            path="convenios/:agreementId/versiones/:version/nueva-version"
+                            element={<AgreementPage edit />}
+                          />
+                          <Route
+                            path="convenios/:agreementId/versiones/:version/acreditar"
+                            element={<IssueCredential />}
+                          />
+                          <Route
+                            path="convenios/unidades/:unitId/reapertura"
+                            element={<Reopening />}
+                          />
+                          <Route
+                            path="acreditaciones"
+                            element={<Credentials />}
                           />
                           <Route path="agenda" element={<Agenda />} />
                           <Route

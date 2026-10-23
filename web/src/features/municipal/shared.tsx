@@ -209,6 +209,12 @@ export function MunicipalLayout() {
             )}
             {context.administrator && (
               <>
+                <NavLink to={`${municipalPath(tenantId)}/convenios`}>
+                  {t("Convenios", "Convenios")}
+                </NavLink>
+                <NavLink to={`${municipalPath(tenantId)}/acreditaciones`}>
+                  {t("Acreditaciones", "Acreditacións")}
+                </NavLink>
                 <NavLink to={`${municipalPath(tenantId)}/personal`}>
                   {t("Personal y permisos", "Persoal e permisos")}
                 </NavLink>
