@@ -1,4 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import {
+  LockKeyhole,
+  Mail,
+  ShieldCheck,
+  SlidersHorizontal,
+  UserRound,
+} from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router";
 import { api } from "../../app/api";
@@ -7,6 +14,7 @@ import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
+import { SettingsLayout } from "../../ui/blocks/settings-page/settings-layout";
 import { PasswordField } from "../../ui/password-field/password-field";
 
 export function RequireAccount() {
@@ -24,8 +32,46 @@ export function RequireAccount() {
   return <Outlet />;
 }
 export function AccountLayout() {
+  const { pathname } = useLocation();
+  const { account } = useSession();
   useMunicipalTheme(undefined);
   const { t } = usePreferences();
+  if (pathname === "/perfil/seguridad")
+    return (
+      <SettingsLayout
+        title={t("Mi cuenta", "A miña conta")}
+        email={account?.email ?? ""}
+        links={[
+          {
+            to: "/perfil",
+            label: t("Preferencias", "Preferencias"),
+            icon: <SlidersHorizontal size={16} aria-hidden="true" />,
+          },
+          {
+            to: "/perfil/datos",
+            label: t("Datos personales", "Datos persoais"),
+            icon: <UserRound size={16} aria-hidden="true" />,
+          },
+          {
+            to: "/perfil/seguridad",
+            label: t("Seguridad", "Seguridade"),
+            icon: <ShieldCheck size={16} aria-hidden="true" />,
+          },
+          {
+            to: "/perfil/privacidad",
+            label: t("Privacidad y baja", "Privacidade e baixa"),
+            icon: <LockKeyhole size={16} aria-hidden="true" />,
+          },
+          {
+            to: "/perfil/invitaciones",
+            label: t("Invitaciones", "Invitacións"),
+            icon: <Mail size={16} aria-hidden="true" />,
+          },
+        ]}
+      >
+        <Outlet />
+      </SettingsLayout>
+    );
   return (
     <>
       <nav

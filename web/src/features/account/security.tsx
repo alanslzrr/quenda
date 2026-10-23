@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Monitor, ShieldCheck, Smartphone } from "lucide-react";
 import { useState } from "react";
 import { ActionForm, textField } from "../../app/action";
 import { api } from "../../app/api";
@@ -6,10 +7,14 @@ import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
+import { Badge } from "../../ui/badge/badge";
+import { SecuritySection } from "../../ui/blocks/security-settings/security-section";
+import security from "../../ui/blocks/security-settings/security-settings.module.css";
 import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
-import { PageTitle, SecretField, useAuthSession } from "./shared";
+import { sessionDevice } from "./session-device";
+import { SecretField, useAuthSession } from "./shared";
 
 export function FactorField({ optional = false }: { optional?: boolean }) {
   const { t } = usePreferences();
@@ -89,18 +94,27 @@ export function AccountSecurity() {
     await sessions.refetch();
   }
   return (
-    <>
-      <PageTitle
-        title={t("Seguridad de tu cuenta", "Seguridade da túa conta")}
-      />
-      <section className={styles.section}>
-        <h2>{t("Contraseña", "Contrasinal")}</h2>
+    <div className={security.block}>
+      <header className={security.header}>
+        <h1 style={{ fontSize: 22, margin: 0, letterSpacing: "-.03em" }}>
+          {t("Seguridad de tu cuenta", "Seguridade da túa conta")}
+        </h1>
         <p>
           {t(
-            "El cambio cerrará las demás sesiones de tu cuenta.",
-            "O cambio pechará as demais sesións da túa conta.",
+            "Controla cómo accedes y dónde mantienes la sesión abierta.",
+            "Controla como accedes e onde mantés a sesión aberta.",
           )}
         </p>
+      </header>
+      <SecuritySection
+        title={t("Contraseña", "Contrasinal")}
+        description={t(
+          "El cambio cerrará las demás sesiones de tu cuenta.",
+          "O cambio pechará as demais sesións da túa conta.",
+        )}
+        action={t("Cambiar contraseña", "Cambiar contrasinal")}
+        closeLabel={t("Ocultar formulario", "Ocultar formulario")}
+      >
         <ActionForm
           label={t("Cambiar contraseña", "Cambiar contrasinal")}
           success={t("Contraseña actualizada.", "Contrasinal actualizado.")}
@@ -131,9 +145,27 @@ export function AccountSecurity() {
             minLength={8}
           />
         </ActionForm>
-      </section>
-      <section className={styles.section}>
-        <h2>{t("Verificación en dos pasos", "Verificación en dous pasos")}</h2>
+      </SecuritySection>
+      <SecuritySection
+        title={t("Verificación en dos pasos", "Verificación en dous pasos")}
+        description={t(
+          "Protege tu cuenta con una aplicación de autenticación.",
+          "Protexe a túa conta cunha aplicación de autenticación.",
+        )}
+        action={t("Gestionar MFA", "Xestionar MFA")}
+        closeLabel={t("Ocultar opciones", "Ocultar opcións")}
+        status={
+          <Badge
+            size="sm"
+            tone={session.data.user.twoFactorEnabled ? "success" : "neutral"}
+            icon={<ShieldCheck size={13} aria-hidden="true" />}
+          >
+            {session.data.user.twoFactorEnabled
+              ? t("Activado", "Activado")
+              : t("Sin activar", "Sen activar")}
+          </Badge>
+        }
+      >
         <p>
           {session.data.user.twoFactorEnabled
             ? t(
@@ -300,9 +332,14 @@ export function AccountSecurity() {
             </ActionForm>
           </>
         )}
-      </section>
-      <section className={styles.section}>
-        <h2>{t("Sesiones abiertas", "Sesións abertas")}</h2>
+      </SecuritySection>
+      <SecuritySection
+        title={t("Sesiones abiertas", "Sesións abertas")}
+        description={t(
+          "Cierra las sesiones que ya no utilices o no reconozcas.",
+          "Pecha as sesións que xa non utilices ou non recoñezas.",
+        )}
+      >
         {sessions.isPending ? (
           <Loading />
         ) : sessions.isError ? (
@@ -311,52 +348,73 @@ export function AccountSecurity() {
             retry={() => void sessions.refetch()}
           />
         ) : (
-          <ul className={styles.list}>
+          <ul className={security.sessions}>
             {sessions.data.map((item) => (
-              <li key={item.token} className={styles.listItem}>
-                <p>
-                  {item.token === session.data.session.token
-                    ? t("Esta sesión", "Esta sesión")
-                    : t("Otra sesión", "Outra sesión")}{" "}
-                  · {new Date(item.createdAt).toLocaleString(locale)}
-                </p>
-                <p>{item.userAgent}</p>
-                {item.token !== session.data.session.token && (
-                  <ActionForm
-                    label={t("Cerrar esta sesión", "Pechar esta sesión")}
-                    submit={async () => {
-                      await api(
-                        "/api/auth/revoke-session",
-                        {
-                          method: "POST",
-                          body: JSON.stringify({ token: item.token }),
-                        },
-                        locale,
-                      );
-                      await sessions.refetch();
-                    }}
-                  />
-                )}
+              <li key={item.token} className={security.session}>
+                <div className={security.sessionInner}>
+                  {/Mobile|Android|iPhone/i.test(item.userAgent ?? "") ? (
+                    <Smartphone
+                      size={18}
+                      className={security.deviceIcon}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Monitor
+                      size={18}
+                      className={security.deviceIcon}
+                      aria-hidden="true"
+                    />
+                  )}
+                  <div className={security.sessionText}>
+                    <strong className={security.sessionName}>
+                      {sessionDevice(item.userAgent, locale)}
+                    </strong>
+                    <p>
+                      {item.token === session.data.session.token
+                        ? t("Esta sesión", "Esta sesión")
+                        : t("Otra sesión", "Outra sesión")}{" "}
+                      · {new Date(item.createdAt).toLocaleString(locale)}
+                    </p>
+                  </div>
+                  {item.token !== session.data.session.token && (
+                    <ActionForm
+                      label={t("Cerrar esta sesión", "Pechar esta sesión")}
+                      submit={async () => {
+                        await api(
+                          "/api/auth/revoke-session",
+                          {
+                            method: "POST",
+                            body: JSON.stringify({ token: item.token }),
+                          },
+                          locale,
+                        );
+                        await sessions.refetch();
+                      }}
+                    />
+                  )}
+                </div>
               </li>
             ))}
           </ul>
         )}
-        <ActionForm
-          label={t("Cerrar las demás sesiones", "Pechar as demais sesións")}
-          success={t(
-            "Las demás sesiones se han cerrado.",
-            "As demais sesións pecháronse.",
-          )}
-          submit={async () => {
-            await api(
-              "/api/auth/revoke-other-sessions",
-              { method: "POST", body: "{}" },
-              locale,
-            );
-            await sessions.refetch();
-          }}
-        />
-      </section>
-    </>
+        <div className={security.sessionsFoot}>
+          <ActionForm
+            label={t("Cerrar las demás sesiones", "Pechar as demais sesións")}
+            success={t(
+              "Las demás sesiones se han cerrado.",
+              "As demais sesións pecháronse.",
+            )}
+            submit={async () => {
+              await api(
+                "/api/auth/revoke-other-sessions",
+                { method: "POST", body: "{}" },
+                locale,
+              );
+              await sessions.refetch();
+            }}
+          />
+        </div>
+      </SecuritySection>
+    </div>
   );
 }

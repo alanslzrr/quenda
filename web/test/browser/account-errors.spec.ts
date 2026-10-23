@@ -78,6 +78,9 @@ test("administrative MFA cannot be presented as disabled after a rejection", asy
     }),
   );
   await page.goto("/perfil/seguridad");
+  await page
+    .getByRole("button", { name: /Gestionar MFA|Xestionar MFA/ })
+    .click();
   const form = page.locator("form").filter({
     has: page.getByRole("button", { name: "Desactivar MFA", exact: true }),
   });

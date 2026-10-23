@@ -54,6 +54,9 @@ test("MFA enrollment, backup sign-in and password change retain usable sessions"
   await page
     .getByRole("link", { name: /Seguridad|Seguridade/, exact: true })
     .click();
+  await page
+    .getByRole("button", { name: /Gestionar MFA|Xestionar MFA/ })
+    .click();
   const enroll = page.locator("form").filter({
     has: page.getByRole("button", { name: "Configurar MFA", exact: true }),
   });
@@ -86,6 +89,9 @@ test("MFA enrollment, backup sign-in and password change retain usable sessions"
   await page.getByRole("button", { name: "Verificar", exact: true }).click();
   await expect(page).toHaveURL(/\/perfil$/);
   await page.goto("/perfil/seguridad");
+  await page
+    .getByRole("button", { name: /Cambiar contraseña|Cambiar contrasinal/ })
+    .click();
   const change = page.locator("form").filter({
     has: page.getByRole("button", {
       name: /Cambiar contraseña|Cambiar contrasinal/,
