@@ -86,6 +86,7 @@ export async function seedMunicipalBrowser(
   ).result;
   return {
     ...catalog,
+    accountId,
     email,
     password,
     secret,

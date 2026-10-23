@@ -9,6 +9,7 @@ import { createAuthentication } from "../../src/modules/identity/index.ts";
 import { withDatabase } from "./postgres.ts";
 import { browserCatalog, seedWebCatalog } from "./web-catalog.ts";
 import { seedMunicipalBrowser } from "./web-municipal.ts";
+import { seedStaffRecipient } from "./web-staff.ts";
 
 // Browser tests own an ephemeral database and local mail sink. No production
 // credentials, external mail delivery or debug HTTP endpoints are involved.
@@ -61,6 +62,23 @@ await withDatabase(async ({ auth, domain, migration }) => {
   await writeFile(
     "web/test-results/municipal-fixtures.json",
     JSON.stringify(municipalFixtures),
+  );
+  const staffFixtures = [];
+  for (let index = 11; index <= 16; index++) {
+    staffFixtures.push({
+      administrator: await seedMunicipalBrowser(
+        app,
+        auth,
+        domain,
+        migration,
+        index,
+      ),
+      recipient: await seedStaffRecipient(app, auth, index),
+    });
+  }
+  await writeFile(
+    "web/test-results/staff-fixtures.json",
+    JSON.stringify(staffFixtures),
   );
   await app.listen({ host: "127.0.0.1", port: 3000 });
   try {
