@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, CalendarDays, Clock3, Info } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { type Appearance, api } from "../../app/api";
@@ -6,6 +7,7 @@ import { Failure, Loading } from "../../app/feedback";
 import layout from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { useMunicipalTheme } from "../../app/theme-provider";
+import { BookingFrame } from "../../ui/blocks/multi-step-form/booking-frame";
 import { Calendar } from "../../ui/calendar/calendar";
 import { Input } from "../../ui/input/input";
 import { calendarLabel } from "../../ui/lib/calendar-labels";
@@ -122,101 +124,154 @@ export function UnitAvailability({
       ),
   });
   return (
-    <>
-      <Link to={`/municipios/${tenantId}`}>
+    <div className={styles.page}>
+      <Link className={styles.back} to={`/municipios/${tenantId}`}>
         {t("Instalaciones del municipio", "Instalacións do municipio")}
       </Link>
-      <div className={layout.hero}>
-        <p className={layout.eyebrow} style={{ marginTop: "2rem" }}>
-          {t("Disponibilidad", "Dispoñibilidade")}
-        </p>
-        <Heading className={layout.title}>{unit.name}</Heading>
-        <p className={layout.description}>
-          {t(
-            "Horarios en la zona del municipio:",
-            "Horarios na zona do municipio:",
-          )}{" "}
-          {unit.timeZone}.{" "}
-          {t(
-            "Consultar una franja no la reserva.",
-            "Consultar unha franxa non a reserva.",
-          )}
-        </p>
-      </div>
-      <div className={styles.grid}>
-        <section
-          aria-label={t("Fecha y duración", "Data e duración")}
-          className={styles.controls}
-        >
-          <Calendar
-            today={today}
-            locale={locale}
-            value={calendarDate(date)}
-            onChange={(value) => setDate(civilDate(value))}
-            minDate={today}
-            maxDate={maximum}
-          />
-          <Input
-            label={t("Duración en minutos", "Duración en minutos")}
-            type="number"
-            value={Number.isFinite(duration) ? duration : ""}
-            min={unit.calendar.minimumMinutes}
-            max={unit.calendar.maximumMinutes}
-            step={unit.calendar.stepMinutes}
-            onChange={(event) => setDuration(event.target.valueAsNumber)}
-            error={
-              valid
-                ? undefined
-                : t(
-                    "Introduce una duración permitida.",
-                    "Introduce unha duración permitida.",
-                  )
-            }
-          />
-        </section>
-        <section aria-labelledby="slots-heading">
-          <h2 id="slots-heading" className={layout.sectionTitle}>
-            {calendarLabel(calendarDate(date), locale, "long")}
-          </h2>
-          {!valid ? null : availability.isPending ? (
-            <Loading />
-          ) : availability.isError ? (
-            <Failure
-              error={availability.error}
-              retry={() => void availability.refetch()}
+      <header className={styles.header}>
+        <div className={styles.unitIcon}>
+          <CalendarDays size={22} strokeWidth={1.5} aria-hidden="true" />
+        </div>
+        <div>
+          <p className={styles.eyebrow}>
+            {t("Unidad reservable", "Unidade reservable")}
+          </p>
+          <Heading>{unit.name}</Heading>
+          <p className={styles.zone}>{unit.timeZone}</p>
+        </div>
+      </header>
+      <BookingFrame
+        index={0}
+        labels={[
+          t("Fecha y hora", "Data e hora"),
+          t("Revisar y confirmar", "Revisar e confirmar"),
+        ]}
+        progressLabel={t("Pasos de la reserva", "Pasos da reserva")}
+      >
+        <div className={styles.grid}>
+          <section
+            aria-label={t("Fecha y duración", "Data e duración")}
+            className={styles.controls}
+          >
+            <div className={styles.controlHeading}>
+              <CalendarDays size={16} aria-hidden="true" />
+              <h2>{t("Elige una fecha", "Escolle unha data")}</h2>
+            </div>
+            <Calendar
+              today={today}
+              locale={locale}
+              value={calendarDate(date)}
+              onChange={(value) => setDate(civilDate(value))}
+              minDate={today}
+              maxDate={maximum}
             />
-          ) : (
-            <>
-              <ul className={styles.slots}>
-                {availability.data.slots.map((slot) => (
-                  <li key={slot.start.utc}>
-                    <Link
-                      className={styles.slot}
-                      to={
-                        reservationId
-                          ? `/reservas/${tenantId}/${reservationId}/confirmar?unidad=${unit.id}&inicio=${encodeURIComponent(slot.start.utc)}&fin=${encodeURIComponent(slot.end.utc)}`
-                          : `/municipios/${tenantId}/unidades/${unit.id}/reservar?inicio=${encodeURIComponent(slot.start.utc)}&fin=${encodeURIComponent(slot.end.utc)}`
-                      }
-                    >
-                      {slotLabel(slot.start.utc, unit.timeZone, locale)} —{" "}
-                      {slotLabel(slot.end.utc, unit.timeZone, locale)}
-                      <small>UTC{slot.start.offset}</small>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              {availability.data.slots.length === 0 && (
-                <p className={layout.empty}>
-                  {t(
-                    "No hay franjas disponibles para esta fecha y duración.",
-                    "Non hai franxas dispoñibles para esta data e duración.",
-                  )}
-                </p>
+            <div className={styles.duration}>
+              <Clock3 size={16} aria-hidden="true" />
+              <Input
+                label={t("Duración en minutos", "Duración en minutos")}
+                type="number"
+                value={Number.isFinite(duration) ? duration : ""}
+                min={unit.calendar.minimumMinutes}
+                max={unit.calendar.maximumMinutes}
+                step={unit.calendar.stepMinutes}
+                onChange={(event) => setDuration(event.target.valueAsNumber)}
+                error={
+                  valid
+                    ? undefined
+                    : t(
+                        "Introduce una duración permitida.",
+                        "Introduce unha duración permitida.",
+                      )
+                }
+              />
+            </div>
+            <p className={styles.note}>
+              {t(
+                "Consultar una franja no la reserva.",
+                "Consultar unha franxa non a reserva.",
               )}
-            </>
+            </p>
+          </section>
+          <section
+            className={styles.availability}
+            aria-labelledby="slots-heading"
+          >
+            <h2 id="slots-heading" className={layout.sectionTitle}>
+              {calendarLabel(calendarDate(date), locale, "long")}
+            </h2>
+            <p className={styles.zone}>
+              {t(
+                "Selecciona una hora de inicio.",
+                "Selecciona unha hora de inicio.",
+              )}{" "}
+              {duration > 0 && `${duration} min`}
+            </p>
+            {!valid ? null : availability.isPending ? (
+              <Loading />
+            ) : availability.isError ? (
+              <Failure
+                error={availability.error}
+                retry={() => void availability.refetch()}
+              />
+            ) : (
+              <>
+                <ul className={styles.slots}>
+                  {availability.data.slots.map((slot) => (
+                    <li key={slot.start.utc}>
+                      <Link
+                        className={styles.slot}
+                        to={
+                          reservationId
+                            ? `/reservas/${tenantId}/${reservationId}/confirmar?unidad=${unit.id}&inicio=${encodeURIComponent(slot.start.utc)}&fin=${encodeURIComponent(slot.end.utc)}`
+                            : `/municipios/${tenantId}/unidades/${unit.id}/reservar?inicio=${encodeURIComponent(slot.start.utc)}&fin=${encodeURIComponent(slot.end.utc)}`
+                        }
+                      >
+                        <span>
+                          {slotLabel(slot.start.utc, unit.timeZone, locale)}{" "}
+                          <span aria-hidden="true">–</span>{" "}
+                          {slotLabel(slot.end.utc, unit.timeZone, locale)}
+                        </span>
+                        <small>
+                          UTC{slot.start.offset}
+                          <ArrowRight size={14} aria-hidden="true" />
+                        </small>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                {availability.data.slots.length === 0 && (
+                  <div className={styles.empty}>
+                    <CalendarDays
+                      size={30}
+                      strokeWidth={1.25}
+                      aria-hidden="true"
+                    />
+                    <p>
+                      {t(
+                        "No hay franjas disponibles para esta fecha y duración.",
+                        "Non hai franxas dispoñibles para esta data e duración.",
+                      )}
+                    </p>
+                    <span>
+                      {t(
+                        "Prueba otra fecha o duración.",
+                        "Proba outra data ou duración.",
+                      )}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        </div>
+        <p className={styles.footnote}>
+          <Info size={15} aria-hidden="true" />
+          {t(
+            "La disponibilidad se comprueba de nuevo al confirmar.",
+            "A dispoñibilidade compróbase de novo ao confirmar.",
           )}
-        </section>
-      </div>
-    </>
+        </p>
+      </BookingFrame>
+    </div>
   );
 }
