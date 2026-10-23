@@ -12,6 +12,7 @@ import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Button } from "../../ui/button/button";
+import { AvailabilitySearch } from "./search";
 export function MunicipalityPage() {
   const { tenantId } = useParams();
   const { locale, t } = usePreferences();
@@ -66,36 +67,45 @@ export function MunicipalityPage() {
         <h1 className={styles.title}>{municipality.data.name}</h1>
         <p className={styles.description}>
           {t(
-            "Instalaciones y unidades reservables del municipio.",
-            "Instalacións e unidades reservables do municipio.",
+            "Elige el día y la duración para ver los horarios disponibles.",
+            "Escolle o día e a duración para ver os horarios dispoñibles.",
           )}
         </p>
       </div>
-      {facilities.data.pages
-        .flatMap((page) => page.items)
-        .map((facility) => (
-          <Facility
-            key={facility.id}
-            tenantId={tenantId ?? ""}
-            facility={facility}
-          />
-        ))}
-      {facilities.data.pages[0].items.length === 0 && (
-        <p className={styles.empty}>
-          {t(
-            "No hay instalaciones publicadas.",
-            "Non hai instalacións publicadas.",
-          )}
-        </p>
-      )}
-      {facilities.hasNextPage && (
-        <Button
-          loading={facilities.isFetchingNextPage}
-          onClick={() => void facilities.fetchNextPage()}
-        >
-          {t("Ver más", "Ver máis")}
-        </Button>
-      )}
+      <AvailabilitySearch
+        tenantId={tenantId ?? ""}
+        timeZone={municipality.data.timeZone}
+      />
+      <details>
+        <summary>
+          {t("Ver todas las instalaciones", "Ver todas as instalacións")}
+        </summary>
+        {facilities.data.pages
+          .flatMap((page) => page.items)
+          .map((facility) => (
+            <Facility
+              key={facility.id}
+              tenantId={tenantId ?? ""}
+              facility={facility}
+            />
+          ))}
+        {facilities.data.pages[0].items.length === 0 && (
+          <p className={styles.empty}>
+            {t(
+              "No hay instalaciones publicadas.",
+              "Non hai instalacións publicadas.",
+            )}
+          </p>
+        )}
+        {facilities.hasNextPage && (
+          <Button
+            loading={facilities.isFetchingNextPage}
+            onClick={() => void facilities.fetchNextPage()}
+          >
+            {t("Ver más", "Ver máis")}
+          </Button>
+        )}
+      </details>
     </>
   );
 }
