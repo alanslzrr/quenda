@@ -38,7 +38,7 @@ export function Operators() {
           {q.data.pages
             .flatMap((p) => p.items)
             .map((o) => (
-              <section className={styles.card} key={o.accountId}>
+              <section className={styles.section} key={o.accountId}>
                 <h3>{o.accountId}</h3>
                 <p>
                   {o.revokedAt
@@ -125,7 +125,7 @@ export function PlatformInvitations({
           {q.data.pages
             .flatMap((p) => p.items)
             .map((i) => (
-              <section className={styles.card} key={i.invitationId}>
+              <section className={styles.section} key={i.invitationId}>
                 <h3>{i.accountId}</h3>
                 <p>
                   {t("Invitación", "Invitación")}: {i.invitationId}
