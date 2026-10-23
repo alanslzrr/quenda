@@ -80,6 +80,15 @@ await withDatabase(async ({ auth, domain, migration }) => {
     "web/test-results/staff-fixtures.json",
     JSON.stringify(staffFixtures),
   );
+  const collaborationFixtures = [];
+  for (let index = 17; index <= 20; index++)
+    collaborationFixtures.push(
+      await seedMunicipalBrowser(app, auth, domain, migration, index),
+    );
+  await writeFile(
+    "web/test-results/collaboration-fixtures.json",
+    JSON.stringify(collaborationFixtures),
+  );
   await app.listen({ host: "127.0.0.1", port: 3000 });
   try {
     await Promise.race([once(process, "SIGTERM"), once(process, "SIGINT")]);
