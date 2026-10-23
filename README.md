@@ -47,6 +47,8 @@ Las reservas incluyen confirmación de condiciones, historial por municipio, mod
 
 La administración municipal se abre desde la cuenta. Incluye instalaciones, unidades, normas versionadas, horarios y excepciones, condiciones de reserva, agenda diaria, bloqueos y reubicaciones con motivo. Los controles reflejan los permisos vigentes; la API autoriza cada operación. La apariencia municipal dispone de vista previa, guardado y restauración de paletas accesibles, sin modificar el tema de administración.
 
+La sección «Personal y permisos» permite invitar administradores y gestores, delimitar operaciones por municipio o unidad, consultar asignaciones e invitaciones y retirar permisos. Las sustituciones de gestores requieren nueva aceptación; el relevo ordinario conserva un administrador habilitado sin caducidad. La retirada por seguridad afecta solo al municipio. El destinatario facilita su identificador desde los datos de su cuenta y acepta desde sus invitaciones con MFA.
+
 ## Autenticación local
 
 Better Auth utiliza el esquema `auth`, con migraciones ejecutadas fuera del proceso web. Kysely configura su adaptador PostgreSQL con transacciones; las consultas del dominio utilizan `pg`.
