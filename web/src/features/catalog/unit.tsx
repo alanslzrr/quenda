@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CalendarDays, Clock3, Info } from "lucide-react";
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import { type Appearance, api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
 import layout from "../../app/layout.module.css";
@@ -9,9 +9,16 @@ import { usePreferences } from "../../app/preferences-provider";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { BookingFrame } from "../../ui/blocks/multi-step-form/booking-frame";
 import { Calendar } from "../../ui/calendar/calendar";
-import { Input } from "../../ui/input/input";
 import { calendarLabel } from "../../ui/lib/calendar-labels";
-import { calendarDate, civilDate, municipalToday, slotLabel } from "./dates";
+import SegmentedControl from "../../ui/segmented-control/segmented-control";
+import {
+  calendarDate,
+  civilDate,
+  durationLabel,
+  durationOptions,
+  localTimeLabel,
+  municipalToday,
+} from "./dates";
 import styles from "./unit.module.css";
 
 export interface Unit {
@@ -88,8 +95,17 @@ export function UnitAvailability({
   owner?: string;
 }) {
   const { locale, t } = usePreferences();
-  const [date, setDate] = useState(() => municipalToday(unit.timeZone));
-  const [duration, setDuration] = useState(unit.calendar.minimumMinutes);
+  const [search] = useSearchParams();
+  const [date, setDate] = useState(() =>
+    /^\d{4}-\d{2}-\d{2}$/.test(search.get("fecha") ?? "")
+      ? (search.get("fecha") ?? municipalToday(unit.timeZone))
+      : municipalToday(unit.timeZone),
+  );
+  const [duration, setDuration] = useState(() =>
+    durationOptions(unit.calendar).includes(Number(search.get("duracion")))
+      ? Number(search.get("duracion"))
+      : unit.calendar.minimumMinutes,
+  );
   const Heading = reservationId ? "h2" : "h1";
   const today = calendarDate(municipalToday(unit.timeZone));
   const maximum = new Date(today);
@@ -137,7 +153,12 @@ export function UnitAvailability({
             {t("Unidad reservable", "Unidade reservable")}
           </p>
           <Heading>{unit.name}</Heading>
-          <p className={styles.zone}>{unit.timeZone}</p>
+          <p className={styles.zone}>
+            {t(
+              "Horarios en la hora local del municipio",
+              "Horarios na hora local do municipio",
+            )}
+          </p>
         </div>
       </header>
       <BookingFrame
@@ -167,23 +188,20 @@ export function UnitAvailability({
             />
             <div className={styles.duration}>
               <Clock3 size={16} aria-hidden="true" />
-              <Input
-                label={t("Duración en minutos", "Duración en minutos")}
-                type="number"
-                value={Number.isFinite(duration) ? duration : ""}
-                min={unit.calendar.minimumMinutes}
-                max={unit.calendar.maximumMinutes}
-                step={unit.calendar.stepMinutes}
-                onChange={(event) => setDuration(event.target.valueAsNumber)}
-                error={
-                  valid
-                    ? undefined
-                    : t(
-                        "Introduce una duración permitida.",
-                        "Introduce unha duración permitida.",
-                      )
-                }
-              />
+              <div>
+                <h2 className={styles.durationTitle}>
+                  {t("¿Cuánto tiempo necesitas?", "Canto tempo precisas?")}
+                </h2>
+                <SegmentedControl
+                  label={t("Duración", "Duración")}
+                  value={String(duration)}
+                  onValueChange={(value) => setDuration(Number(value))}
+                  options={durationOptions(unit.calendar).map((value) => ({
+                    value: String(value),
+                    label: durationLabel(value),
+                  }))}
+                />
+              </div>
             </div>
             <p className={styles.note}>
               {t(
@@ -204,7 +222,7 @@ export function UnitAvailability({
                 "Selecciona una hora de inicio.",
                 "Selecciona unha hora de inicio.",
               )}{" "}
-              {duration > 0 && `${duration} min`}
+              {duration > 0 && durationLabel(duration)}
             </p>
             {!valid ? null : availability.isPending ? (
               <Loading />
@@ -227,12 +245,22 @@ export function UnitAvailability({
                         }
                       >
                         <span>
-                          {slotLabel(slot.start.utc, unit.timeZone, locale)}{" "}
+                          {localTimeLabel(
+                            slot.start.utc,
+                            unit.timeZone,
+                            locale,
+                          )}{" "}
                           <span aria-hidden="true">–</span>{" "}
-                          {slotLabel(slot.end.utc, unit.timeZone, locale)}
+                          {localTimeLabel(slot.end.utc, unit.timeZone, locale)}
                         </span>
                         <small>
-                          UTC{slot.start.offset}
+                          {slot.start.local.slice(0, 10) !==
+                          slot.end.local.slice(0, 10)
+                            ? t(
+                                "Termina al día siguiente",
+                                "Remata ao día seguinte",
+                              )
+                            : t("Elegir", "Escoller")}
                           <ArrowRight size={14} aria-hidden="true" />
                         </small>
                       </Link>
