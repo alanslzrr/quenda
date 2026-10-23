@@ -14,6 +14,7 @@ import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Button } from "../../ui/button/button";
 import { Input } from "../../ui/input/input";
+import { allowed, canEnter } from "../reporting/model";
 import styles from "./municipal.module.css";
 
 export type MunicipalContext = Navigation["municipalities"]["items"][number];
@@ -225,6 +226,26 @@ export function MunicipalLayout() {
             {has("RESERVATION_READ", "RESERVATION_MANAGE", "UNIT_BLOCK") && (
               <NavLink to={`${municipalPath(tenantId)}/agenda`}>
                 {t("Agenda diaria", "Axenda diaria")}
+              </NavLink>
+            )}
+            {canEnter(context) && (
+              <NavLink to={`${municipalPath(tenantId)}/indicadores`}>
+                {t("Indicadores", "Indicadores")}
+              </NavLink>
+            )}
+            {canEnter(context, true) && (
+              <NavLink to={`${municipalPath(tenantId)}/exportaciones`}>
+                {t("Exportar reservas", "Exportar reservas")}
+              </NavLink>
+            )}
+            {allowed(context, "REPORT_READ", null) && (
+              <NavLink end to={`${municipalPath(tenantId)}/informes`}>
+                {t("Informes conjuntos", "Informes conxuntos")}
+              </NavLink>
+            )}
+            {context.administrator && (
+              <NavLink to={`${municipalPath(tenantId)}/informes/revision`}>
+                {t("Revisar informes", "Revisar informes")}
               </NavLink>
             )}
             {context.permissions.some(

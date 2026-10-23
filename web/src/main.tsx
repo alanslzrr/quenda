@@ -199,6 +199,21 @@ const GlobalPrivacy = lazy(() =>
 const Platform = lazy(() =>
   import("./features/platform/page").then((m) => ({ default: m.Platform })),
 );
+const MunicipalIndicators = lazy(() =>
+  import("./features/reporting/municipal").then((m) => ({
+    default: m.MunicipalIndicators,
+  })),
+);
+const MonthlyReport = lazy(() =>
+  import("./features/reporting/monthly").then((m) => ({
+    default: m.MonthlyReport,
+  })),
+);
+const MonthlyReview = lazy(() =>
+  import("./features/reporting/review").then((m) => ({
+    default: m.MonthlyReview,
+  })),
+);
 const client = createQueryClient();
 function Missing() {
   useMunicipalTheme(undefined);
@@ -296,6 +311,19 @@ createRoot(root).render(
                           element={<MunicipalLayout />}
                         >
                           <Route index element={<Catalog />} />
+                          <Route
+                            path="indicadores"
+                            element={<MunicipalIndicators />}
+                          />
+                          <Route
+                            path="exportaciones"
+                            element={<MunicipalIndicators exporting />}
+                          />
+                          <Route path="informes" element={<MonthlyReport />} />
+                          <Route
+                            path="informes/revision"
+                            element={<MonthlyReview />}
+                          />
                           <Route
                             path="privacidad/:section?"
                             element={<MunicipalPrivacy />}
