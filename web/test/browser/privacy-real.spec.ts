@@ -131,6 +131,7 @@ test("authorized privacy staff manages policies, holds, scoped copies and all in
   ).toBeVisible();
   await page
     .locator("section")
+    .filter({ hasNot: page.getByRole("navigation") })
     .filter({
       has: page.getByText("Comunicaciones sintéticas", { exact: true }),
       hasNot: page.getByRole("navigation"),
@@ -187,6 +188,7 @@ test("authorized privacy staff manages policies, holds, scoped copies and all in
   });
   await page
     .locator("section")
+    .filter({ hasNot: page.getByRole("navigation") })
     .filter({
       has: page.getByText(`Interesado: ${f.subject}`, { exact: true }),
     })
