@@ -14,6 +14,7 @@ import {
   type UnitCalendar,
 } from "./calendar-model";
 import styles from "./municipal.module.css";
+import resource from "./resource.module.css";
 import {
   Denied,
   endpoint,
@@ -41,7 +42,7 @@ export function RulesEditor({ path }: { path: string }) {
       {q.isPending ? (
         <Loading />
       ) : q.isError ? (
-        <Failure error={q.error} />
+        <Failure error={q.error} retry={() => void q.refetch()} />
       ) : (
         <>
           <RulesForm
@@ -50,6 +51,7 @@ export function RulesEditor({ path }: { path: string }) {
             initial={q.data ?? { version: 0, text: "" }}
           />
           <Button
+            type="button"
             variant="ghost"
             onClick={async () => {
               const r = await q.refetch();
@@ -115,7 +117,7 @@ export function CalendarEditor({ path }: { path: string }) {
       {q.isPending ? (
         <Loading />
       ) : q.isError ? (
-        <Failure error={q.error} />
+        <Failure error={q.error} retry={() => void q.refetch()} />
       ) : (
         <>
           <CalendarForm
@@ -124,6 +126,7 @@ export function CalendarEditor({ path }: { path: string }) {
             initial={q.data ?? { version: 0, calendar: emptyCalendar }}
           />
           <Button
+            type="button"
             variant="ghost"
             onClick={async () => {
               const r = await q.refetch();
@@ -285,6 +288,7 @@ function CalendarForm({
               </>
             )}
             <Button
+              type="button"
               variant="ghost"
               onClick={() => set(values.filter((x) => x.id !== r.id))}
             >
@@ -344,59 +348,72 @@ function CalendarForm({
           };
         }}
       >
-        <Input
-          label={t("Duración mínima (minutos)", "Duración mínima (minutos)")}
-          name="min"
-          type="number"
-          min={1}
-          required
-          defaultValue={initial.calendar.minimumMinutes}
-        />
-        <Input
-          label={t("Duración máxima (minutos)", "Duración máxima (minutos)")}
-          name="max"
-          type="number"
-          min={1}
-          required
-          defaultValue={initial.calendar.maximumMinutes}
-        />
-        <Input
-          label={t("Paso de horarios (minutos)", "Paso de horarios (minutos)")}
-          name="step"
-          type="number"
-          min={1}
-          required
-          defaultValue={initial.calendar.stepMinutes}
-        />
-        <Input
-          label={t(
-            "Antelación de la unidad (días)",
-            "Antelación da unidade (días)",
-          )}
-          description={t(
-            "Vacío: utiliza el límite municipal.",
-            "Baleiro: utiliza o límite municipal.",
-          )}
-          name="advance"
-          type="number"
-          min={0}
-          defaultValue={initial.calendar.advanceDays ?? ""}
-        />
+        <div className={resource.calendarParameters}>
+          <Input
+            label={t("Duración mínima (minutos)", "Duración mínima (minutos)")}
+            name="min"
+            type="number"
+            min={1}
+            required
+            defaultValue={initial.calendar.minimumMinutes}
+          />
+          <Input
+            label={t("Duración máxima (minutos)", "Duración máxima (minutos)")}
+            name="max"
+            type="number"
+            min={1}
+            required
+            defaultValue={initial.calendar.maximumMinutes}
+          />
+          <Input
+            label={t(
+              "Paso de horarios (minutos)",
+              "Paso de horarios (minutos)",
+            )}
+            name="step"
+            type="number"
+            min={1}
+            required
+            defaultValue={initial.calendar.stepMinutes}
+          />
+          <Input
+            label={t(
+              "Antelación de la unidad (días)",
+              "Antelación da unidade (días)",
+            )}
+            description={t(
+              "Vacío: utiliza el límite municipal.",
+              "Baleiro: utiliza o límite municipal.",
+            )}
+            name="advance"
+            type="number"
+            min={0}
+            defaultValue={initial.calendar.advanceDays ?? ""}
+          />
+        </div>
         <p>
           {t(
             "Horas locales del municipio. Las excepciones sustituyen los horarios semanales de su fecha; sin franjas, el día está cerrado.",
             "Horas locais do municipio. As excepcións substitúen os horarios semanais da súa data; sen franxas, o día está pechado.",
           )}
         </p>
+        <h3 className={resource.subheading}>
+          {t("Disponibilidad semanal", "Dispoñibilidade semanal")}
+        </h3>
         {rows(weekly, setWeekly)}
         <Button
+          type="button"
           variant="secondary"
           onClick={() => setWeekly([...weekly, row({})])}
         >
           {t("Añadir franja semanal", "Engadir franxa semanal")}
         </Button>
+        <h3 className={resource.subheading}>
+          {t("Excepciones por fecha", "Excepcións por data")}
+        </h3>
         {rows(exceptions, setExceptions, true)}
         <Button
+          type="button"
           variant="secondary"
           onClick={() => setExceptions([...exceptions, row({ closed: true })])}
         >
@@ -428,12 +445,13 @@ function PolicyEditor() {
       {q.isPending ? (
         <Loading />
       ) : q.isError ? (
-        <Failure error={q.error} />
+        <Failure error={q.error} retry={() => void q.refetch()} />
       ) : (
         q.data && (
           <>
             <PolicyForm key={reset} initial={q.data} />
             <Button
+              type="button"
               variant="ghost"
               onClick={async () => {
                 const r = await q.refetch();

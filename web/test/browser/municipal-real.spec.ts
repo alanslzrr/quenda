@@ -82,9 +82,12 @@ test("municipal catalog and versioned configuration use the real API", async ({
     .getByRole("link", { name: /Volver al catálogo|Volver ao catálogo/ })
     .click();
   await page.getByRole("link", { name: "Sala nova", exact: true }).click();
+  await page.getByRole("button", { name: /Publicar uni/ }).click();
   await expect(
     page.getByText(/Añade las normas|Engade as normas/),
   ).toBeVisible();
+  await page.getByRole("button", { name: /^(Cerrar|Pechar)$/ }).click();
+  await page.getByRole("tab", { name: "Normas", exact: true }).click();
   const rules = page.locator("form").filter({
     has: page.getByRole("button", { name: /Guardar normas|Gardar normas/ }),
   });
@@ -95,6 +98,7 @@ test("municipal catalog and versioned configuration use the real API", async ({
   await rules
     .getByRole("button", { name: /Guardar normas|Gardar normas/ })
     .click();
+  await page.getByRole("tab", { name: "Horarios", exact: true }).click();
   const calendar = page.locator("form").filter({
     has: page.getByRole("button", {
       name: /Guardar horarios|Gardar horarios/,
@@ -116,6 +120,7 @@ test("municipal catalog and versioned configuration use the real API", async ({
   await expect(
     calendar.getByText(/Cambios guardados|Cambios gardados/),
   ).toHaveText(/Cambios guardados|Cambios gardados/);
+  await page.getByRole("button", { name: /Publicar uni/ }).click();
   const unitPublish = page
     .locator("form")
     .filter({ has: page.getByRole("button", { name: /Publicar uni/ }) });
@@ -124,9 +129,11 @@ test("municipal catalog and versioned configuration use the real API", async ({
   await unitPublish.getByRole("button", { name: /Publicar uni/ }).click();
   await expect(page.getByText("Publicada", { exact: true })).toBeVisible();
   await page.reload();
+  await page.getByRole("tab", { name: "Normas", exact: true }).click();
   await expect(
     page.getByLabel(/Texto de las normas|Texto das normas/),
   ).toHaveValue("Uso deportivo. Respeta el horario reservado.");
+  await page.getByRole("tab", { name: "Horarios", exact: true }).click();
   await expect(page.getByLabel(/^(Fecha|Data)$/)).toHaveValue("2030-01-01");
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
@@ -209,6 +216,7 @@ test("calendar changes preserve confirmed reservations and withdrawal preserves 
 }, info) => {
   const f = await enter(page, info.project.name === "desktop" ? 4 : 5);
   await page.goto(`/administracion/${f.tenant}/unidades/${f.unit}`);
+  await page.getByRole("tab", { name: "Horarios", exact: true }).click();
   // Existing reservations prevent closing all opening intervals.
   const existingCalendar = page.locator("form").filter({
     has: page.getByRole("button", {
@@ -234,6 +242,9 @@ test("calendar changes preserve confirmed reservations and withdrawal preserves 
     .getByRole("button", { name: /Guardar horarios|Gardar horarios/ })
     .click();
   await expect(existingCalendar.getByRole("alert").first()).toBeVisible();
+  await page
+    .getByRole("button", { name: /Retirar del catálogo|Retirar do catálogo/ })
+    .click();
   const withdraw = page.locator("form").filter({
     has: page.getByRole("button", { name: "Retirar", exact: true }),
   });

@@ -1,0 +1,113 @@
+.page {
+  --control-height-md: 40px;
+  --radius-control: 10px;
+  max-width: 1100px;
+  margin-inline: auto;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.page h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.page p {
+  color: var(--text-secondary);
+}
+.page [role="tablist"] {
+  margin-top: 12px;
+}
+.page [role="tab"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.page [role="tabpanel"] {
+  padding-block: 24px;
+}
+.page [role="tabpanel"][hidden] {
+  display: none;
+}
+.page [role="tabpanel"] > section {
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+.page form {
+  width: 100%;
+  max-width: none;
+  gap: 16px;
+}
+.page form > button {
+  justify-self: start;
+  width: auto;
+}
+.page form > fieldset {
+  gap: 16px;
+}
+.page form > fieldset > fieldset {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin: 0;
+  padding: 12px;
+}
+.page form > fieldset > fieldset legend {
+  padding: 0 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.page input,
+.page textarea {
+  font-size: 14px;
+}
+.page textarea {
+  min-height: 220px;
+}
+.group {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(0, 1.65fr);
+  gap: 48px;
+  align-items: start;
+}
+.group p {
+  max-width: 32ch;
+  margin: 4px 0;
+  font-size: 13px;
+}
+.hint {
+  margin-top: 32px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  padding: 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+@media (max-width: 700px) {
+  .group {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .page [role="tabpanel"] {
+    padding-block: 20px;
+  }
+}
+
+.calendarParameters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 24px;
+  max-width: 760px;
+}
+.subheading {
+  margin: 12px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+@media (max-width: 600px) {
+  .calendarParameters {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
