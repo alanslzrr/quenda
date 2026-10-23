@@ -9,6 +9,7 @@ import { createAuthentication } from "../../src/modules/identity/index.ts";
 import { withDatabase } from "./postgres.ts";
 import { browserCatalog, seedWebCatalog } from "./web-catalog.ts";
 import { seedMunicipalBrowser } from "./web-municipal.ts";
+import { seedPlatformBrowser } from "./web-platform.ts";
 import { seedPrivacyBrowser } from "./web-privacy.ts";
 import { seedStaffRecipient } from "./web-staff.ts";
 
@@ -108,6 +109,21 @@ await withDatabase(async ({ auth, domain, migration }) => {
   await writeFile(
     "web/test-results/privacy-fixtures.json",
     JSON.stringify([privacyFirst, privacySecond]),
+  );
+  const platformFixtures = [];
+  for (const index of [23, 25, 27, 29])
+    platformFixtures.push(
+      await seedPlatformBrowser(
+        app,
+        auth,
+        domain,
+        index,
+        privacyFirst.accountId,
+      ),
+    );
+  await writeFile(
+    "web/test-results/platform-fixtures.json",
+    JSON.stringify(platformFixtures),
   );
   await app.listen({ host: "127.0.0.1", port: 3000 });
   try {
