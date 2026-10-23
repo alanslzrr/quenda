@@ -82,7 +82,7 @@
 }
 .hero {
   max-width: 730px;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
 }
 .eyebrow {
   font-size: 0.78rem;
@@ -94,7 +94,7 @@
 .title {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(2.15rem, 5vw, 3.6rem);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
   letter-spacing: -0.045em;
   line-height: 1.08;
   margin: 0 0 1.25rem;
@@ -119,7 +119,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.5rem 0.5rem;
+  padding: 1rem;
+  border-radius: 12px;
   text-decoration: none;
   color: var(--foreground);
   transition: background 0.16s ease;
@@ -130,7 +131,7 @@
 .listTitle {
   display: block;
   font-family: var(--font-display);
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 500;
 }
 .listMeta {
@@ -234,7 +235,7 @@
 .product {
   --radius-control: 10px;
   --radius-surface: 16px;
-  --control-height-md: 40px;
+  --control-height-md: 44px;
 }
 .product .header {
   min-height: 64px;
@@ -258,9 +259,35 @@
     gap: 8px 12px;
   }
   .product .actions a {
-    font-size: 12px;
+    font-size: 14px;
   }
   .product .main {
     padding: 24px 16px 40px;
+  }
+}
+
+.main :is(h1, h2, h3) {
+  overflow-wrap: anywhere;
+}
+.actions a {
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.actions a:hover {
+  text-decoration: underline;
+}
+.listLink:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+@media (max-width: 600px) {
+  .product .header {
+    flex-wrap: wrap;
+  }
+  .product .actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }

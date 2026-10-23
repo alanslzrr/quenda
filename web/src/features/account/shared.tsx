@@ -7,7 +7,7 @@ import {
   UserRound,
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import { Link, Navigate, Outlet, useLocation } from "react-router";
+import { Navigate, Outlet, useLocation } from "react-router";
 import { api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
@@ -32,68 +32,46 @@ export function RequireAccount() {
   return <Outlet />;
 }
 export function AccountLayout() {
-  const { pathname } = useLocation();
   const { account } = useSession();
   useMunicipalTheme(undefined);
   const { t } = usePreferences();
-  if (pathname === "/perfil/seguridad")
-    return (
-      <SettingsLayout
-        title={t("Mi cuenta", "A miña conta")}
-        email={account?.email ?? ""}
-        links={[
-          {
-            to: "/perfil",
-            label: t("Preferencias", "Preferencias"),
-            icon: <SlidersHorizontal size={16} aria-hidden="true" />,
-          },
-          {
-            to: "/perfil/datos",
-            label: t("Datos personales", "Datos persoais"),
-            icon: <UserRound size={16} aria-hidden="true" />,
-          },
-          {
-            to: "/perfil/seguridad",
-            label: t("Seguridad", "Seguridade"),
-            icon: <ShieldCheck size={16} aria-hidden="true" />,
-          },
-          {
-            to: "/perfil/privacidad",
-            label: t("Privacidad y baja", "Privacidade e baixa"),
-            icon: <LockKeyhole size={16} aria-hidden="true" />,
-          },
-          {
-            to: "/perfil/invitaciones",
-            label: t("Invitaciones", "Invitacións"),
-            icon: <Mail size={16} aria-hidden="true" />,
-          },
-        ]}
-      >
-        <Outlet />
-      </SettingsLayout>
-    );
   return (
-    <>
-      <nav
-        className={styles.tabs}
-        aria-label={t("Configuración de cuenta", "Configuración da conta")}
-      >
-        <Link to="/perfil">{t("Preferencias", "Preferencias")}</Link>
-        <Link to="/perfil/datos">
-          {t("Datos personales", "Datos persoais")}
-        </Link>
-        <Link to="/perfil/seguridad">{t("Seguridad", "Seguridade")}</Link>
-        <Link to="/perfil/privacidad">
-          {t("Privacidad y baja", "Privacidade e baixa")}
-        </Link>
-        <Link to="/perfil/invitaciones">
-          {t("Invitaciones", "Invitacións")}
-        </Link>
-      </nav>
+    <SettingsLayout
+      title={t("Mi cuenta", "A miña conta")}
+      email={account?.email ?? ""}
+      links={[
+        {
+          to: "/perfil",
+          label: t("Preferencias", "Preferencias"),
+          icon: <SlidersHorizontal size={16} aria-hidden="true" />,
+        },
+        {
+          to: "/perfil/datos",
+          label: t("Datos personales", "Datos persoais"),
+          icon: <UserRound size={16} aria-hidden="true" />,
+        },
+        {
+          to: "/perfil/seguridad",
+          label: t("Seguridad", "Seguridade"),
+          icon: <ShieldCheck size={16} aria-hidden="true" />,
+        },
+        {
+          to: "/perfil/privacidad",
+          label: t("Privacidad y baja", "Privacidade e baixa"),
+          icon: <LockKeyhole size={16} aria-hidden="true" />,
+        },
+        {
+          to: "/perfil/invitaciones",
+          label: t("Invitaciones", "Invitacións"),
+          icon: <Mail size={16} aria-hidden="true" />,
+        },
+      ]}
+    >
       <Outlet />
-    </>
+    </SettingsLayout>
   );
 }
+
 export function PageTitle({
   title,
   children,

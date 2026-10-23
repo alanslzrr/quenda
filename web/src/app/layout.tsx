@@ -37,12 +37,8 @@ export function Layout() {
   const resource = /^\/administracion\/[^/]+\/unidades\/[^/]+$/.test(
     location.pathname,
   );
-  const showcase =
-    resource ||
-    location.pathname === "/perfil/seguridad" ||
-    /^\/municipios\/[^/]+\/unidades\//.test(location.pathname);
   return (
-    <div className={`${styles.shell} ${showcase ? styles.product : ""}`}>
+    <div className={`${styles.shell} ${styles.product}`}>
       <a className={styles.skip} href="#content">
         {t("Saltar al contenido", "Saltar ao contido")}
       </a>
