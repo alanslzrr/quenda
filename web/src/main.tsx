@@ -153,6 +153,11 @@ const AdministrativeReservation = lazy(() =>
     default: m.AdministrativeReservation,
   })),
 );
+const MunicipalStaff = lazy(() =>
+  import("./features/municipal/staff").then((m) => ({
+    default: m.MunicipalStaff,
+  })),
+);
 const client = createQueryClient();
 function Missing() {
   useMunicipalTheme(undefined);
@@ -262,6 +267,10 @@ createRoot(root).render(
                             element={<MunicipalAppearance />}
                           />
                           <Route path="agenda" element={<Agenda />} />
+                          <Route
+                            path="personal/:section?"
+                            element={<MunicipalStaff />}
+                          />
                           <Route
                             path="reservas/:reservationId"
                             element={<AdministrativeReservation />}
