@@ -268,6 +268,7 @@ export function StaffInvite({
             : t("Enviar invitación", "Enviar invitación")
         }
         body={(data) => {
+          setCreated(false);
           const expiresAt = textField(data, "expiresAt"),
             roleExpiresAt = textField(data, "roleExpiresAt");
           if (
