@@ -3,6 +3,8 @@ import type { Pool } from "pg";
 import { calendarSchema } from "./calendar-routes.ts";
 import {
   publicAvailability,
+  publicAvailabilitySearch,
+  publicBookingDurations,
   publicFacilities,
   publicUnitCalendar,
   publicUnits,
@@ -63,6 +65,74 @@ export async function registerPublicCatalog(
   secret: string,
 ) {
   const limit = publicRateLimit(pool, secret);
+
+  app.get<{ Params: { tenantId: string } }>(
+    "/api/public/municipalities/:tenantId/booking-durations",
+    {
+      onRequest: limit,
+      schema: {
+        operationId: "publicBookingDurations",
+        tags: ["Public catalog"],
+        security: [],
+        params: params(),
+        response: {
+          ...errors,
+          200: {
+            type: "object",
+            required: ["durations"],
+            properties: {
+              durations: { type: "array", items: { type: "integer" } },
+            },
+          },
+        },
+      },
+    },
+    (request) => publicBookingDurations(pool, request.params.tenantId),
+  );
+  app.get<{
+    Params: { tenantId: string };
+    Querystring: { date: string; durationMinutes: string; after?: string };
+  }>(
+    "/api/public/municipalities/:tenantId/availability-search",
+    {
+      onRequest: limit,
+      schema: {
+        operationId: "publicAvailabilitySearch",
+        description:
+          "Busca unidades con intervalos completos libres. Cada página examina hasta 20 unidades publicadas; una página vacía puede tener continuación.",
+        tags: ["Public catalog"],
+        security: [],
+        params: params(),
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          required: ["date", "durationMinutes"],
+          properties: {
+            date: { type: "string", format: "date" },
+            durationMinutes: { type: "string", pattern: "^[1-9][0-9]{0,3}$" },
+            after: uuid,
+          },
+        },
+        response: {
+          ...errors,
+          200: page({
+            id: uuid,
+            name: text,
+            facilityName: text,
+            ...availabilityResponse.properties,
+          }),
+        },
+      },
+    },
+    (request) =>
+      publicAvailabilitySearch(
+        pool,
+        request.params.tenantId,
+        request.query.date,
+        Number(request.query.durationMinutes),
+        request.query.after ?? null,
+      ),
+  );
   app.get<{ Params: { tenantId: string }; Querystring: { after?: string } }>(
     "/api/public/municipalities/:tenantId/facilities",
     {

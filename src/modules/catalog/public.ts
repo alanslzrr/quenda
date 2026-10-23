@@ -137,3 +137,72 @@ export async function candidateAvailability(
     }),
   };
 }
+
+/** Bounded catalog scan: a page can be empty while nextCursor continues the search. */
+export async function publicAvailabilitySearch(
+  pool: Pool,
+  tenantId: string,
+  date: string,
+  durationMinutes: number,
+  after: string | null = null,
+  clock: Clock = systemClock,
+) {
+  return transaction(pool, async (client) => {
+    const rows = (
+      await client.query<{ id: string; name: string; facility_name: string }>(
+        "SELECT * FROM domain.public_search_units($1,$2)",
+        [tenantId, after],
+      )
+    ).rows;
+    const items = [];
+    for (const row of rows.slice(0, 20)) {
+      const unit = await publicUnitCalendar(client, tenantId, row.id);
+      if (
+        durationMinutes < unit.calendar.minimumMinutes ||
+        durationMinutes > unit.calendar.maximumMinutes ||
+        durationMinutes % unit.calendar.stepMinutes !== 0
+      )
+        continue;
+      const candidate = await candidateAvailability(
+        client,
+        tenantId,
+        row.id,
+        date,
+        durationMinutes,
+        clock,
+      );
+      const available = await client.query<{ slot_index: number }>(
+        "SELECT slot_index FROM domain.public_available_slots($1,$2,$3::timestamptz[],$4::timestamptz[])",
+        [
+          tenantId,
+          row.id,
+          candidate.slots.map((s) => s.start.utc),
+          candidate.slots.map((s) => s.end.utc),
+        ],
+      );
+      const positions = new Set(available.rows.map((r) => r.slot_index));
+      const slots = candidate.slots.filter((_, index) =>
+        positions.has(index + 1),
+      );
+      if (slots.length)
+        items.push({
+          id: row.id,
+          name: row.name,
+          facilityName: row.facility_name,
+          ...candidate,
+          slots,
+        });
+    }
+    return {
+      items,
+      nextCursor: rows.length > 20 ? (rows[19]?.id ?? null) : null,
+    };
+  });
+}
+export async function publicBookingDurations(pool: Pool, tenantId: string) {
+  const result = await pool.query<{ minutes: number }>(
+    "SELECT * FROM domain.public_booking_durations($1)",
+    [tenantId],
+  );
+  return { durations: result.rows.map((row) => row.minutes) };
+}
