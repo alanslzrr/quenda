@@ -7,6 +7,10 @@ import {
   saveUnitCalendar,
 } from "../../src/modules/catalog/index.ts";
 import {
+  publicAvailabilitySearch,
+  publicBookingDurations,
+} from "../../src/modules/catalog/public.ts";
+import {
   listOwnNotices,
   processReservationEmail,
 } from "../../src/modules/communications/index.ts";
@@ -668,17 +672,60 @@ test("reservation confirmation validates real calendars and commits every effect
     await t.test(
       "public availability follows committed creation, modification, cancellation and block release",
       async () => {
-        const offered = async () =>
-          (
-            await publicAvailability(
-              domain,
-              tenant,
-              unit,
-              "2030-01-10",
-              60,
-              clock,
-            )
-          ).slots.map((s) => s.start.utc);
+        const offered = async () => {
+          const direct = await publicAvailability(
+            domain,
+            tenant,
+            unit,
+            "2030-01-10",
+            60,
+            clock,
+          );
+          const search = await publicAvailabilitySearch(
+            domain,
+            tenant,
+            "2030-01-10",
+            60,
+            null,
+            clock,
+          );
+          assert.deepEqual(
+            search.items.find((item) => item.id === unit)?.slots ?? [],
+            direct.slots,
+          );
+          assert.ok(search.items.every((item) => item.id !== draft));
+          assert.deepEqual(
+            (
+              await publicAvailabilitySearch(
+                domain,
+                randomUUID(),
+                "2030-01-10",
+                60,
+                null,
+                clock,
+              )
+            ).items,
+            [],
+          );
+          assert.deepEqual(
+            (
+              await publicAvailabilitySearch(
+                domain,
+                tenant,
+                "2030-01-10",
+                45,
+                null,
+                clock,
+              )
+            ).items,
+            [],
+          );
+          assert.deepEqual(
+            (await publicBookingDurations(domain, tenant)).durations,
+            [30, 60, 90, 120],
+          );
+          return direct.slots.map((slot) => slot.start.utc);
+        };
         const a = "2030-01-10T10:00:00.000Z",
           b = "2030-01-10T12:00:00.000Z";
         assert.ok((await offered()).includes(a));

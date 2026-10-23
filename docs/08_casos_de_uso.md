@@ -37,10 +37,12 @@ Una persona puede ejercer varias funciones, sin que una amplíe los permisos de 
 
 **Flujo principal**
 1. El usuario selecciona un municipio o abre su enlace directo. Quenda muestra únicamente sus instalaciones publicadas.
-2. Selecciona una unidad, fecha y duración. Quenda muestra las franjas admitidas en hora local y sus condiciones.
+2. Selecciona fecha y duración. Quenda muestra las unidades con al menos un intervalo completo disponible y sus horarios en hora local. Las duraciones proceden de la configuración municipal de cada unidad.
 3. El usuario elige una franja para continuar en CU-02; la consulta no la reserva.
 
 **Alternativas y excepciones**
+- El usuario también puede abrir una unidad directamente y consultar su fecha y duración.
+- La búsqueda permite continuar por las instalaciones restantes; una página sin coincidencias no implica que se haya agotado el catálogo.
 - Una unidad retirada, incompleta o sin normas válidas no se ofrece.
 - Los intervalos cerrados, ocupados o fuera de las reglas no aparecen como disponibles.
 - Las horas inexistentes se omiten; las repetidas se distinguen por su desplazamiento UTC.
