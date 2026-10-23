@@ -9,6 +9,7 @@ import { usePreferences } from "../../app/preferences-provider";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { BookingFrame } from "../../ui/blocks/multi-step-form/booking-frame";
 import { Calendar } from "../../ui/calendar/calendar";
+import { Input } from "../../ui/input/input";
 import { calendarLabel } from "../../ui/lib/calendar-labels";
 import SegmentedControl from "../../ui/segmented-control/segmented-control";
 import {
@@ -192,15 +193,32 @@ export function UnitAvailability({
                 <h2 className={styles.durationTitle}>
                   {t("¿Cuánto tiempo necesitas?", "Canto tempo precisas?")}
                 </h2>
-                <SegmentedControl
-                  label={t("Duración", "Duración")}
-                  value={String(duration)}
-                  onValueChange={(value) => setDuration(Number(value))}
-                  options={durationOptions(unit.calendar).map((value) => ({
-                    value: String(value),
-                    label: durationLabel(value),
-                  }))}
-                />
+                {(unit.calendar.maximumMinutes - unit.calendar.minimumMinutes) /
+                  unit.calendar.stepMinutes >=
+                48 ? (
+                  <Input
+                    label={t("Duración en minutos", "Duración en minutos")}
+                    type="number"
+                    min={unit.calendar.minimumMinutes}
+                    max={unit.calendar.maximumMinutes}
+                    step={unit.calendar.stepMinutes}
+                    value={duration}
+                    onChange={(event) =>
+                      setDuration(event.target.valueAsNumber)
+                    }
+                    hint={`${unit.calendar.minimumMinutes}–${unit.calendar.maximumMinutes} min · ${t("Intervalos de", "Intervalos de")} ${unit.calendar.stepMinutes} min`}
+                  />
+                ) : (
+                  <SegmentedControl
+                    label={t("Duración", "Duración")}
+                    value={String(duration)}
+                    onValueChange={(value) => setDuration(Number(value))}
+                    options={durationOptions(unit.calendar).map((value) => ({
+                      value: String(value),
+                      label: durationLabel(value),
+                    }))}
+                  />
+                )}
               </div>
             </div>
             <p className={styles.note}>

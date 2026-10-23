@@ -25,7 +25,7 @@ export function AvailabilitySearch({
   const durations = useQuery({
     queryKey: ["public", tenantId, "durations"],
     queryFn: ({ signal }) =>
-      api<{ durations: number[] }>(
+      api<{ durations: number[]; hasMore: boolean }>(
         `/api/public/municipalities/${tenantId}/booking-durations`,
         { signal },
         locale,
@@ -74,6 +74,16 @@ export function AvailabilitySearch({
           }))}
         />
       </div>
+      {durations.data?.hasMore && (
+        <Input
+          label={t("Otra duración en minutos", "Outra duración en minutos")}
+          type="number"
+          min={1}
+          step={1}
+          value={duration ?? ""}
+          onChange={(event) => setChoice(event.target.valueAsNumber)}
+        />
+      )}
       {durations.isError ? (
         <Failure
           error={durations.error}

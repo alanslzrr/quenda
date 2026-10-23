@@ -73,7 +73,7 @@ export function durationOptions(calendar: {
     let n =
       Math.ceil(calendar.minimumMinutes / calendar.stepMinutes) *
       calendar.stepMinutes;
-    n <= calendar.maximumMinutes;
+    n <= calendar.maximumMinutes && result.length < 48;
     n += calendar.stepMinutes
   )
     result.push(n);
