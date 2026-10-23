@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { textField } from "../../app/action";
 import { ApiError } from "../../app/api";
+import { Deadline } from "../../app/deadline";
 import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
@@ -10,7 +11,6 @@ import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
-import { localInstants } from "./local-instants";
 import styles from "./municipal.module.css";
 import {
   endpoint,
@@ -44,61 +44,6 @@ export function useAuthoritySaved() {
       ),
     );
   };
-}
-function Deadline({
-  name,
-  label,
-  required = false,
-}: {
-  name: string;
-  label: string;
-  required?: boolean;
-}) {
-  const { t } = usePreferences();
-  const [value, setValue] = useState("");
-  const [choice, setChoice] = useState("");
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const instants = localInstants(value, zone);
-  const utc =
-    instants.length === 1
-      ? instants[0].utc
-      : (instants.find((x) => x.utc === choice)?.utc ?? "");
-  return (
-    <div>
-      <Input
-        label={label}
-        type="datetime-local"
-        value={value}
-        required={required}
-        onChange={(e) => {
-          setValue(e.target.value);
-          setChoice("");
-        }}
-      />
-      <input type="hidden" name={name} value={utc} />
-      <input type="hidden" name={`${name}Entered`} value={value} />
-      {value && !instants.length && (
-        <p role="alert">
-          {t(
-            "Esta hora no existe en la zona indicada.",
-            "Esta hora non existe na zona indicada.",
-          )}
-        </p>
-      )}
-      {instants.length > 1 && (
-        <Select
-          label={`${label} · UTC`}
-          value={choice}
-          placeholder={t("Selecciona el desfase", "Selecciona o desfase")}
-          onValueChange={setChoice}
-          options={instants.map((x) => ({
-            value: x.utc,
-            label: `UTC${x.offset}`,
-          }))}
-        />
-      )}
-    </div>
-  );
 }
 function PermissionEditor({
   value,
