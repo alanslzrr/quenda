@@ -51,6 +51,8 @@ La sección «Personal y permisos» permite invitar administradores y gestores, 
 
 La sección «Convenios» permite crear versiones, aprobar la participación municipal, activar y suspender el convenio. La reapertura de una unidad exige retirar expresamente su vinculación, sin alterar las reservas existentes. «Acreditaciones» permite emitir desde la versión del convenio y revocar por identificador; no ofrece consultas de acreditaciones ajenas. Estas operaciones conservan la recuperación idempotente. El estado registrado de una versión no sustituye la comprobación de vigencia del backend.
 
+«Conservación y derechos» utiliza permisos explícitos de consulta y ejecución, independientes del rol administrativo. Permite consultar políticas, excepciones y conflictos, registrar políticas aprobadas sin plazos predeterminados, ejecutar actuaciones autorizadas y preparar copias parciales. El ámbito municipal no accede a identidad global ni a otros municipios; el global excluye actividad municipal. Una respuesta sin confirmación impide repetir la operación hasta comprobar su resultado, también después de recargar la pestaña.
+
 ## Autenticación local
 
 Better Auth utiliza el esquema `auth`, con migraciones ejecutadas fuera del proceso web. Kysely configura su adaptador PostgreSQL con transacciones; las consultas del dominio utilizan `pg`.
