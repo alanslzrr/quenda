@@ -170,3 +170,70 @@ test("a second form cannot overwrite an in-flight or uncertain command", async (
     globalThis.fetch = original;
   }
 });
+
+test("collaboration recovery accepts only supported commands and keeps exact version targets", async () => {
+  const { commandReviewPath, commandResultPath } = await import(
+    "../src/features/reservations/commands.ts"
+  );
+  const saved = storage(),
+    tenant = "00000000-0000-4000-8000-000000000101",
+    id = "00000000-0000-4000-8000-000000000102";
+  const base = `/api/municipalities/${tenant}`,
+    view = `/administracion/${tenant}`;
+  for (const suffix of [
+    "agreements",
+    `agreements/${id}/versions`,
+    `agreements/${id}/approve`,
+    `agreements/${id}/activate`,
+    `agreements/${id}/suspend`,
+    "credentials",
+    `credentials/${id}/revoke`,
+    `units/${id}/agreement-restriction/release`,
+  ]) {
+    const item = {
+      ...command(),
+      path: `${base}/${suffix}`,
+      body: JSON.stringify({ expectedVersion: 3 }),
+    };
+    saved.setItem(pendingKey, JSON.stringify(item));
+    assert.deepEqual(readCommand("ana", saved), item);
+  }
+  for (const suffix of [
+    `agreements/${id}/delete`,
+    `credentials/${id}/approve`,
+    `units/${id}/agreement-restriction/release/extra`,
+    "agreements?override=true",
+  ]) {
+    saved.setItem(
+      pendingKey,
+      JSON.stringify({ ...command(), path: `${base}/${suffix}` }),
+    );
+    assert.equal(readCommand("ana", saved), null);
+  }
+  const version = {
+    ...command(),
+    path: `${base}/agreements/${id}/versions`,
+    body: JSON.stringify({ expectedVersion: 3 }),
+  };
+  assert.equal(
+    commandReviewPath(version),
+    `${view}/convenios/${id}/versiones/3`,
+  );
+  assert.equal(
+    commandResultPath(version, { agreementId: id, version: 4 }),
+    `${view}/convenios/${id}/versiones/4`,
+  );
+  const credential = { ...command(), path: `${base}/credentials` };
+  assert.equal(
+    commandResultPath(credential, { id }),
+    `${view}/acreditaciones?referencia=${id}`,
+  );
+  const release = {
+    ...command(),
+    path: `${base}/units/${id}/agreement-restriction/release`,
+  };
+  assert.equal(
+    commandResultPath(release, { unitId: id }),
+    `${view}/convenios/unidades/${id}/reapertura`,
+  );
+});

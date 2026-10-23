@@ -14,6 +14,7 @@ import { PageTitle } from "../account/shared";
 import { calendarDate, municipalToday, slotLabel } from "../catalog/dates";
 import {
   type CommandPolicy,
+  type CommandResult,
   commandResultPath,
   commandReviewPath,
   forgetCommand,
@@ -218,7 +219,7 @@ export function CommandRecovery() {
                 "Comprobar coa mesma solicitude",
               )}
               submit={async () => {
-                const result = await sendCommand<Reservation>(
+                const result = await sendCommand<CommandResult>(
                   pending,
                   locale,
                   true,
@@ -248,8 +249,8 @@ export function CommandRecovery() {
             <Checkbox
               required
               label={t(
-                "He comprobado el resultado en las reservas, la agenda o con el municipio.",
-                "Comprobei o resultado nas reservas, na axenda ou co municipio.",
+                "He comprobado el resultado en la sección correspondiente o con el municipio.",
+                "Comprobei o resultado na sección correspondente ou co municipio.",
               )}
             />
           </ActionForm>

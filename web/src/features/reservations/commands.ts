@@ -22,7 +22,7 @@ export function readCommand(
     const item = JSON.parse(value) as PendingCommand;
     if (item.owner !== owner) return null;
     if (
-      !/^\/api\/municipalities\/[\da-f-]+(?:\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?|\/blocks(?:\/[\da-f-]+\/release)?)$/.test(
+      !/^\/api\/municipalities\/[\da-f-]+(?:\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?|\/blocks(?:\/[\da-f-]+\/release)?|\/agreements(?:\/[\da-f-]+\/(?:versions|approve|activate|suspend))?|\/credentials(?:\/[\da-f-]+\/revoke)?|\/units\/[\da-f-]+\/agreement-restriction\/release)$/.test(
         item.path,
       ) ||
       typeof item.body !== "string" ||
@@ -137,20 +137,42 @@ export async function sendCommand<T>(
 }
 
 export function commandReviewPath(item: PendingCommand) {
-  const tenant = item.path.split("/")[3];
-  const administrative =
-    item.path.includes("/blocks") ||
-    JSON.parse(item.body).administrative === true;
+  const parts = item.path.split("/");
+  const tenant = parts[3];
+  const body = JSON.parse(item.body);
+  if (parts[4] === "agreements") {
+    const version = body.version ?? body.expectedVersion;
+    return `/administracion/${tenant}/convenios${parts[5] && Number.isSafeInteger(version) && version > 0 ? `/${parts[5]}/versiones/${version}` : ""}`;
+  }
+  if (parts[4] === "credentials")
+    return `/administracion/${tenant}/acreditaciones`;
+  if (parts[4] === "units")
+    return `/administracion/${tenant}/convenios/unidades/${parts[5]}/reapertura`;
+  const administrative = parts[4] === "blocks" || body.administrative === true;
   return administrative ? `/administracion/${tenant}/agenda` : "/reservas";
 }
-export function commandResultPath(
-  item: PendingCommand,
-  result: { tenantId: string; id: string },
-) {
+export interface CommandResult {
+  tenantId?: string;
+  id?: string;
+  agreementId?: string;
+  version?: number;
+  unitId?: string;
+}
+export function commandResultPath(item: PendingCommand, result: CommandResult) {
   const review = commandReviewPath(item);
+  const parts = item.path.split("/");
+  if (parts[4] === "agreements")
+    return result.agreementId && result.version
+      ? `/administracion/${parts[3]}/convenios/${result.agreementId}/versiones/${result.version}`
+      : review;
+  if (parts[4] === "credentials")
+    return result.id
+      ? `${review}?referencia=${encodeURIComponent(result.id)}`
+      : review;
+  if (parts[4] === "units") return review;
   if (review === "/reservas")
     return `/reservas/${result.tenantId}/${result.id}`;
-  return item.path.includes("/blocks")
+  return parts[4] === "blocks"
     ? review
     : `/administracion/${result.tenantId}/reservas/${result.id}`;
 }
