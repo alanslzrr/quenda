@@ -209,6 +209,9 @@ export function MunicipalLayout() {
             )}
             {context.administrator && (
               <>
+                <NavLink to={`${municipalPath(tenantId)}/personal`}>
+                  {t("Personal y permisos", "Persoal e permisos")}
+                </NavLink>
                 <NavLink to={`${municipalPath(tenantId)}/condiciones`}>
                   {t("Condiciones de reserva", "Condicións de reserva")}
                 </NavLink>
@@ -269,13 +272,15 @@ export function MunicipalForm({
   children,
   onSaved,
   resetOnSuccess = false,
+  danger = false,
 }: {
   path: string;
   method?: string;
   body: (data: FormData) => unknown;
   label: string;
   children?: ReactNode;
-  onSaved?: (result: unknown) => void;
+  onSaved?: (result: unknown) => void | Promise<void>;
+  danger?: boolean;
   resetOnSuccess?: boolean;
 }) {
   const { locale, t } = usePreferences();
@@ -285,6 +290,7 @@ export function MunicipalForm({
   return (
     <>
       <ActionForm
+        danger={danger}
         disabled={uncertain}
         resetOnSuccess={resetOnSuccess}
         label={label}
@@ -315,7 +321,7 @@ export function MunicipalForm({
             queryKey: ["private", account?.accountId, "municipal"],
           });
           await client.invalidateQueries({ queryKey: ["public"] });
-          onSaved?.(result);
+          await onSaved?.(result);
         }}
       >
         {children}
