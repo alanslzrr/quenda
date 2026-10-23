@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  commandResultPath,
+  commandReviewPath,
   forgetCommand,
   type PendingCommand,
   pendingKey,
@@ -296,7 +298,7 @@ test("monthly review recovery accepts only exact review commands and never route
   for (const path of [
     item.path.replace("2024-03", "2024-13"),
     item.path.replace("reviews", "review-context"),
-    item.path + "?revision=2",
+    `${item.path}?revision=2`,
   ]) {
     saved.setItem(pendingKey, JSON.stringify({ ...item, path }));
     assert.equal(readCommand("ana", saved), null);
