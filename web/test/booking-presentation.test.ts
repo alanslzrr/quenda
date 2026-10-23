@@ -39,3 +39,13 @@ test("ordinary municipal times hide UTC but repeated autumn times remain disting
     /UTC\+01:00/,
   );
 });
+test("large valid duration ranges do not allocate an unbounded option list", () => {
+  assert.equal(
+    durationOptions({
+      minimumMinutes: 1,
+      maximumMinutes: 2147483647,
+      stepMinutes: 1,
+    }).length,
+    48,
+  );
+});
