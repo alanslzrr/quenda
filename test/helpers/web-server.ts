@@ -9,6 +9,7 @@ import { createAuthentication } from "../../src/modules/identity/index.ts";
 import { withDatabase } from "./postgres.ts";
 import { browserCatalog, seedWebCatalog } from "./web-catalog.ts";
 import { seedMunicipalBrowser } from "./web-municipal.ts";
+import { seedPrivacyBrowser } from "./web-privacy.ts";
 import { seedStaffRecipient } from "./web-staff.ts";
 
 // Browser tests own an ephemeral database and local mail sink. No production
@@ -88,6 +89,25 @@ await withDatabase(async ({ auth, domain, migration }) => {
   await writeFile(
     "web/test-results/collaboration-fixtures.json",
     JSON.stringify(collaborationFixtures),
+  );
+  const privacyFirst = await seedPrivacyBrowser(
+    app,
+    auth,
+    domain,
+    migration,
+    21,
+  );
+  const privacySecond = await seedPrivacyBrowser(
+    app,
+    auth,
+    domain,
+    migration,
+    22,
+    privacyFirst.accountId,
+  );
+  await writeFile(
+    "web/test-results/privacy-fixtures.json",
+    JSON.stringify([privacyFirst, privacySecond]),
   );
   await app.listen({ host: "127.0.0.1", port: 3000 });
   try {
