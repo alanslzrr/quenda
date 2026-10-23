@@ -13,7 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { SettingsMenu } from "../../app/settings-menu";
@@ -168,7 +168,7 @@ export function ResourceShell({
       }}
       toolbar={
         <>
-          <Link to={base}>{t("Volver al catálogo", "Volver ao catálogo")}</Link>
+          <span>{m.name}</span>
           <div style={{ display: "flex", gap: 8 }}>
             <MfaDialog />
             <SettingsMenu />
