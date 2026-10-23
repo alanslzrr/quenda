@@ -291,3 +291,17 @@
     justify-content: flex-start;
   }
 }
+@media (max-width: 600px) {
+  .product .header {
+    position: relative;
+  }
+  .product .brand {
+    min-height: 44px;
+    margin-right: 130px;
+  }
+  .product .actions > div:last-child {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+  }
+}
