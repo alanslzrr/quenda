@@ -127,6 +127,7 @@ function NavItem({
   onClick: () => void;
 }) {
   const Icon = entry.icon;
+  const Tag = entry.id.startsWith("/") ? "a" : "button";
   const fade = labelOut(collapsed, reduce);
   const aside = asideIn(collapsed, reduce);
   return (
@@ -135,15 +136,16 @@ function NavItem({
       label={entry.label}
       note={entry.count ? `${entry.count} unread` : undefined}
     >
-      <button
-        type="button"
+      <Tag
+        href={Tag === "a" ? entry.id : undefined}
+        type={Tag === "button" ? "button" : undefined}
         className={[styles.item, nested ? styles.nested : "", lit ? styles.lit : ""]
           .filter(Boolean)
           .join(" ")}
         aria-current={current ? "page" : undefined}
         aria-expanded={expanded}
         aria-controls={controls}
-        onClick={onClick}
+        onClick={(event) => { if (Tag === "a" && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return; event.preventDefault(); onClick(); }}
       >
         {lit && (
           <motion.span
@@ -207,7 +209,7 @@ function NavItem({
             </svg>
           </motion.span>
         )}
-      </button>
+      </Tag>
     </RailTip>
   );
 }
@@ -629,7 +631,7 @@ function RailBody() {
             <div className={styles.toolbar}>{toolbar}</div>
           </header>
           <div className={styles.content}>{children}</div>
-          <p className={styles.srOnly} role="status" aria-live="polite">
+          <p className={styles.srOnly} aria-live="polite">
             {announcement}
           </p>
         </div>

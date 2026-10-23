@@ -142,3 +142,4 @@
 .sheet .item { min-height:44px; }
 .content { padding:28px 32px 48px; }
 @container shell (max-width:479px) { .content { padding:20px 16px 32px; } }
+a.item { text-decoration:none; }
