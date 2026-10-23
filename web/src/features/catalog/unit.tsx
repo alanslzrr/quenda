@@ -206,7 +206,7 @@ export function UnitAvailability({
                     onChange={(event) =>
                       setDuration(event.target.valueAsNumber)
                     }
-                    hint={`${unit.calendar.minimumMinutes}–${unit.calendar.maximumMinutes} min · ${t("Intervalos de", "Intervalos de")} ${unit.calendar.stepMinutes} min`}
+                    description={`${unit.calendar.minimumMinutes}–${unit.calendar.maximumMinutes} min · ${t("Intervalos de", "Intervalos de")} ${unit.calendar.stepMinutes} min`}
                   />
                 ) : (
                   <SegmentedControl
