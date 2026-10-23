@@ -210,9 +210,13 @@ test("MFA expiry keeps the invitation draft and does not retry the write", async
   await expect(
     page.getByRole("button", { name: "Quitar permiso 1", exact: true }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: /Verificar MFA/ })
+    .last()
+    .click();
   await expect(
-    page.getByRole("link", { name: /Verificar MFA/ }),
-  ).toHaveAttribute("target", "_blank");
+    page.getByRole("dialog", { name: "Verificar acceso" }),
+  ).toBeVisible();
   expect(attempts).toBe(1);
 });
 

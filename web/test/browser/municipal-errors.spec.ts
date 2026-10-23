@@ -260,9 +260,14 @@ test("expired MFA preserves the appearance draft and offers verification without
     page.getByRole("combobox", { name: "Paleta clara", exact: true }),
   ).toContainText("Azul");
   expect(writes).toBe(1);
+  await page
+    .getByRole("button", { name: /Verificar MFA/ })
+    .last()
+    .click();
   await expect(
-    page.getByRole("link", { name: /Verificar MFA/ }),
-  ).toHaveAttribute("target", "_blank");
+    page.getByRole("dialog", { name: "Verificar acceso" }),
+  ).toBeVisible();
+  expect(writes).toBe(1);
 });
 
 test("an uncertain catalog creation cannot be resubmitted without reviewing its result", async ({

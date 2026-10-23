@@ -146,6 +146,20 @@ test("municipal policy and appearance persist without changing the administrativ
   page,
 }, info) => {
   await enter(page, info.project.name === "desktop" ? 2 : 3);
+  if (
+    await page
+      .getByRole("button", {
+        name: /Gestión municipal|Xestión municipal/,
+        exact: true,
+      })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", {
+        name: /Gestión municipal|Xestión municipal/,
+        exact: true,
+      })
+      .click();
   await page
     .getByRole("link", { name: /Condiciones de reserva|Condicións de reserva/ })
     .click();
@@ -159,6 +173,20 @@ test("municipal policy and appearance persist without changing the administrativ
   ).toBeVisible();
   await page.reload();
   await expect(page.getByLabel(/Antelación máxima/)).toHaveValue("35");
+  if (
+    await page
+      .getByRole("button", {
+        name: /Gestión municipal|Xestión municipal/,
+        exact: true,
+      })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", {
+        name: /Gestión municipal|Xestión municipal/,
+        exact: true,
+      })
+      .click();
   await page.getByRole("link", { name: /^Apariencia$|^Aparencia$/ }).click();
   const rootAccent = await page
     .locator("html")
@@ -265,6 +293,20 @@ test("daily agenda relocates without accepting rules and cancels explicitly", as
 }, info) => {
   test.setTimeout(90000);
   const f = await enter(page, info.project.name === "desktop" ? 6 : 7);
+  if (
+    await page
+      .getByRole("button", {
+        name: /Gestión municipal|Xestión municipal/,
+        exact: true,
+      })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", {
+        name: /Gestión municipal|Xestión municipal/,
+        exact: true,
+      })
+      .click();
   await page.getByRole("link", { name: /Agenda diaria|Axenda diaria/ }).click();
   await page.getByLabel(/Fecha de la agenda|Data da axenda/).fill(f.date);
   await page
@@ -310,6 +352,20 @@ test("blocks survive reload and release through the daily agenda", async ({
 }, info) => {
   const f = await enter(page, info.project.name === "desktop" ? 8 : 9);
 
+  if (
+    await page
+      .getByRole("button", {
+        name: /Gestión municipal|Xestión municipal/,
+        exact: true,
+      })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", {
+        name: /Gestión municipal|Xestión municipal/,
+        exact: true,
+      })
+      .click();
   await page
     .getByRole("link", { name: /Agenda diaria|Axenda diaria/ })
     .first()
