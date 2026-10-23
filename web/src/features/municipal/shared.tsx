@@ -120,6 +120,16 @@ export function Administration() {
         <Failure error={query.error} />
       ) : (
         <>
+          {query.data.pages[0]?.platform.operator && (
+            <p>
+              <Link to="/plataforma">
+                {t(
+                  "Administración de plataforma",
+                  "Administración de plataforma",
+                )}
+              </Link>
+            </p>
+          )}
           {query.data.pages[0]?.platform.permissions.some((p) =>
             ["PRIVACY_READ", "PRIVACY_EXECUTE"].includes(p),
           ) && (

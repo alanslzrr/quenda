@@ -196,6 +196,9 @@ const MunicipalPrivacy = lazy(() =>
 const GlobalPrivacy = lazy(() =>
   import("./features/privacy/page").then((m) => ({ default: m.GlobalPrivacy })),
 );
+const Platform = lazy(() =>
+  import("./features/platform/page").then((m) => ({ default: m.Platform })),
+);
 const client = createQueryClient();
 function Missing() {
   useMunicipalTheme(undefined);
@@ -275,6 +278,11 @@ createRoot(root).render(
                         }
                       />
                       <Route element={<RequireAccount />}>
+                        <Route path="plataforma" element={<Platform />} />
+                        <Route
+                          path="plataforma/gestion/:section"
+                          element={<Platform />}
+                        />
                         <Route
                           path="plataforma/privacidad/:section?"
                           element={<GlobalPrivacy />}
