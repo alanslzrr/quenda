@@ -11,11 +11,12 @@ import { browserCatalog, seedWebCatalog } from "./web-catalog.ts";
 import { seedMunicipalBrowser } from "./web-municipal.ts";
 import { seedPlatformBrowser } from "./web-platform.ts";
 import { seedPrivacyBrowser } from "./web-privacy.ts";
+import { seedReportingBrowser } from "./web-reporting.ts";
 import { seedStaffRecipient } from "./web-staff.ts";
 
 // Browser tests own an ephemeral database and local mail sink. No production
 // credentials, external mail delivery or debug HTTP endpoints are involved.
-await withDatabase(async ({ auth, domain, migration }) => {
+await withDatabase(async ({ auth, domain, migration, worker }) => {
   for (let index = 1; index <= 4; index++) {
     const catalog = browserCatalog(index);
     await seedWebCatalog(auth, migration, catalog);
@@ -124,6 +125,15 @@ await withDatabase(async ({ auth, domain, migration }) => {
   await writeFile(
     "web/test-results/platform-fixtures.json",
     JSON.stringify(platformFixtures),
+  );
+  const reportingFixtures = [];
+  for (const index of [31, 33])
+    reportingFixtures.push(
+      await seedReportingBrowser(app, auth, domain, migration, worker, index),
+    );
+  await writeFile(
+    "web/test-results/reporting-fixtures.json",
+    JSON.stringify(reportingFixtures),
   );
   await app.listen({ host: "127.0.0.1", port: 3000 });
   try {
