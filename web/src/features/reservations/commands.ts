@@ -120,12 +120,13 @@ export async function sendCommand<T>(
         forgetCommand(storage);
       return result;
     } catch (error) {
-      // A timeout or 5xx does not prove rollback. Keep exactly the same command.
+      // A timeout or 5xx does not prove rollback. A rejected replay can also
+      // reflect expired MFA or changed permissions after the original commit.
       if (
         error instanceof ApiError &&
         error.status >= 400 &&
         error.status < 500 &&
-        !(retry && error.code === "CONFLICT") &&
+        !retry &&
         readCommand(item.owner, storage)?.key === item.key
       )
         forgetCommand(storage);

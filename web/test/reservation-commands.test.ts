@@ -237,3 +237,32 @@ test("collaboration recovery accepts only supported commands and keeps exact ver
     `${view}/convenios/unidades/${id}/reapertura`,
   );
 });
+
+test("replay authorization failures retain the original uncertain command until its outcome is resolved", async () => {
+  const saved = storage(),
+    item = command(),
+    original = globalThis.fetch;
+  try {
+    for (const status of [401, 403, 404, 409, 422, 429]) {
+      globalThis.fetch = async (path) =>
+        String(path).endsWith("command-policy")
+          ? Response.json({
+              retentionSeconds: 3600,
+              serverTime: new Date().toISOString(),
+            })
+          : Response.json(
+              {
+                error: {
+                  code: "REAUTHENTICATION_REQUIRED",
+                  message: "Verify again",
+                },
+              },
+              { status },
+            );
+      await assert.rejects(sendCommand(item, "es", true, saved));
+      assert.deepEqual(readCommand("ana", saved), item);
+    }
+  } finally {
+    globalThis.fetch = original;
+  }
+});
