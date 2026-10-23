@@ -49,6 +49,8 @@ La administración municipal se abre desde la cuenta. Incluye instalaciones, uni
 
 La sección «Personal y permisos» permite invitar administradores y gestores, delimitar operaciones por municipio o unidad, consultar asignaciones e invitaciones y retirar permisos. Las sustituciones de gestores requieren nueva aceptación; el relevo ordinario conserva un administrador habilitado sin caducidad. La retirada por seguridad afecta solo al municipio. El destinatario facilita su identificador desde los datos de su cuenta y acepta desde sus invitaciones con MFA.
 
+La sección «Convenios» permite crear versiones, aprobar la participación municipal, activar y suspender el convenio. La reapertura de una unidad exige retirar expresamente su vinculación, sin alterar las reservas existentes. «Acreditaciones» permite emitir desde la versión del convenio y revocar por identificador; no ofrece consultas de acreditaciones ajenas. Estas operaciones conservan la recuperación idempotente. El estado registrado de una versión no sustituye la comprobación de vigencia del backend.
+
 ## Autenticación local
 
 Better Auth utiliza el esquema `auth`, con migraciones ejecutadas fuera del proceso web. Kysely configura su adaptador PostgreSQL con transacciones; las consultas del dominio utilizan `pg`.
