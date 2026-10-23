@@ -18,6 +18,10 @@ export function PersonalDetails() {
   return (
     <>
       <PageTitle title={t("Datos personales", "Datos persoais")} />
+      <p>
+        {t("Identificador de cuenta", "Identificador de conta")}:{" "}
+        <code>{session.data.user.id}</code>
+      </p>
       <section className={styles.section}>
         <h2>{t("Nombre", "Nome")}</h2>
         <ActionForm
