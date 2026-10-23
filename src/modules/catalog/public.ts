@@ -200,9 +200,12 @@ export async function publicAvailabilitySearch(
   });
 }
 export async function publicBookingDurations(pool: Pool, tenantId: string) {
-  const result = await pool.query<{ minutes: number }>(
+  const result = await pool.query<{ minutes: number; has_more: boolean }>(
     "SELECT * FROM domain.public_booking_durations($1)",
     [tenantId],
   );
-  return { durations: result.rows.map((row) => row.minutes) };
+  return {
+    durations: result.rows.map((row) => row.minutes),
+    hasMore: result.rows.some((row) => row.has_more),
+  };
 }

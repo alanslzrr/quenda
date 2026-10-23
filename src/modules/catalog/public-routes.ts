@@ -81,6 +81,7 @@ export async function registerPublicCatalog(
             type: "object",
             required: ["durations"],
             properties: {
+              hasMore: { type: "boolean" },
               durations: { type: "array", items: { type: "integer" } },
             },
           },
@@ -109,7 +110,7 @@ export async function registerPublicCatalog(
           required: ["date", "durationMinutes"],
           properties: {
             date: { type: "string", format: "date" },
-            durationMinutes: { type: "string", pattern: "^[1-9][0-9]{0,3}$" },
+            durationMinutes: { type: "string", pattern: "^[1-9][0-9]{0,9}$" },
             after: uuid,
           },
         },
