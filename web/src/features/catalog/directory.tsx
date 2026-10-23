@@ -7,6 +7,7 @@ import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Button } from "../../ui/button/button";
+import directory from "./directory.module.css";
 export function Directory() {
   useMunicipalTheme(undefined);
   const { locale, t } = usePreferences();
@@ -49,15 +50,13 @@ export function Directory() {
         <Failure error={query.error} retry={() => void query.refetch()} />
       ) : (
         <>
-          <ul className={styles.list}>
+          <ul className={directory.municipalities}>
             {query.data.pages
               .flatMap((page) => page.items)
               .map((item) => (
-                <li className={styles.listItem} key={item.id}>
-                  <Link
-                    className={styles.listLink}
-                    to={`/municipios/${item.id}`}
-                  >
+                <li key={item.id}>
+                  <Link to={`/municipios/${item.id}`}>
+                    <MapPin size={24} aria-hidden="true" />
                     <span>
                       <span className={styles.listTitle}>{item.name}</span>
                       <span className={styles.listMeta}>
