@@ -151,6 +151,14 @@ function InvitationList({ kind, title }: { kind: Kind; title: string }) {
                           locale,
                         );
                         await query.refetch();
+                        await Promise.all(
+                          ["platform-context", "privacy-navigation"].map(
+                            (key) =>
+                              client.invalidateQueries({
+                                queryKey: ["private", account?.accountId, key],
+                              }),
+                          ),
+                        );
                         await client.invalidateQueries({
                           queryKey: [
                             "private",
