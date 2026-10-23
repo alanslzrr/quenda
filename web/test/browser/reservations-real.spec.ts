@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { calendarDate } from "../../src/features/catalog/dates";
 import { calendarLabel } from "../../src/ui/lib/calendar-labels";
@@ -167,6 +168,34 @@ test("municipal search offers a ninety minute booking and keeps its context on r
   await page.getByRole("option", { name: "1 h 30 min", exact: true }).click();
   const chosen = page.locator('a[href*="/reservar?"]').first();
   await expect(chosen).toBeVisible();
+  for (const theme of ["light", "dark"] as const) {
+    await page
+      .getByRole("button", { name: /Ajustes|Axustes/, exact: true })
+      .click();
+    const option = page.getByRole("menuitem", {
+      name: theme === "light" ? "Modo claro" : /Modo oscuro|Modo escuro/,
+      exact: true,
+    });
+    if (await option.isEnabled()) await option.click();
+    else await page.keyboard.press("Escape");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .analyze()
+      ).violations,
+    ).toEqual([]);
+    await page.screenshot({
+      path: `test-results/search-${info.project.name}-${theme}.png`,
+      fullPage: true,
+    });
+  }
   const href = await chosen.getAttribute("href");
   const params = new URL(href ?? "", "http://local").searchParams;
   expect(
