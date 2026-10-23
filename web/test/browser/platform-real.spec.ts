@@ -270,14 +270,7 @@ test("municipal onboarding replacement security suspension and recovery preserve
     ).toBe("REVOKED");
     await accept(recipient, "Administración municipal");
     await recipient.goto(`/administracion/${tenantId}`);
-    if (
-      await recipient
-        .getByRole("button", {
-          name: /Gestión municipal|Xestión municipal/,
-          exact: true,
-        })
-        .isVisible()
-    )
+    if ((recipient.viewportSize()?.width ?? 1280) < 768)
       await recipient
         .getByRole("button", {
           name: /Gestión municipal|Xestión municipal/,
