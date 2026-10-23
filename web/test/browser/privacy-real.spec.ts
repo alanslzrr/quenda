@@ -133,6 +133,7 @@ test("authorized privacy staff manages policies, holds, scoped copies and all in
     .locator("section")
     .filter({
       has: page.getByText("Comunicaciones sintéticas", { exact: true }),
+      hasNot: page.getByRole("navigation"),
     })
     .getByRole("link", { name: "Retirar política", exact: true })
     .click();
