@@ -1,4 +1,5 @@
-import { Link, useParams, useSearchParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
+import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import styles from "../privacy/privacy.module.css";
@@ -80,9 +81,6 @@ function Workspace() {
           "Estas operacións requiren permiso de operador e MFA verificado nos últimos cinco minutos. Non conceden acceso xeral á actividade municipal.",
         )}
       </p>
-      <Link to="/perfil/seguridad" target="_blank" rel="noopener">
-        {t("Verificar MFA en otra pestaña", "Verificar MFA noutra pestana")}
-      </Link>
       <nav
         className={styles.nav}
         aria-label={t("Gestión de plataforma", "Xestión de plataforma")}

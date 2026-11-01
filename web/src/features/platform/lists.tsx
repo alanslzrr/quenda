@@ -1,5 +1,5 @@
-import { Link } from "react-router";
 import { Failure, Loading } from "../../app/feedback";
+import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import styles from "../municipal/municipal.module.css";
 import { More } from "../municipal/shared";
