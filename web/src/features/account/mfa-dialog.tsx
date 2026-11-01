@@ -1,9 +1,18 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
-import { type ReactNode, useContext, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+} from "react";
 import { ActionForm } from "../../app/action";
 import { usePreferences } from "../../app/preferences-provider";
-import { ReauthenticationContext } from "../../app/reauthentication-context";
+import {
+  ReauthenticationContext,
+  ReauthenticationNoticeContext,
+} from "../../app/reauthentication-context";
 import { useSession } from "../../app/session";
 import { Button } from "../../ui/button/button";
 import { Dialog, DialogContent } from "../../ui/dialog/dialog";
@@ -15,8 +24,35 @@ export function MfaDialog() {
   return (
     <Button variant="secondary" size="sm" onClick={() => open?.()}>
       <ShieldCheck size={16} aria-hidden="true" />
-      {t("Verificar MFA", "Verificar MFA")}
+      {t("Verificar acceso", "Verificar acceso")}
     </Button>
+  );
+}
+export function MfaNotice() {
+  const state = useContext(ReauthenticationNoticeContext);
+  const { t } = usePreferences();
+  if (!state?.pending) return null;
+  return (
+    <section
+      id="security-verification"
+      tabIndex={-1}
+      role="status"
+      aria-label={t("Verificación de seguridad", "Verificación de seguridade")}
+      style={{
+        padding: 16,
+        marginBottom: 24,
+        border: "1px solid var(--border-strong)",
+        borderRadius: "var(--radius-control)",
+      }}
+    >
+      <p>
+        {t(
+          "Confirma tu identidad para continuar. La sesión sigue abierta y tus cambios se conservan.",
+          "Confirma a túa identidade para continuar. A sesión segue aberta e os teus cambios consérvanse.",
+        )}
+      </p>
+      <MfaDialog />
+    </section>
   );
 }
 export function MfaBoundary({ children }: { children: ReactNode }) {
@@ -24,18 +60,32 @@ export function MfaBoundary({ children }: { children: ReactNode }) {
   const { account, refresh } = useSession();
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [requests, setRequests] = useState<Set<string>>(() => new Set());
+  const register = useCallback((id: string) => {
+    setRequests((previous) => new Set(previous).add(id));
+    return () =>
+      setRequests((previous) => {
+        const next = new Set(previous);
+        next.delete(id);
+        return next;
+      });
+  }, []);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const requestVerification = useCallback(() => {
+    returnFocus.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    setOpen(true);
+  }, []);
+
   return (
-    <ReauthenticationContext.Provider
-      value={() => {
-        returnFocus.current =
-          document.activeElement instanceof HTMLElement
-            ? document.activeElement
-            : null;
-        setOpen(true);
-      }}
-    >
-      {children}
+    <ReauthenticationContext.Provider value={requestVerification}>
+      <ReauthenticationNoticeContext.Provider
+        value={{ register, pending: requests.size > 0 }}
+      >
+        {children}
+      </ReauthenticationNoticeContext.Provider>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           onCloseAutoFocus={(event) => {
@@ -53,13 +103,14 @@ export function MfaBoundary({ children }: { children: ReactNode }) {
           )}
         >
           <ActionForm
-            label={t("Verificar MFA", "Verificar MFA")}
+            label={t("Verificar acceso", "Verificar acceso")}
             submit={async (data) => {
               await verifyFactor(data, locale);
               await refresh();
               await client.invalidateQueries({
-                queryKey: ["private", account?.accountId, "municipal"],
+                queryKey: ["private", account?.accountId],
               });
+              setRequests(new Set());
               setOpen(false);
             }}
           >
