@@ -497,14 +497,14 @@ Una persona puede ejercer varias funciones, sin que una amplíe los permisos de 
 
 **Flujo principal**
 1. El administrador abre «Apariencia», selecciona una combinación predefinida para cada modo y el modo inicial.
-2. Quenda muestra una vista previa sin modificar la interfaz publicada.
+2. Quenda aplica temporalmente el borrador a toda la aplicación visible, sin publicar ni cambiar preferencias; salir, descartar o recargar termina la vista previa.
 3. Al guardar, comprueba permisos y revisión, persiste la configuración y registra la actuación.
 
 **Alternativas y excepciones**
 - Restaurar aplica la combinación neutra en ambos modos y el modo claro mediante la misma operación de guardado.
 - Una revisión obsoleta exige consultar la configuración actual; no sobrescribe el cambio de otro administrador.
-- La elección personal de claro/oscuro prevalece sobre el modo inicial del municipio.
-- La administración conserva el tema de Quenda. No se admiten colores libres ni estilos por componente.
+- Fuera de la vista previa, la elección personal de claro/oscuro prevalece sobre el modo inicial del municipio.
+- Salvo durante la vista previa temporal, la administración conserva el tema de Quenda. No se admiten colores libres ni estilos por componente.
 
 **Resultado esperado:** apariencia pública persistida únicamente en el municipio autorizado.
 

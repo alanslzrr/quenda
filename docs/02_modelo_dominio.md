@@ -227,6 +227,6 @@ Cada municipio configura una combinación predefinida para el modo claro, otra p
 
 La configuración pública comienza con la combinación neutra en ambos modos y el modo claro. Guardar o restaurar exige administrador municipal, MFA reciente y la revisión consultada; conserva auditoría y rechaza una revisión obsoleta sin sobrescribir el cambio anterior. La vista previa no modifica la configuración publicada.
 
-El modo elegido por el usuario prevalece sobre el predeterminado municipal. La administración conserva la identidad visual de Quenda en ambos modos. Cambiar de municipio no copia su apariencia al siguiente.
+Fuera de la vista previa temporal, el modo elegido por el usuario prevalece sobre el predeterminado municipal y la administración conserva la identidad visual de Quenda. La vista previa del editor aplica temporalmente el borrador a toda la aplicación sin publicar ni modificar preferencias. Cambiar de municipio no copia su apariencia al siguiente.
 
 Idioma y modo se gestionan desde el menú superior de ajustes o el perfil, con una única preferencia por cuenta. Sin sesión, la elección se conserva en el navegador. Sin idioma explícito, la interfaz selecciona el primer idioma admitido del navegador —gallego o castellano— y utiliza gallego como alternativa. La preferencia explícita de idioma también se aplica a nuevos avisos; no reescribe mensajes ya generados.
