@@ -1,23 +1,39 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { ArrowRight } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Clock3 } from "lucide-react";
+import { useEffect } from "react";
 import { Link, useParams } from "react-router";
 import {
+  ApiError,
   type Appearance,
   api,
   type Municipality,
-  type Page,
 } from "../../app/api";
+import { useFavorite } from "../../app/favorite";
 import { Failure, Loading } from "../../app/feedback";
-import styles from "../../app/layout.module.css";
+import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
+import { canRefetch } from "../../app/query";
 import { useMunicipalTheme } from "../../app/theme-provider";
-import { Button } from "../../ui/button/button";
-import { AvailabilitySearch } from "./search";
-export function MunicipalityPage() {
-  const { tenantId } = useParams();
-  const { locale, t } = usePreferences();
-  const municipality = useQuery({
+import { BackLink } from "./booking";
+import styles from "./booking.module.css";
+import {
+  BookingSteps,
+  Choice,
+  Choices,
+  FavoriteToggle,
+  facilityPath,
+  municipalityPath,
+  pickerPath,
+  searchPath,
+  useJourneyQuery,
+} from "./journey";
+import { AvailabilitySearch, useFacilities } from "./search";
+
+export function useMunicipality(tenantId: string | undefined) {
+  const { locale } = usePreferences();
+  return useQuery({
     queryKey: ["public", tenantId, "municipality"],
+    enabled: !!tenantId,
     queryFn: ({ signal }) =>
       api<Municipality>(
         `/api/public/municipalities/${tenantId}`,
@@ -25,8 +41,17 @@ export function MunicipalityPage() {
         locale,
       ),
   });
+}
+export function usePublicAppearance(tenantId: string | undefined) {
+  const { locale } = usePreferences();
+  const client = useQueryClient();
+  const queryKey = ["public", tenantId, "appearance"];
   const appearance = useQuery({
-    queryKey: ["public", tenantId, "appearance"],
+    queryKey,
+    enabled: !!tenantId,
+    // Appearance falls back silently, so there is no manual retry control.
+    // Re-entering may recover it, but never before its rate-limit deadline.
+    retryOnMount: canRefetch(client.getQueryState(queryKey)?.error),
     queryFn: ({ signal }) =>
       api<Appearance>(
         `/api/public/municipalities/${tenantId}/appearance`,
@@ -35,139 +60,218 @@ export function MunicipalityPage() {
       ),
   });
   useMunicipalTheme(appearance.data);
-  const facilities = useInfiniteQuery({
-    queryKey: ["public", tenantId, "facilities", locale],
-    initialPageParam: null as string | null,
-    queryFn: ({ pageParam, signal }) =>
-      api<Page<{ id: string; name: string }>>(
-        `/api/public/municipalities/${tenantId}/facilities${pageParam ? `?after=${pageParam}` : ""}`,
-        { signal },
-        locale,
-      ),
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
-  });
-  if (municipality.isPending || facilities.isPending) return <Loading />;
-  if (municipality.isError || facilities.isError)
-    return (
+}
+
+const missing = (error: unknown) =>
+  error instanceof ApiError && error.status === 404;
+
+/** A municipality that no longer exists stops being the starting point and sends people back to choose. */
+export function MunicipalityGone({ tenantId }: { tenantId: string }) {
+  const { t } = usePreferences();
+  const query = useJourneyQuery();
+  const [favorite, setFavorite] = useFavorite();
+  const wasFavorite = favorite === tenantId;
+  useEffect(() => {
+    if (wasFavorite) setFavorite(null);
+  }, [wasFavorite, setFavorite]);
+  return (
+    <div className={styles.page}>
+      <div className={styles.empty}>
+        <p>
+          {t(
+            "Este municipio no está disponible.",
+            "Este municipio non está dispoñible.",
+          )}
+        </p>
+        <span>
+          {wasFavorite
+            ? t(
+                "Era tu municipio favorito; lo hemos quitado. Elige otro para continuar.",
+                "Era o teu municipio favorito; quitámolo. Escolle outro para continuar.",
+              )
+            : t(
+                "Puede que el enlace haya cambiado. Elige un municipio para continuar.",
+                "Pode que a ligazón cambiase. Escolle un municipio para continuar.",
+              )}
+        </span>
+      </div>
+      <LinkButton to={`${pickerPath}${query}`} variant="primary">
+        {t("Elegir municipio", "Escoller municipio")}
+      </LinkButton>
+    </div>
+  );
+}
+
+/** Second step: the facilities of one municipality. */
+export function MunicipalityPage() {
+  const { tenantId = "" } = useParams();
+  const { locale, t } = usePreferences();
+  const query = useJourneyQuery();
+  const municipality = useMunicipality(tenantId);
+  const facilities = useFacilities(tenantId);
+  usePublicAppearance(tenantId);
+  if (municipality.isPending) return <Loading />;
+  if (municipality.isError)
+    return missing(municipality.error) ? (
+      <MunicipalityGone tenantId={tenantId} />
+    ) : (
       <Failure
-        error={municipality.error ?? facilities.error}
-        retry={() => {
-          void municipality.refetch();
-          void facilities.refetch();
-        }}
+        error={municipality.error}
+        retry={() => void municipality.refetch()}
+      />
+    );
+  const name = municipality.data.name;
+  const items = [...facilities.items].sort(
+    (a, b) =>
+      Number(b.units > 0) - Number(a.units > 0) ||
+      a.name.localeCompare(b.name, locale),
+  );
+  const bookable = items.filter((item) => item.units > 0);
+  return (
+    <div className={styles.page}>
+      <BookingSteps
+        current={1}
+        tenantId={tenantId}
+        municipality={name}
+        query={query}
+      />
+      <header className={styles.intro}>
+        <p className={styles.context}>{name}</p>
+        <h1 className={styles.title}>
+          {t("Elige una instalación", "Escolle unha instalación")}
+        </h1>
+        <p className={styles.lead}>
+          {t(
+            "Cada instalación agrupa pistas, salas u otros espacios que se reservan por separado.",
+            "Cada instalación agrupa pistas, salas ou outros espazos que se reservan por separado.",
+          )}
+        </p>
+        <div className={styles.introActions}>
+          <FavoriteToggle tenantId={tenantId} name={name} />
+          <Link className={styles.textLink} to={`${pickerPath}${query}`}>
+            {t("Cambiar municipio", "Cambiar municipio")}
+          </Link>
+        </div>
+      </header>
+      {facilities.isError ? (
+        <Failure
+          error={facilities.error}
+          retry={() => void facilities.refetch()}
+        />
+      ) : facilities.loading ? (
+        <Loading />
+      ) : !bookable.length ? (
+        <>
+          <div className={styles.empty}>
+            <p>
+              {t(
+                `${name} todavía no ofrece reservas en línea.`,
+                `${name} aínda non ofrece reservas en liña.`,
+              )}
+            </p>
+            <span>
+              {t(
+                "Cuando el ayuntamiento publique instalaciones aparecerán aquí. Puedes consultar otro municipio.",
+                "Cando o concello publique instalacións aparecerán aquí. Podes consultar outro municipio.",
+              )}
+            </span>
+          </div>
+          <LinkButton to={`${pickerPath}${query}`}>
+            {t("Elegir otro municipio", "Escoller outro municipio")}
+          </LinkButton>
+        </>
+      ) : (
+        <div className={styles.sections}>
+          <Choices>
+            {items.map((item) => (
+              <Choice
+                key={item.id}
+                to={
+                  item.units > 0
+                    ? facilityPath(tenantId, item.id, query)
+                    : undefined
+                }
+                title={item.name}
+                meta={
+                  item.units === 0
+                    ? t(
+                        "Sin espacios reservables por ahora",
+                        "Sen espazos reservables polo de agora",
+                      )
+                    : item.units === 1
+                      ? t("1 espacio reservable", "1 espazo reservable")
+                      : t(
+                          `${item.units} espacios reservables`,
+                          `${item.units} espazos reservables`,
+                        )
+                }
+              />
+            ))}
+          </Choices>
+          <aside className={styles.shortcut}>
+            <Clock3 size={18} aria-hidden="true" />
+            <div>
+              <h2>
+                {t("¿Te importa más la hora?", "Impórtache máis a hora?")}
+              </h2>
+              <p>
+                {t(
+                  "Busca los horarios libres de todas las instalaciones a la vez.",
+                  "Busca os horarios libres de todas as instalacións á vez.",
+                )}
+              </p>
+              <Link
+                className={styles.textLink}
+                to={searchPath(tenantId, query)}
+              >
+                {t("Buscar por día y hora", "Buscar por día e hora")}
+              </Link>
+            </div>
+          </aside>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Shortcut for people who start from the time: every facility of the municipality at once. */
+export function SearchPage() {
+  const { tenantId = "" } = useParams();
+  const { t } = usePreferences();
+  const query = useJourneyQuery();
+  const municipality = useMunicipality(tenantId);
+  usePublicAppearance(tenantId);
+  if (municipality.isPending) return <Loading />;
+  if (municipality.isError)
+    return missing(municipality.error) ? (
+      <MunicipalityGone tenantId={tenantId} />
+    ) : (
+      <Failure
+        error={municipality.error}
+        retry={() => void municipality.refetch()}
       />
     );
   return (
-    <>
-      <Link to="/">{t("Todos los municipios", "Todos os municipios")}</Link>
-      <div className={styles.hero}>
-        <p className={styles.eyebrow} style={{ marginTop: "2rem" }}>
-          {t("Deporte municipal", "Deporte municipal")}
-        </p>
-        <h1 className={styles.title}>{municipality.data.name}</h1>
-        <p className={styles.description}>
+    <div className={styles.page}>
+      <BackLink to={municipalityPath(tenantId, query)}>
+        {t("Elegir por instalación", "Escoller por instalación")}
+      </BackLink>
+      <header className={styles.intro}>
+        <p className={styles.context}>{municipality.data.name}</p>
+        <h1 className={styles.title}>
+          {t("Buscar por día y hora", "Buscar por día e hora")}
+        </h1>
+        <p className={styles.lead}>
           {t(
-            "Elige el día y la duración para ver los horarios disponibles.",
-            "Escolle o día e a duración para ver os horarios dispoñibles.",
+            "Elige el día y la duración para ver qué espacios quedan libres en todas las instalaciones.",
+            "Escolle o día e a duración para ver que espazos quedan libres en todas as instalacións.",
           )}
         </p>
-      </div>
+      </header>
       <AvailabilitySearch
-        tenantId={tenantId ?? ""}
+        tenantId={tenantId}
         timeZone={municipality.data.timeZone}
       />
-      <details>
-        <summary>
-          {t("Ver todas las instalaciones", "Ver todas as instalacións")}
-        </summary>
-        {facilities.data.pages
-          .flatMap((page) => page.items)
-          .map((facility) => (
-            <Facility
-              key={facility.id}
-              tenantId={tenantId ?? ""}
-              facility={facility}
-            />
-          ))}
-        {facilities.data.pages[0].items.length === 0 && (
-          <p className={styles.empty}>
-            {t(
-              "No hay instalaciones publicadas.",
-              "Non hai instalacións publicadas.",
-            )}
-          </p>
-        )}
-        {facilities.hasNextPage && (
-          <Button
-            loading={facilities.isFetchingNextPage}
-            onClick={() => void facilities.fetchNextPage()}
-          >
-            {t("Ver más", "Ver máis")}
-          </Button>
-        )}
-      </details>
-    </>
-  );
-}
-function Facility({
-  tenantId,
-  facility,
-}: {
-  tenantId: string;
-  facility: { id: string; name: string };
-}) {
-  const { locale, t } = usePreferences();
-  const units = useInfiniteQuery({
-    queryKey: ["public", tenantId, facility.id, "units", locale],
-    initialPageParam: null as string | null,
-    queryFn: ({ pageParam, signal }) =>
-      api<Page<{ id: string; name: string }>>(
-        `/api/public/municipalities/${tenantId}/facilities/${facility.id}/units${pageParam ? `?after=${pageParam}` : ""}`,
-        { signal },
-        locale,
-      ),
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
-  });
-  return (
-    <section>
-      <h2 className={styles.sectionTitle}>{facility.name}</h2>
-      {units.isPending ? (
-        <Loading />
-      ) : units.isError ? (
-        <Failure error={units.error} retry={() => void units.refetch()} />
-      ) : (
-        <>
-          <ul className={styles.list}>
-            {units.data.pages
-              .flatMap((page) => page.items)
-              .map((unit) => (
-                <li className={styles.listItem} key={unit.id}>
-                  <Link
-                    className={styles.listLink}
-                    to={`/municipios/${tenantId}/unidades/${unit.id}`}
-                  >
-                    <span className={styles.listTitle}>{unit.name}</span>
-                    <ArrowRight size={20} aria-hidden="true" />
-                  </Link>
-                </li>
-              ))}
-          </ul>
-          {units.data.pages[0].items.length === 0 && (
-            <p className={styles.empty}>
-              {t("No hay unidades publicadas.", "Non hai unidades publicadas.")}
-            </p>
-          )}
-          {units.hasNextPage && (
-            <Button
-              variant="secondary"
-              loading={units.isFetchingNextPage}
-              onClick={() => void units.fetchNextPage()}
-            >
-              {t("Ver más unidades", "Ver máis unidades")}
-            </Button>
-          )}
-        </>
-      )}
-    </section>
+    </div>
   );
 }
