@@ -237,14 +237,13 @@ test("unit composition preserves drafts across tabs and contextual MFA without r
   const { commands } = await fixture(page);
   await page.goto(resource);
   await page
-    .getByRole("alert")
-    .getByRole("button", { name: "Verificar MFA" })
+    .getByRole("button", { name: "Verificar acceso", exact: true })
     .click();
   const dialog = page.getByRole("dialog");
   await dialog
     .getByLabel("Código de autenticación", { exact: true })
     .fill("123456");
-  await dialog.getByRole("button", { name: "Verificar MFA" }).click();
+  await dialog.getByRole("button", { name: "Verificar acceso" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Pista de tenis" }),
@@ -258,14 +257,13 @@ test("unit composition preserves drafts across tabs and contextual MFA without r
   const rules = page.getByRole("tabpanel", { name: "Normas", exact: true });
   await rules.getByLabel("Motivo").fill("Revisión municipal");
   await rules.getByRole("button", { name: "Guardar normas" }).click();
-  await rules
-    .getByRole("alert")
-    .getByRole("button", { name: "Verificar MFA" })
+  await page
+    .getByRole("button", { name: "Verificar acceso", exact: true })
     .click();
   await dialog
     .getByLabel("Código de autenticación", { exact: true })
     .fill("123456");
-  await dialog.getByRole("button", { name: "Verificar MFA" }).click();
+  await dialog.getByRole("button", { name: "Verificar acceso" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByLabel("Texto de las normas")).toHaveValue(draft);
   expect(commands).toHaveLength(1);
@@ -296,33 +294,23 @@ test("booking composition exposes the real selection and explicit acceptance", a
   page,
 }, info) => {
   await fixture(page);
-  await page.goto(publicUnit);
+  await page.goto(`${publicUnit}?fecha=${bookingDate}&duracion=60`);
   await expect(
     page.getByRole("heading", { name: "Pista de tenis" }),
   ).toBeVisible();
-  await page
-    .getByRole("gridcell", {
-      name: new Intl.DateTimeFormat("es", {
-        timeZone: "Europe/Madrid",
-        dateStyle: "full",
-      }).format(new Date(start)),
-      exact: true,
-    })
-    .click();
-  await expect(
-    page.getByRole("link").filter({ hasText: "Elegir" }),
-  ).toHaveCount(1);
+  const slot = page.locator('a[href*="/reservar?"]');
+  await expect(slot).toHaveCount(1);
   for (const theme of ["light", "dark"] as const) {
     await appearance(page, theme);
     await audit(page, `availability-${info.project.name}-${theme}`);
   }
-  await page.getByRole("link").filter({ hasText: "Elegir" }).first().click();
+  await slot.click();
   await expect(
-    page.getByRole("heading", { name: "Confirmar reserva", exact: true }),
+    page.getByRole("heading", { name: "Revisa tu reserva", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("checkbox", {
-      name: "Acepto estas normas y las condiciones de cancelación.",
+      name: "He leído y acepto las normas de uso y las condiciones de cancelación.",
     }),
   ).not.toBeChecked();
   for (const theme of ["light", "dark"] as const) {
@@ -362,4 +350,86 @@ test("security composition reveals existing forms without exposing credentials i
   await expect(
     page.getByLabel("Código de autenticación", { exact: true }),
   ).toBeVisible();
+});
+
+test("audit regression: background MFA recovery preserves name and rules drafts", async ({
+  page,
+}) => {
+  const { commands } = await fixture(page);
+  await page.goto(resource);
+  const verify = async () => {
+    await page
+      .getByRole("button", { name: "Verificar acceso", exact: true })
+      .click();
+    const dialog = page.getByRole("dialog");
+    await dialog
+      .getByLabel("Código de autenticación", { exact: true })
+      .fill("123456");
+    await dialog.getByRole("button", { name: "Verificar acceso" }).click();
+    await expect(dialog).toHaveCount(0);
+  };
+  await verify();
+  await page.getByLabel("Nombre", { exact: true }).fill("Borrador de nombre");
+  await page.getByRole("tab", { name: "Horarios", exact: true }).click();
+  await page.getByLabel("Inicio (HH:mm)", { exact: true }).fill("10:15");
+  await page.getByRole("tab", { name: "Normas", exact: true }).click();
+  await page.getByLabel("Texto de las normas").fill("Borrador de normas");
+  await page.route(`**/api/municipalities/${tenant}/units/${unit}`, (route) =>
+    route.fulfill({
+      status: 403,
+      json: {
+        error: {
+          code: "REAUTHENTICATION_REQUIRED",
+          message: "Verifica el acceso",
+        },
+      },
+    }),
+  );
+  for (const endpoint of ["/api/me", "/api/me/navigation"]) {
+    await page.route(`**${endpoint}`, (route) =>
+      route.fulfill({
+        status: 503,
+        json: {
+          error: { code: "UNAVAILABLE", message: "Conexión interrumpida" },
+        },
+      }),
+    );
+  }
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    window.dispatchEvent(new Event("visibilitychange"));
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    window.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(
+    page.getByRole("button", { name: "Verificar acceso", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Texto de las normas")).toHaveValue(
+    "Borrador de normas",
+  );
+  await expect(
+    page.getByRole("button", { name: "Guardar normas", exact: true }),
+  ).toBeDisabled();
+  await page.unroute(`**/api/municipalities/${tenant}/units/${unit}`);
+  await page.unroute("**/api/me");
+  await page.unroute("**/api/me/navigation");
+  await verify();
+  await expect(page.getByLabel("Texto de las normas")).toHaveValue(
+    "Borrador de normas",
+  );
+  await page.getByRole("tab", { name: "Datos", exact: true }).click();
+  await expect(page.getByLabel("Nombre", { exact: true })).toHaveValue(
+    "Borrador de nombre",
+  );
+  await page.getByRole("tab", { name: "Horarios", exact: true }).click();
+  await expect(page.getByLabel("Inicio (HH:mm)", { exact: true })).toHaveValue(
+    "10:15",
+  );
+  expect(commands).toHaveLength(0);
 });
