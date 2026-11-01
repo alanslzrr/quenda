@@ -6,6 +6,7 @@ test.use({ timezoneId: "America/Los_Angeles" });
 const tenant = "00000000-0000-4000-8000-000000000001";
 const facility = "00000000-0000-4000-8000-000000000002";
 const unit = "00000000-0000-4000-8000-000000000003";
+const emptyFacility = "00000000-0000-4000-8000-000000000004";
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
@@ -31,20 +32,59 @@ test.beforeEach(async ({ page }) => {
         defaultTheme: "dark",
       };
     else if (url.pathname.endsWith("/booking-durations"))
-      body = { durations: [60, 90, 120] };
+      body = { durations: [60, 90, 120], hasMore: false, recommended: 60 };
     else if (url.pathname.endsWith("/availability-search"))
-      body = { items: [], nextCursor: null };
+      body = {
+        items: [
+          {
+            id: unit,
+            name: "Pista 1",
+            facilityId: facility,
+            facilityName: "Centro deportivo",
+            timeZone: "Europe/Madrid",
+            slots: [
+              {
+                start: {
+                  utc: "2026-10-22T16:00:00.000Z",
+                  local: "2026-10-22T18:00:00",
+                },
+                end: {
+                  utc: "2026-10-22T17:00:00.000Z",
+                  local: "2026-10-22T19:00:00",
+                },
+              },
+            ],
+          },
+        ],
+        nextCursor: null,
+      };
     else if (url.pathname.endsWith("/facilities"))
       body = {
-        items: [{ id: facility, name: "Centro deportivo" }],
+        items: [
+          { id: facility, name: "Centro deportivo", units: 1 },
+          { id: emptyFacility, name: "Piscina", units: 0 },
+        ],
         nextCursor: null,
       };
     else if (url.pathname.endsWith("/units"))
-      body = { items: [{ id: unit, name: "Pista 1" }], nextCursor: null };
+      body = {
+        items: [
+          {
+            id: unit,
+            name: "Pista 1",
+            facilityId: facility,
+            minimumMinutes: 60,
+            maximumMinutes: 120,
+          },
+        ],
+        nextCursor: null,
+      };
     else if (url.pathname.endsWith(`/units/${unit}`))
       body = {
         id: unit,
         name: "Pista 1",
+        facilityId: facility,
+        facilityName: "Centro deportivo",
         timeZone: "Europe/Madrid",
         municipalAdvanceDays: 30,
         cancellationMinutes: 1440,
@@ -81,25 +121,64 @@ test("public catalog uses municipal scope and restores Quenda theme on exit", as
 }, info) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  await page.clock.setFixedTime(new Date("2026-10-22T12:00:00Z"));
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    /Reserva instala/,
-  );
-  await page.getByRole("link", { name: /Oleiros/ }).click();
   await expect(
-    page.getByRole("heading", { name: "Oleiros", exact: true }),
+    page.getByRole("heading", {
+      level: 1,
+      name: /^(¿Dónde quieres|Onde queres) reservar\?$/,
+    }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: /^Oleiros/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/municipios/${tenant}$`));
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: /^(Elige una|Escolle unha) instalación$/,
+    }),
   ).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator("html")).toHaveAttribute("data-accent", "green");
-  await page.clock.setFixedTime(new Date("2026-10-22T12:00:00Z"));
-  await page
-    .getByText(/Ver todas las instalaciones|Ver todas as instalacións/)
-    .click();
-  await page.getByRole("link", { name: "Pista 1", exact: true }).click();
+  await expect(page.getByRole("link", { name: /^Piscina/ })).toHaveCount(0);
+  await expect(
+    page.getByText(
+      /^(Sin espacios reservables por ahora|Sen espazos reservables polo de agora)$/,
+    ),
+  ).toBeVisible();
+  await page.getByRole("link", { name: /^Centro deportivo/ }).click();
+  const unitStep = page.getByRole("heading", {
+    level: 1,
+    name: /^(Elige un espacio|Escolle un espazo)$/,
+  });
+  await expect(unitStep).toBeVisible();
+  await page.getByRole("link", { name: /^Pista 1/ }).click();
   await expect(
     page.getByRole("heading", { name: "Pista 1", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText(/(No hay|Non hai) fran/)).toBeVisible();
+  await page.getByRole("combobox", { name: /^Duración$/ }).click();
+  await page.getByRole("option", { name: "1 h 30 min", exact: true }).click();
+  await expect(page).toHaveURL(/duracion=90/);
+  const steps = page.getByRole("navigation", {
+    name: /^Pasos d(e la|a) reserva$/,
+  });
+  await expect(steps.locator('[aria-current="step"]')).toContainText(
+    /Día (y|e) hora/,
+  );
+  await steps
+    .getByRole("button", { name: /^Esp(acio|azo), completado/ })
+    .click();
+  await expect(unitStep).toBeVisible();
+  await expect(page).toHaveURL(/duracion=90/);
+  await page.goBack();
+  await expect(
+    page.getByRole("heading", { name: "Pista 1", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: /^Duración$/ }),
+  ).toContainText("1 h 30 min");
+  await expect(page.getByText(/(No|Non) quedan horarios/)).toBeVisible();
+  await page.getByRole("button", { name: "Día", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCSS("opacity", "1");
   await expect(
     page.getByRole("grid", {
       name:
@@ -118,10 +197,57 @@ test("public catalog uses municipal scope and restores Quenda theme on exit", as
     path: info.outputPath("availability.png"),
     fullPage: true,
   });
-  await page.getByRole("link", { name: "Quenda, inicio" }).click();
+  const brand = page.getByRole("banner").getByRole("link", { name: /Oleiros/ });
+  await expect(brand).toHaveAccessibleName(/^(quenda\s*)?Oleiros$/);
+  await brand.click();
+  await expect(page).toHaveURL(new RegExp(`/municipios/${tenant}$`));
+  await page.getByRole("link", { name: "Acceder", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-accent", "neutral");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   expect(errors).toEqual([]);
+});
+test("a favourite municipality becomes the booking entry without hiding the change", async ({
+  page,
+}) => {
+  await page.goto("/reservar");
+  const reserve = page
+    .getByRole("navigation", { name: "Navegación principal" })
+    .getByRole("link", { name: "Reservar", exact: true });
+  await expect(reserve).toHaveAttribute("href", "/reservar");
+  await page
+    .getByRole("button", { name: "Marcar Oleiros como favorito", exact: true })
+    .click();
+  const toggle = page.getByRole("button", {
+    name: "Quitar Oleiros de favoritos",
+    exact: true,
+  });
+  await expect(toggle).toBeFocused();
+  await expect(
+    page.getByRole("heading", { name: /^(Tu|O teu) municipio favorito$/ }),
+  ).toBeVisible();
+  await expect(reserve).toHaveAttribute("href", `/municipios/${tenant}`);
+  await page.reload();
+  await reserve.click();
+  await expect(page).toHaveURL(new RegExp(`/municipios/${tenant}$`));
+  await page
+    .getByRole("link", { name: "Cambiar municipio", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/reservar$/);
+});
+test("a municipality without bookable spaces explains the dead end", async ({
+  page,
+}) => {
+  await page.route("**/api/public/municipalities/*/facilities*", (route) =>
+    route.fulfill({ json: { items: [], nextCursor: null } }),
+  );
+  await page.goto(`/municipios/${tenant}`);
+  await expect(
+    page.getByText(/Oleiros (todavía no ofrece|aínda non ofrece)/),
+  ).toBeVisible();
+  await page
+    .getByRole("link", { name: /^(Elegir otro|Escoller outro) municipio$/ })
+    .click();
+  await expect(page).toHaveURL(/\/reservar$/);
 });
 test("settings preserve explicit language and theme across reloads", async ({
   page,
@@ -222,6 +348,7 @@ test("current-day marker follows the municipality rather than browser timezone",
 }, info) => {
   await page.clock.setFixedTime(new Date("2026-10-22T22:30:00Z"));
   await page.goto(`/municipios/${tenant}/unidades/${unit}`);
+  await page.getByRole("button", { name: "Día", exact: true }).click();
   await expect(
     page.getByRole("gridcell", {
       name:
