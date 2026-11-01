@@ -119,7 +119,7 @@ export function reservationMail(
   });
   const label = copy[locale];
   const href = new URL(
-    `/api/municipalities/${event.tenantId}/reservations/${event.reservationId}`,
+    `/reservas/${event.tenantId}/${event.reservationId}`,
     base.origin,
   ).href;
   return {

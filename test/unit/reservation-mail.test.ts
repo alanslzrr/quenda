@@ -47,7 +47,7 @@ test("reservation messages localize all events and distinguish history from curr
       );
       assert.match(
         message.text,
-        /https:\/\/quenda\.test\/api\/municipalities\/00000000-0000-4000-8000-000000000001\/reservations\/00000000-0000-4000-8000-000000000002/,
+        /https:\/\/quenda\.test\/reservas\/00000000-0000-4000-8000-000000000001\/00000000-0000-4000-8000-000000000002/,
       );
       assert.match(message.text, /GMT\+02:00/);
       assert.match(message.text, /GMT\+01:00/);
