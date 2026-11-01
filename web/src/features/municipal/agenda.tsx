@@ -1,9 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { ActionForm, textField } from "../../app/action";
 import { api, type Municipality } from "../../app/api";
+import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
+import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { Checkbox } from "../../ui/checkbox/checkbox";
@@ -517,34 +519,40 @@ export function AdministrativeReservation() {
         {t("Unidad:", "Unidade:")} {r.unitId}
       </p>
       {r.usageRulesUnitId && r.usageRulesVersion !== null ? (
-        <details>
-          <summary>
-            {t("Normas aceptadas", "Normas aceptadas")} ·{" "}
-            {t("versión", "versión")} {r.usageRulesVersion}
-          </summary>
+        <Disclosure
+          title={
+            <>
+              {t("Normas aceptadas", "Normas aceptadas")} ·{" "}
+              {t("versión", "versión")} {r.usageRulesVersion}
+            </>
+          }
+        >
           <p>
             {t("Unidad:", "Unidade:")} {r.usageRulesUnitId}
           </p>
           <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
             {r.usageRulesText}
           </p>
-        </details>
+        </Disclosure>
       ) : (
         <p>{t("Sin aceptación registrada.", "Sen aceptación rexistrada.")}</p>
       )}
       {r.pendingUsageRulesVersion !== null && (
-        <details>
-          <summary>
-            {t(
-              "Normas pendientes de aceptación",
-              "Normas pendentes de aceptación",
-            )}{" "}
-            · {t("versión", "versión")} {r.pendingUsageRulesVersion}
-          </summary>
+        <Disclosure
+          title={
+            <>
+              {t(
+                "Normas pendientes de aceptación",
+                "Normas pendentes de aceptación",
+              )}{" "}
+              · {t("versión", "versión")} {r.pendingUsageRulesVersion}
+            </>
+          }
+        >
           <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
             {r.pendingUsageRulesText}
           </p>
-        </details>
+        </Disclosure>
       )}
 
       <p>
