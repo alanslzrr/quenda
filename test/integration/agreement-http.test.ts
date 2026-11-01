@@ -503,7 +503,17 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       assert.equal(revokedReplay.statusCode, 200, revokedReplay.body);
       assert.equal(revokedReplay.headers["idempotency-replayed"], "true");
       assert.deepEqual(revokedReplay.json(), revoked.json());
-      assert.equal((await client.request(credentialUrl)).statusCode, 404);
+      const credentialList = await client.request(credentialUrl);
+      assert.equal(credentialList.statusCode, 200, credentialList.body);
+      assert.equal(credentialList.headers["cache-control"], "no-store");
+      assert.ok(
+        credentialList
+          .json()
+          .items.some(
+            (item: { id: string; revokedAt: string | null }) =>
+              item.id === issued.json().id && item.revokedAt,
+          ),
+      );
       const released = await client.request(
         releaseUrl,
         releaseBody,
@@ -795,10 +805,30 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         "UPDATE domain.administrative_rate_limit SET window_started_at=now()-interval '1 minute' WHERE account_id=$1",
         [accountId],
       );
+      const reviewOptionsUrl = `${url}/${monthlyAgreement}/review-options`;
+      const reviewOptions = await client.request(reviewOptionsUrl);
+      assert.equal(reviewOptions.statusCode, 200, reviewOptions.body);
+      assert.equal(reviewOptions.headers["cache-control"], "no-store");
+      assert.deepEqual(Object.keys(reviewOptions.json().items[0]).sort(), [
+        "month",
+        "participants",
+        "revision",
+      ]);
+      assert.equal(reviewOptions.json().items[0].month, "2024-03");
+      assert.equal(
+        (await client.request(`${reviewOptionsUrl}?after=0000-01`)).statusCode,
+        400,
+      );
+      assert.equal(
+        (await client.request(`${reviewOptionsUrl}?after=2024-13`)).statusCode,
+        400,
+      );
       await migration.query(
         "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1 AND account_id=$2",
         [tenant, accountId],
       );
+      assert.equal((await client.request(reviewOptionsUrl)).statusCode, 403);
+      assert.equal((await client.request(credentialUrl)).statusCode, 403);
       assert.equal((await client.request(url, input, headers)).statusCode, 403);
       assert.equal(
         (
@@ -850,6 +880,8 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       assert.equal((await client.request(url, input, headers)).statusCode, 401);
       assert.equal((await client.request(detailUrl)).statusCode, 401);
       assert.equal((await client.request(monthlyUrl)).statusCode, 401);
+      assert.equal((await client.request(reviewOptionsUrl)).statusCode, 401);
+      assert.equal((await client.request(credentialUrl)).statusCode, 401);
       const spec = app.swagger() as { paths: Record<string, unknown> };
       for (const path of [
         "/api/municipalities/{tenantId}/agreements/{agreementId}/reports/{month}",
