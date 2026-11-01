@@ -1,16 +1,19 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { ActionForm, textField } from "../../app/action";
 import { api } from "../../app/api";
+import { Disclosure } from "../../app/disclosure";
 import { usePreferences } from "../../app/preferences-provider";
 import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
 import { CollaborationAction } from "../collaboration/action";
+import { AgreementSelect } from "../collaboration/agreement-select";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
 import type { CommandResult } from "../reservations/commands";
-import { MonthlyFields, uuidPattern } from "./fields";
 import type { ReviewContext } from "./model";
+import { ReviewFields } from "./review-fields";
 export function MonthlyReview() {
   const m = useMunicipality();
   return m.administrator ? <Review key={m.id} /> : <Denied />;
@@ -18,7 +21,14 @@ export function MonthlyReview() {
 function Review() {
   const m = useMunicipality(),
     { t, locale } = usePreferences();
+  const [search] = useSearchParams();
+  const [agreementId, setAgreementId] = useState(search.get("convenio") ?? "");
   const [context, setContext] = useState<ReviewContext>();
+  const [labels, setLabels] = useState({
+    agreement: "",
+    municipality: "",
+    account: "",
+  });
   const [saved, setSaved] = useState<CommandResult>();
   const [generation, setGeneration] = useState(0);
   const base = context
@@ -27,8 +37,17 @@ function Review() {
   return (
     <>
       <h1>
-        {t("Revisión de informe conjunto", "Revisión de informe conxunto")}
+        {t(
+          "Revisión de privacidad de informes",
+          "Revisión de privacidade de informes",
+        )}
       </h1>
+      <p>
+        {t(
+          "Evalúa si compartir este informe conjunto puede revelar información de personas. Una evaluación favorable no publica el informe ni concede permisos al destinatario.",
+          "Avalía se compartir este informe conxunto pode revelar información de persoas. Unha avaliación favorable non publica o informe nin concede permisos ao destinatario.",
+        )}
+      </p>
       <p>
         {t(
           "Registra la evaluación de riesgo para una revisión y destinatario concretos. Las referencias documentan la revisión humana; no acreditan anonimato ni autorizan por sí solas la entrega. No introduzcas datos personales ni documentos completos.",
@@ -54,6 +73,16 @@ function Review() {
               recipientAccountId: textField(d, "recipientAccountId").trim(),
             });
             setSaved(undefined);
+            setLabels({
+              agreement: textField(d, "agreementName"),
+              municipality: textField(d, "recipientMunicipalityName"),
+              account:
+                textField(d, "recipientAccountIdLabel") ||
+                t(
+                  "Cuenta indicada por el destinatario",
+                  "Conta indicada polo destinatario",
+                ),
+            });
             setContext(
               await api<ReviewContext>(
                 `${endpoint(m.id)}/agreements/${encodeURIComponent(agreement)}/reports/${encodeURIComponent(month)}/review-context?${params}`,
@@ -63,50 +92,31 @@ function Review() {
             );
           }}
         >
-          <MonthlyFields />
-          <Input
-            name="revision"
-            label={t("Revisión preparada", "Revisión preparada")}
-            required
-            type="number"
-            min={1}
-            max={2147483647}
-            step={1}
-          />
-          <Input
-            name="recipientTenantId"
-            label={t(
-              "Municipio destinatario (identificador)",
-              "Municipio destinatario (identificador)",
-            )}
-            required
-            pattern={uuidPattern}
-          />
-          <Input
-            name="recipientAccountId"
-            label={t(
-              "Cuenta destinataria (identificador)",
-              "Conta destinataria (identificador)",
-            )}
-            required
-            maxLength={200}
-          />
+          <AgreementSelect value={agreementId} onChange={setAgreementId} />
+          {agreementId && (
+            <ReviewFields key={agreementId} agreement={agreementId} />
+          )}
         </ActionForm>
       ) : (
         <>
           <h2>{t("Contexto de evaluación", "Contexto de avaliación")}</h2>
           <p>
-            {context.agreementId} · {context.month} ·{" "}
-            {t("Revisión", "Revisión")} {context.revision}
+            {labels.agreement} · {context.month} · {t("Revisión", "Revisión")}{" "}
+            {context.revision}
           </p>
           <p>
             {t("Municipio destinatario", "Municipio destinatario")}:{" "}
-            {context.recipientTenantId}
+            {labels.municipality}
           </p>
           <p>
-            {t("Cuenta destinataria", "Conta destinataria")}:{" "}
-            {context.recipientAccountId}
+            {t("Cuenta destinataria", "Conta destinataria")}: {labels.account}
           </p>
+          <Disclosure title={t("Referencias técnicas", "Referencias técnicas")}>
+            <p>
+              {context.agreementId} · {context.recipientTenantId} ·{" "}
+              {context.recipientAccountId}
+            </p>
+          </Disclosure>
           {saved ? (
             <p role="status">
               {t("Revisión registrada", "Revisión rexistrada")}:{" "}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { usePreferences } from "../../app/preferences-provider";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
+import { AgreementSelect } from "../collaboration/agreement-select";
 import { useMunicipality } from "../municipal/shared";
 import { allowed, canExport } from "./model";
 export const uuidPattern =
@@ -93,15 +94,21 @@ export function PeriodFields() {
   );
 }
 export function MonthlyFields() {
+  const m = useMunicipality();
+  const [agreement, setAgreement] = useState("");
   const { t } = usePreferences();
   return (
     <>
-      <Input
-        name="agreementId"
-        label={t("Identificador del convenio", "Identificador do convenio")}
-        required
-        pattern={uuidPattern}
-      />
+      {m.administrator ? (
+        <AgreementSelect value={agreement} onChange={setAgreement} />
+      ) : (
+        <Input
+          name="agreementId"
+          label={t("Identificador del convenio", "Identificador do convenio")}
+          required
+          pattern={uuidPattern}
+        />
+      )}
       <Input
         name="month"
         type="month"
