@@ -45,7 +45,7 @@ export function browser(
 }
 
 // Independent RFC 6238 test implementation; production verification is Better Auth's.
-export function totp(secret: string, stepOffset = 0): string {
+export function totp(secret: string, stepOffset = 0, now = Date.now()): string {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   let bits = "";
   for (const char of secret.replace(/=+$/, "").toUpperCase()) {
@@ -57,7 +57,7 @@ export function totp(secret: string, stepOffset = 0): string {
     Number.parseInt(bits.slice(i * 8, i * 8 + 8), 2),
   );
   const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000) + stepOffset));
+  counter.writeBigUInt64BE(BigInt(Math.floor(now / 30000) + stepOffset));
   const mac = createHmac("sha1", Buffer.from(bytes)).update(counter).digest();
   const offset = (mac[19] ?? 0) & 15;
   return String((mac.readUInt32BE(offset) & 0x7fffffff) % 1000000).padStart(
