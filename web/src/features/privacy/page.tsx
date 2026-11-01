@@ -1,4 +1,5 @@
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
+import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { Denied } from "../municipal/shared";
 import {
@@ -98,9 +99,6 @@ function Workspace() {
           "Consulta e execución requiren permisos independentes e MFA recente. As solicitudes de dereitos tramítanse polas canles administrativas existentes.",
         )}
       </p>
-      <Link to="/perfil/seguridad" target="_blank" rel="noopener">
-        {t("Verificar MFA en otra pestaña", "Verificar MFA noutra pestana")}
-      </Link>
       <nav
         className={styles.nav}
         aria-label={t("Gestión de privacidad", "Xestión de privacidade")}
