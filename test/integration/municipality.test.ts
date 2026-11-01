@@ -2816,6 +2816,10 @@ test("municipal creation and first administrator acceptance are atomic and isola
           (await publicUnits(domain, tenant.tenantId, f.facilityId)).items,
           [],
         );
+        assert.deepEqual(
+          (await publicFacilities(domain, tenant.tenantId)).items,
+          [{ id: f.facilityId, name: "Público", units: 0 }],
+        );
         await publishCatalogResource(
           domain,
           account("admin-a"),
@@ -2864,10 +2868,21 @@ test("municipal creation and first administrator acceptance are atomic and isola
           ).rows,
           before,
         );
-        assert.equal(
-          (await publicUnits(domain, tenant.tenantId, f.facilityId)).items[0]
-            ?.id,
-          u.unitId,
+        assert.deepEqual(
+          (await publicUnits(domain, tenant.tenantId, f.facilityId)).items,
+          [
+            {
+              id: u.unitId,
+              name: "Pista",
+              facilityId: f.facilityId,
+              minimumMinutes: 30,
+              maximumMinutes: 120,
+            },
+          ],
+        );
+        assert.deepEqual(
+          (await publicFacilities(domain, tenant.tenantId)).items,
+          [{ id: f.facilityId, name: "Público", units: 1 }],
         );
         await assert.rejects(
           publicUnitCalendar(domain, randomUUID(), u.unitId),
