@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { DatabaseError, type Pool } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
+import { civilMonth } from "../../shared/civil-date.ts";
 import {
   type AuthenticatedAccount,
   requirePermission,
@@ -21,7 +22,7 @@ export async function deliverMonthlyReport(
       )
     )
       throw new HttpError("INVALID_INPUT");
-    const start = Temporal.PlainYearMonth.from(month)
+    const start = Temporal.PlainYearMonth.from(civilMonth(month))
       .toPlainDate({ day: 1 })
       .toString();
     return await command(
