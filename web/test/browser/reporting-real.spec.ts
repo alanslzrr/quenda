@@ -4,6 +4,7 @@ import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
 import { test } from "./fixtures";
+import { selectValue } from "./select-value";
 
 async function visibleNumbers(page: Page) {
   const reduced = await page.evaluate(
@@ -43,13 +44,36 @@ async function report(
   month: string,
 ) {
   await page.goto(`/administracion/${tenant}/informes`);
-  await page
-    .getByLabel(/Identificador (del convenio|do convenio)/)
-    .fill(agreement);
+  const selector = page.getByRole("combobox", {
+    name: "Convenio",
+    exact: true,
+  });
+  const reference = page.getByLabel(/Identificador (del convenio|do convenio)/);
+  await expect(selector.or(reference)).toBeVisible();
+  if (await selector.count())
+    await selectValue(page, "agreementId", "Convenio", agreement);
+  else
+    await page
+      .getByLabel(/Identificador (del convenio|do convenio)/)
+      .fill(agreement);
   await page.getByLabel("Mes publicado").fill(month);
-  await page
-    .getByRole("button", { name: "Consultar informe", exact: true })
-    .click();
+  const submit = page.getByRole("button", {
+    name: "Consultar informe",
+    exact: true,
+  });
+  const response = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`/agreements/${agreement}/reports/${month}`) &&
+      response.request().method() === "GET",
+  );
+  await submit.click();
+  if ((await response).status() === 429) {
+    // The real per-account limiter remains enabled. Respect its visible cooldown
+    // and explicitly resubmit; never replay a review or a business mutation.
+    await expect(page.getByRole("timer")).toBeVisible();
+    await expect(page.getByRole("timer")).toHaveCount(0, { timeout: 65000 });
+    await submit.click();
+  }
 }
 async function review(
   page: Page,
@@ -61,19 +85,25 @@ async function review(
   decision = "Favorable",
 ) {
   await page.goto(`/administracion/${tenant}/informes/revision`);
-  await page
-    .getByLabel(/Identificador (del convenio|do convenio)/)
-    .fill(agreement);
-  await page.getByLabel("Mes publicado").fill(month);
-  await page.getByLabel("Revisión preparada").fill("1");
-  await page
-    .getByLabel("Municipio destinatario (identificador)")
-    .fill(recipientTenant);
-  await page
-    .getByLabel(
-      /Cuenta destinataria \(identificador\)|Conta destinataria \(identificador\)/,
-    )
-    .fill(account);
+  await selectValue(page, "agreementId", "Convenio", agreement);
+  await selectValue(page, "month", "Mes preparado", month);
+  await selectValue(
+    page,
+    "recipientTenantId",
+    "Municipio destinatario",
+    recipientTenant,
+  );
+  if (recipientTenant === tenant)
+    await selectValue(
+      page,
+      "recipientAccountId",
+      /Persona destinataria|Persoa destinataria/,
+      account,
+    );
+  else
+    await page
+      .getByLabel(/Referencia de (cuenta|conta) facilitada/)
+      .fill(account);
   await page
     .getByRole("button", {
       name: "Consultar contexto de revisión",

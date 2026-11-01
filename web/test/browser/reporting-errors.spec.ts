@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, type Page } from "@playwright/test";
 import { test } from "./fixtures";
+import { selectValue } from "./select-value";
 
 const tenant = "00000000-0000-4000-8000-000000000001",
   unit = "00000000-0000-4000-8000-000000000002",
@@ -33,6 +34,26 @@ async function fixture(
           nextCursor: null,
         },
         platform: { operator: false, permissions: [] },
+      };
+    if (path === `${base}/agreements`)
+      body = {
+        items: [
+          { agreementId: agreement, name: "Convenio de pruebas", version: 1 },
+        ],
+        nextCursor: null,
+      };
+    if (path === `${base}/profiles`)
+      body = {
+        items: [
+          {
+            accountId: "recipient",
+            accountLabel: {
+              name: "Persona destinataria",
+              email: "recipient@demo.test",
+            },
+          },
+        ],
+        nextCursor: null,
       };
     if (path.endsWith("command-policy"))
       body = { serverTime: new Date().toISOString(), retentionSeconds: 3600 };
@@ -249,9 +270,7 @@ test("monthly delivery requires an explicit action and suppression renders no me
   );
   await page.goto(`${view}/informes`);
   expect(calls).toBe(0);
-  await page
-    .getByLabel(/Identificador (del convenio|do convenio)/)
-    .fill(agreement);
+  await selectValue(page, "agreementId", "Convenio", agreement);
   await page.getByLabel("Mes publicado").fill("2024-03");
   await page
     .getByRole("button", { name: "Consultar informe", exact: true })
@@ -277,18 +296,29 @@ test("monthly delivery requires an explicit action and suppression renders no me
   expect(calls).toBe(2);
 });
 async function context(page: Page, revision = "2") {
+  await page.route("**/review-options", (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          {
+            month: "2024-03",
+            revision: Number(revision),
+            participants: [{ id: tenant, name: "Oleiros" }],
+          },
+        ],
+        nextCursor: null,
+      },
+    }),
+  );
   await page.goto(`${view}/informes/revision`);
-  await page
-    .getByLabel(/Identificador (del convenio|do convenio)/)
-    .fill(agreement);
-  await page.getByLabel("Mes publicado").fill("2024-03");
-  await page.getByLabel("Revisión preparada").fill(revision);
-  await page.getByLabel("Municipio destinatario (identificador)").fill(tenant);
-  await page
-    .getByLabel(
-      /Cuenta destinataria \(identificador\)|Conta destinataria \(identificador\)/,
-    )
-    .fill("recipient");
+  await selectValue(page, "agreementId", "Convenio", agreement);
+  await selectValue(page, "month", "Mes preparado", "2024-03");
+  await selectValue(
+    page,
+    "recipientAccountId",
+    /Persona destinataria|Persoa destinataria/,
+    "recipient",
+  );
   await page
     .getByRole("button", {
       name: "Consultar contexto de revisión",
