@@ -8,6 +8,7 @@ import {
 } from "../../src/modules/collaboration/monthly-assessment.ts";
 import { deliverMonthlyReport } from "../../src/modules/collaboration/monthly-delivery.ts";
 import { reviewMonthlyAssessment } from "../../src/modules/collaboration/monthly-review.ts";
+import { monthlyReviewOptions } from "../../src/modules/collaboration/navigation.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
 test("worker monthly assessment scopes attributed bookings without quota or public identifier access", {
@@ -241,6 +242,66 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
           ).rows[0].digest as string,
         { accountId: "report-0", tenantId: reviewerTenant },
       );
+    const options = await monthlyReviewOptions(
+      domain,
+      reviewer,
+      reviewerTenant,
+      agreement,
+      null,
+    );
+    assert.equal(options.items.length, 1);
+    assert.equal(options.items[0]?.revision, 2);
+    assert.equal(options.items[0]?.month, "2024-03");
+    assert.ok(
+      options.items.every(
+        (row) =>
+          Object.keys(row).sort().join(",") === "month,participants,revision",
+      ),
+    );
+    assert.deepEqual(
+      (
+        await monthlyReviewOptions(
+          domain,
+          reviewer,
+          reviewerTenant,
+          agreement,
+          "2024-03",
+        )
+      ).items,
+      [],
+    );
+    assert.deepEqual(
+      (
+        await monthlyReviewOptions(
+          domain,
+          reviewer,
+          reviewerTenant,
+          randomUUID(),
+          null,
+        )
+      ).items,
+      [],
+    );
+    await assert.rejects(
+      monthlyReviewOptions(
+        domain,
+        { ...reviewer, mfaVerifiedAt: new Date(0) },
+        reviewerTenant,
+        agreement,
+        null,
+      ),
+      { code: "REAUTHENTICATION_REQUIRED" },
+    );
+    await assert.rejects(
+      monthlyReviewOptions(domain, reviewer, tenants[1]!, agreement, null),
+      { code: "FORBIDDEN" },
+    );
+    await assert.rejects(
+      domain.query("SELECT * FROM domain.monthly_review_options($1,NULL)", [
+        agreement,
+      ]),
+      { code: "42501" },
+    );
     const history = await context();
     const reviewInput = {
       month: "2024-03",

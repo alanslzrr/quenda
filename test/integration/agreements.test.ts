@@ -16,6 +16,7 @@ import {
   revokeAgreementCredential,
   suspendAgreement,
 } from "../../src/modules/collaboration/index.ts";
+import { issuedCredentials } from "../../src/modules/collaboration/navigation.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
 test("agreement drafts preserve participant ownership and do not activate capabilities", {
@@ -938,6 +939,43 @@ test("agreement drafts preserve participant ownership and do not activate capabi
           1,
         );
         const credential = saved.result.id;
+        const issued = await issuedCredentials(domain, actor(0), tenant, null);
+        assert.equal(issued.items.length, 2);
+        assert.ok(
+          issued.items.some(
+            (row) =>
+              row.id === credential &&
+              row.accountLabel?.email ===
+                `${credentialInput.accountId}@example.test`,
+          ),
+        );
+        assert.ok(
+          issued.items.every(
+            (row) => !("verificationReference" in row) && !("subjectId" in row),
+          ),
+        );
+        assert.deepEqual(
+          (await issuedCredentials(domain, actor(1), tenants[1]!, null)).items,
+          [],
+        );
+        await assert.rejects(
+          issuedCredentials(domain, actor(1), tenant, null),
+          { code: "FORBIDDEN" },
+        );
+        await assert.rejects(
+          issuedCredentials(
+            domain,
+            { ...actor(0), mfaVerifiedAt: new Date(0) },
+            tenant,
+            null,
+          ),
+          { code: "REAUTHENTICATION_REQUIRED" },
+        );
+        await assert.rejects(
+          domain.query("SELECT * FROM domain.issued_credentials(NULL)"),
+          { code: "42501" },
+        );
+
         const evidence = (
           await migration.query(
             "SELECT * FROM domain.agreement_credential WHERE id=$1",
