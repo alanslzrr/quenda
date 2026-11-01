@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { accountLabelSchema } from "./account-labels.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
 import {
   acceptManager,
@@ -296,6 +297,8 @@ export async function registerManagerRoutes(
                   properties: {
                     invitationId: uuid,
                     accountId: { type: "string" },
+                    accountLabel: accountLabelSchema,
+                    invitedByLabel: accountLabelSchema,
                     invitedBy: { type: "string" },
                     expiresAt: { type: "string", format: "date-time" },
                     roleExpiresAt: {
@@ -336,12 +339,14 @@ export async function registerManagerRoutes(
         },
       },
     },
-    async (request, reply) =>
-      listMunicipalManagerInvitations(
+    async (request, reply) => {
+      reply.header("cache-control", "no-store");
+      return listMunicipalManagerInvitations(
         pool,
         await actor(request, reply),
         request.params.tenantId,
         request.query.after ?? null,
-      ),
+      );
+    },
   );
 }

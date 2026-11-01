@@ -1,5 +1,6 @@
 import type { Pool } from "pg";
 import { command } from "../../database/command.ts";
+import { accountLabels } from "./account-labels.ts";
 import { requireAdministrator } from "./administrator.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
 import type { ManagerInvitationInput } from "./manager.ts";
@@ -36,11 +37,22 @@ export async function listMunicipalManagerInvitations(
         [tenantId, after],
       );
       const page = result.rows.slice(0, 20);
+      const labels = await accountLabels(
+        client,
+        page.flatMap((row) => [
+          row.account_id,
+          ...("invited_by" in row && typeof row.invited_by === "string"
+            ? [row.invited_by]
+            : []),
+        ]),
+      );
       return {
         items: page.map((row) => ({
           invitationId: row.id,
           accountId: row.account_id,
+          accountLabel: labels.get(row.account_id) ?? null,
           invitedBy: row.invited_by,
+          invitedByLabel: labels.get(row.invited_by) ?? null,
           expiresAt: row.expires_at.toISOString(),
           roleExpiresAt: row.role_expires_at?.toISOString() ?? null,
           acceptedAt: row.accepted_at?.toISOString() ?? null,
