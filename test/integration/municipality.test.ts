@@ -1483,7 +1483,41 @@ test("municipal creation and first administrator acceptance are atomic and isola
         assert.ok(
           rows.every(
             (row) =>
-              Object.keys(row).sort().join(",") === "accountId,createdAt",
+              row.accountLabel?.email === `${row.accountId}@example.test`,
+          ),
+        );
+        await transaction(
+          domain,
+          async (client) => {
+            const labels = await client.query(
+              "SELECT * FROM domain.municipal_account_labels($1)",
+              [["admin-a", "admin-b", "other"]],
+            );
+            assert.deepEqual(
+              labels.rows.map((row) => row.account_id),
+              ["admin-a"],
+            );
+          },
+          { accountId: "admin-a", tenantId: a.tenantId },
+        );
+        await assert.rejects(
+          transaction(
+            domain,
+            (client) =>
+              client.query(
+                "SELECT * FROM domain.municipal_account_labels($1)",
+                [["admin-a"]],
+              ),
+            { accountId: "admin-b", tenantId: a.tenantId },
+          ),
+          { code: "42501" },
+        );
+
+        assert.ok(
+          rows.every(
+            (row) =>
+              Object.keys(row).sort().join(",") ===
+              "accountId,accountLabel,createdAt",
           ),
         );
         assert.ok(

@@ -1,5 +1,6 @@
 import type { Pool } from "pg";
 import { command } from "../../database/command.ts";
+import { accountLabels } from "./account-labels.ts";
 import { requireAdministrator } from "./administrator.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
 
@@ -24,9 +25,19 @@ export async function listMunicipalProfiles(
         [tenantId, after],
       );
       const page = result.rows.slice(0, 20);
+      const labels = await accountLabels(
+        client,
+        page.flatMap((row) => [
+          row.account_id,
+          ...("invited_by" in row && typeof row.invited_by === "string"
+            ? [row.invited_by]
+            : []),
+        ]),
+      );
       return {
         items: page.map((row) => ({
           accountId: row.account_id,
+          accountLabel: labels.get(row.account_id) ?? null,
           createdAt: row.created_at.toISOString(),
         })),
         nextCursor:
