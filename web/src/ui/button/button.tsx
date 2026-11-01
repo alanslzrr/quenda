@@ -204,6 +204,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(
     {
       className,
+      type = "button",
       variant = "primary",
       size = "md",
       loading = false,
@@ -245,6 +246,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <motion.button
+        type={type}
         ref={setRefs}
         tabIndex={props.tabIndex ?? 0}
         className={classes}
