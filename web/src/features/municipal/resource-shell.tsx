@@ -1,5 +1,7 @@
 import {
+  CalendarCheck2,
   CalendarDays,
+  CalendarPlus,
   ChartNoAxesCombined,
   ClipboardList,
   Download,
@@ -18,7 +20,8 @@ import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { SettingsMenu } from "../../app/settings-menu";
 import { SidebarRail } from "../../ui/blocks/sidebar-rail/sidebar-rail";
-import { MfaDialog } from "../account/mfa-dialog";
+import { MfaNotice } from "../account/mfa-dialog";
+import { useBookingEntry } from "../catalog/journey";
 import { allowed, canEnter } from "../reporting/model";
 import { type MunicipalContext, municipalPath } from "./shared";
 
@@ -34,6 +37,7 @@ export function ResourceShell({
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const base = municipalPath(m.id);
+  const entry = useBookingEntry();
   const has = (...ops: string[]) =>
     m.administrator || m.permissions.some((p) => ops.includes(p.operation));
   const item = (path: string, label: string, icon: typeof Landmark) => ({
@@ -92,7 +96,7 @@ export function ResourceShell({
               item("/convenios", "Convenios", Handshake),
               item(
                 "/acreditaciones",
-                t("Acreditaciones", "Acreditacións"),
+                t("Acreditaciones de uso", "Acreditacións de uso"),
                 TicketCheck,
               ),
             ]
@@ -110,7 +114,7 @@ export function ResourceShell({
           ? [
               item(
                 "/informes/revision",
-                t("Revisar informes", "Revisar informes"),
+                t("Revisión de privacidad", "Revisión de privacidade"),
                 FileCheck,
               ),
             ]
@@ -144,6 +148,18 @@ export function ResourceShell({
           ]
         : [],
     },
+    {
+      id: "personal",
+      heading: t("Uso personal", "Uso persoal"),
+      items: [
+        { id: entry, label: t("Reservar", "Reservar"), icon: CalendarPlus },
+        {
+          id: "/reservas",
+          label: t("Mis reservas", "As miñas reservas"),
+          icon: CalendarCheck2,
+        },
+      ],
+    },
   ].filter((s) => s.items.length);
   return (
     <SidebarRail
@@ -170,12 +186,12 @@ export function ResourceShell({
         <>
           <span>{m.name}</span>
           <div style={{ display: "flex", gap: 8 }}>
-            <MfaDialog />
             <SettingsMenu />
           </div>
         </>
       }
     >
+      <MfaNotice />
       {children}
     </SidebarRail>
   );

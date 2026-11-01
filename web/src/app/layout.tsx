@@ -1,110 +1,159 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, Outlet, useLocation } from "react-router";
-import { Button } from "../ui/button/button";
+import { Building2, CalendarPlus } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Link, Outlet, useLocation, useMatch } from "react-router";
+import { MfaBoundary, MfaNotice } from "../features/account/mfa-dialog";
+import { useBookingEntry } from "../features/catalog/journey";
+import { useMunicipality } from "../features/catalog/municipality";
+import { BookingNavigation } from "./booking-navigation";
 import { Failure } from "./feedback";
 import styles from "./layout.module.css";
 import { usePreferences } from "./preferences-provider";
 import { useSession } from "./session";
 import { SettingsMenu } from "./settings-menu";
+import { useStaffEntry } from "./staff-entry";
+
 export function Layout() {
   const { t } = usePreferences();
-  const { account, signOut } = useSession();
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<unknown>();
+  const { account } = useSession();
   const location = useLocation();
   const main = useRef<HTMLElement>(null);
   const previous = useRef(location.pathname);
+  const place = useMatch("/municipios/:tenantId/*");
+  const tenantId = place?.params.tenantId;
+  const municipality = useMunicipality(tenantId);
   useEffect(() => {
     if (previous.current !== location.pathname) {
       previous.current = location.pathname;
-      main.current?.focus();
+      main.current?.focus({ preventScroll: true });
       window.scrollTo(0, 0);
     }
   }, [location.pathname]);
-  async function leave() {
-    if (busy) return;
-    setBusy(true);
-    setFailure(undefined);
-    try {
-      await signOut();
-      window.location.replace("/");
-    } catch (error) {
-      setFailure(error);
-    } finally {
-      setBusy(false);
-    }
-  }
   const resource = /^\/administracion\/[^/]+(?:\/|$)/.test(location.pathname);
+  const name = tenantId ? municipality.data?.name : undefined;
+  const entry = useBookingEntry();
+  const booking =
+    location.pathname === "/" ||
+    location.pathname === "/reservar" ||
+    location.pathname.startsWith("/municipios/");
+  const staff = useStaffEntry(account?.accountId, !resource);
   return (
-    <div className={`${styles.shell} ${styles.product}`}>
-      <a className={styles.skip} href="#content">
-        {t("Saltar al contenido", "Saltar ao contido")}
-      </a>
-      {!resource && (
-        <header className={styles.header}>
-          <Link
-            className={styles.brand}
-            to="/"
-            aria-label={t("Quenda, inicio", "Quenda, inicio")}
+    <MfaBoundary key={account?.accountId ?? "guest"}>
+      <div className={`${styles.shell} ${styles.product}`}>
+        <a className={styles.skip} href="#content">
+          {t("Saltar al contenido", "Saltar ao contido")}
+        </a>
+        {!resource && (
+          <header
+            className={styles.header}
+            data-account={!!account || undefined}
+            data-place={!!name || undefined}
           >
-            <span className={styles.brandMark} aria-hidden="true">
-              q
-            </span>
-            quenda
-          </Link>
-          <nav
-            className={styles.actions}
-            aria-label={t("Navegación principal", "Navegación principal")}
-          >
-            {account ? (
-              <>
-                <Link to="/reservas">
-                  {t("Mis reservas", "As miñas reservas")}
-                </Link>
-                <Link to="/avisos">{t("Avisos", "Avisos")}</Link>
-                <Link to="/perfil">{t("Mi cuenta", "A miña conta")}</Link>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  loading={busy}
-                  onClick={() => void leave()}
+            <Link
+              className={styles.brand}
+              to={tenantId ? `/municipios/${tenantId}` : "/"}
+            >
+              <span className={styles.brandMark} aria-hidden="true">
+                q
+              </span>
+              <span className={styles.wordmark}>quenda</span>
+              {name && (
+                <>
+                  <span className={styles.divider} aria-hidden="true">
+                    /
+                  </span>
+                  <span className={styles.place}>{name}</span>
+                </>
+              )}
+            </Link>
+            <nav
+              className={styles.nav}
+              aria-label={t("Navegación principal", "Navegación principal")}
+            >
+              <Link
+                to={entry}
+                className={styles.navItem}
+                data-primary=""
+                aria-current={
+                  booking || location.pathname.startsWith("/reservas")
+                    ? "page"
+                    : undefined
+                }
+              >
+                <CalendarPlus size={16} aria-hidden="true" />
+                {t("Reservar", "Reservar")}
+              </Link>
+              {staff.to && (
+                <Link
+                  to={staff.to}
+                  className={styles.navItem}
+                  data-staff=""
+                  aria-current={
+                    /^\/(administracion|plataforma)(\/|$)/.test(
+                      location.pathname,
+                    )
+                      ? "page"
+                      : undefined
+                  }
                 >
-                  {t("Salir", "Saír")}
-                </Button>
-              </>
-            ) : (
-              <Link to="/acceso">{t("Acceder", "Acceder")}</Link>
-            )}
-            <SettingsMenu />
-          </nav>
-        </header>
-      )}
-      <main
-        id="content"
-        ref={main}
-        tabIndex={-1}
-        className={resource ? styles.workspaceMain : styles.main}
-      >
-        {failure !== undefined && <Failure error={failure} />}
-        <Outlet />
-      </main>
-      {!resource && (
-        <footer className={styles.footer}>
-          <span>
+                  <Building2 size={16} aria-hidden="true" />
+                  {t("Gestión", "Xestión")}
+                </Link>
+              )}
+            </nav>
+            <div className={styles.tools}>
+              {!account && (
+                <Link className={styles.signIn} to="/acceso">
+                  {t("Acceder", "Acceder")}
+                </Link>
+              )}
+              <SettingsMenu />
+            </div>
+          </header>
+        )}
+        <main
+          id="content"
+          ref={main}
+          tabIndex={-1}
+          className={
+            resource
+              ? styles.workspaceMain
+              : `${styles.main} ${booking || location.pathname.startsWith("/reservas") ? styles.bookingMain : ""}`
+          }
+        >
+          {staff.error && (
+            <section aria-label={t("Acceso a gestión", "Acceso á xestión")}>
+              <p>
+                {t(
+                  "No hemos podido comprobar tus opciones de gestión. Puedes seguir usando el resto de la aplicación.",
+                  "Non puidemos comprobar as túas opcións de xestión. Podes seguir usando o resto da aplicación.",
+                )}
+              </p>
+              <Failure
+                error={staff.error}
+                retry={staff.retry}
+                retryLabel={t(
+                  "Reintentar acceso a gestión",
+                  "Volver comprobar o acceso á xestión",
+                )}
+              />
+            </section>
+          )}
+          {(booking || location.pathname.startsWith("/reservas")) && (
+            <BookingNavigation />
+          )}
+          {!resource && <MfaNotice />}
+          <Outlet />
+        </main>
+        {!resource && (
+          <footer className={styles.footer}>
             Quenda ·{" "}
             {t(
               "Instalaciones deportivas municipales",
               "Instalacións deportivas municipais",
             )}
-          </span>
-          <span>
-            {t(
-              "Una cuenta, varios municipios.",
-              "Unha conta, varios municipios.",
-            )}
-          </span>
-        </footer>
-      )}
-    </div>
+          </footer>
+        )}
+      </div>
+    </MfaBoundary>
   );
 }
