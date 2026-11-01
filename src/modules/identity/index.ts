@@ -4,6 +4,7 @@ export const moduleDefinition = {
 } as const;
 
 export { accessFailureAudit } from "./access-audit.ts";
+export { accountLabelSchema, accountLabels } from "./account-labels.ts";
 export { requireAdministrator } from "./administrator.ts";
 export {
   listMunicipalAdministratorInvitations,
