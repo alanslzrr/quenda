@@ -1,93 +1,124 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { ArrowRight, MapPin } from "lucide-react";
-import { Link } from "react-router";
-import { api, type Municipality, type Page } from "../../app/api";
+import { useState } from "react";
+import { useFavorite } from "../../app/favorite";
 import { Failure, Loading } from "../../app/feedback";
-import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { useMunicipalTheme } from "../../app/theme-provider";
-import { Button } from "../../ui/button/button";
-import directory from "./directory.module.css";
-export function Directory() {
+import { Input } from "../../ui/input/input";
+import styles from "./booking.module.css";
+import {
+  BookingSteps,
+  Choice,
+  Choices,
+  FavoriteBadge,
+  FavoriteToggle,
+  municipalityPath,
+  useJourneyQuery,
+  useMunicipalities,
+} from "./journey";
+
+const searchable = 8;
+
+/** First step of a booking: the municipality, with the favourite offered first and every other one still in reach. */
+export function Home() {
   useMunicipalTheme(undefined);
   const { locale, t } = usePreferences();
-  const query = useInfiniteQuery({
-    queryKey: ["public", "municipalities", locale],
-    initialPageParam: null as string | null,
-    queryFn: ({ pageParam, signal }) =>
-      api<Page<Municipality>>(
-        `/api/public/municipalities${pageParam ? `?after=${encodeURIComponent(pageParam)}` : ""}`,
-        { signal },
-        locale,
-      ),
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
-  });
+  const [favorite] = useFavorite();
+  const [filter, setFilter] = useState("");
+  const query = useJourneyQuery();
+  const municipalities = useMunicipalities();
+  const items = [...municipalities.items].sort((a, b) =>
+    a.name.localeCompare(b.name, locale),
+  );
+  const chosen = items.find((item) => item.id === favorite);
+  const needle = filter.trim().toLocaleLowerCase(locale);
+  const others = items.filter(
+    (item) =>
+      item.id !== chosen?.id &&
+      (!needle || item.name.toLocaleLowerCase(locale).includes(needle)),
+  );
+  const row = (item: (typeof items)[number], mine = false) => (
+    <Choice
+      key={item.id}
+      to={municipalityPath(item.id, query)}
+      title={item.name}
+      badge={mine ? <FavoriteBadge /> : undefined}
+      aside={<FavoriteToggle tenantId={item.id} name={item.name} compact />}
+    />
+  );
   return (
-    <>
-      <div className={styles.hero}>
-        <p className={styles.eyebrow}>
-          {t(
-            "Instalaciones deportivas municipales",
-            "Instalacións deportivas municipais",
-          )}
-        </p>
+    <div className={styles.page}>
+      <BookingSteps current={0} />
+      <header className={styles.intro}>
         <h1 className={styles.title}>
-          {t(
-            "Reserva instalaciones deportivas.",
-            "Reserva instalacións deportivas.",
-          )}
+          {t("¿Dónde quieres reservar?", "Onde queres reservar?")}
         </h1>
-        <p className={styles.description}>
+        <p className={styles.lead}>
           {t(
-            "Elige un municipio para consultar sus instalaciones y los horarios disponibles.",
-            "Escolle un municipio para consultar as súas instalacións e os horarios dispoñibles.",
+            "Elige el municipio para ver sus instalaciones deportivas. Marca uno como favorito y la próxima vez empezarás ahí.",
+            "Escolle o municipio para ver as súas instalacións deportivas. Marca un como favorito e a próxima vez comezarás aí.",
           )}
         </p>
-      </div>
-      {query.isPending ? (
+      </header>
+      {municipalities.isError ? (
+        <Failure
+          error={municipalities.error}
+          retry={() => void municipalities.refetch()}
+        />
+      ) : municipalities.loading ? (
         <Loading />
-      ) : query.isError ? (
-        <Failure error={query.error} retry={() => void query.refetch()} />
+      ) : !items.length ? (
+        <div className={styles.empty}>
+          <p>
+            {t(
+              "Todavía no hay municipios con reserva en línea.",
+              "Aínda non hai municipios con reserva en liña.",
+            )}
+          </p>
+        </div>
       ) : (
-        <>
-          <ul className={directory.municipalities}>
-            {query.data.pages
-              .flatMap((page) => page.items)
-              .map((item) => (
-                <li key={item.id}>
-                  <Link to={`/municipios/${item.id}`}>
-                    <MapPin size={24} aria-hidden="true" />
-                    <span>
-                      <span className={styles.listTitle}>{item.name}</span>
-                      <span className={styles.listMeta}>
-                        {t("Consultar instalaciones", "Consultar instalacións")}
-                      </span>
-                    </span>
-                    <ArrowRight size={22} aria-hidden="true" />
-                  </Link>
-                </li>
-              ))}
-          </ul>
-          {query.data.pages[0].items.length === 0 && (
-            <p className={styles.empty}>
-              <MapPin size={20} aria-hidden="true" />{" "}
-              {t(
-                "Todavía no hay municipios disponibles.",
-                "Aínda non hai municipios dispoñibles.",
-              )}
-            </p>
+        <div className={styles.sections}>
+          {chosen && (
+            <section aria-labelledby="favorite-heading">
+              <h2 id="favorite-heading" className={styles.sectionTitle}>
+                {t("Tu municipio favorito", "O teu municipio favorito")}
+              </h2>
+              <Choices>{row(chosen, true)}</Choices>
+            </section>
           )}
-          {query.hasNextPage && (
-            <Button
-              variant="secondary"
-              loading={query.isFetchingNextPage}
-              onClick={() => void query.fetchNextPage()}
-            >
-              {t("Ver más municipios", "Ver máis municipios")}
-            </Button>
-          )}
-        </>
+          <section aria-labelledby="municipalities-heading">
+            <h2 id="municipalities-heading" className={styles.sectionTitle}>
+              {chosen
+                ? t("Otros municipios", "Outros municipios")
+                : t("Municipios", "Municipios")}
+            </h2>
+            {items.length > searchable && (
+              <div className={styles.filter}>
+                <Input
+                  label={t("Buscar municipio", "Buscar municipio")}
+                  type="search"
+                  value={filter}
+                  onChange={(event) => setFilter(event.target.value)}
+                />
+              </div>
+            )}
+            {others.length ? (
+              <Choices>{others.map((item) => row(item))}</Choices>
+            ) : (
+              <p className={styles.quiet} role="status">
+                {needle
+                  ? t(
+                      "Ningún municipio coincide con la búsqueda.",
+                      "Ningún municipio coincide coa busca.",
+                    )
+                  : t(
+                      "No hay más municipios en esta instancia.",
+                      "Non hai máis municipios nesta instancia.",
+                    )}
+              </p>
+            )}
+          </section>
+        </div>
       )}
-    </>
+    </div>
   );
 }

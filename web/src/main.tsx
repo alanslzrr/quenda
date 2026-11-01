@@ -15,11 +15,21 @@ import {
 import { createQueryClient } from "./app/query";
 import { SessionProvider } from "./app/session";
 import { ThemeProvider, useMunicipalTheme } from "./app/theme-provider";
-import { Directory } from "./features/catalog/directory";
+import { Home } from "./features/catalog/directory";
 
 const MunicipalityPage = lazy(() =>
   import("./features/catalog/municipality").then((m) => ({
     default: m.MunicipalityPage,
+  })),
+);
+const SearchPage = lazy(() =>
+  import("./features/catalog/municipality").then((m) => ({
+    default: m.SearchPage,
+  })),
+);
+const FacilityPage = lazy(() =>
+  import("./features/catalog/facility").then((m) => ({
+    default: m.FacilityPage,
   })),
 );
 const UnitPage = lazy(() =>
@@ -238,10 +248,19 @@ createRoot(root).render(
                 <Suspense fallback={<Loading />}>
                   <Routes>
                     <Route element={<Layout />}>
-                      <Route index element={<Directory />} />
+                      <Route index element={<Home />} />
+                      <Route path="reservar" element={<Home />} />
                       <Route
                         path="municipios/:tenantId"
                         element={<MunicipalityPage />}
+                      />
+                      <Route
+                        path="municipios/:tenantId/horarios"
+                        element={<SearchPage />}
+                      />
+                      <Route
+                        path="municipios/:tenantId/instalaciones/:facilityId"
+                        element={<FacilityPage />}
                       />
                       <Route
                         path="municipios/:tenantId/unidades/:unitId"
