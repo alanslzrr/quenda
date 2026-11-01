@@ -2,11 +2,13 @@ import {
   type MailConfiguration,
   readMailConfiguration,
 } from "./mail/config.ts";
+import { trustedProxies } from "./trusted-proxies.ts";
 
 export const defaultIdempotencyRetentionSeconds = 86400;
 
 export interface Config {
   idempotencyRetentionSeconds: number;
+  trustedProxyCidrs?: string[];
   host: string;
   port: number;
   logLevel: "silent" | "error" | "warn" | "info" | "debug";
@@ -104,7 +106,14 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
   } catch {
     throw new ConfigurationError("MAIL_TRANSPORT");
   }
+  let trustedProxyCidrs: string[];
+  try {
+    trustedProxyCidrs = trustedProxies(env.TRUSTED_PROXY_CIDRS);
+  } catch {
+    throw new ConfigurationError("TRUSTED_PROXY_CIDRS");
+  }
   return {
+    trustedProxyCidrs,
     idempotencyRetentionSeconds: integer(
       env.IDEMPOTENCY_RETENTION_SECONDS ??
         String(defaultIdempotencyRetentionSeconds),
