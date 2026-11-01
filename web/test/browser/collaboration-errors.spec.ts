@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { test } from "./fixtures";
+import { selectValue } from "./select-value";
 
 const tenant = "00000000-0000-4000-8000-000000000001",
   unit = "00000000-0000-4000-8000-000000000003",
@@ -76,6 +77,19 @@ async function fixture(page: Page, a = agreement(), administrator = true) {
       body = { serverTime: new Date().toISOString(), retentionSeconds: 3600 };
     if (path === `${root}/agreements/${id}/versions/1`) body = a;
     if (path === `${root}/agreements`) body = { items: [a], nextCursor: null };
+    if (path === `${root}/profiles`)
+      body = {
+        items: [
+          {
+            accountId: "cuenta-vinculada",
+            accountLabel: {
+              name: "Cuenta vinculada",
+              email: "persona@demo.test",
+            },
+          },
+        ],
+        nextCursor: null,
+      };
     if (path === `${root}/agenda/units`)
       body = { items: [{ id: unit, name: "Pista 1" }], nextCursor: null };
     await route.fulfill({ json: body });
@@ -370,7 +384,7 @@ test("inaccessible agreement versions expose no configuration and credential ref
     page.getByLabel("Identificador de acreditación", { exact: true }),
   ).toHaveValue(id);
   await expect(
-    page.getByText(/Revocación registrada|Acreditación emitida/),
+    page.getByText(/^Revocación registrada|^Acreditación emitida\./),
   ).toHaveCount(0);
 });
 
@@ -429,9 +443,12 @@ test("recorded activation does not bypass effective-version checks when issuing 
     });
   });
   await page.goto(`${view}/acreditar`);
-  await page
-    .getByLabel(/Identificador (de la cuenta|da conta)/, { exact: true })
-    .fill("cuenta-vinculada");
+  await selectValue(
+    page,
+    "accountId",
+    /Persona beneficiaria|Persoa beneficiaria/,
+    "cuenta-vinculada",
+  );
   await page
     .getByLabel("Inicio de acreditación", { exact: true })
     .fill("2026-11-01T10:00");
@@ -459,7 +476,9 @@ test("recorded activation does not bypass effective-version checks when issuing 
     verificationReference: "Verificación 3",
   });
   await expect(
-    page.getByLabel(/Identificador (de la cuenta|da conta)/, { exact: true }),
-  ).toHaveValue("cuenta-vinculada");
+    page.getByRole("combobox", {
+      name: /Persona beneficiaria|Persoa beneficiaria/,
+    }),
+  ).toContainText("Cuenta vinculada");
   await expect(page.getByText(/Acreditación emitida\./)).toHaveCount(0);
 });

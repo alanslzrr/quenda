@@ -4,6 +4,7 @@ import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
 import { test } from "./fixtures";
+import { selectValue } from "./select-value";
 
 async function signin(
   page: Page,
@@ -174,11 +175,12 @@ test("two municipalities approve exact units, activate, accredit, revoke, suspen
     await page
       .getByRole("link", { name: "Emitir acreditación", exact: true })
       .click();
-    await page
-      .getByLabel(/^(?:Identificador de la cuenta|Identificador da conta)$/, {
-        exact: true,
-      })
-      .fill(a.accountId);
+    await selectValue(
+      page,
+      "accountId",
+      /Persona beneficiaria|Persoa beneficiaria/,
+      a.accountId,
+    );
     await page
       .getByLabel("Inicio de acreditación", { exact: true })
       .fill(civil(0));
