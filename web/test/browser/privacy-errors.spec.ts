@@ -203,11 +203,18 @@ test("policy forms have no legal defaults, retain drafts after MFA rejection and
   await expect(page.getByLabel("Referencia de aprobación")).toHaveValue(
     "Aprobación 7",
   );
+  await page
+    .getByRole("button", { name: "Verificar acceso", exact: true })
+    .click();
   await expect(
-    page.getByRole("link", {
-      name: /Verificar MFA en otra pestaña|Verificar MFA noutra pestana/,
-    }),
-  ).toHaveAttribute("target", "_blank");
+    page.getByRole("dialog", { name: "Verificar acceso" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: /Cerrar|Pechar/, exact: true })
+    .click();
+  await expect(page.getByLabel("Referencia de aprobación")).toHaveValue(
+    "Aprobación 7",
+  );
 });
 test("HTTP 200 privacy outcomes are not all presented as successful deletion", async ({
   page,
