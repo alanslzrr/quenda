@@ -117,7 +117,9 @@ test("changed conditions clear acceptance and require explicit review without co
     });
   });
   await page.goto(checkout);
-  await page.getByRole("checkbox", { name: /Acepto estas normas/ }).check();
+  await page
+    .getByRole("checkbox", { name: /He leído y acepto las normas de uso/ })
+    .check();
   await page
     .getByRole("button", { name: "Confirmar reserva", exact: true })
     .click();
@@ -126,7 +128,7 @@ test("changed conditions clear acceptance and require explicit review without co
   ).toBeVisible();
   await expect(page.getByText("Normas vigentes 2")).toBeVisible();
   await expect(
-    page.getByRole("checkbox", { name: /Acepto estas normas/ }),
+    page.getByRole("checkbox", { name: /He leído y acepto las normas de uso/ }),
   ).not.toBeChecked();
   expect(posts).toBe(1);
   await expect(page).toHaveURL(/\/reservar\?/);
@@ -144,7 +146,9 @@ test("lost response survives reload and explicit replay retains its payload and 
     else await r.fulfill({ json: reservation });
   });
   await page.goto(checkout);
-  await page.getByRole("checkbox", { name: /Acepto estas normas/ }).check();
+  await page
+    .getByRole("checkbox", { name: /He leído y acepto las normas de uso/ })
+    .check();
   await page
     .getByRole("button", { name: "Confirmar reserva", exact: true })
     .click();
@@ -205,30 +209,50 @@ test("pending rules can be accepted near start without changing historical evide
   });
   await page.goto(detail);
   await expect(
-    page.getByText("Sin aceptación registrada. La reserva conserva su estado."),
+    page.getByText(
+      "No consta una aceptación registrada. La reserva mantiene su estado.",
+    ),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Cancelar reserva", exact: true }),
   ).toHaveCount(0);
   await page
-    .getByRole("checkbox", { name: /Acepto las normas indicadas/ })
+    .getByRole("checkbox", { name: /acepto las normas de este espacio/ })
     .check();
   await page
     .getByRole("button", { name: "Aceptar normas", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Normas pendientes de aceptación" }),
+    page.getByText("Tienes normas nuevas pendientes de aceptar"),
   ).toHaveCount(0);
-  await expect(page.getByText("Confirmada", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Reserva confirmada", exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("Normas de la nueva pista")).toBeVisible();
 });
 test("history retains municipality on pagination and resets its cursor when scope changes", async ({
   page,
 }) => {
   const seen: URL[] = [];
-  await page.route("**/api/me/reservations?*", async (r) => {
+  await page.route("**/api/me/reservations*", async (r) => {
     const url = new URL(r.request().url());
     seen.push(url);
+    if (!url.searchParams.has("tenantId"))
+      return r.fulfill({
+        json: {
+          items: [
+            { ...reservation, municipality: "Oleiros", unitName: "Pista 1" },
+            {
+              ...reservation,
+              id: other,
+              tenantId: other,
+              municipality: "A Coruña",
+              unitName: "Pista 2",
+            },
+          ],
+          nextCursor: null,
+        },
+      });
     await r.fulfill({
       json: {
         items: [
@@ -279,7 +303,7 @@ test("checkout remains accessible and a quota rejection never appears as a confi
   );
   await page.goto(checkout);
   await expect(
-    page.getByRole("heading", { name: "Confirmar reserva" }),
+    page.getByRole("heading", { name: "Revisa tu reserva" }),
   ).toBeVisible();
   expect(
     (
@@ -297,7 +321,9 @@ test("checkout remains accessible and a quota rejection never appears as a confi
     path: `test-results/checkout-${test.info().project.name}.png`,
     fullPage: true,
   });
-  await page.getByRole("checkbox", { name: /Acepto estas normas/ }).check();
+  await page
+    .getByRole("checkbox", { name: /He leído y acepto las normas de uso/ })
+    .check();
   await page
     .getByRole("button", { name: "Confirmar reserva", exact: true })
     .click();
@@ -329,11 +355,10 @@ test("a deadline rejection leaves the reservation confirmed and never invents a 
   );
   await page.goto(detail);
   await page
-    .getByRole("checkbox", {
-      name: "Quiero cancelar esta reserva y liberar la franja.",
-    })
-    .check();
-  await page
+    .getByRole("button", { name: "Cancelar reserva", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog
     .getByRole("button", { name: "Cancelar reserva", exact: true })
     .click();
   await expect(
@@ -341,8 +366,14 @@ test("a deadline rejection leaves the reservation confirmed and never invents a 
       "El plazo de cancelación ha terminado. La reserva no se ha cancelado.",
     ),
   ).toBeVisible();
-  await expect(page.getByText("Confirmada", { exact: true })).toBeVisible();
-  await expect(page.getByText("Cancelada", { exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Reserva confirmada", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Reserva cancelada", exact: true }),
+  ).toHaveCount(0);
 });
 
 test("an expired session removes the pending private command before returning to sign-in", async ({
@@ -375,3 +406,170 @@ test("an expired session removes the pending private command before returning to
     )
     .toBeNull();
 });
+
+for (const skew of [-600000, 600000])
+  test(`audit regression: recovery uses server time with browser skew ${skew}`, async ({
+    page,
+  }) => {
+    const now = Date.now();
+    await page.clock.setFixedTime(now + skew);
+    await page.addInitScript(
+      ({ now, path }) =>
+        sessionStorage.setItem(
+          "quenda.reservation-command",
+          JSON.stringify({
+            owner: "ana",
+            path,
+            key: "clock-regression",
+            body: "{}",
+            createdAt: now,
+            retentionSeconds: 3600,
+          }),
+        ),
+      { now, path },
+    );
+    await page.goto("/reservas/recuperacion");
+    await expect(
+      page.getByRole("button", {
+        name: "Comprobar con la misma solicitud",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("El plazo de reintento ha terminado.", { exact: false }),
+    ).toHaveCount(0);
+    await page.reload();
+    await expect(
+      page.getByRole("button", {
+        name: "Comprobar con la misma solicitud",
+        exact: true,
+      }),
+    ).toBeVisible();
+    let recovered = false;
+    await page.route("**/api/public/reservation-command-policy", (route) =>
+      recovered
+        ? route.fulfill({
+            json: {
+              retentionSeconds: 3600,
+              serverTime: new Date(now + 3600000).toISOString(),
+            },
+          })
+        : route.abort("failed"),
+    );
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "hidden",
+      });
+      window.dispatchEvent(new Event("visibilitychange"));
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "visible",
+      });
+      window.dispatchEvent(new Event("visibilitychange"));
+    });
+    const retry = page.getByRole("button", { name: "Reintentar", exact: true });
+    await expect(retry).toBeVisible();
+    await expect(
+      page.getByText("El plazo de reintento ha terminado.", { exact: false }),
+    ).toHaveCount(0);
+    recovered = true;
+    await retry.click();
+    await expect(
+      page.getByText("El plazo de reintento ha terminado.", { exact: false }),
+    ).toBeVisible();
+    expect(
+      JSON.parse(
+        (await page.evaluate(() =>
+          sessionStorage.getItem("quenda.reservation-command"),
+        )) ?? "null",
+      ).key,
+    ).toBe("clock-regression");
+  });
+
+for (const failure of ["429", "503", "offline"] as const)
+  test(`audit regression: ${failure} pagination stops until explicit recovery`, async ({
+    page,
+  }) => {
+    let attempts = 0;
+    let recover = false;
+    await page.route("**/availability?*", (route) =>
+      route.fulfill({ json: { slots: [] } }),
+    );
+    await page.route(
+      `**/api/public/municipalities/${tenant}/units/${unit}`,
+      (route) =>
+        route.fulfill({
+          json: {
+            id: unit,
+            facilityId: other,
+            facilityName: "Centro",
+            municipalAdvanceDays: 30,
+            cancellationMinutes: 1440,
+            usageRulesVersion: 1,
+            bookingPolicyVersion: 1,
+            calendarVersion: 1,
+            calendar: {
+              minimumMinutes: 60,
+              maximumMinutes: 120,
+              stepMinutes: 60,
+              advanceDays: null,
+            },
+            name: "Pista 1",
+            timeZone: "Europe/Madrid",
+          },
+        }),
+    );
+    await page.route(
+      `**/api/public/municipalities/${tenant}/facilities`,
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [{ id: other, name: "Centro", units: 21 }],
+            nextCursor: null,
+          },
+        }),
+    );
+    await page.route(
+      `**/api/public/municipalities/${tenant}/facilities/${other}/units*`,
+      (route) => {
+        if (new URL(route.request().url()).searchParams.has("after")) {
+          attempts++;
+          if (recover)
+            return route.fulfill({
+              json: {
+                items: [{ id: other, name: "Otra pista" }],
+                nextCursor: null,
+              },
+            });
+          if (failure === "offline") return route.abort("failed");
+          return route.fulfill({
+            status: Number(failure),
+            headers: { "retry-after": "60" },
+            json: {
+              error: { code: "RATE_LIMITED", message: "Espera para continuar" },
+            },
+          });
+        }
+        return route.fulfill({
+          json: { items: [{ id: unit, name: "Pista 1" }], nextCursor: unit },
+        });
+      },
+    );
+    await page.goto(`${detail}/modificar`);
+    const retry = page.getByRole("button", { name: "Reintentar", exact: true });
+    await expect(retry).toBeVisible();
+    if (failure !== "offline") await expect(retry).toBeDisabled();
+    expect(attempts).toBe(1);
+    await page.clock.install();
+    await page.clock.fastForward(61000);
+    await expect(retry).toBeEnabled();
+    expect(attempts).toBe(1);
+    recover = true;
+    await retry.click();
+    await expect(retry).toHaveCount(0);
+    await expect.poll(() => attempts).toBe(2);
+    await expect(
+      page.getByRole("combobox", { name: "Instalación", exact: true }),
+    ).toContainText("Centro");
+  });
