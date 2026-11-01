@@ -9,6 +9,7 @@ import {
 import {
   publicAvailabilitySearch,
   publicBookingDurations,
+  publicUnitCalendar,
 } from "../../src/modules/catalog/public.ts";
 import {
   listOwnNotices,
@@ -721,9 +722,38 @@ test("reservation confirmation validates real calendars and commits every effect
             [],
           );
           assert.deepEqual(
-            (await publicBookingDurations(domain, tenant)).durations,
-            [30, 60, 90, 120],
+            (
+              await publicAvailabilitySearch(
+                domain,
+                tenant,
+                "2030-01-10",
+                60,
+                null,
+                clock,
+                randomUUID(),
+              )
+            ).items,
+            [],
           );
+          const found = (
+            await publicAvailabilitySearch(
+              domain,
+              tenant,
+              "2030-01-10",
+              60,
+              null,
+              clock,
+              facility,
+            )
+          ).items.find((item) => item.id === unit);
+          assert.equal(found?.facilityId, facility);
+          assert.equal(
+            (await publicUnitCalendar(domain, tenant, unit)).facilityName,
+            found?.facilityName,
+          );
+          const durations = await publicBookingDurations(domain, tenant);
+          assert.deepEqual(durations.durations, [30, 60, 90, 120]);
+          assert.equal(durations.recommended, 30);
           return direct.slots.map((slot) => slot.start.utc);
         };
         const a = "2030-01-10T10:00:00.000Z",

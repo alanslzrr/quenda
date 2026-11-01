@@ -83,6 +83,11 @@ export async function registerPublicCatalog(
             properties: {
               hasMore: { type: "boolean" },
               durations: { type: "array", items: { type: "integer" } },
+              recommended: {
+                type: "integer",
+                description:
+                  "Duración admitida por más unidades publicadas; en empate, la más corta.",
+              },
             },
           },
         },
@@ -92,7 +97,12 @@ export async function registerPublicCatalog(
   );
   app.get<{
     Params: { tenantId: string };
-    Querystring: { date: string; durationMinutes: string; after?: string };
+    Querystring: {
+      date: string;
+      durationMinutes: string;
+      after?: string;
+      facilityId?: string;
+    };
   }>(
     "/api/public/municipalities/:tenantId/availability-search",
     {
@@ -112,6 +122,7 @@ export async function registerPublicCatalog(
             date: { type: "string", format: "date" },
             durationMinutes: { type: "string", pattern: "^[1-9][0-9]{0,9}$" },
             after: uuid,
+            facilityId: uuid,
           },
         },
         response: {
@@ -119,6 +130,7 @@ export async function registerPublicCatalog(
           200: page({
             id: uuid,
             name: text,
+            facilityId: uuid,
             facilityName: text,
             ...availabilityResponse.properties,
           }),
@@ -132,6 +144,8 @@ export async function registerPublicCatalog(
         request.query.date,
         Number(request.query.durationMinutes),
         request.query.after ?? null,
+        undefined,
+        request.query.facilityId ?? null,
       ),
   );
   app.get<{ Params: { tenantId: string }; Querystring: { after?: string } }>(
@@ -144,7 +158,10 @@ export async function registerPublicCatalog(
         security: [],
         params: params(),
         querystring: query,
-        response: { ...errors, 200: page({ id: uuid, name: text }) },
+        response: {
+          ...errors,
+          200: page({ id: uuid, name: text, units: { type: "integer" } }),
+        },
       },
     },
     (request) =>
@@ -169,7 +186,13 @@ export async function registerPublicCatalog(
         querystring: query,
         response: {
           ...errors,
-          200: page({ id: uuid, name: text, facilityId: uuid }),
+          200: page({
+            id: uuid,
+            name: text,
+            facilityId: uuid,
+            minimumMinutes: { type: "integer" },
+            maximumMinutes: { type: "integer" },
+          }),
         },
       },
     },
@@ -201,6 +224,7 @@ export async function registerPublicCatalog(
               "id",
               "name",
               "facilityId",
+              "facilityName",
               "timeZone",
               "municipalAdvanceDays",
               "cancellationMinutes",
@@ -213,6 +237,7 @@ export async function registerPublicCatalog(
               id: uuid,
               name: text,
               facilityId: uuid,
+              facilityName: text,
               timeZone: text,
               municipalAdvanceDays: { type: "integer" },
               cancellationMinutes: { type: "integer" },

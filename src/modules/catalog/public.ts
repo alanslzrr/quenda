@@ -10,7 +10,7 @@ export async function publicFacilities(
   tenantId: string,
   after: string | null = null,
 ) {
-  const result = await pool.query<{ id: string; name: string }>(
+  const result = await pool.query<{ id: string; name: string; units: number }>(
     "SELECT * FROM domain.public_facilities($1,$2)",
     [tenantId, after],
   );
@@ -29,6 +29,8 @@ export async function publicUnits(
     id: string;
     name: string;
     facility_id: string;
+    minimum_minutes: number;
+    maximum_minutes: number;
   }>("SELECT * FROM domain.public_units($1,$2,$3)", [
     tenantId,
     facilityId,
@@ -39,6 +41,8 @@ export async function publicUnits(
       id: row.id,
       name: row.name,
       facilityId: row.facility_id,
+      minimumMinutes: row.minimum_minutes,
+      maximumMinutes: row.maximum_minutes,
     })),
     nextCursor: result.rows.length > 20 ? (result.rows[19]?.id ?? null) : null,
   };
@@ -59,6 +63,7 @@ export async function publicUnitCalendar(
     usage_rules_version: number;
     version: number;
     calendar: UnitCalendarInput;
+    facility_name: string;
   }>("SELECT * FROM domain.public_unit_calendar($1,$2)", [tenantId, unitId]);
   const row = result.rows[0];
   if (!row) throw new HttpError("NOT_FOUND");
@@ -66,6 +71,7 @@ export async function publicUnitCalendar(
     id: row.id,
     name: row.name,
     facilityId: row.facility_id,
+    facilityName: row.facility_name,
     timeZone: row.timezone,
     municipalAdvanceDays: row.municipal_advance_days,
     cancellationMinutes: row.cancellation_minutes,
@@ -146,6 +152,7 @@ export async function publicAvailabilitySearch(
   durationMinutes: number,
   after: string | null = null,
   clock: Clock = systemClock,
+  facilityId: string | null = null,
 ) {
   return transaction(pool, async (client) => {
     const rows = (
@@ -158,6 +165,7 @@ export async function publicAvailabilitySearch(
     for (const row of rows.slice(0, 20)) {
       const unit = await publicUnitCalendar(client, tenantId, row.id);
       if (
+        (facilityId && unit.facilityId !== facilityId) ||
         durationMinutes < unit.calendar.minimumMinutes ||
         durationMinutes > unit.calendar.maximumMinutes ||
         durationMinutes % unit.calendar.stepMinutes !== 0
@@ -188,6 +196,7 @@ export async function publicAvailabilitySearch(
         items.push({
           id: row.id,
           name: row.name,
+          facilityId: unit.facilityId,
           facilityName: row.facility_name,
           ...candidate,
           slots,
@@ -200,12 +209,19 @@ export async function publicAvailabilitySearch(
   });
 }
 export async function publicBookingDurations(pool: Pool, tenantId: string) {
-  const result = await pool.query<{ minutes: number; has_more: boolean }>(
-    "SELECT * FROM domain.public_booking_durations($1)",
-    [tenantId],
+  const result = await pool.query<{
+    minutes: number;
+    units: number;
+    has_more: boolean;
+  }>("SELECT * FROM domain.public_booking_durations($1)", [tenantId]);
+  // Rows are ordered by duration, so ties keep the shortest duration.
+  const recommended = result.rows.reduce<(typeof result.rows)[number] | null>(
+    (best, row) => (!best || row.units > best.units ? row : best),
+    null,
   );
   return {
     durations: result.rows.map((row) => row.minutes),
     hasMore: result.rows.some((row) => row.has_more),
+    ...(recommended ? { recommended: recommended.minutes } : {}),
   };
 }
