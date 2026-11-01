@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  Bell,
+  CalendarCheck2,
   LockKeyhole,
   Mail,
   ShieldCheck,
@@ -40,6 +42,16 @@ export function AccountLayout() {
       title={t("Mi cuenta", "A miña conta")}
       email={account?.email ?? ""}
       links={[
+        {
+          to: "/reservas",
+          label: t("Mis reservas", "As miñas reservas"),
+          icon: <CalendarCheck2 size={16} aria-hidden="true" />,
+        },
+        {
+          to: "/avisos",
+          label: t("Avisos", "Avisos"),
+          icon: <Bell size={16} aria-hidden="true" />,
+        },
         {
           to: "/perfil",
           label: t("Preferencias", "Preferencias"),
