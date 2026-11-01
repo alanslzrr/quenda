@@ -16,12 +16,14 @@ import type {
 } from "react";
 import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { Link } from "react-router";
 import { ChevronDown } from "lucide-react";
 import { motionTokens } from "../lib/motion-tokens";
 import styles from "./dropdown-menu.module.css";
 
 export interface DropdownItem {
   label: string;
+  to?: string;
   onSelect?: () => void;
   disabled?: boolean;
   icon?: ReactNode;
@@ -237,14 +239,28 @@ export const DropdownMenu = forwardRef<HTMLButtonElement, DropdownMenuProps>(
                   data-tone={item.destructive ? "danger" : undefined}
                   style={{ "--i": index } as CSSProperties}
                   disabled={item.disabled}
+                  asChild={!!item.to && !item.disabled}
                   onSelect={item.onSelect}
                 >
-                  {item.icon && (
-                    <span className={styles.icon} aria-hidden="true">
-                      {item.icon}
-                    </span>
+                  {item.to && !item.disabled ? (
+                    <Link to={item.to}>
+                      {item.icon && (
+                        <span className={styles.icon} aria-hidden="true">
+                          {item.icon}
+                        </span>
+                      )}
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <>
+                      {item.icon && (
+                        <span className={styles.icon} aria-hidden="true">
+                          {item.icon}
+                        </span>
+                      )}
+                      {item.label}
+                    </>
                   )}
-                  {item.label}
                 </DropdownPrimitive.Item>
               </Fragment>
             ))}
