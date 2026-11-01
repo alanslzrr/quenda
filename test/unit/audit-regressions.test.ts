@@ -67,3 +67,82 @@ test("only trusted peers resolve forwarded clients; forged prefixes do not overr
     }
   }
 });
+
+test("public search reads each calendar only once in its transaction", async () => {
+  const { publicAvailabilitySearch, candidateAvailability } = await import(
+    "../../src/modules/catalog/public.ts"
+  );
+  const calls: string[] = [];
+  const rows = Array.from({ length: 21 }, (_, i) => ({
+    id: String(i),
+    name: `Unit ${i}`,
+    facility_name: "Facility",
+  }));
+  const client = {
+    release() {},
+    async query(sql: string, values: unknown[] = []) {
+      calls.push(sql);
+      if (sql.includes("public_search_units")) return { rows };
+      if (sql.includes("public_unit_calendar"))
+        return {
+          rows: [
+            {
+              id: values[1],
+              name: "Unit",
+              facility_id: "facility",
+              facility_name: "Facility",
+              timezone: "Europe/Madrid",
+              municipal_advance_days: 30,
+              cancellation_minutes: 0,
+              booking_policy_version: 1,
+              usage_rules_version: 1,
+              version: 1,
+              calendar: {
+                minimumMinutes: 60,
+                maximumMinutes: 120,
+                stepMinutes: 60,
+                advanceDays: null,
+                weekly: [{ day: 1, startMinute: 540, endMinute: 1260 }],
+                exceptions: [],
+              },
+            },
+          ],
+        };
+      if (sql.includes("public_available_slots"))
+        return { rows: [{ slot_index: 1 }] };
+      return { rows: [] };
+    },
+  };
+  const pool = { connect: async () => client } as unknown as import("pg").Pool;
+  const result = await publicAvailabilitySearch(
+    pool,
+    "tenant",
+    "2026-11-02",
+    60,
+    null,
+    { now: () => new Date("2026-10-29T00:00:00Z") },
+  );
+  assert.equal(result.items.length, 20);
+  assert.equal(result.nextCursor, "19");
+  assert.equal(
+    calls.filter((sql) => sql.includes("public_unit_calendar")).length,
+    20,
+  );
+  assert.equal(
+    calls.filter((sql) => sql.includes("domain.public_")).length,
+    41,
+  );
+  assert.equal(calls[0], "BEGIN ISOLATION LEVEL SERIALIZABLE");
+  assert.equal(calls.at(-1), "COMMIT");
+  const candidate = await candidateAvailability(
+    client as unknown as import("pg").PoolClient,
+    "tenant",
+    "0",
+    "2026-11-02",
+    60,
+    { now: () => new Date("2026-10-29T00:00:00Z") },
+  );
+  assert.deepEqual(result.items[0]?.slots, candidate.slots.slice(0, 1));
+  assert.equal(result.items[0]?.unitId, candidate.unitId);
+  assert.equal(result.items[0]?.calendarVersion, candidate.calendarVersion);
+});

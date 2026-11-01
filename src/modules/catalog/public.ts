@@ -126,6 +126,15 @@ export async function candidateAvailability(
   clock: Clock = systemClock,
 ) {
   const unit = await publicUnitCalendar(client, tenantId, unitId);
+  return availabilityFromCalendar(unit, date, durationMinutes, clock);
+}
+function availabilityFromCalendar(
+  unit: Awaited<ReturnType<typeof publicUnitCalendar>>,
+  date: string,
+  durationMinutes: number,
+  clock: Clock,
+) {
+  const unitId = unit.id;
   const now = clock.now().toISOString();
   return {
     unitId,
@@ -171,10 +180,8 @@ export async function publicAvailabilitySearch(
         durationMinutes % unit.calendar.stepMinutes !== 0
       )
         continue;
-      const candidate = await candidateAvailability(
-        client,
-        tenantId,
-        row.id,
+      const candidate = availabilityFromCalendar(
+        unit,
         date,
         durationMinutes,
         clock,
