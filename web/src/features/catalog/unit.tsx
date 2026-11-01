@@ -1,30 +1,40 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, CalendarDays, Clock3, Info } from "lucide-react";
-import { useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router";
-import { type Appearance, api } from "../../app/api";
+import { Link, useParams } from "react-router";
+import { ApiError, api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
-import layout from "../../app/layout.module.css";
+import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
-import { useMunicipalTheme } from "../../app/theme-provider";
-import { BookingFrame } from "../../ui/blocks/multi-step-form/booking-frame";
-import { Calendar } from "../../ui/calendar/calendar";
-import { Input } from "../../ui/input/input";
+import { useSession } from "../../app/session";
+import { Alert } from "../../ui/alert/alert";
 import { calendarLabel } from "../../ui/lib/calendar-labels";
-import SegmentedControl from "../../ui/segmented-control/segmented-control";
+import {
+  bookingQuery,
+  DateField,
+  DurationField,
+  type Slot,
+  SlotList,
+  useBookingParams,
+} from "./booking";
+import styles from "./booking.module.css";
 import {
   calendarDate,
   civilDate,
   durationLabel,
   durationOptions,
-  localTimeLabel,
-  municipalToday,
 } from "./dates";
-import styles from "./unit.module.css";
+import {
+  BookingSteps,
+  facilityPath,
+  municipalityPath,
+  useJourneyQuery,
+} from "./journey";
+import { useMunicipality, usePublicAppearance } from "./municipality";
 
 export interface Unit {
   id: string;
   name: string;
+  facilityId: string;
+  facilityName: string;
   timeZone: string;
   municipalAdvanceDays: number;
   cancellationMinutes: number;
@@ -38,24 +48,19 @@ export interface Unit {
     advanceDays: number | null;
   };
 }
-interface Instant {
-  utc: string;
-  local: string;
-  offset: string;
-  timeZone: string;
-}
 export interface Availability {
   unitId: string;
   date: string;
   timeZone: string;
   calculatedAt: string;
-  slots: { start: Instant; end: Instant; durationMinutes: number }[];
+  slots: (Slot & { durationMinutes: number })[];
 }
-export function UnitPage() {
-  const { tenantId, unitId } = useParams();
+
+export function usePublicUnit(tenantId: string, unitId: string | undefined) {
   const { locale } = usePreferences();
-  const unit = useQuery({
+  return useQuery({
     queryKey: ["public", tenantId, unitId, "calendar", locale],
+    enabled: !!unitId,
     queryFn: ({ signal }) =>
       api<Unit>(
         `/api/public/municipalities/${tenantId}/units/${unitId}`,
@@ -63,62 +68,95 @@ export function UnitPage() {
         locale,
       ),
   });
-  const appearance = useQuery({
-    queryKey: ["public", tenantId, "appearance"],
-    queryFn: ({ signal }) =>
-      api<Appearance>(
-        `/api/public/municipalities/${tenantId}/appearance`,
-        { signal },
-        locale,
-      ),
-  });
-  useMunicipalTheme(appearance.data);
+}
+
+/** Fourth step: day, duration and time for one unit. */
+export function UnitPage() {
+  const { tenantId = "", unitId } = useParams();
+  const { t } = usePreferences();
+  const query = useJourneyQuery();
+  const unit = usePublicUnit(tenantId, unitId);
+  const municipality = useMunicipality(tenantId);
+  usePublicAppearance(tenantId);
   if (unit.isPending) return <Loading />;
   if (unit.isError)
-    return <Failure error={unit.error} retry={() => void unit.refetch()} />;
+    return unit.error instanceof ApiError && unit.error.status === 404 ? (
+      <div className={styles.page}>
+        <div className={styles.empty}>
+          <p>
+            {t(
+              "Este espacio no está disponible para reservar.",
+              "Este espazo non está dispoñible para reservar.",
+            )}
+          </p>
+          <span>
+            {t(
+              "Puede que el ayuntamiento lo haya retirado o cambiado. Elige otro espacio.",
+              "Pode que o concello o retirase ou cambiase. Escolle outro espazo.",
+            )}
+          </span>
+        </div>
+        <LinkButton to={municipalityPath(tenantId, query)} variant="primary">
+          {t("Ver instalaciones", "Ver instalacións")}
+        </LinkButton>
+      </div>
+    ) : (
+      <Failure error={unit.error} retry={() => void unit.refetch()} />
+    );
   return (
     <UnitAvailability
       key={`${tenantId}:${unitId}`}
-      tenantId={tenantId ?? ""}
+      tenantId={tenantId}
       unit={unit.data}
+      municipality={municipality.data?.name}
     />
   );
 }
+
+function addDays(date: string, days: number) {
+  const value = calendarDate(date);
+  value.setDate(value.getDate() + days);
+  return civilDate(value);
+}
+
 export function UnitAvailability({
   tenantId,
   unit,
   reservationId,
   owner,
+  municipality,
 }: {
   tenantId: string;
   unit: Unit;
   reservationId?: string;
   owner?: string;
+  municipality?: string;
 }) {
   const { locale, t } = usePreferences();
-  const [search] = useSearchParams();
-  const [date, setDate] = useState(() =>
-    /^\d{4}-\d{2}-\d{2}$/.test(search.get("fecha") ?? "")
-      ? (search.get("fecha") ?? municipalToday(unit.timeZone))
-      : municipalToday(unit.timeZone),
-  );
-  const [duration, setDuration] = useState(() =>
-    durationOptions(unit.calendar).includes(Number(search.get("duracion")))
-      ? Number(search.get("duracion"))
-      : unit.calendar.minimumMinutes,
-  );
-  const Heading = reservationId ? "h2" : "h1";
-  const today = calendarDate(municipalToday(unit.timeZone));
-  const maximum = new Date(today);
-  maximum.setDate(
-    maximum.getDate() +
-      (unit.calendar.advanceDays ?? unit.municipalAdvanceDays),
-  );
-  const valid =
-    Number.isInteger(duration) &&
-    duration >= unit.calendar.minimumMinutes &&
-    duration <= unit.calendar.maximumMinutes &&
-    duration % unit.calendar.stepMinutes === 0;
+  const { account } = useSession();
+  const params = useBookingParams(unit.timeZone);
+  const { minimumMinutes, maximumMinutes, stepMinutes } = unit.calendar;
+  const admits = (minutes: number | undefined): minutes is number =>
+    minutes !== undefined &&
+    Number.isInteger(minutes) &&
+    minutes >= minimumMinutes &&
+    minutes <= maximumMinutes &&
+    minutes % stepMinutes === 0;
+  const options = durationOptions(unit.calendar);
+  const enumerable = (maximumMinutes - minimumMinutes) / stepMinutes < 48;
+  // A duration or day chosen for another space may not fit this one: replace only that value and say so.
+  const durationReplaced =
+    enumerable && params.duration !== undefined && !admits(params.duration);
+  const duration =
+    admits(params.duration) || (!enumerable && params.duration !== undefined)
+      ? params.duration
+      : (options[0] ?? minimumMinutes);
+  const valid = admits(duration);
+  const maxDays = unit.calendar.advanceDays ?? unit.municipalAdvanceDays;
+  const lastDate = addDays(params.today, maxDays);
+  const dateReplaced = params.date > lastDate;
+  const date = dateReplaced ? params.today : params.date;
+  const query = bookingQuery({ date, duration: valid ? duration : undefined });
   const availability = useQuery({
     queryKey: [
       ...(reservationId ? ["private", owner] : ["public"]),
@@ -140,184 +178,168 @@ export function UnitAvailability({
         locale,
       ),
   });
+  const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const day = calendarLabel(calendarDate(date), locale, "day");
+  const headingId = `slots-${unit.id}`;
+  const facility = { id: unit.facilityId, name: unit.facilityName };
   return (
     <div className={styles.page}>
-      <Link className={styles.back} to={`/municipios/${tenantId}`}>
-        {t("Instalaciones del municipio", "Instalacións do municipio")}
-      </Link>
-      <header className={styles.header}>
-        <div className={styles.unitIcon}>
-          <CalendarDays size={22} strokeWidth={1.5} aria-hidden="true" />
-        </div>
-        <div>
-          <p className={styles.eyebrow}>
-            {t("Unidad reservable", "Unidade reservable")}
-          </p>
-          <Heading>{unit.name}</Heading>
-          <p className={styles.zone}>
-            {t(
-              "Horarios en la hora local del municipio",
-              "Horarios na hora local do municipio",
-            )}
-          </p>
-        </div>
-      </header>
-      <BookingFrame
-        index={0}
-        labels={[
-          t("Fecha y hora", "Data e hora"),
-          t("Revisar y confirmar", "Revisar e confirmar"),
-        ]}
-        progressLabel={t("Pasos de la reserva", "Pasos da reserva")}
-      >
-        <div className={styles.grid}>
-          <section
-            aria-label={t("Fecha y duración", "Data e duración")}
-            className={styles.controls}
-          >
-            <div className={styles.controlHeading}>
-              <CalendarDays size={16} aria-hidden="true" />
-              <h2>{t("Elige una fecha", "Escolle unha data")}</h2>
-            </div>
-            <Calendar
-              today={today}
-              locale={locale}
-              value={calendarDate(date)}
-              onChange={(value) => setDate(civilDate(value))}
-              minDate={today}
-              maxDate={maximum}
-            />
-            <div className={styles.duration}>
-              <Clock3 size={16} aria-hidden="true" />
-              <div>
-                <h2 className={styles.durationTitle}>
-                  {t("¿Cuánto tiempo necesitas?", "Canto tempo precisas?")}
-                </h2>
-                {(unit.calendar.maximumMinutes - unit.calendar.minimumMinutes) /
-                  unit.calendar.stepMinutes >=
-                48 ? (
-                  <Input
-                    label={t("Duración en minutos", "Duración en minutos")}
-                    type="number"
-                    min={unit.calendar.minimumMinutes}
-                    max={unit.calendar.maximumMinutes}
-                    step={unit.calendar.stepMinutes}
-                    value={duration}
-                    onChange={(event) =>
-                      setDuration(event.target.valueAsNumber)
-                    }
-                    description={`${unit.calendar.minimumMinutes}–${unit.calendar.maximumMinutes} min · ${t("Intervalos de", "Intervalos de")} ${unit.calendar.stepMinutes} min`}
-                  />
-                ) : (
-                  <SegmentedControl
-                    label={t("Duración", "Duración")}
-                    value={String(duration)}
-                    onValueChange={(value) => setDuration(Number(value))}
-                    options={durationOptions(unit.calendar).map((value) => ({
-                      value: String(value),
-                      label: durationLabel(value),
-                    }))}
-                  />
-                )}
-              </div>
-            </div>
-            <p className={styles.note}>
+      {!reservationId && (
+        <>
+          <BookingSteps
+            current={3}
+            tenantId={tenantId}
+            municipality={municipality}
+            facility={facility}
+            unit={unit}
+            query={query}
+          />
+          <header className={styles.intro}>
+            <p className={styles.context}>
+              {[municipality, unit.facilityName].filter(Boolean).join(" · ")}
+            </p>
+            <h1 className={styles.title}>{unit.name}</h1>
+            <p className={styles.lead}>
               {t(
-                "Consultar una franja no la reserva.",
-                "Consultar unha franxa non a reserva.",
+                "Elige el día, la duración y una hora libre.",
+                "Escolle o día, a duración e unha hora libre.",
               )}
             </p>
-          </section>
-          <section
-            className={styles.availability}
-            aria-labelledby="slots-heading"
-          >
-            <h2 id="slots-heading" className={layout.sectionTitle}>
-              {calendarLabel(calendarDate(date), locale, "long")}
-            </h2>
-            <p className={styles.zone}>
-              {t(
-                "Selecciona una hora de inicio.",
-                "Selecciona unha hora de inicio.",
-              )}{" "}
-              {duration > 0 && durationLabel(duration)}
-            </p>
-            {!valid ? null : availability.isPending ? (
-              <Loading />
-            ) : availability.isError ? (
-              <Failure
-                error={availability.error}
-                retry={() => void availability.refetch()}
-              />
-            ) : (
-              <>
-                <ul className={styles.slots}>
-                  {availability.data.slots.map((slot) => (
-                    <li key={slot.start.utc}>
-                      <Link
-                        className={styles.slot}
-                        to={
-                          reservationId
-                            ? `/reservas/${tenantId}/${reservationId}/confirmar?unidad=${unit.id}&inicio=${encodeURIComponent(slot.start.utc)}&fin=${encodeURIComponent(slot.end.utc)}`
-                            : `/municipios/${tenantId}/unidades/${unit.id}/reservar?inicio=${encodeURIComponent(slot.start.utc)}&fin=${encodeURIComponent(slot.end.utc)}`
-                        }
-                      >
-                        <span>
-                          {localTimeLabel(
-                            slot.start.utc,
-                            unit.timeZone,
-                            locale,
-                          )}{" "}
-                          <span aria-hidden="true">–</span>{" "}
-                          {localTimeLabel(slot.end.utc, unit.timeZone, locale)}
-                        </span>
-                        <small>
-                          {slot.start.local.slice(0, 10) !==
-                          slot.end.local.slice(0, 10)
-                            ? t(
-                                "Termina al día siguiente",
-                                "Remata ao día seguinte",
-                              )
-                            : t("Elegir", "Escoller")}
-                          <ArrowRight size={14} aria-hidden="true" />
-                        </small>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-                {availability.data.slots.length === 0 && (
-                  <div className={styles.empty}>
-                    <CalendarDays
-                      size={30}
-                      strokeWidth={1.25}
-                      aria-hidden="true"
-                    />
-                    <p>
-                      {t(
-                        "No hay franjas disponibles para esta fecha y duración.",
-                        "Non hai franxas dispoñibles para esta data e duración.",
-                      )}
-                    </p>
-                    <span>
-                      {t(
-                        "Prueba otra fecha o duración.",
-                        "Proba outra data ou duración.",
-                      )}
-                    </span>
-                  </div>
-                )}
-              </>
-            )}
-          </section>
-        </div>
-        <p className={styles.footnote}>
-          <Info size={15} aria-hidden="true" />
-          {t(
-            "La disponibilidad se comprueba de nuevo al confirmar.",
-            "A dispoñibilidade compróbase de novo ao confirmar.",
+            <div className={styles.introActions}>
+              <Link
+                className={styles.textLink}
+                to={facilityPath(tenantId, unit.facilityId, query)}
+              >
+                {t("Cambiar espacio", "Cambiar espazo")}
+              </Link>
+            </div>
+          </header>
+        </>
+      )}
+      {(durationReplaced || dateReplaced || params.dateAdjusted) && (
+        <Alert
+          className={styles.adjusted}
+          tone="info"
+          title={t(
+            "Hemos ajustado tu selección a este espacio",
+            "Axustamos a túa selección a este espazo",
           )}
-        </p>
-      </BookingFrame>
+        >
+          {[
+            params.dateAdjusted &&
+              t(
+                "El día elegido no es válido o ya ha pasado; mostramos hoy.",
+                "O día elixido non é válido ou xa pasou; amosamos hoxe.",
+              ),
+            durationReplaced &&
+              t(
+                `No admite reservas de ${durationLabel(params.duration ?? 0)}; mostramos ${durationLabel(duration ?? minimumMinutes)}.`,
+                `Non admite reservas de ${durationLabel(params.duration ?? 0)}; amosamos ${durationLabel(duration ?? minimumMinutes)}.`,
+              ),
+            dateReplaced &&
+              t(
+                `Solo se puede reservar con ${maxDays} días de antelación; mostramos hoy.`,
+                `Só se pode reservar con ${maxDays} días de antelación; amosamos hoxe.`,
+              ),
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        </Alert>
+      )}
+      <div className={styles.search} data-fields={2}>
+        <DateField
+          date={date}
+          today={params.today}
+          maxDays={maxDays}
+          onChange={(next) => params.update({ fecha: next })}
+        />
+        <DurationField
+          value={duration}
+          options={options}
+          range={
+            enumerable
+              ? undefined
+              : {
+                  minimum: minimumMinutes,
+                  maximum: maximumMinutes,
+                  step: stepMinutes,
+                }
+          }
+          onChange={(minutes) =>
+            params.update({
+              duracion: Number.isInteger(minutes) ? String(minutes) : "",
+            })
+          }
+        />
+      </div>
+      <section className={styles.slotsSection} aria-labelledby={headingId}>
+        <div className={styles.resultsHead}>
+          <h2 id={headingId}>{t("Horarios libres", "Horarios libres")}</h2>
+          {valid && (
+            <p>
+              {day} · {durationLabel(duration)}
+            </p>
+          )}
+        </div>
+        {browserZone !== unit.timeZone && (
+          <p className={styles.timeZone}>
+            {t(
+              `Horas locales del municipio (${unit.timeZone}).`,
+              `Horas locais do municipio (${unit.timeZone}).`,
+            )}
+          </p>
+        )}
+        {!valid ? (
+          <div className={styles.empty}>
+            <p>
+              {t(
+                "Indica una duración admitida para ver los horarios.",
+                "Indica unha duración admitida para ver os horarios.",
+              )}
+            </p>
+          </div>
+        ) : availability.isPending ? (
+          <Loading />
+        ) : availability.isError ? (
+          <Failure
+            error={availability.error}
+            retry={() => void availability.refetch()}
+          />
+        ) : availability.data.slots.length === 0 ? (
+          <div className={styles.empty}>
+            <p>
+              {t(
+                `No quedan horarios libres de ${durationLabel(duration)} este día.`,
+                `Non quedan horarios libres de ${durationLabel(duration)} este día.`,
+              )}
+            </p>
+            <span>
+              {t(
+                "Prueba otro día u otra duración.",
+                "Proba outro día ou outra duración.",
+              )}
+            </span>
+          </div>
+        ) : (
+          <SlotList
+            slots={availability.data.slots}
+            timeZone={unit.timeZone}
+            href={(slot) =>
+              reservationId
+                ? `/reservas/${tenantId}/${reservationId}/confirmar?unidad=${unit.id}&inicio=${encodeURIComponent(slot.start.utc)}&fin=${encodeURIComponent(slot.end.utc)}`
+                : `/municipios/${tenantId}/unidades/${unit.id}/reservar?inicio=${encodeURIComponent(slot.start.utc)}&fin=${encodeURIComponent(slot.end.utc)}`
+            }
+          />
+        )}
+        {!reservationId && !account && (
+          <p className={styles.quiet}>
+            {t(
+              "Al elegir una hora te pediremos que accedas o crees una cuenta. Después volverás a esta reserva.",
+              "Ao escoller unha hora pedirémosche que accedas ou crees unha conta. Despois volverás a esta reserva.",
+            )}
+          </p>
+        )}
+      </section>
     </div>
   );
 }
