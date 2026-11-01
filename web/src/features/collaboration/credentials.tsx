@@ -1,12 +1,27 @@
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { textField } from "../../app/action";
 import { ApiError } from "../../app/api";
+import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
+import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
-import { Denied, endpoint, Reason, useMunicipality } from "../municipal/shared";
+import { Select } from "../../ui/select/select";
+import {
+  type AccountLabelValue,
+  accountText,
+} from "../municipal/account-label";
+import { AccountSelect } from "../municipal/account-select";
+import {
+  Denied,
+  endpoint,
+  More,
+  Reason,
+  useMunicipality,
+  useMunicipalPages,
+} from "../municipal/shared";
 import { CollaborationAction } from "./action";
 import { useAgreement } from "./agreements";
 import { InstantField } from "./instant-field";
@@ -98,11 +113,8 @@ function Issue() {
               "A conta debe estar vinculada a este municipio. O sistema comproba a versión efectiva e o permiso de emisión; a acreditación non garante por si soa unha reserva.",
             )}
           </p>
-          <Input
-            required
-            name="accountId"
-            maxLength={200}
-            label={t("Identificador de la cuenta", "Identificador da conta")}
+          <AccountSelect
+            label={t("Persona beneficiaria", "Persoa beneficiaria")}
           />
           <InstantField
             name="startsAt"
@@ -140,21 +152,42 @@ export function Credentials() {
 }
 function Revoke() {
   const m = useMunicipality();
-  const { t } = usePreferences();
+  const { t, locale } = usePreferences();
   const [search] = useSearchParams();
   const [id, setId] = useState(search.get("referencia") ?? "");
+  const [confirmed, setConfirmed] = useState(false);
+  function changeId(value: string) {
+    setId(value);
+    setConfirmed(false);
+  }
   const [receipt, setReceipt] = useState<string>();
+  const query = useMunicipalPages<{
+    id: string;
+    agreementName: string;
+    accountId: string;
+    accountLabel: AccountLabelValue;
+    startsAt: string;
+    endsAt: string;
+    revokedAt: string | null;
+  }>(`${endpoint(m.id)}/credentials`);
+  const rows = query.data?.pages.flatMap((p) => p.items) ?? [];
   return (
     <>
-      <h1>{t("Acreditaciones", "Acreditacións")}</h1>
+      <h1>{t("Acreditaciones de uso", "Acreditacións de uso")}</h1>
       <p>
         {t(
-          "Para emitir una acreditación, abre la versión del convenio. La revocación requiere el identificador de una acreditación emitida por este municipio; no se consultan acreditaciones ajenas.",
-          "Para emitir unha acreditación, abre a versión do convenio. A revogación require o identificador dunha acreditación emitida por este municipio; non se consultan acreditacións alleas.",
+          "Autorizan a una persona a usar los espacios de un convenio que exige acreditación. No son reservas ni garantizan disponibilidad.",
+          "Autorizan unha persoa a usar os espazos dun convenio que esixe acreditación. Non son reservas nin garanten dispoñibilidade.",
+        )}
+      </p>
+      <p>
+        {t(
+          "Para emitir una acreditación, abre la versión del convenio. Para revocar, selecciona una acreditación emitida por este municipio; no se consultan acreditaciones ajenas.",
+          "Para emitir unha acreditación, abre a versión do convenio. Para revogar, selecciona unha acreditación emitida por este municipio; non se consultan acreditacións alleas.",
         )}
       </p>
       <Link to={agreementPath(m.id)}>
-        {t("Consultar convenios", "Consultar convenios")}
+        {t("Emitir desde un convenio", "Emitir desde un convenio")}
       </Link>
       <h2>{t("Revocar acreditación", "Revogar acreditación")}</h2>
       {receipt ? (
@@ -166,19 +199,72 @@ function Revoke() {
           path={`${endpoint(m.id)}/credentials/${id}/revoke`}
           danger
           label={t("Revocar acreditación", "Revogar acreditación")}
-          body={(d) => ({ reason: textField(d, "reason").trim() })}
+          body={(d) => {
+            if (!new RegExp(`^${uuidPattern}$`).test(id))
+              throw new ApiError(
+                400,
+                "INVALID_INPUT",
+                t(
+                  "Selecciona una acreditación o indica su referencia.",
+                  "Selecciona unha acreditación ou indica a súa referencia.",
+                ),
+              );
+            return { reason: textField(d, "reason").trim() };
+          }}
           onResult={(r) => setReceipt(r.id)}
         >
-          <Input
-            required
-            pattern={uuidPattern}
-            label={t(
-              "Identificador de acreditación",
-              "Identificador de acreditación",
+          <Select
+            disabled={!rows.length}
+            label={t("Acreditación emitida", "Acreditación emitida")}
+            placeholder={t(
+              "Selecciona una acreditación",
+              "Selecciona unha acreditación",
             )}
-            value={id}
-            onChange={(e) => setId(e.target.value)}
+            value={rows.some((row) => row.id === id) ? id : ""}
+            onValueChange={(value) => {
+              // A manual reference may not belong to the paginated options.
+              // Ignore the native empty-select synchronization in that case.
+              if (value) changeId(value);
+            }}
+            options={rows.map((row) => ({
+              value: row.id,
+              label: `${accountText(row.accountLabel, t("Cuenta no disponible", "Conta non dispoñible"))} · ${row.agreementName} · ${new Date(row.startsAt).toLocaleDateString(locale)} – ${new Date(row.endsAt).toLocaleDateString(locale)}${row.revokedAt ? t(" · Revocada", " · Revogada") : ""}`,
+              disabled: !!row.revokedAt,
+            }))}
           />
+          {query.isPending ? (
+            <Loading />
+          ) : query.isError ? (
+            <Failure error={query.error} retry={() => void query.refetch()} />
+          ) : (
+            <>
+              <More query={query} />
+              {!rows.length && (
+                <p>
+                  {t(
+                    "No hay acreditaciones emitidas por este municipio.",
+                    "Non hai acreditacións emitidas por este municipio.",
+                  )}
+                </p>
+              )}
+            </>
+          )}
+          <Disclosure
+            title={t(
+              "Usar una referencia conocida",
+              "Usar unha referencia coñecida",
+            )}
+          >
+            <Input
+              pattern={uuidPattern}
+              label={t(
+                "Identificador de acreditación",
+                "Identificador de acreditación",
+              )}
+              value={id}
+              onChange={(e) => changeId(e.target.value)}
+            />
+          </Disclosure>
           <p>
             {t(
               "Puede revocarse aunque el convenio esté suspendido. Las reservas confirmadas se conservan.",
@@ -188,6 +274,8 @@ function Revoke() {
           <Reason />
           <Checkbox
             required
+            checked={confirmed}
+            onCheckedChange={(value) => setConfirmed(value === true)}
             label={t("Confirmo la revocación", "Confirmo a revogación")}
           />
         </CollaborationAction>

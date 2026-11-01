@@ -1,6 +1,7 @@
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { textField } from "../../app/action";
 import { Failure, Loading } from "../../app/feedback";
+import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
@@ -161,6 +162,16 @@ function VersionDetails({ item: a }: { item: Agreement }) {
         )}
       </p>
       <PendingLink />
+      {a.aggregateReports && (
+        <Link
+          to={`/administracion/${m.id}/informes/revision?convenio=${encodeURIComponent(a.agreementId)}`}
+        >
+          {t(
+            "Revisar privacidad de informes",
+            "Revisar privacidade de informes",
+          )}
+        </Link>
+      )}
       <dl>
         {[
           [t("Finalidad", "Finalidade"), a.purpose],
