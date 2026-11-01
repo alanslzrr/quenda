@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router";
 import { textField } from "../../app/action";
 import { ApiError } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
+import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";

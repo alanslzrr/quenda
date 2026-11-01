@@ -1,6 +1,7 @@
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { textField } from "../../app/action";
 import { Failure, Loading } from "../../app/feedback";
+import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import {
