@@ -45,3 +45,10 @@ export async function createAccount(page: Page) {
   await expect(page).toHaveURL(/\/perfil$/);
   return email;
 }
+export async function signOut(page: Page) {
+  await page.getByRole("button", { name: /^(Ajustes|Axustes)$/ }).click();
+  await page
+    .getByRole("menuitem", { name: /^(Cerrar sesión|Pechar sesión)$/ })
+    .click();
+  await expect(page).toHaveURL(/^[^?#]*\/(municipios\/[^/]+)?$/);
+}
