@@ -198,9 +198,33 @@ test("platform operators invite revoke and hand over authority without inheritin
     );
     await revoke(page);
     await recipient.goto("/plataforma");
-    await expect(
-      recipient.getByText("No tienes permiso para esta operación."),
-    ).toBeVisible();
+    const denied = recipient.getByText(
+      "No tienes permiso para esta operación.",
+    );
+    // The optional management-entry section has its own recovery action. Scope
+    // this assertion to the route guard's recovery action, not that header hint.
+    const platformFailure = recipient
+      .getByRole("region", { name: "Resolver el problema", exact: true })
+      .filter({
+        has: recipient.getByRole("button", { name: "Reintentar", exact: true }),
+      });
+    const limited = platformFailure.getByRole("alert").filter({
+      hasText: "Demasiadas solicitudes. Espera antes de repetir.",
+    });
+    // This compressed, reload-heavy lifecycle can consume the real per-account
+    // minute budget. Respect the server's wait instead of changing that limit or
+    // treating a 429 as proof that revoked permissions were enforced.
+    await expect(denied.or(limited)).toBeVisible();
+    if (await limited.isVisible()) {
+      await expect(platformFailure.getByRole("timer")).toBeVisible();
+      const retry = platformFailure.getByRole("button", {
+        name: "Reintentar",
+        exact: true,
+      });
+      await expect(retry).toBeEnabled({ timeout: 65_000 });
+      await retry.click();
+    }
+    await expect(denied).toBeVisible();
     expect((await recipient.request.get("/api/me")).status()).toBe(200);
   } finally {
     await other.close();
