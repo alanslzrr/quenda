@@ -46,7 +46,7 @@ export function SignIn({ register = false }: { register?: boolean }) {
               email: data.get("email"),
               name: data.get("name"),
               password: data.get("password"),
-              callbackURL: `${location.origin}/acceso`,
+              callbackURL: `${location.origin}/acceso${returnTo === "/perfil" ? "" : `?returnTo=${encodeURIComponent(returnTo)}`}`,
             }),
           },
           locale,

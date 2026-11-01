@@ -1,8 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { reservationMail } from "../../../src/modules/communications/reservation-mail";
 import { calendarDate } from "../../src/features/catalog/dates";
 import { calendarLabel } from "../../src/ui/lib/calendar-labels";
-import { createAccount } from "./account-helpers";
+import { createAccount, password, signOut } from "./account-helpers";
 import { test } from "./fixtures";
 
 const catalog = (index: number) => ({
@@ -11,7 +12,10 @@ const catalog = (index: number) => ({
 });
 const checkout = (tenant: string, unit: string, start: string, end: string) =>
   `/municipios/${tenant}/unidades/${unit}/reservar?inicio=${encodeURIComponent(start)}&fin=${encodeURIComponent(end)}`;
+const acceptance =
+  /He leído y acepto las normas de uso|Lin e acepto as normas de uso/;
 async function selectDay(page: Page, date: string, locale: string) {
+  await page.getByRole("button", { name: "Día", exact: true }).click();
   const today = new Date();
   const target = calendarDate(date);
   if (
@@ -39,25 +43,29 @@ test("real reservation, overlapping reschedule, notices, history filter and canc
     end = `${day}T${hour + 1}:00:00Z`;
   await page.goto(checkout(tenant, unit, start, end));
   await expect(
-    page.getByRole("heading", { name: "Confirmar reserva" }),
+    page.getByRole("heading", {
+      name: /Revisa tu reserva|Revisa a túa reserva/,
+    }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Confirmar reserva", exact: true })
     .click();
   await expect(page).toHaveURL(/\/reservar\?/);
-  await page.getByRole("checkbox", { name: /Acepto estas normas/ }).check();
+  await page.getByRole("checkbox", { name: acceptance }).check();
   await page
     .getByRole("button", { name: "Confirmar reserva", exact: true })
     .click();
   await expect(page).toHaveURL(new RegExp(`/reservas/${tenant}/[\\da-f-]+$`));
   const detail = new URL(page.url()).pathname;
   const id = detail.split("/").at(-1) ?? "";
-  await expect(page.getByRole("heading", { name: /Detalle/ })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Reserva confirmada", exact: true }),
+  ).toBeVisible();
   await page
-    .getByRole("link", { name: "Modificar reserva", exact: true })
+    .getByRole("link", { name: "Cambiar horario", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Modificar reserva", exact: true }),
+    page.getByRole("heading", { name: "Cambiar horario", exact: true }),
   ).toBeVisible();
   // The calendar's authenticated projection must offer an overlap with the old hold.
   const projection = await page.request.get(
@@ -70,22 +78,17 @@ test("real reservation, overlapping reschedule, notices, history filter and canc
         Date.parse(s.start.utc) === Date.parse(`${day}T${hour}:30:00Z`),
     ),
   ).toBe(true);
-  await selectDay(page, day, info.project.name === "desktop" ? "es" : "gl");
-  await page.getByRole("button", { name: "1 h", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`fecha=${day}&duracion=60`));
   const slot = await projection.json();
   const chosen = slot.slots.find(
     (s: { start: { utc: string } }) =>
       Date.parse(s.start.utc) === Date.parse(`${day}T${hour}:30:00Z`),
   );
   const destination = `${detail}/confirmar?unidad=${unit}&inicio=${encodeURIComponent(chosen.start.utc)}&fin=${encodeURIComponent(chosen.end.utc)}`;
+  await page.locator(`a[href="${destination}"]`).click();
+  await page.getByRole("checkbox", { name: acceptance }).check();
   await page
-    .getByRole("link")
-    .filter({ has: page.locator("small") })
-    .and(page.locator(`a[href="${destination}"]`))
-    .click();
-  await page.getByRole("checkbox", { name: /Acepto estas normas/ }).check();
-  await page
-    .getByRole("button", { name: "Confirmar modificación", exact: true })
+    .getByRole("button", { name: /^(Confirmar el cambio|Confirmar o cambio)$/ })
     .click();
   await expect(page).toHaveURL(new RegExp(`${detail}$`));
   const changed = await page.request.get(
@@ -97,22 +100,20 @@ test("real reservation, overlapping reschedule, notices, history filter and canc
   await page.goto("/avisos");
   await expect(page.getByText(/Reserva modificada/)).toBeVisible();
   await page.goto("/reservas");
-  await page.getByRole("combobox", { name: "Municipio", exact: true }).click();
-  await page
-    .getByRole("option", {
-      name: `Oleiros de proba ${info.project.name === "desktop" ? 1 : 2}`,
-      exact: true,
-    })
-    .click();
-  await expect(page.getByRole("link", { name: /Pista 1/ })).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Municipio", exact: true }),
+  ).toHaveCount(0);
   await page.getByRole("link", { name: /Pista 1/ }).click();
-  await page
-    .getByRole("checkbox", { name: /Quiero cancelar|Quero cancelar/ })
-    .check();
   await page
     .getByRole("button", { name: "Cancelar reserva", exact: true })
     .click();
-  await expect(page.getByText("Cancelada", { exact: true })).toBeVisible();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Cancelar reserva", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Reserva cancelada", exact: true }),
+  ).toBeVisible();
   const free = await page.request.get(
     `/api/public/municipalities/${tenant}/units/${unit}/availability?date=${day}&durationMinutes=60`,
   );
@@ -136,7 +137,7 @@ test("late reservation requires its explicit restriction and cannot be cancelled
   await page.goto(
     checkout(tenant, unit, start.toISOString(), end.toISOString()),
   );
-  await page.getByRole("checkbox", { name: /Acepto estas normas/ }).check();
+  await page.getByRole("checkbox", { name: acceptance }).check();
   await page
     .getByRole("button", { name: "Confirmar reserva", exact: true })
     .click();
@@ -150,7 +151,7 @@ test("late reservation requires its explicit restriction and cannot be cancelled
     page.getByRole("button", { name: "Cancelar reserva", exact: true }),
   ).toHaveCount(0);
   await expect(
-    page.getByText(/mantiene su ocupación|mantén a súa ocupación/),
+    page.getByText(/mantiene el espacio ocupado|mantén o espazo ocupado/),
   ).toBeVisible();
 });
 
@@ -159,12 +160,12 @@ test("municipal search offers a ninety minute booking and keeps its context on r
 }, info) => {
   const { tenant } = catalog(info.project.name === "desktop" ? 1 : 2);
   await createAccount(page);
-  await page.goto(`/municipios/${tenant}`);
-  const day = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
-  await page.getByLabel(/¿Qué día\?|Que día\?/).fill(day);
-  await page
-    .getByRole("combobox", { name: /tiempo necesitas|tempo precisas/ })
-    .click();
+  await page.goto(`/municipios/${tenant}/horarios`);
+  const day = new Date(Date.now() + (5 + info.repeatEachIndex) * 86400000)
+    .toISOString()
+    .slice(0, 10);
+  await selectDay(page, day, info.project.name === "desktop" ? "es" : "gl");
+  await page.getByRole("combobox", { name: "Duración", exact: true }).click();
   await page.getByRole("option", { name: "1 h 30 min", exact: true }).click();
   const chosen = page.locator('a[href*="/reservar?"]').first();
   await expect(chosen).toBeVisible();
@@ -204,13 +205,95 @@ test("municipal search offers a ninety minute booking and keeps its context on r
   ).toBe(90 * 60000);
   await chosen.click();
   await expect(
-    page.getByRole("heading", { name: "Confirmar reserva", exact: true }),
+    page.getByRole("heading", {
+      name: /Revisa tu reserva|Revisa a túa reserva/,
+    }),
   ).toBeVisible();
   await expect(page.getByText("1 h 30 min", { exact: true })).toBeVisible();
-  await page
-    .getByRole("link", { name: /Elegir otra franja|Escoller outra franxa/ })
-    .click();
+  await page.getByRole("link", { name: /^Cambiar día (u|ou) hora$/ }).click();
   await expect(
-    page.getByRole("button", { name: "1 h 30 min", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    page.getByRole("combobox", { name: "Duración", exact: true }),
+  ).toContainText("1 h 30 min");
+});
+
+test("audit regression: generated email opens the reservation through real login without writing", async ({
+  page,
+}, info) => {
+  const { tenant, unit } = catalog(info.project.name === "desktop" ? 1 : 2);
+  const email = await createAccount(page);
+  const day = new Date(Date.now() + (5 + info.repeatEachIndex) * 86400000)
+    .toISOString()
+    .slice(0, 10);
+  const start = `${day}T14:00:00Z`,
+    end = `${day}T15:00:00Z`;
+  const response = await page.request.post(
+    `/api/municipalities/${tenant}/reservations`,
+    {
+      headers: {
+        "Idempotency-Key": crypto.randomUUID(),
+        Origin: "http://127.0.0.1:5173",
+      },
+      data: {
+        unitId: unit,
+        startsAt: start,
+        endsAt: end,
+        acceptance: {
+          usageRulesVersion: 1,
+          bookingPolicyVersion: 1,
+          nonCancellable: false,
+        },
+      },
+    },
+  );
+  expect(response.status()).toBe(201);
+  const reservation = await response.json();
+  const mail = reservationMail(
+    email,
+    "http://127.0.0.1:5173",
+    info.project.name === "desktop" ? "es" : "gl",
+    {
+      tenantId: tenant,
+      reservationId: reservation.id,
+      revision: 1,
+      kind: "CONFIRMADA",
+      occurredAt: new Date().toISOString(),
+      startsAt: start,
+      endsAt: end,
+      timeZone: "Europe/Madrid",
+      unitId: unit,
+      pendingUsageRulesVersion: null,
+    },
+  );
+  const link = mail.text.match(/https?:\/\/[^\s]+$/)?.[0];
+  expect(link).toBe(
+    `http://127.0.0.1:5173/reservas/${tenant}/${reservation.id}`,
+  );
+  if (!link) throw new Error("Mail link missing");
+  let writes = 0;
+  page.on("request", (request) => {
+    if (
+      request.method() !== "GET" &&
+      request.url().includes(`/municipalities/${tenant}/reservations`)
+    )
+      writes++;
+  });
+  await page.goto(link);
+  await expect(
+    page.getByRole("heading", { name: "Reserva confirmada", exact: true }),
+  ).toBeVisible();
+  await signOut(page);
+  await page.goto(link);
+  await expect(page).toHaveURL(/\/acceso\?returnTo=/);
+  await page.getByLabel("Correo electrónico", { exact: true }).fill(email);
+  await page.getByLabel(/^(Contraseña|Contrasinal)$/).fill(password);
+  await page.getByRole("button", { name: "Entrar", exact: true }).click();
+  await expect(page).toHaveURL(link);
+  await expect(
+    page.getByRole("heading", { name: "Reserva confirmada", exact: true }),
+  ).toBeVisible();
+  expect(writes).toBe(0);
+  const current = await page.request.get(
+    `/api/municipalities/${tenant}/reservations/${reservation.id}`,
+  );
+  expect((await current.json()).revision).toBe(1);
 });
