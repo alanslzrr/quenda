@@ -70,12 +70,12 @@ export function ThemeSwitch({ theme, variant = "reveal", onThemeChange, label, i
       variant="secondary"
       className={classes}
       data-theme={theme}
-      aria-label={label ?? `Switch to ${next} mode`}
+      aria-label={iconOnly ? (label ?? `Switch to ${next} mode`) : undefined}
       aria-pressed={theme === "dark"}
       onClick={event => onThemeChange(next, variant, event.currentTarget)}
     >
       <span className={styles.iconWrap}><ThemeIcon theme={theme} reduced={reduced} settled={settled} /></span>
-      {!iconOnly && <span className={styles.label}>Switch theme</span>}
+      {!iconOnly && <span className={styles.label}>{label ?? "Dark mode"}</span>}
     </Button>
   );
 }

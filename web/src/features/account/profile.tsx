@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate } from "react-router";
+import { Navigate } from "react-router";
 import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
@@ -32,9 +32,6 @@ export function Profile() {
           )}
         </p>
       </div>
-      <Link to="/administracion">
-        {t("Administración municipal", "Administración municipal")}
-      </Link>
       <div className={styles.form}>
         <Select
           label={t("Idioma", "Idioma")}
@@ -46,15 +43,11 @@ export function Profile() {
           ]}
           onValueChange={(value) => update({ locale: value as "es" | "gl" })}
         />
-        <fieldset disabled={pending} style={{ border: 0, padding: 0 }}>
+        <fieldset disabled={pending} className={styles.choiceGroup}>
           <legend>{t("Apariencia", "Aparencia")}</legend>
           <ThemeSwitch
             theme={theme ?? "light"}
-            label={
-              theme === "dark"
-                ? t("Modo oscuro", "Modo escuro")
-                : t("Modo claro", "Modo claro")
-            }
+            label={t("Modo oscuro", "Modo escuro")}
             onThemeChange={(value) => update({ theme: value })}
           />
         </fieldset>
