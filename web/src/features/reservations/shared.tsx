@@ -11,7 +11,13 @@ import { useMunicipalTheme } from "../../app/theme-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { calendarLabel } from "../../ui/lib/calendar-labels";
 import { PageTitle } from "../account/shared";
-import { calendarDate, localTimeLabel, municipalToday } from "../catalog/dates";
+import {
+  calendarDate,
+  endsNextDay,
+  intervalLabel,
+  localTimeLabel,
+  municipalToday,
+} from "../catalog/dates";
 import {
   type CommandPolicy,
   type CommandResult,
@@ -22,6 +28,7 @@ import {
   retryAllowed,
   sendCommand,
 } from "./commands";
+import local from "./reservations.module.css";
 export interface Reservation {
   accountId?: string;
   id: string;
@@ -71,11 +78,12 @@ export function ReservationSummary({
 }: {
   reservation: Pick<Reservation, "startsAt" | "endsAt" | "timeZone">;
 }) {
-  const { locale } = usePreferences();
+  const { locale, t } = usePreferences();
   return (
     <p>
-      {dateTime(r.startsAt, r.timeZone, locale)} —{" "}
-      {dateTime(r.endsAt, r.timeZone, locale)}
+      {intervalLabel(r.startsAt, r.endsAt, r.timeZone, locale)}
+      {endsNextDay(r.startsAt, r.endsAt, r.timeZone) &&
+        ` · ${t("termina al día siguiente", "remata ao día seguinte")}`}
     </p>
   );
 }
@@ -100,15 +108,21 @@ export function ReservationAction({
   label,
   children,
   onFailure,
+  note,
+  danger,
+  secondary,
 }: {
   path: string;
   body: unknown;
   label: string;
-  children: ReactNode;
+  children?: ReactNode;
   onFailure?: (error: unknown) => Promise<void>;
+  note?: string;
+  danger?: boolean;
+  secondary?: ReactNode;
 }) {
   const { account } = useSession();
-  const { locale, t } = usePreferences();
+  const { locale } = usePreferences();
   const client = useQueryClient();
   const navigate = useNavigate();
   const [uncertain, setUncertain] = useState(false);
@@ -117,6 +131,8 @@ export function ReservationAction({
   return (
     <ActionForm
       label={label}
+      danger={danger}
+      secondary={secondary}
       submit={async () => {
         if (!account) return;
         const policy = await api<CommandPolicy>(
@@ -150,12 +166,7 @@ export function ReservationAction({
       }}
     >
       {children}
-      <p>
-        {t(
-          "La operación se confirma con la respuesta del sistema.",
-          "A operación confírmase coa resposta do sistema.",
-        )}
-      </p>
+      {note && <p className={local.note}>{note}</p>}
     </ActionForm>
   );
 }
