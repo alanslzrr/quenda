@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { accountLabelSchema } from "./account-labels.ts";
 import {
   listMunicipalAdministratorInvitations,
   listMunicipalAdministrators,
@@ -28,6 +29,7 @@ export async function registerAdministratorQueryRoutes(
         "Administrador con MFA reciente: consulta la última asignación administrativa de cada cuenta del municipio, incluida su vigencia actual. No contiene roles de otros municipios.",
       properties: {
         accountId,
+        accountLabel: accountLabelSchema,
         invitationId: uuid,
         grantedAt: instant,
         expiresAt: nullableInstant,
@@ -45,7 +47,9 @@ export async function registerAdministratorQueryRoutes(
       properties: {
         invitationId: uuid,
         accountId,
+        accountLabel: accountLabelSchema,
         invitedBy: accountId,
+        invitedByLabel: accountLabelSchema,
         expiresAt: instant,
         roleExpiresAt: nullableInstant,
         acceptedAt: nullableInstant,
@@ -102,13 +106,15 @@ export async function registerAdministratorQueryRoutes(
           },
         },
       },
-      async (request, reply) =>
-        query.run(
+      async (request, reply) => {
+        reply.header("cache-control", "no-store");
+        return query.run(
           pool,
           await actor(request, reply),
           request.params.tenantId,
           request.query.after ?? null,
-        ),
+        );
+      },
     );
   }
 }
