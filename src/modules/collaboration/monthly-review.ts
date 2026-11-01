@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { DatabaseError, type Pool } from "pg";
 import { idempotentCommand } from "../../database/idempotency.ts";
 import { HttpError } from "../../http/errors.ts";
+import { civilMonth } from "../../shared/civil-date.ts";
 import {
   type AuthenticatedAccount,
   requireAdministrator,
@@ -63,7 +64,7 @@ export async function reviewMonthlyAssessment(
       (input.revision > 1 && evidence.correctionReference === null)
     )
       throw new HttpError("INVALID_INPUT");
-    const month = Temporal.PlainYearMonth.from(input.month)
+    const month = Temporal.PlainYearMonth.from(civilMonth(input.month))
       .toPlainDate({ day: 1 })
       .toString();
     const agreement = agreementId.toLowerCase(),
