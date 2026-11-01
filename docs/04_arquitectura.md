@@ -83,7 +83,7 @@ El frontend es una SPA con React 19, TypeScript y Vite. Utiliza React Router par
 
 **Justificación:** CSS Modules evita colisiones de estilos; las variables CSS permiten configurar la apariencia municipal sin duplicar componentes. Radix proporciona comportamientos de teclado y foco, y Motion permite respetar movimiento reducido. La aplicación mantiene la responsabilidad sobre etiquetas, contraste y accesibilidad de los flujos. [Radix](https://www.radix-ui.com/primitives/docs/overview/accessibility), [Motion](https://motion.dev/docs/react-accessibility).
 
-React Router y TanStack Query cubren funciones que Vite no incluye. La integración continua ejecuta por separado la comprobación de tipos, ya que Vite transpila TypeScript sin comprobarlo. [React](https://react.dev/learn/build-a-react-app-from-scratch), [Vite](https://vite.dev/guide/features.html#typescript).
+React Router y TanStack Query cubren funciones que Vite no incluye. Los comandos locales comprueban los tipos por separado, ya que Vite transpila TypeScript sin comprobarlo. La plantilla de CI sigue inactiva y cubre backend; no existe todavía automatización frontend activa. [React](https://react.dev/learn/build-a-react-app-from-scratch), [Vite](https://vite.dev/guide/features.html#typescript).
 
 La aplicación web reside en `web/`, con compilación y dependencias separadas del backend. Los componentes, estilos, helpers y fuentes son archivos locales; no dependen de otra biblioteca privada ni de su directorio de desarrollo. Las pantallas se cargan por ruta.
 
@@ -105,11 +105,11 @@ La [apariencia municipal](02_modelo_dominio.md#apariencia-y-preferencias) utiliz
 
 ## ADR-10 Terraform y portabilidad
 
-Terraform provisiona la infraestructura mediante módulos específicos del proveedor y configuración por entorno. La aplicación se distribuye en imágenes OCI y PostgreSQL permite exportar y restaurar sus datos. Las versiones de Terraform y sus proveedores quedan fijadas.
+Se prevé Terraform para provisionar infraestructura mediante módulos específicos del proveedor y configuración por entorno; no está implementado en este repositorio. La aplicación se distribuye en imágenes OCI y PostgreSQL permite exportar y restaurar sus datos. Al implementarlo deberán fijarse las versiones de Terraform y sus proveedores.
 
 **Justificación:** los cambios de infraestructura son reproducibles y revisables. Cambiar de proveedor exige adaptar sus recursos; Terraform no proporciona una abstracción multicloud automática. [Composición de módulos](https://developer.hashicorp.com/terraform/language/modules/develop/composition#multi-cloud-abstractions).
 
-El estado y los planes se mantienen fuera del repositorio, con acceso restringido, bloqueo y recuperación. Marcar un valor como `sensitive` no lo elimina del estado. Las licencias de Terraform y sus proveedores se revisan por separado de la licencia del producto. [Estado](https://developer.hashicorp.com/terraform/language/state/backends), [datos sensibles](https://developer.hashicorp.com/terraform/language/manage-sensitive-data), [licencia](https://github.com/hashicorp/terraform/blob/main/LICENSE).
+El estado y los planes deberán mantenerse fuera del repositorio, con acceso restringido, bloqueo y recuperación. Marcar un valor como `sensitive` no lo elimina del estado. Las licencias de Terraform y sus proveedores se revisan por separado de la licencia del producto. [Estado](https://developer.hashicorp.com/terraform/language/state/backends), [datos sensibles](https://developer.hashicorp.com/terraform/language/manage-sensitive-data), [licencia](https://github.com/hashicorp/terraform/blob/main/LICENSE).
 
 La implantación requiere ejecución de trabajos, copias, restauración y monitorización. La topología y el proveedor se determinan en [PD-OPERACION](06_decisiones_y_validacion.md#decisiones-pendientes); Kubernetes y multizona no son requisitos del sistema.
 
