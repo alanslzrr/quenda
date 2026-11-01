@@ -1,20 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, Clock3, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
-import { ApiError, type Appearance, api } from "../../app/api";
+import { ApiError, api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
-import { useMunicipalTheme } from "../../app/theme-provider";
-import { BookingFrame } from "../../ui/blocks/multi-step-form/booking-frame";
+import { Alert } from "../../ui/alert/alert";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import {
-  durationLabel,
-  localTimeLabel,
-  municipalToday,
-} from "../catalog/dates";
-import type { Unit } from "../catalog/unit";
-import booking from "../catalog/unit.module.css";
+  BackLink,
+  BookingSummary,
+  bookingQuery,
+  RulesText,
+} from "../catalog/booking";
+import booking from "../catalog/booking.module.css";
+import { durationLabel, intervalLabel, municipalToday } from "../catalog/dates";
+import { BookingSteps, unitPath } from "../catalog/journey";
+import { useMunicipality, usePublicAppearance } from "../catalog/municipality";
+import { usePublicUnit } from "../catalog/unit";
 import type { CommandPolicy } from "./commands";
 import {
   dateTime,
@@ -22,6 +24,7 @@ import {
   reservationPath,
   useReservation,
 } from "./shared";
+
 export function Checkout() {
   const { tenantId = "", unitId: routeUnit, reservationId = "" } = useParams();
   const [search] = useSearchParams();
@@ -36,26 +39,10 @@ export function Checkout() {
     const timer = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(timer);
   }, []);
-  const municipality = useQuery({
-    queryKey: ["public", tenantId, "municipality"],
-    queryFn: ({ signal }) =>
-      api<{ name: string }>(
-        `/api/public/municipalities/${tenantId}`,
-        { signal },
-        locale,
-      ),
-  });
+  const municipality = useMunicipality(tenantId);
+  usePublicAppearance(tenantId);
   const original = useReservation(tenantId, reservationId);
-  const unit = useQuery({
-    queryKey: ["public", tenantId, unitId, "checkout", locale],
-    queryFn: ({ signal }) =>
-      api<Unit>(
-        `/api/public/municipalities/${tenantId}/units/${unitId}`,
-        { signal },
-        locale,
-      ),
-    staleTime: 0,
-  });
+  const unit = usePublicUnit(tenantId, unitId);
   const rules = useQuery({
     queryKey: ["public", tenantId, unitId, "rules", locale],
     queryFn: ({ signal }) =>
@@ -76,16 +63,6 @@ export function Checkout() {
       ),
     staleTime: 0,
   });
-  const appearance = useQuery({
-    queryKey: ["public", tenantId, "appearance"],
-    queryFn: ({ signal }) =>
-      api<Appearance>(
-        `/api/public/municipalities/${tenantId}/appearance`,
-        { signal },
-        locale,
-      ),
-  });
-  useMunicipalTheme(appearance.data);
   if (
     unit.isPending ||
     rules.isPending ||
@@ -109,28 +86,41 @@ export function Checkout() {
         retry={() => void refresh()}
       />
     );
-  const now =
-    Date.parse(policy.data.serverTime) +
-    Math.max(0, Date.now() - policy.dataUpdatedAt);
+  const minutes = (Date.parse(endsAt) - Date.parse(startsAt)) / 60000;
+  const query = bookingQuery({
+    date: Number.isFinite(Date.parse(startsAt))
+      ? municipalToday(unit.data.timeZone, new Date(startsAt))
+      : undefined,
+    duration: minutes > 0 ? minutes : undefined,
+  });
+  const back = reservationId
+    ? `/reservas/${tenantId}/${reservationId}/modificar`
+    : unitPath(tenantId, unitId, query);
   if (
     !Number.isFinite(Date.parse(startsAt)) ||
     !Number.isFinite(Date.parse(endsAt)) ||
-    Date.parse(endsAt) <= Date.parse(startsAt)
+    minutes <= 0
   )
     return (
-      <p>
-        {t(
-          "Selecciona una franja válida en el calendario.",
-          "Selecciona unha franxa válida no calendario.",
-        )}
-      </p>
+      <div className={booking.page}>
+        <BackLink to={back}>{t("Elegir horario", "Escoller horario")}</BackLink>
+        <div className={booking.empty}>
+          <p>
+            {t(
+              "Este horario no es válido. Elige otro en la lista de horarios libres.",
+              "Este horario non é válido. Escolle outro na lista de horarios libres.",
+            )}
+          </p>
+        </div>
+      </div>
     );
-  const nonCancellable =
-    now > Date.parse(startsAt) - unit.data.cancellationMinutes * 60000;
-  const deadline = new Date(
-    Date.parse(startsAt) - unit.data.cancellationMinutes * 60000,
-  ).toISOString();
-  const base = `/api/municipalities/${tenantId}/reservations`;
+  const now =
+    Date.parse(policy.data.serverTime) +
+    Math.max(0, Date.now() - policy.dataUpdatedAt);
+  const window = unit.data.cancellationMinutes * 60000;
+  const nonCancellable = now > Date.parse(startsAt) - window;
+  const deadline = new Date(Date.parse(startsAt) - window).toISOString();
+  const facility = unit.data.facilityName;
   const body = {
     ...(reservationId ? { expectedRevision: original.data?.revision } : {}),
     unitId,
@@ -142,129 +132,165 @@ export function Checkout() {
       nonCancellable,
     },
   };
+  const action = reservationId
+    ? t("Confirmar el cambio", "Confirmar o cambio")
+    : t("Confirmar reserva", "Confirmar reserva");
+  const slot = intervalLabel(startsAt, endsAt, unit.data.timeZone, locale);
   return (
     <div className={booking.page}>
-      <Link
-        className={booking.back}
-        to={
-          reservationId
-            ? `/reservas/${tenantId}/${reservationId}/modificar`
-            : `/municipios/${tenantId}/unidades/${unitId}?fecha=${municipalToday(unit.data.timeZone, new Date(startsAt))}&duracion=${(Date.parse(endsAt) - Date.parse(startsAt)) / 60000}`
-        }
-      >
-        {t("Elegir otra franja", "Escoller outra franxa")}
-      </Link>
-      <header className={booking.header}>
-        <div className={booking.unitIcon}>
-          <ShieldCheck size={22} strokeWidth={1.5} aria-hidden="true" />
-        </div>
-        <div>
-          <p className={booking.eyebrow}>{unit.data.name}</p>
-          <h1>
-            {t(
-              reservationId ? "Confirmar modificación" : "Confirmar reserva",
-              reservationId ? "Confirmar modificación" : "Confirmar reserva",
-            )}
-          </h1>
-        </div>
+      {reservationId ? (
+        <BackLink to={back}>{t("Cambiar horario", "Cambiar horario")}</BackLink>
+      ) : (
+        <BookingSteps
+          current={4}
+          tenantId={tenantId}
+          municipality={municipality.data?.name}
+          facility={{ id: unit.data.facilityId, name: facility }}
+          unit={unit.data}
+          slot={slot}
+          query={query}
+        />
+      )}
+      <header className={booking.intro}>
+        <h1 className={booking.title}>
+          {reservationId
+            ? t("Revisa el cambio", "Revisa o cambio")
+            : t("Revisa tu reserva", "Revisa a túa reserva")}
+        </h1>
+        {!reservationId && (
+          <>
+            <p className={booking.lead}>
+              {t(
+                "Comprueba los datos, lee las condiciones y confirma. Hasta entonces no hay nada reservado.",
+                "Comproba os datos, le as condicións e confirma. Ata entón non hai nada reservado.",
+              )}
+            </p>
+            <div className={booking.introActions}>
+              <Link className={booking.textLink} to={back}>
+                {t("Cambiar día u hora", "Cambiar día ou hora")}
+              </Link>
+            </div>
+          </>
+        )}
       </header>
-      <BookingFrame
-        index={1}
-        labels={[
-          t("Fecha y hora", "Data e hora"),
-          t("Revisar y confirmar", "Revisar e confirmar"),
-        ]}
-        progressLabel={t("Pasos de la reserva", "Pasos da reserva")}
-      >
-        <div className={booking.checkout}>
-          <aside
-            className={booking.summary}
-            aria-label={t("Resumen de la reserva", "Resumo da reserva")}
-          >
-            <p className={booking.eyebrow}>{municipality.data?.name}</p>
-            <h2>{unit.data.name}</h2>
-            <dl>
-              <div>
-                <dt>
-                  <CalendarDays size={16} aria-hidden="true" />
-                  {t("Fecha", "Data")}
-                </dt>
-                <dd>
-                  {new Intl.DateTimeFormat(locale, {
-                    timeZone: unit.data.timeZone,
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  }).format(new Date(startsAt))}
-                </dd>
-              </div>
-              <div>
-                <dt>
-                  <Clock3 size={16} aria-hidden="true" />
-                  {t("Horario", "Horario")}
-                </dt>
-                <dd>
-                  {localTimeLabel(startsAt, unit.data.timeZone, locale)} –{" "}
-                  {localTimeLabel(endsAt, unit.data.timeZone, locale)}
-                  <small>
-                    {durationLabel(
-                      (Date.parse(endsAt) - Date.parse(startsAt)) / 60000,
-                    )}
-                    {municipalToday(unit.data.timeZone, new Date(startsAt)) !==
-                      municipalToday(unit.data.timeZone, new Date(endsAt)) &&
-                      t(
-                        " · Termina al día siguiente",
-                        " · Remata ao día seguinte",
-                      )}
-                  </small>
-                </dd>
-              </div>
-            </dl>
-          </aside>
-          <section className={booking.review}>
-            {failure !== undefined && <Failure error={failure} />}
-            <div
-              className={nonCancellable ? booking.warning : booking.conditions}
+      <div className={booking.split}>
+        <BookingSummary
+          context={[municipality.data?.name, facility]
+            .filter(Boolean)
+            .join(" · ")}
+          unitName={unit.data.name}
+          startsAt={startsAt}
+          endsAt={endsAt}
+          timeZone={unit.data.timeZone}
+        >
+          {original.data && (
+            <p className={booking.summaryAction}>
+              {t("Sustituye a", "Substitúe a")}{" "}
+              {intervalLabel(
+                original.data.startsAt,
+                original.data.endsAt,
+                original.data.timeZone,
+                locale,
+              )}
+            </p>
+          )}
+        </BookingSummary>
+        <div className={booking.main}>
+          {!reservationId &&
+          failure instanceof ApiError &&
+          failure.code === "CONFLICT" ? (
+            <Alert
+              tone="danger"
+              title={t(
+                "Este horario ya no está libre",
+                "Este horario xa non está libre",
+              )}
             >
-              <h2>
-                {nonCancellable && (
-                  <TriangleAlert size={17} aria-hidden="true" />
-                )}
-                {nonCancellable
-                  ? t("Sin cancelación ordinaria", "Sen cancelación ordinaria")
-                  : t(
-                      "Condiciones de cancelación",
-                      "Condicións de cancelación",
-                    )}
-              </h2>
               <p>
                 {t(
-                  "Cancelación ordinaria hasta:",
-                  "Cancelación ordinaria ata:",
+                  "Se ha ocupado mientras revisabas. No se ha creado ninguna reserva; elige otra hora.",
+                  "Ocupouse mentres revisabas. Non se creou ningunha reserva; escolle outra hora.",
+                )}
+              </p>
+              <p>
+                <Link className={booking.textLink} to={back}>
+                  {t("Elegir otra hora", "Escoller outra hora")}
+                </Link>
+              </p>
+            </Alert>
+          ) : (
+            failure !== undefined && <Failure error={failure} />
+          )}
+          {nonCancellable && (
+            <Alert
+              tone="warning"
+              title={t(
+                "Esta reserva no se podrá cancelar ni cambiar",
+                "Esta reserva non se poderá cancelar nin cambiar",
+              )}
+            >
+              {t(
+                `Empieza dentro de las ${durationLabel(unit.data.cancellationMinutes)} previas al inicio, cuando ya no se admiten cancelaciones ni cambios ordinarios.`,
+                `Comeza dentro das ${durationLabel(unit.data.cancellationMinutes)} previas ao inicio, cando xa non se admiten cancelacións nin cambios ordinarios.`,
+              )}
+            </Alert>
+          )}
+          <section className={booking.block}>
+            <h2>{t("Cancelación", "Cancelación")}</h2>
+            {!nonCancellable && (
+              <p>
+                {t(
+                  "Puedes cancelar o cambiar la reserva hasta el",
+                  "Podes cancelar ou cambiar a reserva ata o",
                 )}{" "}
-                {dateTime(deadline, unit.data.timeZone, locale)}.
+                <strong>
+                  {dateTime(deadline, unit.data.timeZone, locale)}
+                </strong>
+                .
               </p>
-              <p>
+            )}
+            <ul className={booking.points}>
+              {!nonCancellable && (
+                <li>
+                  {t(
+                    "Después no podrás cancelarla ni cambiarla para evitar ese plazo.",
+                    "Despois non poderás cancelala nin cambiala para evitar ese prazo.",
+                  )}
+                </li>
+              )}
+              <li>
                 {t(
-                  "Dentro del plazo restringido no puedes cancelar ni modificar para eludirlo. El municipio puede valorar una cancelación excepcional. No se generan penalizaciones automáticas.",
-                  "Dentro do prazo restrinxido non podes cancelar nin modificar para evitalo. O municipio pode valorar unha cancelación excepcional. Non se xeran penalizacións automáticas.",
+                  "El ayuntamiento puede valorar una cancelación excepcional.",
+                  "O concello pode valorar unha cancelación excepcional.",
                 )}
-              </p>
-              <p>
+              </li>
+              <li>
                 {t(
-                  "La titularidad y la responsabilidad no se transfieren. Cambiar participantes solo está permitido cuando lo permitan las normas municipales.",
-                  "A titularidade e a responsabilidade non se transfiren. Cambiar participantes só está permitido cando o permitan as normas municipais.",
+                  "La reserva es personal y no se transfiere. Los cambios de participantes dependen de las normas municipales.",
+                  "A reserva é persoal e non se transfire. Os cambios de participantes dependen das normas municipais.",
                 )}
-              </p>
-            </div>
-            <div className={booking.rules}>
-              <h2>
-                {t("Normas de uso", "Normas de uso")} ·{" "}
-                {t("versión", "versión")} {rules.data.version}
-              </h2>
-              <p style={{ whiteSpace: "pre-wrap" }}>{rules.data.text}</p>
-            </div>
+              </li>
+              <li>
+                {t(
+                  "No hay pagos ni penalizaciones automáticas.",
+                  "Non hai pagamentos nin penalizacións automáticas.",
+                )}
+              </li>
+            </ul>
+          </section>
+          <section className={booking.block} aria-labelledby="rules-heading">
+            <h2 id="rules-heading">{t("Normas de uso", "Normas de uso")}</h2>
+            <p>
+              {t(
+                "Léelas antes de confirmar. Quedará registrada la versión que aceptes.",
+                "Leas antes de confirmar. Quedará rexistrada a versión que aceptes.",
+              )}
+            </p>
+            <RulesText label={t("Texto de las normas", "Texto das normas")}>
+              {rules.data.text}
+            </RulesText>
+          </section>
+          <div className={booking.confirm}>
             {rules.data.version !== unit.data.usageRulesVersion ? (
               <Failure
                 error={
@@ -272,8 +298,8 @@ export function Checkout() {
                     0,
                     "CONDITIONS_CHANGED",
                     t(
-                      "Las condiciones han cambiado. Actualiza y revisa las normas.",
-                      "As condicións cambiaron. Actualiza e revisa as normas.",
+                      "Las normas han cambiado mientras revisabas. Actualiza y vuelve a leerlas.",
+                      "As normas cambiaron mentres revisabas. Actualiza e volve lelas.",
                     ),
                   )
                 }
@@ -285,16 +311,13 @@ export function Checkout() {
                 path={
                   reservationId
                     ? `${reservationPath(tenantId, reservationId)}/modify`
-                    : base
+                    : `/api/municipalities/${tenantId}/reservations`
                 }
                 body={body}
-                label={t(
-                  reservationId
-                    ? "Confirmar modificación"
-                    : "Confirmar reserva",
-                  reservationId
-                    ? "Confirmar modificación"
-                    : "Confirmar reserva",
+                label={action}
+                note={t(
+                  "Al confirmar comprobamos de nuevo que el horario sigue libre.",
+                  "Ao confirmar comprobamos de novo que o horario segue libre.",
                 )}
                 onFailure={async (error) => {
                   if (
@@ -310,8 +333,8 @@ export function Checkout() {
                   required
                   name="acceptance"
                   label={t(
-                    "Acepto estas normas y las condiciones de cancelación.",
-                    "Acepto estas normas e as condicións de cancelación.",
+                    "He leído y acepto las normas de uso y las condiciones de cancelación.",
+                    "Lin e acepto as normas de uso e as condicións de cancelación.",
                   )}
                 />
                 {nonCancellable && (
@@ -319,16 +342,16 @@ export function Checkout() {
                     required
                     name="nonCancellable"
                     label={t(
-                      "Acepto que esta reserva no permite cancelación ni modificación ordinaria por su proximidad al inicio.",
-                      "Acepto que esta reserva non permite cancelación nin modificación ordinaria pola súa proximidade ao inicio.",
+                      "Acepto que esta reserva no se podrá cancelar ni cambiar.",
+                      "Acepto que esta reserva non se poderá cancelar nin cambiar.",
                     )}
                   />
                 )}
               </ReservationAction>
             )}
-          </section>
+          </div>
         </div>
-      </BookingFrame>
+      </div>
     </div>
   );
 }
