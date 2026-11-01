@@ -57,7 +57,11 @@ await withDatabase(async ({ auth, domain, migration, worker }) => {
       Object.defineProperty(request, "ip", { value: client });
   });
   const municipalFixtures = [];
-  for (let index = 1; index <= 10; index++)
+  // Separate accounts keep repeated editor regressions within the real per-account limits.
+  for (const index of [
+    ...Array.from({ length: 10 }, (_, i) => i + 1),
+    ...Array.from({ length: 10 }, (_, i) => i + 35),
+  ])
     municipalFixtures.push(
       await seedMunicipalBrowser(app, auth, domain, migration, index),
     );
