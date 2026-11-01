@@ -1,17 +1,27 @@
+import { retryAfterDeadline } from "./retry-after.ts";
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly requestId?: string;
+  readonly retryAt?: number;
   constructor(
     status: number,
     code: string,
     message: string,
     requestId?: string,
+    retryAt?: number,
   ) {
     super(message);
     this.status = status;
     this.code = code;
     this.requestId = requestId;
+    this.retryAt =
+      status === 429
+        ? (retryAt ?? retryAfterDeadline(null))
+        : status === 503
+          ? retryAt
+          : undefined;
   }
 }
 export async function api<T>(
@@ -33,17 +43,37 @@ export async function api<T>(
     cache: "no-store",
     redirect: "error",
   });
+  const retryAt =
+    response.status === 429 ||
+    (response.status === 503 && response.headers.has("retry-after"))
+      ? retryAfterDeadline(
+          response.headers.get("retry-after"),
+          Date.now(),
+          response.headers.get("date"),
+        )
+      : undefined;
   if (response.status === 204) return undefined as T;
-  const data = await response.json();
+  const data = await response.json().catch((error: unknown) => {
+    // A proxy can reject the request with HTML rather than our JSON envelope.
+    // Preserve the cooldown even then; never replay a mutation automatically.
+    if (retryAt !== undefined) return undefined;
+    throw error;
+  });
   if (!response.ok)
     throw new ApiError(
       response.status,
-      data.error?.code ?? "REQUEST_FAILED",
-      data.error?.message ??
-        (locale === "gl"
-          ? "Non se puido completar a solicitude."
-          : "No se pudo completar la solicitud."),
-      data.requestId,
+      data?.error?.code ??
+        (response.status === 429 ? "RATE_LIMITED" : "REQUEST_FAILED"),
+      data?.error?.message ??
+        (response.status === 429
+          ? locale === "gl"
+            ? "Demasiadas solicitudes. Agarda antes de repetir."
+            : "Demasiadas solicitudes. Espera antes de repetir."
+          : locale === "gl"
+            ? "Non se puido completar a solicitude."
+            : "No se pudo completar la solicitud."),
+      data?.requestId,
+      retryAt,
     );
   return data as T;
 }
