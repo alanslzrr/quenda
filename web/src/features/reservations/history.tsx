@@ -1,127 +1,143 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { CalendarPlus } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
-import { api, type Municipality, type Page } from "../../app/api";
+import { api, type Page } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
-import styles from "../../app/layout.module.css";
+import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
+import { Badge } from "../../ui/badge/badge";
 import { Button } from "../../ui/button/button";
 import { Select } from "../../ui/select/select";
 import { PageTitle } from "../account/shared";
-import {
-  detailPath,
-  PendingLink,
-  type Reservation,
-  ReservationSummary,
-} from "./shared";
-export function ReservationHistory() {
-  useMunicipalTheme(undefined);
+import { endsNextDay, intervalLabel } from "../catalog/dates";
+import { useBookingEntry } from "../catalog/journey";
+import styles from "./reservations.module.css";
+import { detailPath, PendingLink, type Reservation } from "./shared";
+
+type HistoryItem = Reservation & { municipality: string; unitName: string };
+
+function useHistory(tenant: string) {
   const { account } = useSession();
-  const { locale, t } = usePreferences();
-  const [tenant, setTenant] = useState("all");
-  const municipalities = useInfiniteQuery({
-    queryKey: ["public", "municipalities", locale],
-    initialPageParam: null as string | null,
-    queryFn: ({ pageParam, signal }) =>
-      api<Page<Municipality>>(
-        `/api/public/municipalities${pageParam ? `?after=${encodeURIComponent(pageParam)}` : ""}`,
-        { signal },
-        locale,
-      ),
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
-  });
-  const query = useInfiniteQuery({
+  const { locale } = usePreferences();
+  return useInfiniteQuery({
     queryKey: ["private", account?.accountId, "reservations", tenant, locale],
     initialPageParam: null as string | null,
     queryFn: ({ pageParam, signal }) => {
       const params = new URLSearchParams();
       if (tenant !== "all") params.set("tenantId", tenant);
       if (pageParam) params.set("after", pageParam);
-      return api<
-        Page<Reservation & { municipality: string; unitName: string }>
-      >(`/api/me/reservations?${params}`, { signal }, locale);
+      return api<Page<HistoryItem>>(
+        `/api/me/reservations?${params}`,
+        { signal },
+        locale,
+      );
     },
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
+}
+
+export function ReservationHistory() {
+  useMunicipalTheme(undefined);
+  const { locale, t } = usePreferences();
+  const [tenant, setTenant] = useState("all");
+  const entry = useBookingEntry();
+  const all = useHistory("all");
+  const query = useHistory(tenant);
+  const municipalities = [
+    ...new Map(
+      (all.data?.pages.flatMap((page) => page.items) ?? []).map((item) => [
+        item.tenantId,
+        item.municipality,
+      ]),
+    ),
+  ].sort((a, b) => a[1].localeCompare(b[1], locale));
+  const items = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const status = (value: Reservation["status"]) =>
+    value === "CONFIRMADA"
+      ? t("Confirmada", "Confirmada")
+      : value === "CANCELADA"
+        ? t("Cancelada", "Cancelada")
+        : t("Finalizada", "Finalizada");
+  const newBooking = (
+    <LinkButton to={entry} variant="primary">
+      <CalendarPlus size={16} aria-hidden="true" />
+      {t("Nueva reserva", "Nova reserva")}
+    </LinkButton>
+  );
   return (
     <>
-      <PageTitle title={t("Mis reservas", "As miñas reservas")} />
+      <div className={styles.heading}>
+        <PageTitle title={t("Mis reservas", "As miñas reservas")} />
+        {!!items.length && newBooking}
+      </div>
       <PendingLink />
-      <section className={styles.section}>
-        <Select
-          label={t("Municipio", "Municipio")}
-          value={tenant}
-          onValueChange={setTenant}
-          options={[
-            {
-              value: "all",
-              label: t("Todos los municipios", "Todos os municipios"),
-            },
-            ...(municipalities.data?.pages
-              .flatMap((p) => p.items)
-              .map((m) => ({ value: m.id, label: m.name })) ?? []),
-          ]}
-        />
-        {municipalities.isError && (
-          <Failure
-            error={municipalities.error}
-            retry={() => void municipalities.refetch()}
+      {municipalities.length > 1 && (
+        <div className={styles.toolbar}>
+          <Select
+            label={t("Municipio", "Municipio")}
+            value={tenant}
+            onValueChange={setTenant}
+            options={[
+              {
+                value: "all",
+                label: t("Todos los municipios", "Todos os municipios"),
+              },
+              ...municipalities.map(([value, label]) => ({ value, label })),
+            ]}
           />
-        )}
-        {municipalities.hasNextPage && (
-          <Button
-            variant="secondary"
-            loading={municipalities.isFetchingNextPage}
-            onClick={() => void municipalities.fetchNextPage()}
-          >
-            {t("Cargar más municipios", "Cargar máis municipios")}
-          </Button>
-        )}
-      </section>
+        </div>
+      )}
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
         <Failure error={query.error} retry={() => void query.refetch()} />
+      ) : !items.length ? (
+        <div className={styles.empty}>
+          <p>{t("Todavía no tienes reservas.", "Aínda non tes reservas.")}</p>
+          <span>
+            {tenant === "all"
+              ? t(
+                  "Elige municipio, instalación, espacio y hora. La reserva aparecerá aquí.",
+                  "Escolle municipio, instalación, espazo e hora. A reserva aparecerá aquí.",
+                )
+              : t(
+                  "No tienes reservas en este municipio.",
+                  "Non tes reservas neste municipio.",
+                )}
+          </span>
+          <div className={styles.actions}>{newBooking}</div>
+        </div>
       ) : (
         <>
-          <ul className={styles.list}>
-            {query.data.pages
-              .flatMap((p) => p.items)
-              .map((r) => (
-                <li key={`${r.tenantId}:${r.id}`} className={styles.listItem}>
-                  <Link
-                    className={styles.listLink}
-                    to={detailPath(r.tenantId, r.id)}
+          <ul className={styles.rows}>
+            {items.map((r) => (
+              <li key={`${r.tenantId}:${r.id}`}>
+                <Link className={styles.row} to={detailPath(r.tenantId, r.id)}>
+                  <span className={styles.rowText}>
+                    <span className={styles.rowTitle}>{r.unitName}</span>
+                    <span className={styles.rowMeta}>
+                      {r.municipality} ·{" "}
+                      {intervalLabel(r.startsAt, r.endsAt, r.timeZone, locale)}
+                      {endsNextDay(r.startsAt, r.endsAt, r.timeZone) &&
+                        ` (${t("termina al día siguiente", "remata ao día seguinte")})`}
+                    </span>
+                  </span>
+                  <Badge
+                    size="sm"
+                    tone={r.status === "CONFIRMADA" ? "success" : "neutral"}
                   >
-                    <div>
-                      <span className={styles.listTitle}>
-                        {r.unitName} · {r.municipality}
-                      </span>
-                      <ReservationSummary reservation={r} />
-                      <span className={styles.listMeta}>
-                        {r.status === "CONFIRMADA"
-                          ? t("Confirmada", "Confirmada")
-                          : r.status === "CANCELADA"
-                            ? t("Cancelada", "Cancelada")
-                            : t("Finalizada", "Finalizada")}
-                      </span>
-                    </div>
-                  </Link>
-                </li>
-              ))}
+                    {status(r.status)}
+                  </Badge>
+                </Link>
+              </li>
+            ))}
           </ul>
-          {query.data.pages[0].items.length === 0 && (
-            <p>
-              {t(
-                "No hay reservas en este ámbito.",
-                "Non hai reservas neste ámbito.",
-              )}
-            </p>
-          )}
           {query.hasNextPage && (
             <Button
+              className={styles.more}
               variant="secondary"
               loading={query.isFetchingNextPage}
               onClick={() => void query.fetchNextPage()}
@@ -134,6 +150,7 @@ export function ReservationHistory() {
     </>
   );
 }
+
 interface Notice {
   eventId: string;
   tenantId: string;
@@ -161,56 +178,59 @@ export function Notices() {
       ),
     getNextPageParam: (p) => p.nextCursor ?? undefined,
   });
+  const items = query.data?.pages.flatMap((p) => p.items) ?? [];
   return (
     <>
       <PageTitle title={t("Avisos", "Avisos")}>
         {t(
-          "Cambios registrados en tus reservas. Consulta el detalle para ver su estado actual.",
-          "Cambios rexistrados nas túas reservas. Consulta o detalle para ver o seu estado actual.",
+          "Cambios en tus reservas. Abre cada aviso para ver el estado actual.",
+          "Cambios nas túas reservas. Abre cada aviso para ver o estado actual.",
         )}
       </PageTitle>
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
         <Failure error={query.error} retry={() => void query.refetch()} />
+      ) : !items.length ? (
+        <div className={styles.empty}>
+          <p>{t("No tienes avisos.", "Non tes avisos.")}</p>
+        </div>
       ) : (
         <>
-          <ul className={styles.list}>
-            {query.data.pages
-              .flatMap((p) => p.items)
-              .map((n) => (
-                <li key={n.eventId} className={styles.listItem}>
-                  <Link
-                    className={styles.listLink}
-                    to={detailPath(n.tenantId, n.reservationId)}
-                  >
-                    <div>
-                      <span className={styles.listTitle}>
-                        {n.kind === "CONFIRMADA"
-                          ? t("Reserva confirmada", "Reserva confirmada")
-                          : n.kind === "MODIFICADA"
-                            ? t("Reserva modificada", "Reserva modificada")
-                            : t("Reserva cancelada", "Reserva cancelada")}
-                      </span>
-                      <ReservationSummary reservation={n} />
-                      {n.pendingUsageRulesVersion !== null && (
-                        <p>
-                          {t(
-                            "Este cambio requiere revisar las normas.",
-                            "Este cambio require revisar as normas.",
-                          )}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                </li>
-              ))}
+          <ul className={styles.rows}>
+            {items.map((n) => (
+              <li key={n.eventId}>
+                <Link
+                  className={styles.row}
+                  to={detailPath(n.tenantId, n.reservationId)}
+                >
+                  <span className={styles.rowText}>
+                    <span className={styles.rowTitle}>
+                      {n.kind === "CONFIRMADA"
+                        ? t("Reserva confirmada", "Reserva confirmada")
+                        : n.kind === "MODIFICADA"
+                          ? t("Reserva modificada", "Reserva modificada")
+                          : t("Reserva cancelada", "Reserva cancelada")}
+                    </span>
+                    <span className={styles.rowMeta}>
+                      {intervalLabel(n.startsAt, n.endsAt, n.timeZone, locale)}
+                    </span>
+                  </span>
+                  {n.pendingUsageRulesVersion !== null ? (
+                    <Badge size="sm" tone="warning">
+                      {t("Revisar normas", "Revisar normas")}
+                    </Badge>
+                  ) : (
+                    <span />
+                  )}
+                </Link>
+              </li>
+            ))}
           </ul>
-          {query.data.pages[0].items.length === 0 && (
-            <p>{t("No hay avisos.", "Non hai avisos.")}</p>
-          )}
           {query.hasNextPage && (
             <Button
+              className={styles.more}
+              variant="secondary"
               loading={query.isFetchingNextPage}
               onClick={() => void query.fetchNextPage()}
             >
