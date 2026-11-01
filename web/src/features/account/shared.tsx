@@ -14,16 +14,18 @@ import { api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
+import { discardEditor, EditorRecovery } from "../../app/read-recovery";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { SettingsLayout } from "../../ui/blocks/settings-page/settings-layout";
 import { PasswordField } from "../../ui/password-field/password-field";
 
 export function RequireAccount() {
-  const { account, loading, error } = useSession();
+  const { account, loading, error, refresh } = useSession();
   const location = useLocation();
   if (loading) return <Loading />;
-  if (error) return <Failure error={error} />;
+  if (error && (!account || discardEditor(error)))
+    return <Failure error={error} />;
   if (!account)
     return (
       <Navigate
@@ -31,7 +33,11 @@ export function RequireAccount() {
         replace
       />
     );
-  return <Outlet />;
+  return (
+    <EditorRecovery error={error} retry={() => void refresh().catch(() => {})}>
+      <Outlet key={account.accountId} />
+    </EditorRecovery>
+  );
 }
 export function AccountLayout() {
   const { account } = useSession();
