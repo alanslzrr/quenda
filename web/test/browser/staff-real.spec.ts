@@ -119,7 +119,11 @@ test("staff grants require acceptance and replace scope without an authority gap
       `/administracion/${f.administrator.tenant}/personal/gestores`,
     );
     await page
-      .getByRole("button", { name: f.recipient.accountId, exact: true })
+      .getByRole("button", {
+        name: new RegExp(
+          f.recipient.email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        ),
+      })
       .click();
     await page
       .getByRole("button", { name: /Sustituir permisos|Substituír permisos/ })
@@ -167,7 +171,11 @@ test("staff grants require acceptance and replace scope without an authority gap
     await page.reload();
     const accepted = page.getByRole("row").filter({ hasText: "Aceptada" });
     await accepted
-      .getByRole("button", { name: f.recipient.accountId, exact: true })
+      .getByRole("button", {
+        name: new RegExp(
+          f.recipient.email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        ),
+      })
       .click();
     const revoke = await formAction(
       page,
@@ -207,8 +215,9 @@ test("municipal administrator handover needs an accepted indefinite successor", 
     fullPage: true,
   });
   await page
+    .getByRole("table", { name: "Administradores", exact: true })
     .getByRole("button", {
-      name: new RegExp(`${f.administrator.accountId}.*(tu cuenta|a túa conta)`),
+      name: /tu cuenta|a túa conta/,
     })
     .click();
   await formAction(
@@ -237,10 +246,9 @@ test("municipal administrator handover needs an accepted indefinite successor", 
     await accept(recipient);
     await page.goto(base);
     await page
+      .getByRole("table", { name: "Administradores", exact: true })
       .getByRole("button", {
-        name: new RegExp(
-          `${f.administrator.accountId}.*(tu cuenta|a túa conta)`,
-        ),
+        name: /tu cuenta|a túa conta/,
       })
       .click();
     await formAction(
@@ -253,8 +261,12 @@ test("municipal administrator handover needs an accepted indefinite successor", 
       page.getByText(/Debe quedar (otro|outro) responsable habilitado/),
     ).toBeVisible();
     await page
-      .getByRole("button", { name: f.recipient.accountId, exact: true })
-      .first()
+      .getByRole("table", { name: "Administradores", exact: true })
+      .getByRole("button", {
+        name: new RegExp(
+          f.recipient.email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        ),
+      })
       .click();
     const indefinite = await formAction(
       page,
@@ -264,10 +276,9 @@ test("municipal administrator handover needs an accepted indefinite successor", 
     );
     await expect(indefinite).toHaveCount(0);
     await page
+      .getByRole("table", { name: "Administradores", exact: true })
       .getByRole("button", {
-        name: new RegExp(
-          `${f.administrator.accountId}.*(tu cuenta|a túa conta)`,
-        ),
+        name: /tu cuenta|a túa conta/,
       })
       .click();
     await formAction(
@@ -283,11 +294,14 @@ test("municipal administrator handover needs an accepted indefinite successor", 
       ),
     ).toBeVisible();
     await recipient.goto(base);
-    const row = recipient.getByRole("row").filter({
-      has: recipient.getByRole("button", {
-        name: new RegExp(`${f.recipient.accountId}.*tu cuenta`),
-      }),
-    });
+    const row = recipient
+      .getByRole("table", { name: "Administradores", exact: true })
+      .getByRole("row")
+      .filter({
+        has: recipient.getByRole("button", {
+          name: /tu cuenta|a túa conta/,
+        }),
+      });
     await expect(row).toContainText("Sin caducidad");
     await expect(row).toContainText("Habilitado");
   } finally {

@@ -8,6 +8,10 @@ const root = `/api/municipalities/${tenant}`;
 const invitation = {
   invitationId: "00000000-0000-4000-8000-000000000005",
   accountId: "destinatario",
+  accountLabel: {
+    name: "Persona destinataria",
+    email: "destinatario@demo.test",
+  },
   invitedBy: "responsable",
   expiresAt: "2090-01-01T00:00:00Z",
   roleExpiresAt: null,
@@ -211,7 +215,7 @@ test("MFA expiry keeps the invitation draft and does not retry the write", async
     page.getByRole("button", { name: "Quitar permiso 1", exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: /Verificar MFA/ })
+    .getByRole("button", { name: /Verificar acceso/ })
     .last()
     .click();
   await expect(
@@ -270,6 +274,10 @@ test("staff history paginates without claiming accepted grants are currently aut
                 ...invitation,
                 invitationId: unit,
                 accountId: "segunda",
+                accountLabel: {
+                  name: "Segunda persona",
+                  email: "segunda@demo.test",
+                },
                 acceptedAt: "2025-01-01T00:00:00Z",
               },
             ],
@@ -280,7 +288,7 @@ test("staff history paginates without claiming accepted grants are currently aut
   });
   await page.goto(`/administracion/${tenant}/personal`);
   await page.getByRole("button", { name: /Cargar más|Cargar máis/ }).click();
-  await page.getByRole("button", { name: "segunda", exact: true }).click();
+  await page.getByRole("button", { name: /Segunda persona/ }).click();
   await expect(
     page.getByText(
       /Revocar una invitación aceptada no retira|Revogar unha invitación aceptada non retira/,
@@ -301,7 +309,7 @@ test("staff history paginates without claiming accepted grants are currently aut
     path: `test-results/staff-history-${info.project.name}.png`,
     fullPage: true,
   });
-  await page.getByRole("button", { name: "destinatario", exact: true }).click();
+  await page.getByRole("button", { name: /Persona destinataria/ }).click();
   await page
     .getByRole("checkbox", {
       name: /Confirmo la revocación|Confirmo a revogación/,
