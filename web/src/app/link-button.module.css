@@ -1,0 +1,37 @@
+.link {
+  text-decoration: none;
+}
+.link:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+.link svg {
+  flex: none;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 0;
+  gap: var(--space-2);
+  border: 0;
+  border-radius: 0;
+  font: inherit;
+  white-space: normal;
+  text-align: start;
+  justify-content: flex-start;
+  color: var(--foreground);
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+.action:hover {
+  color: var(--text-secondary);
+}
+@media (pointer: coarse) {
+  .action {
+    min-height: 44px;
+  }
+}
