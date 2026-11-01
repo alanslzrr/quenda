@@ -1,13 +1,16 @@
 import { useState } from "react";
-import { Link, NavLink, useParams } from "react-router";
+import { NavLink, useParams } from "react-router";
 import { textField } from "../../app/action";
+import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
+import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
+import { AccountLabel } from "./account-label";
 import styles from "./municipal.module.css";
 import {
   Denied,
@@ -111,12 +114,7 @@ function Administrators() {
                     variant="ghost"
                     onClick={() => setSelected(r.accountId)}
                   >
-                    <span className={staffStyles.identifier}>
-                      {r.accountId}
-                    </span>
-                    {r.accountId === account?.accountId
-                      ? t(" (tu cuenta)", " (a túa conta)")
-                      : ""}
+                    <AccountLabel id={r.accountId} label={r.accountLabel} />
                   </Button>
                 ),
               },
@@ -150,8 +148,13 @@ function Administrators() {
         >
           <h3>
             {t("Administración de la cuenta", "Administración da conta")}:{" "}
-            {item.accountId}
+            <AccountLabel id={item.accountId} label={item.accountLabel} />
           </h3>
+          <Disclosure
+            title={t("Identificador técnico", "Identificador técnico")}
+          >
+            <code>{item.accountId}</code>
+          </Disclosure>
           <p>
             {t("Concedida", "Concedida")}:{" "}
             {new Date(item.grantedAt).toLocaleString(locale)}
@@ -273,9 +276,7 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
                       setReplacing(false);
                     }}
                   >
-                    <span className={staffStyles.identifier}>
-                      {r.accountId}
-                    </span>
+                    <AccountLabel id={r.accountId} label={r.accountLabel} />
                   </Button>
                 ),
               },
@@ -303,10 +304,12 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
             {t("Identificador", "Identificador")}: {item.invitationId}
           </p>
           <p>
-            {t("Destinatario", "Destinatario")}: {item.accountId}
+            {t("Destinatario", "Destinatario")}:{" "}
+            <AccountLabel id={item.accountId} label={item.accountLabel} />
           </p>
           <p>
-            {t("Emisor", "Emisor")}: {item.invitedBy}
+            {t("Emisor", "Emisor")}:{" "}
+            <AccountLabel id={item.invitedBy} label={item.invitedByLabel} />
           </p>
           <p>
             {item.roleExpiresAt

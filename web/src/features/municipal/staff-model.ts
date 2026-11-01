@@ -1,3 +1,4 @@
+import type { AccountLabelValue } from "./account-label";
 export const staffOperations = {
   CATALOG_CREATE: ["Crear catálogo", "Crear catálogo"],
   CATALOG_MANAGE: ["Gestionar catálogo", "Xestionar catálogo"],
@@ -35,6 +36,8 @@ export function validPermissions(permissions: Permission[]) {
 export type StaffInvitation = {
   invitationId: string;
   accountId: string;
+  accountLabel?: AccountLabelValue;
+  invitedByLabel?: AccountLabelValue;
   invitedBy: string;
   expiresAt: string;
   roleExpiresAt: string | null;
@@ -45,6 +48,8 @@ export type StaffInvitation = {
 };
 export type Administrator = {
   accountId: string;
+  accountLabel?: AccountLabelValue;
+  invitedByLabel?: AccountLabelValue;
   invitationId: string;
   grantedAt: string;
   expiresAt: string | null;
