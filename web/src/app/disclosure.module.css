@@ -1,0 +1,20 @@
+.trigger.trigger {
+  justify-content: flex-start;
+  padding-inline: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  white-space: normal;
+  text-align: start;
+}
+.trigger.trigger:hover:not(:disabled) {
+  background: transparent;
+  box-shadow: none;
+  color: var(--foreground);
+}
+.state {
+  color: var(--text-muted);
+  margin-inline-start: var(--space-2);
+  font-size: var(--text-xs);
+}
