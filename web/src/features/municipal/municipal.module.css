@@ -69,21 +69,6 @@
   min-width: 0;
   flex: 1 1 130px;
 }
-.preview {
-  padding: 1.5rem;
-  border: 1px solid var(--border-strong);
-  border-radius: 12px;
-  background: var(--background);
-  color: var(--foreground);
-  margin: 1.5rem 0;
-}
-.preview p {
-  color: var(--text-secondary);
-}
-.preview button {
-  background: var(--accent);
-  color: var(--accent-foreground);
-}
 .notice {
   padding: 1rem;
   border-left: 3px solid var(--accent);

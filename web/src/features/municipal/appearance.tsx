@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Appearance } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
+import layout from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
-import { defaultAppearance, themeVariables } from "../../app/theme";
+import { defaultAppearance } from "../../app/theme";
+import { useAppearancePreview } from "../../app/theme-provider";
 import { Button } from "../../ui/button/button";
 import { Select } from "../../ui/select/select";
-import styles from "./municipal.module.css";
 import {
   Denied,
   endpoint,
@@ -30,8 +31,8 @@ function AppearanceEditor() {
       <h1>{t("Apariencia", "Aparencia")}</h1>
       <p>
         {t(
-          "Solo se aplica a la interfaz pública del municipio. La administración mantiene el tema de Quenda.",
-          "Só se aplica á interface pública do municipio. A administración mantén o tema de Quenda.",
+          "La apariencia guardada se aplica a la interfaz pública del municipio. Puedes probarla temporalmente en toda esta aplicación sin cambiar tu tema personal.",
+          "A aparencia gardada aplícase á interface pública do municipio. Podes probala temporalmente en toda esta aplicación sen cambiar o teu tema persoal.",
         )}
       </p>
       {q.isPending ? (
@@ -43,6 +44,7 @@ function AppearanceEditor() {
           <>
             <AppearanceForm key={reset} initial={q.data} />
             <Button
+              type="button"
               variant="ghost"
               onClick={async () => {
                 const r = await q.refetch();
@@ -64,9 +66,9 @@ function AppearanceForm({ initial }: { initial: Appearance }) {
   const m = useMunicipality();
   const { t } = usePreferences();
   const [draft, setDraft] = useState(initial);
-  const [preview, setPreview] = useState<"light" | "dark">(
-    initial.defaultTheme,
-  );
+  const [preview, setPreview] = useState<"light" | "dark" | null>(null);
+  const previewTrigger = useRef<HTMLButtonElement>(null);
+  useAppearancePreview(draft, preview);
   const palettes = [
     { value: "neutral", label: t("Neutro", "Neutro") },
     { value: "blue", label: t("Azul", "Azul") },
@@ -78,6 +80,55 @@ function AppearanceForm({ initial }: { initial: Appearance }) {
   ];
   return (
     <>
+      <div className={layout.form}>
+        <Select
+          ref={previewTrigger}
+          label={t("Modo de vista previa", "Modo de vista previa")}
+          value={preview ?? "personal"}
+          options={[
+            {
+              value: "personal",
+              label: t(
+                "Sin vista previa · tema personal",
+                "Sen vista previa · tema persoal",
+              ),
+            },
+            ...modes,
+          ]}
+          onValueChange={(value) =>
+            setPreview(
+              value === "personal" ? null : (value as "light" | "dark"),
+            )
+          }
+        />
+        {preview ? (
+          <div role="status">
+            <p>
+              {t(
+                "Vista previa temporal en toda la aplicación. No cambia tu preferencia personal ni publica el borrador.",
+                "Vista previa temporal en toda a aplicación. Non cambia a túa preferencia persoal nin publica o borrador.",
+              )}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setPreview(null);
+                previewTrigger.current?.focus();
+              }}
+            >
+              {t("Salir de la vista previa", "Saír da vista previa")}
+            </Button>
+          </div>
+        ) : (
+          <p>
+            {t(
+              "Selecciona Claro u Oscuro para probar la apariencia en toda la aplicación.",
+              "Selecciona Claro ou Escuro para probar a aparencia en toda a aplicación.",
+            )}
+          </p>
+        )}
+      </div>
       <MunicipalForm
         path={`${endpoint(m.id)}/appearance`}
         method="PUT"
@@ -130,6 +181,7 @@ function AppearanceForm({ initial }: { initial: Appearance }) {
           )}
         </p>
         <Button
+          type="button"
           variant="secondary"
           onClick={() =>
             setDraft({ ...defaultAppearance, version: draft.version })
@@ -146,31 +198,7 @@ function AppearanceForm({ initial }: { initial: Appearance }) {
             "A vista previa e a restauración non se publican ata gardar.",
           )}
         </p>
-        <Select
-          placeholder={t("Selecciona una opción", "Selecciona unha opción")}
-          label={t("Modo de vista previa", "Modo de vista previa")}
-          value={preview}
-          options={modes}
-          onValueChange={(v) => setPreview(v as "light" | "dark")}
-        />
       </MunicipalForm>
-      <section
-        aria-label={t("Vista previa pública", "Vista previa pública")}
-        className={styles.preview}
-        style={themeVariables(preview, draft)}
-        data-lumen=""
-      >
-        <h2>{m.name}</h2>
-        <p>
-          {t(
-            "Consulta las instalaciones y elige una franja disponible.",
-            "Consulta as instalacións e escolle unha franxa dispoñible.",
-          )}
-        </p>
-        <Button type="button" aria-disabled="true">
-          {t("Consultar disponibilidad", "Consultar dispoñibilidade")}
-        </Button>
-      </section>
     </>
   );
 }
