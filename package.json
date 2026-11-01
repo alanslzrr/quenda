@@ -36,6 +36,8 @@
     "source:archive": "node scripts/source-archive.ts",
     "image:build": "node scripts/build-image.ts",
     "test:performance": "node test/performance/run.ts",
+    "demo:local": "node test/demo/server.ts",
+    "demo:code": "node test/demo/access.ts",
     "operator:recover": "node --env-file=.env.migration.local scripts/recover-operator.ts",
     "privacy:checkpoint": "node --env-file=.env.migration.local scripts/privacy-checkpoint.ts",
     "privacy:restore-reconcile": "node scripts/privacy-restore-reconcile.ts",
