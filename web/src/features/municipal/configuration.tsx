@@ -17,6 +17,8 @@ import styles from "./municipal.module.css";
 import resource from "./resource.module.css";
 import {
   Denied,
+  discardEditor,
+  EditorRecovery,
   endpoint,
   MunicipalForm,
   Reason,
@@ -41,15 +43,17 @@ export function RulesEditor({ path }: { path: string }) {
       <h2>{t("Normas de uso", "Normas de uso")}</h2>
       {q.isPending ? (
         <Loading />
-      ) : q.isError ? (
+      ) : q.isError && (q.data === undefined || discardEditor(q.error)) ? (
         <Failure error={q.error} retry={() => void q.refetch()} />
       ) : (
         <>
-          <RulesForm
-            key={reset}
-            path={path}
-            initial={q.data ?? { version: 0, text: "" }}
-          />
+          <EditorRecovery error={q.error} retry={() => void q.refetch()}>
+            <RulesForm
+              key={reset}
+              path={path}
+              initial={q.data ?? { version: 0, text: "" }}
+            />
+          </EditorRecovery>
           <Button
             type="button"
             variant="ghost"
@@ -116,15 +120,17 @@ export function CalendarEditor({ path }: { path: string }) {
       <h2>{t("Horarios y excepciones", "Horarios e excepcións")}</h2>
       {q.isPending ? (
         <Loading />
-      ) : q.isError ? (
+      ) : q.isError && (q.data === undefined || discardEditor(q.error)) ? (
         <Failure error={q.error} retry={() => void q.refetch()} />
       ) : (
         <>
-          <CalendarForm
-            key={reset}
-            path={path}
-            initial={q.data ?? { version: 0, calendar: emptyCalendar }}
-          />
+          <EditorRecovery error={q.error} retry={() => void q.refetch()}>
+            <CalendarForm
+              key={reset}
+              path={path}
+              initial={q.data ?? { version: 0, calendar: emptyCalendar }}
+            />
+          </EditorRecovery>
           <Button
             type="button"
             variant="ghost"
@@ -444,12 +450,14 @@ function PolicyEditor() {
       <h1>{t("Condiciones de reserva", "Condicións de reserva")}</h1>
       {q.isPending ? (
         <Loading />
-      ) : q.isError ? (
+      ) : q.isError && (q.data === undefined || discardEditor(q.error)) ? (
         <Failure error={q.error} retry={() => void q.refetch()} />
       ) : (
         q.data && (
           <>
-            <PolicyForm key={reset} initial={q.data} />
+            <EditorRecovery error={q.error} retry={() => void q.refetch()}>
+              <PolicyForm key={reset} initial={q.data} />
+            </EditorRecovery>
             <Button
               type="button"
               variant="ghost"

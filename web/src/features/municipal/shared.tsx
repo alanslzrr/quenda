@@ -4,18 +4,27 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useState } from "react";
-import { Link, Outlet, useParams } from "react-router";
+import { Outlet, useParams } from "react-router";
 import { ActionForm } from "../../app/action";
 import { ApiError, api, type Navigation, type Page } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
-import layout from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
+import { canRefetch } from "../../app/query";
+import {
+  discardEditor,
+  EditorRecovery,
+  useReadBlocked,
+} from "../../app/read-recovery";
+
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Button } from "../../ui/button/button";
 import { Input } from "../../ui/input/input";
-import { MfaBoundary } from "../account/mfa-dialog";
+import booking from "../catalog/booking.module.css";
+import { Choice, Choices } from "../catalog/journey";
 import { ResourceShell } from "./resource-shell";
+
+export { discardEditor, EditorRecovery } from "../../app/read-recovery";
 
 export type MunicipalContext = Navigation["municipalities"]["items"][number];
 export function permitted(
@@ -58,7 +67,7 @@ export function useMunicipalQuery<T>(
       }
     },
     enabled: !!account,
-    refetchOnMount,
+    refetchOnMount: (query) => refetchOnMount && canRefetch(query.state.error),
     retry: false,
   });
 }
@@ -88,15 +97,20 @@ export function More({
   query: {
     hasNextPage: boolean;
     isFetchingNextPage: boolean;
+    isFetching: boolean;
     fetchNextPage: () => unknown;
   };
 }) {
   const { t } = usePreferences();
   return query.hasNextPage ? (
     <Button
+      type="button"
       variant="secondary"
       loading={query.isFetchingNextPage}
-      onClick={() => void query.fetchNextPage()}
+      disabled={query.isFetching}
+      onClick={() => {
+        if (!query.isFetching) void query.fetchNextPage();
+      }}
     >
       {t("Cargar más", "Cargar máis")}
     </Button>
@@ -117,58 +131,96 @@ export function Administration() {
       ),
     getNextPageParam: (last) => last.municipalities.nextCursor ?? undefined,
   });
+  const platform = query.data?.pages[0]?.platform;
+  const privacy = platform?.permissions.some((p) =>
+    ["PRIVACY_READ", "PRIVACY_EXECUTE"].includes(p),
+  );
+  const municipalities =
+    query.data?.pages.flatMap((p) => p.municipalities.items) ?? [];
   return (
-    <>
-      <h1>{t("Administración municipal", "Administración municipal")}</h1>
+    <div className={booking.page}>
+      <header className={booking.intro}>
+        <h1 className={booking.title}>
+          {t("Gestión municipal", "Xestión municipal")}
+        </h1>
+        <p className={booking.lead}>
+          {t(
+            "Aquí actúas como personal autorizado, con los permisos que te han concedido. Para reservar a tu nombre usa «Reservar».",
+            "Aquí actúas como persoal autorizado, cos permisos que che concederon. Para reservar ao teu nome usa «Reservar».",
+          )}
+        </p>
+      </header>
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
-        <Failure error={query.error} />
+        <Failure error={query.error} retry={() => void query.refetch()} />
       ) : (
-        <>
-          {query.data.pages[0]?.platform.operator && (
-            <p>
-              <Link to="/plataforma">
+        <div className={booking.sections}>
+          <section aria-labelledby="managed-heading">
+            <h2 id="managed-heading" className={booking.sectionTitle}>
+              {t("Municipios que gestionas", "Municipios que xestionas")}
+            </h2>
+            {municipalities.length ? (
+              <Choices>
+                {municipalities.map((m) => (
+                  <Choice
+                    key={m.id}
+                    to={municipalPath(m.id)}
+                    title={m.name}
+                    meta={
+                      m.administrator
+                        ? t(
+                            "Administración del municipio",
+                            "Administración do municipio",
+                          )
+                        : t(
+                            `${m.permissions.length} ${m.permissions.length === 1 ? "permiso delegado" : "permisos delegados"}`,
+                            `${m.permissions.length} ${m.permissions.length === 1 ? "permiso delegado" : "permisos delegados"}`,
+                          )
+                    }
+                  />
+                ))}
+              </Choices>
+            ) : (
+              <p className={booking.quiet}>
                 {t(
-                  "Administración de plataforma",
-                  "Administración de plataforma",
+                  "No tienes permisos municipales vigentes.",
+                  "Non tes permisos municipais vixentes.",
                 )}
-              </Link>
-            </p>
+              </p>
+            )}
+            <More query={query} />
+          </section>
+          {(platform?.operator || privacy) && (
+            <section aria-labelledby="platform-heading">
+              <h2 id="platform-heading" className={booking.sectionTitle}>
+                {t("Plataforma", "Plataforma")}
+              </h2>
+              <Choices>
+                {platform?.operator && (
+                  <Choice
+                    to="/plataforma"
+                    title={t(
+                      "Administración de plataforma",
+                      "Administración de plataforma",
+                    )}
+                  />
+                )}
+                {privacy && (
+                  <Choice
+                    to="/plataforma/privacidad"
+                    title={t(
+                      "Conservación y derechos globales",
+                      "Conservación e dereitos globais",
+                    )}
+                  />
+                )}
+              </Choices>
+            </section>
           )}
-          {query.data.pages[0]?.platform.permissions.some((p) =>
-            ["PRIVACY_READ", "PRIVACY_EXECUTE"].includes(p),
-          ) && (
-            <Link to="/plataforma/privacidad">
-              {t(
-                "Conservación y derechos globales",
-                "Conservación e dereitos globais",
-              )}
-            </Link>
-          )}
-          <ul className={layout.list}>
-            {query.data.pages
-              .flatMap((p) => p.municipalities.items)
-              .map((m) => (
-                <li key={m.id} className={layout.listItem}>
-                  <Link className={layout.listLink} to={municipalPath(m.id)}>
-                    {m.name}
-                  </Link>
-                </li>
-              ))}
-          </ul>
-          {!query.data.pages[0]?.municipalities.items.length && (
-            <p>
-              {t(
-                "No tienes permisos municipales vigentes.",
-                "Non tes permisos municipais vixentes.",
-              )}
-            </p>
-          )}
-          <More query={query} />
-        </>
+        </div>
       )}
-    </>
+    </div>
   );
 }
 export function MunicipalLayout() {
@@ -210,16 +262,17 @@ export function MunicipalLayout() {
     },
   });
   if (query.isPending) return <Loading />;
-  if (query.isError)
+  if (query.isError && (!query.data || discardEditor(query.error)))
     return <Failure error={query.error} retry={() => void query.refetch()} />;
   const context = query.data;
+  if (!context) return null;
   return (
     <Context.Provider value={context}>
-      <MfaBoundary>
-        <ResourceShell municipality={context}>
+      <ResourceShell municipality={context}>
+        <EditorRecovery error={query.error} retry={() => void query.refetch()}>
           <Outlet key={`${account?.accountId}:${tenantId}`} />
-        </ResourceShell>
-      </MfaBoundary>
+        </EditorRecovery>
+      </ResourceShell>
     </Context.Provider>
   );
 }
@@ -270,11 +323,12 @@ export function MunicipalForm({
   const client = useQueryClient();
   const { account } = useSession();
   const [uncertain, setUncertain] = useState(false);
+  const readBlocked = useReadBlocked();
   return (
     <>
       <ActionForm
         danger={danger}
-        disabled={uncertain}
+        disabled={uncertain || readBlocked}
         resetOnSuccess={resetOnSuccess}
         label={label}
         success={t("Cambios guardados.", "Cambios gardados.")}

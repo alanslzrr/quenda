@@ -1,8 +1,9 @@
 import { Archive, Clock3, FileText, Globe, Settings2 } from "lucide-react";
 import { useState } from "react";
-import { Link, Navigate, useParams } from "react-router";
+import { Navigate, useParams } from "react-router";
 import { textField } from "../../app/action";
 import { Failure, Loading } from "../../app/feedback";
+import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { Badge } from "../../ui/badge/badge";
 import { PageHeader } from "../../ui/blocks/page-header/page-header";
@@ -17,6 +18,8 @@ import styles from "./municipal.module.css";
 import resourceStyles from "./resource.module.css";
 import {
   Denied,
+  discardEditor,
+  EditorRecovery,
   endpoint,
   More,
   MunicipalForm,
@@ -203,7 +206,7 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
   const path = `${endpoint(m.id)}/${unit ? "units" : "facilities"}/${id}`;
   const resource = useMunicipalQuery<Resource>(path);
   if (resource.isPending) return <Loading />;
-  if (resource.isError)
+  if (resource.isError && (!resource.data || discardEditor(resource.error)))
     return (
       <Failure error={resource.error} retry={() => void resource.refetch()} />
     );
@@ -251,7 +254,10 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
   );
   if (!unit)
     return (
-      <>
+      <EditorRecovery
+        error={resource.error}
+        retry={() => void resource.refetch()}
+      >
         <Link to={municipalPath(m.id)}>{t("Catálogo", "Catálogo")}</Link>
         <h1>{resource.data.name}</h1>
         <p>{state}</p>
@@ -261,115 +267,120 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
           <h2>{t("Retirar del catálogo", "Retirar do catálogo")}</h2>
           {withdrawal}
         </section>
-      </>
+      </EditorRecovery>
     );
   return (
-    <div className={resourceStyles.page}>
-      <PageHeader
-        title={resource.data.name}
-        description={t(
-          "Configura la unidad que los usuarios pueden reservar.",
-          "Configura a unidade que os usuarios poden reservar.",
-        )}
-        status={
-          <Badge
-            size="sm"
-            tone={
-              resource.data.withdrawnAt
-                ? "neutral"
-                : resource.data.publishedAt
-                  ? "success"
-                  : "warning"
-            }
-          >
-            {state}
-          </Badge>
-        }
-        actions={
-          <>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Globe size={16} aria-hidden="true" />
-                  {t("Publicar unidad", "Publicar unidade")}
-                </Button>
-              </DialogTrigger>
-              <DialogContent
-                title={t("Publicar unidad", "Publicar unidade")}
-                closeLabel={t("Cerrar", "Pechar")}
-              >
-                <UnitPublication path={path} />
-              </DialogContent>
-            </Dialog>
-            {!resource.data.withdrawnAt && (
+    <EditorRecovery
+      error={resource.error}
+      retry={() => void resource.refetch()}
+    >
+      <div className={resourceStyles.page}>
+        <PageHeader
+          title={resource.data.name}
+          description={t(
+            "Configura la unidad que los usuarios pueden reservar.",
+            "Configura a unidade que os usuarios poden reservar.",
+          )}
+          status={
+            <Badge
+              size="sm"
+              tone={
+                resource.data.withdrawnAt
+                  ? "neutral"
+                  : resource.data.publishedAt
+                    ? "success"
+                    : "warning"
+              }
+            >
+              {state}
+            </Badge>
+          }
+          actions={
+            <>
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button size="sm" variant="secondary">
-                    <Archive size={16} aria-hidden="true" />
-                    {t("Retirar del catálogo", "Retirar do catálogo")}
+                  <Button size="sm">
+                    <Globe size={16} aria-hidden="true" />
+                    {t("Publicar unidad", "Publicar unidade")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent
-                  title={t("Retirar del catálogo", "Retirar do catálogo")}
+                  title={t("Publicar unidad", "Publicar unidade")}
                   closeLabel={t("Cerrar", "Pechar")}
                 >
-                  {withdrawal}
+                  <UnitPublication path={path} />
                 </DialogContent>
               </Dialog>
-            )}
-          </>
-        }
-      />
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList
-          aria-label={t(
-            "Configuración de la unidad",
-            "Configuración da unidade",
-          )}
-        >
-          <TabsTrigger value="data">
-            <Settings2 size={16} aria-hidden="true" />
-            {t("Datos", "Datos")}
-          </TabsTrigger>
-          <TabsTrigger value="calendar">
-            <Clock3 size={16} aria-hidden="true" />
-            {t("Horarios", "Horarios")}
-          </TabsTrigger>
-          <TabsTrigger value="rules">
-            <FileText size={16} aria-hidden="true" />
-            {t("Normas", "Normas")}
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="data" forceMount>
-          <section className={resourceStyles.group}>
-            <div>
-              <h2>{t("Datos de la unidad", "Datos da unidade")}</h2>
-              <p>
-                {t(
-                  "Este nombre identifica la unidad en el catálogo público y en las reservas.",
-                  "Este nome identifica a unidade no catálogo público e nas reservas.",
-                )}
-              </p>
-            </div>
-            <div>{nameForm}</div>
-          </section>
-          {!resource.data.publishedAt && (
-            <div className={resourceStyles.hint}>
-              {t(
-                "Antes de publicar, completa las normas de uso y los horarios. La instalación también debe estar publicada.",
-                "Antes de publicar, completa as normas de uso e os horarios. A instalación tamén debe estar publicada.",
+              {!resource.data.withdrawnAt && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="secondary">
+                      <Archive size={16} aria-hidden="true" />
+                      {t("Retirar del catálogo", "Retirar do catálogo")}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent
+                    title={t("Retirar del catálogo", "Retirar do catálogo")}
+                    closeLabel={t("Cerrar", "Pechar")}
+                  >
+                    {withdrawal}
+                  </DialogContent>
+                </Dialog>
               )}
-            </div>
-          )}
-        </TabsContent>
-        <TabsContent value="calendar" forceMount>
-          <CalendarEditor path={path} />
-        </TabsContent>
-        <TabsContent value="rules" forceMount>
-          <RulesEditor path={path} />
-        </TabsContent>
-      </Tabs>
-    </div>
+            </>
+          }
+        />
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList
+            aria-label={t(
+              "Configuración de la unidad",
+              "Configuración da unidade",
+            )}
+          >
+            <TabsTrigger value="data">
+              <Settings2 size={16} aria-hidden="true" />
+              {t("Datos", "Datos")}
+            </TabsTrigger>
+            <TabsTrigger value="calendar">
+              <Clock3 size={16} aria-hidden="true" />
+              {t("Horarios", "Horarios")}
+            </TabsTrigger>
+            <TabsTrigger value="rules">
+              <FileText size={16} aria-hidden="true" />
+              {t("Normas", "Normas")}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="data" forceMount>
+            <section className={resourceStyles.group}>
+              <div>
+                <h2>{t("Datos de la unidad", "Datos da unidade")}</h2>
+                <p>
+                  {t(
+                    "Este nombre identifica la unidad en el catálogo público y en las reservas.",
+                    "Este nome identifica a unidade no catálogo público e nas reservas.",
+                  )}
+                </p>
+              </div>
+              <div>{nameForm}</div>
+            </section>
+            {!resource.data.publishedAt && (
+              <div className={resourceStyles.hint}>
+                {t(
+                  "Antes de publicar, completa las normas de uso y los horarios. La instalación también debe estar publicada.",
+                  "Antes de publicar, completa as normas de uso e os horarios. A instalación tamén debe estar publicada.",
+                )}
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="calendar" forceMount>
+            <CalendarEditor path={path} />
+          </TabsContent>
+          <TabsContent value="rules" forceMount>
+            <RulesEditor path={path} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </EditorRecovery>
   );
 }
 
