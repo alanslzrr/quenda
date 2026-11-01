@@ -1,4 +1,5 @@
 import { HttpError } from "../../http/errors.ts";
+import { civilDate } from "../../shared/civil-date.ts";
 
 export interface LocalInterval {
   startMinute: number;
@@ -21,7 +22,7 @@ function invalid(): never {
 }
 
 export function localDate(date: string): Date {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date.startsWith("0000-")) invalid();
+  civilDate(date);
   const instant = new Date(`${date}T00:00:00.000Z`);
   if (
     !Number.isFinite(instant.getTime()) ||

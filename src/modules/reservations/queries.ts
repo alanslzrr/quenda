@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
+import { civilDate } from "../../shared/civil-date.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
 import type { AuthenticatedAccount } from "../identity/index.ts";
 import { present, type Reservation } from "./state.ts";
@@ -74,6 +75,7 @@ export async function listMunicipalReservations(
   clock: Clock = systemClock,
   correlationId: string = randomUUID(),
 ) {
+  if (options.date !== undefined) civilDate(options.date);
   const after = options.after ?? null,
     unitId = options.unitId ?? null;
   if (
