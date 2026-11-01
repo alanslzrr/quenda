@@ -31,6 +31,7 @@ const healthSchema = {
 
 export async function buildApp(options: {
   database: DatabaseHealth;
+  trustedProxyCidrs?: string[];
   sourceOffer?: SourceOffer;
   idempotencyRetentionSeconds?: number;
   domain?: Pool;
@@ -38,6 +39,9 @@ export async function buildApp(options: {
   identity?: { authentication: Authentication; config: AuthConfiguration };
 }) {
   const app = Fastify({
+    trustProxy: options.trustedProxyCidrs?.length
+      ? options.trustedProxyCidrs
+      : false,
     logger: { level: options.logLevel ?? "info" },
     logController: new LogController({ disableRequestLogging: true }),
     genReqId: () => randomUUID(),

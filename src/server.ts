@@ -21,6 +21,9 @@ async function start(): Promise<void> {
   );
   const app = await buildApp({
     database,
+    ...(config.trustedProxyCidrs
+      ? { trustedProxyCidrs: config.trustedProxyCidrs }
+      : {}),
     ...(sourceOffer ? { sourceOffer } : {}),
     domain: database.domain,
     idempotencyRetentionSeconds: config.idempotencyRetentionSeconds,
