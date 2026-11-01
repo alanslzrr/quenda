@@ -24,11 +24,11 @@ async function enter(page: Page, index: number) {
   }
 
   await page
-    .getByRole("link", { name: "Administración municipal", exact: true })
+    .getByRole("navigation", { name: "Navegación principal" })
+    .getByRole("link", { name: /^(Gestión|Xestión)$/ })
     .click();
-  await page
-    .getByRole("link", { name: "Oleiros de proba", exact: true })
-    .click();
+  if (new URL(page.url()).pathname === "/administracion")
+    await page.getByRole("link", { name: /^Oleiros de proba/ }).click();
   await expect(page).toHaveURL(`/administracion/${f.tenant}`);
   return f;
 }
@@ -39,6 +39,11 @@ async function select(
 ) {
   await page.getByRole("combobox", { name, exact: true }).click();
   await page.getByRole("option", { name: option, exact: true }).click();
+  // Radix restores outside accessibility and focus after its closing animation.
+  await expect(page.getByRole("listbox", { includeHidden: true })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole("combobox", { name, exact: true })).toBeFocused();
 }
 test("municipal catalog and versioned configuration use the real API", async ({
   page,
@@ -142,7 +147,7 @@ test("municipal catalog and versioned configuration use the real API", async ({
   });
 });
 
-test("municipal policy and appearance persist without changing the administrative theme", async ({
+test("municipal appearance saves explicitly while preview temporarily overrides the administrative theme", async ({
   page,
 }, info) => {
   await enter(page, info.project.name === "desktop" ? 2 : 3);
@@ -179,8 +184,16 @@ test("municipal policy and appearance persist without changing the administrativ
     .evaluate((el) => getComputedStyle(el).getPropertyValue("--accent"));
   await select(page, "Paleta clara", "Azul");
   await select(page, /Paleta oscura|Paleta escura/, "Verde");
-  const preview = page.getByRole("region", { name: "Vista previa pública" });
-  await expect(preview).toHaveCSS("background-color", "rgb(249, 251, 255)");
+  await select(page, "Modo de vista previa", "Claro");
+  await expect(page.locator("body")).toHaveCSS(
+    "background-color",
+    "rgb(249, 251, 255)",
+  );
+  await page
+    .getByRole("button", {
+      name: /Salir de la vista previa|Saír da vista previa/,
+    })
+    .click();
   expect(
     await page
       .locator("html")
@@ -197,7 +210,10 @@ test("municipal policy and appearance persist without changing the administrativ
     page.getByRole("combobox", { name: "Paleta clara", exact: true }),
   ).toContainText("Azul");
   await select(page, "Modo de vista previa", /Oscuro|Escuro/);
-  await expect(preview).toHaveCSS("background-color", "rgb(21, 37, 29)");
+  await expect(page.locator("body")).toHaveCSS(
+    "background-color",
+    "rgb(21, 37, 29)",
+  );
   expect(
     (
       await new AxeBuilder({ page })
@@ -384,4 +400,147 @@ test("blocks survive reload and release through the daily agenda", async ({
     path: `test-results/municipal-agenda-${info.project.name}.png`,
     fullPage: true,
   });
+});
+
+test("audit regression: real editors retain versions across MFA recovery and discard revoked drafts", async ({
+  page,
+}, info) => {
+  const f = await enter(
+    page,
+    10 + info.repeatEachIndex * 2 + (info.project.name === "desktop" ? 0 : 1),
+  );
+  const path = `/api/municipalities/${f.tenant}/units/${f.unit}`;
+  const base = `/api/municipalities/${f.tenant}`;
+  for (const suffix of [
+    "/reservations?date=0000-01-01",
+    "/exports/reservations?from=0000-01-01&to=0000-02-01",
+    "/indicators?from=0000-01-01&to=0000-02-01",
+    `/agreements/${f.unit}/reports/0000-01`,
+  ]) {
+    const invalid = await page.request.get(base + suffix);
+    expect(invalid.status()).toBe(400);
+    expect((await invalid.json()).error.code).toBe("INVALID_INPUT");
+  }
+  for (const date of ["0001-01-01", "9999-12-31"]) {
+    expect(
+      (await page.request.get(`${base}/reservations?date=${date}`)).status(),
+    ).toBe(200);
+  }
+  const oldCalendar = await (await page.request.get(`${path}/calendar`)).json();
+  const original = await (await page.request.get(`${path}/usage-rules`)).json();
+  await page.goto(`/administracion/${f.tenant}/unidades/${f.unit}`);
+  await page.getByLabel(/^(Nombre|Nome)$/).fill("Nombre sin guardar");
+  await page.getByRole("tab", { name: "Horarios", exact: true }).click();
+  const start = page.getByLabel("Inicio (HH:mm)", { exact: true }).first();
+  await start.fill("01:15");
+  await page.getByRole("tab", { name: "Normas", exact: true }).click();
+  const text = page.getByLabel(/Texto de las normas|Texto das normas/);
+  await text.fill("Normas sin guardar");
+  await page
+    .getByRole("tabpanel", { name: "Normas" })
+    .getByLabel("Motivo")
+    .fill("Cambio local");
+  // A separate request publishes a concurrent revision while the draft stays open.
+  const concurrent = await page.request.put(`${path}/usage-rules`, {
+    headers: { Origin: "http://127.0.0.1:5173" },
+    data: {
+      expectedVersion: original.version,
+      text: `Revisión concurrente ${crypto.randomUUID()}`,
+      reason: "Edición concurrente",
+    },
+  });
+  expect(concurrent.status()).toBe(200);
+  const concurrentCalendar = await page.request.put(`${path}/calendar`, {
+    headers: { Origin: "http://127.0.0.1:5173" },
+    data: {
+      expectedVersion: oldCalendar.version,
+      calendar: oldCalendar.calendar,
+      reason: "Revisión concurrente",
+    },
+  });
+  expect(concurrentCalendar.status()).toBe(200);
+  let failure = "REAUTHENTICATION_REQUIRED";
+  let writes = 0;
+  page.on("request", (request) => {
+    if (request.url().includes(path) && request.method() !== "GET") writes++;
+  });
+  const gate = async (route: import("@playwright/test").Route) => {
+    if (route.request().method() !== "GET" || !failure) return route.continue();
+    return route.fulfill({
+      status: 403,
+      json: { error: { code: failure, message: "Acceso pendiente" } },
+    });
+  };
+  await page.route(`**${path}**`, gate);
+  const resume = () =>
+    page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "hidden",
+      });
+      window.dispatchEvent(new Event("visibilitychange"));
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "visible",
+      });
+      window.dispatchEvent(new Event("visibilitychange"));
+    });
+  await resume();
+  const verify = page.getByRole("button", {
+    name: "Verificar acceso",
+    exact: true,
+  });
+  await expect(verify).toBeVisible();
+  await expect(text).toHaveValue("Normas sin guardar");
+  const save = page.getByRole("button", {
+    name: /Guardar normas|Gardar normas/,
+  });
+  await expect(save).toBeDisabled();
+  failure = "";
+  await verify.click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByLabel("Código de autenticación", { exact: true })
+    .fill(totp(f.secret));
+  await dialog
+    .getByRole("button", { name: "Verificar acceso", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  await expect(save).toBeEnabled();
+  await expect(text).toHaveValue("Normas sin guardar");
+  expect(writes).toBe(0);
+  const conflict = page.waitForResponse(
+    (r) =>
+      r.url().endsWith(`${path}/usage-rules`) && r.request().method() === "PUT",
+  );
+  await save.click();
+  expect((await conflict).status()).toBe(409);
+  await expect(text).toHaveValue("Normas sin guardar");
+  expect(writes).toBe(1);
+  await page.getByRole("tab", { name: "Horarios", exact: true }).click();
+  await expect(start).toHaveValue("01:15");
+  await page
+    .getByRole("tabpanel", { name: "Horarios" })
+    .getByLabel("Motivo")
+    .fill("Borrador local");
+  const calendarConflict = page.waitForResponse(
+    (r) =>
+      r.url().endsWith(`${path}/calendar`) && r.request().method() === "PUT",
+  );
+  await page
+    .getByRole("button", { name: /Guardar horarios|Gardar horarios/ })
+    .click();
+  expect((await calendarConflict).status()).toBe(409);
+  await expect(start).toHaveValue("01:15");
+  expect(writes).toBe(2);
+  await page.getByRole("tab", { name: "Datos", exact: true }).click();
+  await expect(page.getByLabel(/^(Nombre|Nome)$/)).toHaveValue(
+    "Nombre sin guardar",
+  );
+  failure = "FORBIDDEN";
+  await resume();
+  await expect(page.getByLabel(/^(Nombre|Nome)$/)).toHaveCount(0);
+  await expect(
+    page.getByLabel(/Texto de las normas|Texto das normas/),
+  ).toHaveCount(0);
 });

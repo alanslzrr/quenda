@@ -229,7 +229,7 @@ test("expired MFA preserves the appearance draft and offers verification without
         status: 403,
         json: {
           error: {
-            code: "MFA_REQUIRED",
+            code: "REAUTHENTICATION_REQUIRED",
             message: "Verifica de nuevo el segundo factor.",
           },
         },
@@ -261,7 +261,7 @@ test("expired MFA preserves the appearance draft and offers verification without
   ).toContainText("Azul");
   expect(writes).toBe(1);
   await page
-    .getByRole("button", { name: /Verificar MFA/ })
+    .getByRole("button", { name: /Verificar acceso/ })
     .last()
     .click();
   await expect(
