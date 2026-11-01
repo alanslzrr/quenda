@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { DatabaseError, type Pool } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
+import { civilDate } from "../../shared/civil-date.ts";
 import {
   type AuthenticatedAccount,
   requirePermission,
@@ -25,8 +26,8 @@ export async function exportReservations(
         ))
     )
       throw new HttpError("INVALID_INPUT");
-    const days = Temporal.PlainDate.from(from).until(
-      Temporal.PlainDate.from(to),
+    const days = Temporal.PlainDate.from(civilDate(from)).until(
+      Temporal.PlainDate.from(civilDate(to)),
     ).days;
     if (days < 1 || days > 366) throw new HttpError("INVALID_INPUT");
     return await command(

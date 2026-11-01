@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { DatabaseError, type Pool } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
+import { civilDate } from "../../shared/civil-date.ts";
 import {
   type AuthenticatedAccount,
   requirePermission,
@@ -59,8 +60,8 @@ async function readIndicators(
       !/^\d{4}-\d{2}-\d{2}$/.test(to)
     )
       throw new HttpError("INVALID_INPUT");
-    const first = Temporal.PlainDate.from(from),
-      last = Temporal.PlainDate.from(to);
+    const first = Temporal.PlainDate.from(civilDate(from)),
+      last = Temporal.PlainDate.from(civilDate(to));
     if (first.until(last).days < 1 || first.until(last).days > 366)
       throw new HttpError("INVALID_INPUT");
     unitId = unitId?.toLowerCase() ?? null;
