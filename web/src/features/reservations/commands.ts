@@ -12,6 +12,18 @@ export interface CommandPolicy {
   retentionSeconds: number;
   serverTime: string;
 }
+// A missing or inconsistent clock is a recoverable read failure, not proof of expiry.
+export function commandTime(policy: CommandPolicy, createdAt?: number) {
+  const time = Date.parse(policy.serverTime);
+  if (
+    !Number.isFinite(time) ||
+    !Number.isFinite(policy.retentionSeconds) ||
+    policy.retentionSeconds <= 0 ||
+    (createdAt !== undefined && time < createdAt)
+  )
+    throw new Error("Cannot establish command recovery deadline");
+  return time;
+}
 export function readCommand(
   owner: string,
   storage: Storage = sessionStorage,
@@ -49,7 +61,7 @@ export function forgetCommand(storage: Storage = sessionStorage) {
 }
 export function retryAllowed(
   item: PendingCommand,
-  now = Date.now(),
+  now: number,
   retention = item.retentionSeconds,
 ) {
   // Keep a margin before server expiry; expired keys may execute a new command.
@@ -93,7 +105,7 @@ export async function sendCommand<T>(
     if (
       !retryAllowed(
         item,
-        Date.parse(policy.serverTime),
+        commandTime(policy, item.createdAt),
         policy.retentionSeconds,
       )
     )

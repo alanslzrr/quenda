@@ -304,3 +304,32 @@ test("monthly review recovery accepts only exact review commands and never route
     assert.equal(readCommand("ana", saved), null);
   }
 });
+
+test("unavailable or inconsistent recovery clocks never imply expiry or send a write", async () => {
+  const saved = storage();
+  const item = command();
+  saved.setItem(pendingKey, JSON.stringify(item));
+  const original = globalThis.fetch;
+  let writes = 0;
+  try {
+    for (const serverTime of [
+      "invalid",
+      new Date(item.createdAt - 1000).toISOString(),
+    ]) {
+      globalThis.fetch = async (_path, options) => {
+        if (options?.method === "POST") writes++;
+        return Response.json({ retentionSeconds: 3600, serverTime });
+      };
+      await assert.rejects(
+        sendCommand(item, "es", true, saved),
+        /Cannot establish/,
+      );
+      assert.deepEqual(readCommand("ana", saved), item);
+    }
+    assert.equal(writes, 0);
+    assert.equal(retryAllowed(item, item.createdAt + 3594999), true);
+    assert.equal(retryAllowed(item, item.createdAt + 3595000), false);
+  } finally {
+    globalThis.fetch = original;
+  }
+});

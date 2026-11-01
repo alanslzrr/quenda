@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ActionForm } from "../../app/action";
 import { api } from "../../app/api";
@@ -23,6 +23,7 @@ import {
   type CommandResult,
   commandResultPath,
   commandReviewPath,
+  commandTime,
   forgetCommand,
   readCommand,
   retryAllowed,
@@ -180,14 +181,22 @@ export function CommandRecovery() {
   const pending = account ? readCommand(account.accountId) : null;
   const policy = useQuery({
     queryKey: ["public", "command-policy", version],
-    queryFn: ({ signal }) =>
-      api<CommandPolicy>(
+    queryFn: async ({ signal }) => {
+      const value = await api<CommandPolicy>(
         "/api/public/reservation-command-policy",
         { signal },
         locale,
-      ),
+      );
+      commandTime(value, pending?.createdAt);
+      return { ...value, receivedAt: performance.now() };
+    },
     staleTime: 0,
   });
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => tick((v) => v + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
   return (
     <>
       <PageTitle title={t("Revisar operación", "Revisar operación")} />
@@ -209,13 +218,14 @@ export function CommandRecovery() {
               "Non se recibiu unha confirmación. A operación pode terse completado. Consulta o estado actual antes de enviar outra solicitude.",
             )}
           </p>
-          {policy.isPending ? (
+          {policy.isPending || policy.isFetching ? (
             <Loading />
           ) : policy.isError ? (
-            <Failure error={policy.error} />
+            <Failure error={policy.error} retry={() => void policy.refetch()} />
           ) : retryAllowed(
               pending,
-              Date.now(),
+              Date.parse(policy.data.serverTime) +
+                Math.max(0, performance.now() - policy.data.receivedAt),
               policy.data.retentionSeconds,
             ) ? (
             <ActionForm
