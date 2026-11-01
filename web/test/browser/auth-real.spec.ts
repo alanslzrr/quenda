@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { expect } from "@playwright/test";
+import { signOut } from "./account-helpers";
 import { test } from "./fixtures";
 
 test("verified account signs in and persists preferences through the real API", async ({
@@ -59,8 +60,7 @@ test("verified account signs in and persists preferences through the real API", 
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.getByRole("button", { name: "Salir", exact: true }).click();
-  await expect(page).toHaveURL("/");
+  await signOut(page);
   await expect(
     page.getByRole("link", { name: "Acceder", exact: true }),
   ).toBeVisible();

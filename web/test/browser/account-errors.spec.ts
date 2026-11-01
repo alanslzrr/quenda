@@ -58,9 +58,10 @@ test("rejected deactivation preserves the account and shows the reservation rest
     ),
   ).toBeVisible();
   await expect(page).toHaveURL(/\/perfil\/privacidad$/);
+  await page.getByRole("button", { name: /Ajustes|Axustes/ }).click();
   await expect(
-    page.getByRole("button", { name: "Salir", exact: true }),
-  ).toBeVisible();
+    page.getByRole("menuitem", { name: "Mi cuenta", exact: true }),
+  ).toHaveAttribute("href", "/perfil");
 });
 test("administrative MFA cannot be presented as disabled after a rejection", async ({
   page,

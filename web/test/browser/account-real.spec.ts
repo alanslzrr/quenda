@@ -2,7 +2,13 @@ import { randomUUID } from "node:crypto";
 import AxeBuilder from "@axe-core/playwright";
 import { expect } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
-import { createAccount, login, mailLink, password } from "./account-helpers";
+import {
+  createAccount,
+  login,
+  mailLink,
+  password,
+  signOut,
+} from "./account-helpers";
 import { test } from "./fixtures";
 
 test("personal details, password recovery and accessible settings use the real API", async ({
@@ -28,8 +34,7 @@ test("personal details, password recovery and accessible settings use the real A
         .analyze()
     ).violations,
   ).toEqual([]);
-  await page.getByRole("button", { name: /^(Salir|Saír)$/ }).click();
-  await expect(page).toHaveURL("/");
+  await signOut(page);
   await page.goto("/recuperar");
   await page.getByLabel("Correo electrónico", { exact: true }).fill(email);
   await page.getByRole("button", { name: /Enviar instru/ }).click();
@@ -79,8 +84,7 @@ test("MFA enrollment, backup sign-in and password change retain usable sessions"
     .getByRole("button", { name: /He guardado los códigos|Gardei os códigos/ })
     .click();
   await expect(page.locator("pre")).toHaveCount(0);
-  await page.getByRole("button", { name: /^(Salir|Saír)$/ }).click();
-  await expect(page).toHaveURL("/");
+  await signOut(page);
   await login(page, email);
   await page
     .getByRole("checkbox", { name: "Usar un código de respaldo" })
