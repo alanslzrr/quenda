@@ -198,3 +198,13 @@ Una unidad adscrita no pasa a acceso abierto al vencer o suspenderse el convenio
 Reabrir la unidad fuera del convenio exige configuración municipal explícita y respeta las ocupaciones existentes. La finalización termina el acceso compartido y conserva únicamente las evidencias exigidas por la política aplicable, sin redistribuir historiales.
 
 Una política municipal no autoriza a destruir consumos, acreditaciones o referencias compartidas de otros participantes. La API municipal devuelve un conflicto y conserva esas evidencias para revisión conjunta; no ejecuta su supresión unilateral. El vencimiento del convenio tampoco constituye un permiso de borrado.
+
+### Etiquetas de presentación municipal
+
+Los listados de personal, invitaciones y perfiles municipales pueden proyectar nombre
+y correo exclusivamente para cuentas ya vinculadas a ese ámbito o a sus invitaciones.
+Esta proyección requiere administrador vigente y MFA reciente; no proporciona acceso
+a credenciales, otros roles o actividad de otros municipios. Se resuelve por lotes de
+la página mediante una función acotada y no concede lectura directa de tablas de
+autenticación. Las identidades suprimidas se muestran como no disponibles; los IDs
+siguen siendo las claves internas y referencias técnicas, nunca la prueba de un permiso.
