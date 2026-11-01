@@ -1,3 +1,5 @@
+import { calendarLabel } from "../../ui/lib/calendar-labels.ts";
+
 // Calendar Date values are civil-day carriers, not reservation instants.
 export function civilDate(value: Date) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
@@ -5,6 +7,18 @@ export function civilDate(value: Date) {
 export function calendarDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day, 12);
+}
+
+/** URL dates are civil days, not permissively normalized JavaScript dates. */
+export function resolveBookingDate(requested: string, today: string) {
+  const usable =
+    /^\d{4}-\d{2}-\d{2}$/.test(requested) &&
+    civilDate(calendarDate(requested)) === requested &&
+    requested >= today;
+  return {
+    date: usable ? requested : today,
+    dateAdjusted: requested !== "" && !usable,
+  };
 }
 export function municipalToday(timeZone: string, now = new Date()) {
   const parts = new Intl.DateTimeFormat("en", {
@@ -55,6 +69,33 @@ export function localTimeLabel(
       .formatToParts(new Date(instant))
       .find((part) => part.type === "timeZoneName")?.value ?? "";
   return `${label} (${offset.replace("GMT", "UTC")})`;
+}
+export function endsNextDay(start: string, end: string, timeZone: string) {
+  return (
+    municipalToday(timeZone, new Date(start)) !==
+    municipalToday(timeZone, new Date(end))
+  );
+}
+export function timeRange(
+  start: string,
+  end: string,
+  timeZone: string,
+  locale: string,
+) {
+  return `${localTimeLabel(start, timeZone, locale)}–${localTimeLabel(end, timeZone, locale)}`;
+}
+export function intervalLabel(
+  start: string,
+  end: string,
+  timeZone: string,
+  locale: string,
+) {
+  const day = calendarLabel(
+    calendarDate(municipalToday(timeZone, new Date(start))),
+    locale,
+    "day",
+  );
+  return `${day} · ${timeRange(start, end, timeZone, locale)}`;
 }
 export function durationLabel(minutes: number) {
   const hours = Math.floor(minutes / 60),

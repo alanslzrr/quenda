@@ -3,6 +3,8 @@ import test from "node:test";
 import {
   durationLabel,
   durationOptions,
+  endsNextDay,
+  intervalLabel,
   localTimeLabel,
 } from "../src/features/catalog/dates.ts";
 
@@ -47,5 +49,19 @@ test("large valid duration ranges do not allocate an unbounded option list", () 
       stepMinutes: 1,
     }).length,
     48,
+  );
+});
+
+test("intervals name the municipal day and mark bookings that end after midnight", () => {
+  const start = "2026-10-24T21:30:00.000Z";
+  const end = "2026-10-24T22:30:00.000Z";
+  assert.equal(
+    intervalLabel(start, end, "Europe/Madrid", "es"),
+    "sábado, 24 de octubre · 23:30–00:30",
+  );
+  assert.equal(endsNextDay(start, end, "Europe/Madrid"), true);
+  assert.equal(
+    endsNextDay(start, "2026-10-24T21:59:00.000Z", "Europe/Madrid"),
+    false,
   );
 });
