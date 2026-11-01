@@ -94,10 +94,12 @@
 .root{font-size:var(--text-base);line-height:var(--leading-body)}
 .sidebarHead h2{font-family:var(--font-display);line-height:1.1}
 .paneHead h3{line-height:1.1}
-.settings { height:auto; min-height:520px; overflow:visible; }
-.root { width:100%; }
+.settings { height:auto; min-height:440px; overflow:visible; }
+.root { width:min(100%, 980px); }
 .navItem { text-decoration:none; min-height:40px; }
 .navItem[aria-current=page] { background:var(--surface); box-shadow:var(--shadow-resting); }
 .scroller { height:auto; overflow:visible; padding:28px; }
 @container(max-width:719px) { .settings { height:auto; } .scroller { padding:20px 16px; } }
 @container(max-width:719px) { .account { display:flex; padding:8px 20px; margin:0; } .navItem { min-height:44px; } }
+
+.navItem:focus-visible { outline:2px solid var(--foreground); outline-offset:2px; }

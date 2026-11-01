@@ -1,4 +1,10 @@
-import { type FormEvent, type ReactNode, useRef, useState } from "react";
+import {
+  Children,
+  type FormEvent,
+  type ReactNode,
+  useRef,
+  useState,
+} from "react";
 import { Alert } from "../ui/alert/alert";
 import { Button } from "../ui/button/button";
 import { Failure } from "./feedback";
@@ -13,8 +19,10 @@ export function ActionForm({
   danger = false,
   resetOnSuccess = true,
   disabled = false,
+  secondary,
 }: {
   children?: ReactNode;
+  secondary?: ReactNode;
   submit: (data: FormData) => Promise<void>;
   label: string;
   success?: string;
@@ -48,23 +56,39 @@ export function ActionForm({
   }
   return (
     <form className={styles.form} onSubmit={run}>
-      <fieldset disabled={busy} className={styles.fields}>
-        {children}
-      </fieldset>
+      {Children.toArray(children).length > 0 && (
+        <fieldset disabled={busy} className={styles.fields}>
+          {children}
+        </fieldset>
+      )}
       {error !== undefined && <Failure error={error} />}
       {done && success && (
         <div role="status">
           <Alert tone="success" title={success} />
         </div>
       )}
-      <Button
-        type="submit"
-        variant={danger ? "danger" : "primary"}
-        loading={busy}
-        disabled={busy || disabled}
-      >
-        {label}
-      </Button>
+      {secondary ? (
+        <div className={styles.formActions}>
+          {secondary}
+          <Button
+            type="submit"
+            variant={danger ? "danger" : "primary"}
+            loading={busy}
+            disabled={busy || disabled}
+          >
+            {label}
+          </Button>
+        </div>
+      ) : (
+        <Button
+          type="submit"
+          variant={danger ? "danger" : "primary"}
+          loading={busy}
+          disabled={busy || disabled}
+        >
+          {label}
+        </Button>
+      )}
     </form>
   );
 }
