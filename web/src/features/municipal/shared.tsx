@@ -312,7 +312,7 @@ export function Reason() {
       name="reason"
       required
       maxLength={500}
-      pattern=".*\S.*"
+      pattern={String.raw`.*\S.*`}
       title={t(
         "Indica un motivo; no puede quedar en blanco.",
         "Indica un motivo; non pode quedar en branco.",
