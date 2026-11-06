@@ -158,10 +158,16 @@ function Revoke() {
   const m = useMunicipality();
   const { t, locale } = usePreferences();
   const [search] = useSearchParams();
-  const [id, setId] = useState(search.get("referencia") ?? "");
+  const [id, setId] = useState(() => {
+    const reference = search.get("referencia") ?? "";
+    // Pending-command recovery only accepts lower-case ids, and a malformed link must not start blocked.
+    return new RegExp(`^${uuidPattern}$`).test(reference)
+      ? reference.toLowerCase()
+      : "";
+  });
   const [confirmed, setConfirmed] = useState(false);
   function changeId(value: string) {
-    setId(value);
+    setId(value.trim().toLowerCase());
     setConfirmed(false);
   }
   const [receipt, setReceipt] = useState<string>();
@@ -260,7 +266,6 @@ function Revoke() {
             )}
           >
             <Input
-              pattern={uuidPattern}
               label={t(
                 "Identificador de acreditación",
                 "Identificador de acreditación",
