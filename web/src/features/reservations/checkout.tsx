@@ -303,8 +303,8 @@ export function Checkout() {
               {!nonCancellable && (
                 <li>
                   {t(
-                    "Después no podrás cancelarla ni cambiarla para evitar ese plazo.",
-                    "Despois non poderás cancelala nin cambiala para evitar ese prazo.",
+                    "Pasado ese plazo, no podrás cancelarla ni cambiarla.",
+                    "Pasado ese prazo, non poderás cancelala nin cambiala.",
                   )}
                 </li>
               )}
@@ -333,7 +333,7 @@ export function Checkout() {
             <p>
               {t(
                 "Léelas antes de confirmar. Quedará registrada la versión que aceptes.",
-                "Leas antes de confirmar. Quedará rexistrada a versión que aceptes.",
+                "Le antes de confirmar. Quedará rexistrada a versión que aceptes.",
               )}
             </p>
             <RulesText label={t("Texto de las normas", "Texto das normas")}>

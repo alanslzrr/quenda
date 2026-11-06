@@ -231,7 +231,7 @@ export function FavoriteToggle({
   const [favorite, setFavorite] = useFavorite();
   const on = favorite === tenantId;
   const text = on
-    ? t("Quitar de favoritos", "Quitar de favoritos")
+    ? t("Quitar de favoritos", "Quitar dos favoritos")
     : t("Marcar como favorito", "Marcar como favorito");
   const label = on
     ? t(`Quitar ${name} de favoritos`, `Quitar ${name} de favoritos`)
