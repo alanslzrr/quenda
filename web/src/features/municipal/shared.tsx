@@ -17,11 +17,13 @@ import {
 } from "../../app/read-recovery";
 
 import { useSession } from "../../app/session";
+import { browserStorage } from "../../app/storage.ts";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Button } from "../../ui/button/button";
 import { Input } from "../../ui/input/input";
 import booking from "../catalog/booking.module.css";
 import { Choice, Choices } from "../catalog/journey";
+import { municipalityLabel } from "./municipality-label.ts";
 import { ResourceShell } from "./resource-shell";
 
 export { discardEditor, EditorRecovery } from "../../app/read-recovery";
@@ -79,7 +81,7 @@ export function useMunicipalPages<T>(path: string) {
     initialPageParam: "",
     queryFn: ({ pageParam, signal }) =>
       api<Page<T>>(
-        `${path}${path.includes("?") ? "&" : "?"}after=${pageParam}`.replace(
+        `${path}${path.includes("?") ? "&" : "?"}after=${encodeURIComponent(pageParam)}`.replace(
           /([?&])after=$/,
           "",
         ),
@@ -125,7 +127,7 @@ export function Administration() {
     initialPageParam: "",
     queryFn: ({ pageParam, signal }) =>
       api<Navigation>(
-        `/api/me/navigation${pageParam ? `?after=${pageParam}` : ""}`,
+        `/api/me/navigation${pageParam ? `?after=${encodeURIComponent(pageParam)}` : ""}`,
         { signal },
         locale,
       ),
@@ -137,6 +139,8 @@ export function Administration() {
   );
   const municipalities =
     query.data?.pages.flatMap((p) => p.municipalities.items) ?? [];
+  const labelOf = (m: (typeof municipalities)[number]) =>
+    municipalityLabel(m, municipalities);
   return (
     <div className={booking.page}>
       <header className={booking.intro}>
@@ -166,7 +170,7 @@ export function Administration() {
                   <Choice
                     key={m.id}
                     to={municipalPath(m.id)}
-                    title={m.name}
+                    title={labelOf(m)}
                     meta={
                       m.administrator
                         ? t(
@@ -239,18 +243,21 @@ export function MunicipalLayout() {
     retry: false,
     queryFn: async ({ signal }) => {
       let after: string | null = null;
-      do {
+      let found: Navigation["municipalities"]["items"][number] | undefined;
+      const seen: { id: string; name: string }[] = [];
+      // Keep reading the (small) list after the match so homonyms on later pages are noticed.
+      for (let page = 0; page < 10; page += 1) {
         const result: Navigation = await api(
-          `/api/me/navigation${after ? `?after=${after}` : ""}`,
+          `/api/me/navigation${after ? `?after=${encodeURIComponent(after)}` : ""}`,
           { signal },
           locale,
         );
-        const found = result.municipalities.items.find(
-          (m) => m.id === tenantId,
-        );
-        if (found) return found;
+        seen.push(...result.municipalities.items);
+        found ??= result.municipalities.items.find((m) => m.id === tenantId);
         after = result.municipalities.nextCursor;
-      } while (after);
+        if (!after) break;
+      }
+      if (found) return { ...found, name: municipalityLabel(found, seen) };
       throw new ApiError(
         403,
         "FORBIDDEN",
@@ -322,7 +329,25 @@ export function MunicipalForm({
   const { locale, t } = usePreferences();
   const client = useQueryClient();
   const { account } = useSession();
-  const [uncertain, setUncertain] = useState(false);
+  // The marker (never the request) survives navigation and reload, because these endpoints have no replay contract.
+  const marker = `quenda.municipal-uncertain:${account?.accountId ?? ""}:${method}:${path}`;
+  const [uncertain, setUncertainState] = useState(() => {
+    try {
+      return browserStorage("session")?.getItem(marker) !== null;
+    } catch {
+      return false;
+    }
+  });
+  const setUncertain = (value: boolean) => {
+    setUncertainState(value);
+    try {
+      const storage = browserStorage("session");
+      if (value) storage?.setItem(marker, "pending");
+      else storage?.removeItem(marker);
+    } catch {
+      /* Without storage the guard still holds while this view stays mounted. */
+    }
+  };
   const readBlocked = useReadBlocked();
   return (
     <>
