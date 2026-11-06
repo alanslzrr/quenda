@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ActionForm, textField } from "../../app/action";
 import { announce, restoreFocus } from "../../app/announce";
-import { api, type Municipality } from "../../app/api";
+import { ApiError, api, type Municipality } from "../../app/api";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link } from "../../app/link-button";
@@ -28,6 +28,7 @@ import {
   type Reservation,
   ReservationSummary,
 } from "../reservations/shared";
+import { admissibleDuration } from "./calendar-model";
 import { localInstants } from "./local-instants";
 import styles from "./municipal.module.css";
 import {
@@ -691,11 +692,24 @@ function Relocation({
   target: string;
 }) {
   const m = useMunicipality();
+  const { t } = usePreferences();
   const q = useMunicipalQuery<Unit>(
     `/api/public/municipalities/${m.id}/units/${target}`,
   );
   if (q.isPending) return <Loading />;
-  if (q.isError) return <Failure error={q.error} />;
+  if (q.isError) {
+    // Staff plan over every unit, but only a published unit can receive a booking.
+    if (q.error instanceof ApiError && q.error.status === 404)
+      return (
+        <p role="status">
+          {t(
+            "Esta unidad está retirada o sin publicar y no admite reubicaciones. Elige otra unidad de destino.",
+            "Esta unidade está retirada ou sen publicar e non admite reubicacións. Escolle outra unidade de destino.",
+          )}
+        </p>
+      );
+    return <Failure error={q.error} retry={() => void q.refetch()} />;
+  }
   return q.data ? (
     <RelocationSlots key={target} reservation={reservation} unit={q.data} />
   ) : null;
@@ -711,6 +725,17 @@ function RelocationSlots({
   const { locale, t } = usePreferences();
   const [date, setDate] = useState(() => municipalToday(unit.timeZone));
   const [duration, setDuration] = useState(unit.calendar.minimumMinutes);
+  // The field keeps what is typed; only an admissible value settles into a query, so typing never spends reads.
+  const [typed, setTyped] = useState(String(unit.calendar.minimumMinutes));
+  const admissible = admissibleDuration(typed, unit.calendar);
+  useEffect(() => {
+    if (admissible === null || admissible === duration) return;
+    const timer = window.setTimeout(() => {
+      setDuration(admissible);
+      setSlot("");
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [admissible, duration]);
   const [slot, setSlot] = useState("");
   const q = useMunicipalQuery<Availability>(
     `${endpoint(m.id)}/reservations/${r.id}/availability?administrative=true&unitId=${unit.id}&date=${date}&durationMinutes=${duration}`,
@@ -733,14 +758,19 @@ function RelocationSlots({
           type="number"
           required
           label={t("Duración (minutos)", "Duración (minutos)")}
-          value={duration}
+          value={typed}
           min={unit.calendar.minimumMinutes}
           max={unit.calendar.maximumMinutes}
           step={unit.calendar.stepMinutes}
-          onChange={(e) => {
-            setDuration(Number(e.target.value));
-            setSlot("");
-          }}
+          error={
+            admissible === null
+              ? t(
+                  `Indica entre ${unit.calendar.minimumMinutes} y ${unit.calendar.maximumMinutes} minutos, en múltiplos de ${unit.calendar.stepMinutes}.`,
+                  `Indica entre ${unit.calendar.minimumMinutes} e ${unit.calendar.maximumMinutes} minutos, en múltiplos de ${unit.calendar.stepMinutes}.`,
+                )
+              : undefined
+          }
+          onChange={(e) => setTyped(e.target.value)}
         />
       </div>
       {q.isPending ? (
