@@ -698,6 +698,16 @@ test("agreement drafts preserve participant ownership and do not activate capabi
         assert.equal(current.status, "APROBADO");
         assert.equal(current.weeklyLimit, 2);
         assert.equal(current.approvals.length, 2);
+        // Each municipality sees who approved for it, and only that it was approved elsewhere.
+        assert.equal(
+          current.approvals.find((a) => a.tenantId === tenant)?.approvedBy,
+          actor(0).accountId,
+        );
+        assert.ok(
+          current.approvals
+            .filter((a) => a.tenantId !== tenant)
+            .every((a) => a.approvedBy === null),
+        );
         assert.deepEqual(
           current.participants.map((p) => p.tenantId).sort(),
           [tenants[0], tenants[2]].sort(),
