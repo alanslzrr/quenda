@@ -136,7 +136,9 @@ test("a malformed resource id never reaches the API", async ({ page }) => {
   });
   await page.goto("/municipios/not-a-uuid/unidades/..%2Fx");
   await expect(
-    page.getByRole("heading", { name: "Página no encontrada" }),
+    page.getByRole("heading", {
+      name: /Página no encontrada|Páxina non atopada/,
+    }),
   ).toBeVisible();
   expect(requests.filter((path) => path.includes("not-a-uuid"))).toHaveLength(
     0,
