@@ -16,6 +16,8 @@ export interface AlertProps extends HTMLAttributes<HTMLDivElement> {
   open?: boolean;
   /** Shows a dismiss button. An uncontrolled alert collapses first, then calls this. */
   onDismiss?: () => void;
+  /** Accessible name prefix of the dismiss button, in the application language. */
+  dismissLabel?: string;
 }
 type AlertBoxProps = Omit<AlertProps, "open"> & { reduce: boolean | null; animateIcon?: boolean };
 
@@ -66,7 +68,7 @@ function HeightFrame({ className, reduce, morphKey, children }: { className?: st
   </motion.div>;
 }
 
-function AlertBox({ tone = "info", title, children, className, reduce, onDismiss, animateIcon = false, ...props }: AlertBoxProps) {
+function AlertBox({ tone = "info", title, children, className, reduce, onDismiss, dismissLabel = "Dismiss", animateIcon = false, ...props }: AlertBoxProps) {
   const Icon = icons[tone];
   const text = typeof children === "string" || typeof children === "number" ? String(children) : null;
   const hasDetails = children !== undefined && children !== null && children !== false && children !== "";
@@ -84,7 +86,7 @@ function AlertBox({ tone = "info", title, children, className, reduce, onDismiss
         {text === null ? children : <AnimatePresence mode="popLayout" initial={false}><Swap key={text} className={styles.line} {...swap}>{text}</Swap></AnimatePresence>}
       </motion.p>}</AnimatePresence>
     </HeightFrame>
-    {onDismiss && <button type="button" className={styles.dismiss} aria-label={`Dismiss: ${title}`} onClick={onDismiss}><X width={16} height={16} strokeWidth={1.75} aria-hidden="true"/></button>}
+    {onDismiss && <button type="button" className={styles.dismiss} aria-label={`${dismissLabel}: ${title}`} onClick={onDismiss}><X width={16} height={16} strokeWidth={1.75} aria-hidden="true"/></button>}
   </div>;
 }
 
