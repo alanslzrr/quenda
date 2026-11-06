@@ -312,6 +312,11 @@ export function Reason() {
       name="reason"
       required
       maxLength={500}
+      pattern=".*\S.*"
+      title={t(
+        "Indica un motivo; no puede quedar en blanco.",
+        "Indica un motivo; non pode quedar en branco.",
+      )}
     />
   );
 }
@@ -364,6 +369,7 @@ export function MunicipalForm({
         danger={danger}
         disabled={uncertain || readBlocked}
         resetOnSuccess={resetOnSuccess}
+        clearOnSuccess={["reason"]}
         label={label}
         success={t("Cambios guardados.", "Cambios gardados.")}
         submit={async (data) => {
