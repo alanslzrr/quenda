@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ActionForm } from "../../app/action";
+import { restoreFocus } from "../../app/announce";
 import { api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
@@ -156,6 +157,7 @@ export function ReservationAction({
             queryKey: ["private", account.accountId],
           });
           navigate(detailPath(result.tenantId, result.id), { replace: true });
+          restoreFocus();
         } catch (error) {
           if (readCommand(account.accountId)) {
             setUncertain(true);
