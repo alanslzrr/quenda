@@ -262,7 +262,7 @@ function VersionDetails({ item: a }: { item: Agreement }) {
             )}
             <p>
               {approval
-                ? `${t("Aprobada por", "Aprobada por")} ${approval.approvedBy} · ${new Date(approval.approvedAt).toLocaleString(locale)}`
+                ? `${approval.approvedBy ? `${t("Aprobada por", "Aprobada por")} ${approval.approvedBy}` : t("Aprobada", "Aprobada")} · ${new Date(approval.approvedAt).toLocaleString(locale)}`
                 : t("Sin aprobación registrada.", "Sen aprobación rexistrada.")}
             </p>
           </section>
