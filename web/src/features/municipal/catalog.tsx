@@ -315,20 +315,22 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
           }
           actions={
             <>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Globe size={16} aria-hidden="true" />
-                    {t("Publicar unidad", "Publicar unidade")}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent
-                  title={t("Publicar unidad", "Publicar unidade")}
-                  closeLabel={t("Cerrar", "Pechar")}
-                >
-                  <UnitPublication path={path} />
-                </DialogContent>
-              </Dialog>
+              {!resource.data.withdrawnAt && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Globe size={16} aria-hidden="true" />
+                      {t("Publicar unidad", "Publicar unidade")}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent
+                    title={t("Publicar unidad", "Publicar unidade")}
+                    closeLabel={t("Cerrar", "Pechar")}
+                  >
+                    <UnitPublication path={path} />
+                  </DialogContent>
+                </Dialog>
+              )}
               {!resource.data.withdrawnAt && (
                 <Dialog>
                   <DialogTrigger asChild>
