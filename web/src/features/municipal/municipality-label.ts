@@ -1,7 +1,7 @@
 const same = (a: string, b: string) =>
   a.trim().localeCompare(b.trim(), "es", { sensitivity: "base" }) === 0;
 
-/** Municipal names are not unique, so a repeated name carries the start of its id to stay distinguishable. */
+/** Municipal names are not unique, so a repeated name carries the end of its id to stay distinguishable. */
 export function municipalityLabel(
   municipality: { id: string; name: string },
   all: readonly { id: string; name: string }[],
@@ -11,6 +11,6 @@ export function municipalityLabel(
       other.id !== municipality.id && same(other.name, municipality.name),
   );
   return repeated
-    ? `${municipality.name} · ${municipality.id.slice(0, 8)}`
+    ? `${municipality.name} · ${municipality.id.slice(-6)}`
     : municipality.name;
 }

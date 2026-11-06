@@ -14,8 +14,8 @@ test("a name used once is shown unchanged", () => {
   assert.equal(municipalityLabel(first, [first]), "Oleiros");
 });
 
-test("homonymous municipalities are told apart by the start of their id", () => {
+test("homonymous municipalities are told apart by the end of their id", () => {
   const all = [first, second, other];
-  assert.equal(municipalityLabel(first, all), "Oleiros · 11111111");
-  assert.equal(municipalityLabel(second, all), " oleiros  · 22222222");
+  assert.equal(municipalityLabel(first, all), "Oleiros · 111111");
+  assert.equal(municipalityLabel(second, all), " oleiros  · 222222");
 });
