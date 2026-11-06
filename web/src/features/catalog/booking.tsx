@@ -1,5 +1,5 @@
 import { ArrowLeft, CalendarDays, Clock3 } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { usePreferences } from "../../app/preferences-provider";
 import { DatePicker } from "../../ui/date-picker/date-picker";
@@ -13,6 +13,7 @@ import {
   durationLabel,
   endsNextDay,
   municipalToday,
+  parseDuration,
   repeatedTime,
   resolveBookingDate,
   timeRange,
@@ -28,7 +29,7 @@ export function useBookingParams(timeZone: string) {
   const [search, setSearch] = useSearchParams();
   const today = municipalToday(timeZone);
   const requested = search.get("fecha") ?? "";
-  const duration = Number(search.get("duracion")) || undefined;
+  const duration = parseDuration(search.get("duracion"));
   const update = (changes: Record<string, string | undefined>) =>
     setSearch(
       (current) => {
@@ -126,6 +127,8 @@ export function DurationField({
   onChange: (minutes: number) => void;
 }) {
   const { t } = usePreferences();
+  // A cleared or half-typed field must not reset the chosen duration while it is being edited.
+  const [typed, setTyped] = useState<string | null>(null);
   if (range)
     return (
       <Input
@@ -135,7 +138,8 @@ export function DurationField({
         min={range.minimum}
         max={range.maximum}
         step={range.step}
-        value={value ?? ""}
+        value={typed ?? value ?? ""}
+        onBlur={() => setTyped(null)}
         description={
           range.maximum === undefined
             ? undefined
@@ -144,7 +148,11 @@ export function DurationField({
                 `De ${durationLabel(range.minimum)} a ${durationLabel(range.maximum)}, en intervalos de ${range.step} min`,
               )
         }
-        onChange={(event) => onChange(event.target.valueAsNumber)}
+        onChange={(event) => {
+          setTyped(event.target.value);
+          const minutes = event.target.valueAsNumber;
+          if (Number.isInteger(minutes) && minutes > 0) onChange(minutes);
+        }}
       />
     );
   return (
