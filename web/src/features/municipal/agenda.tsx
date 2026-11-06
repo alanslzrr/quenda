@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ActionForm, textField } from "../../app/action";
+import { announce, restoreFocus } from "../../app/announce";
 import { api, type Municipality } from "../../app/api";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
@@ -300,6 +301,7 @@ function BlockList({
                   <AdministrativeAction
                     path={`${endpoint(m.id)}/blocks/${b.id}/release`}
                     label={t("Liberar bloqueo", "Liberar bloqueo")}
+                    success={t("Bloqueo liberado.", "Bloqueo liberado.")}
                     body={(d) => ({ reason: textField(d, "reason") })}
                   >
                     <Reason />
@@ -392,6 +394,10 @@ function CreateBlock({
     <AdministrativeAction
       path={`${endpoint(m.id)}/blocks`}
       label={t("Crear bloqueo", "Crear bloqueo")}
+      success={t(
+        "Bloqueo creado. Consulta el día afectado en la agenda.",
+        "Bloqueo creado. Consulta o día afectado na axenda.",
+      )}
       body={(d) => ({
         unitId: unit,
         startsAt: start,
@@ -436,12 +442,14 @@ export function AdministrativeAction({
   path,
   body,
   label,
+  success,
   children,
   disabled = false,
 }: {
   path: string;
   body: (d: FormData) => unknown;
   label: string;
+  success: string;
   children: ReactNode;
   disabled?: boolean;
 }) {
@@ -456,6 +464,7 @@ export function AdministrativeAction({
     <ActionForm
       disabled={disabled}
       label={label}
+      success={success}
       submit={async (d) => {
         if (!account || disabled) return;
         const policy = await api<CommandPolicy>(
@@ -481,6 +490,8 @@ export function AdministrativeAction({
           });
           await client.invalidateQueries({ queryKey: ["public"] });
           navigate(commandResultPath(command, result), { replace: true });
+          announce(success);
+          restoreFocus();
         } catch (error) {
           if (readCommand(account.accountId)) {
             setUncertain(true);
@@ -646,6 +657,10 @@ function ReservationOperations({
             "Cancelar administrativamente",
             "Cancelar administrativamente",
           )}
+          success={t(
+            "Reserva cancelada administrativamente.",
+            "Reserva cancelada administrativamente.",
+          )}
           body={(d) => ({
             expectedRevision: r.revision,
             administrative: true,
@@ -760,6 +775,7 @@ function RelocationSlots({
         <AdministrativeAction
           path={`${endpoint(m.id)}/reservations/${r.id}/modify`}
           label={t("Confirmar reubicación", "Confirmar reubicación")}
+          success={t("Reserva reubicada.", "Reserva reubicada.")}
           body={(d) => ({
             expectedRevision: r.revision,
             unitId: unit.id,
