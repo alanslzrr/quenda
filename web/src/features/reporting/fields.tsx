@@ -113,6 +113,10 @@ export function MonthlyFields() {
         name="month"
         type="month"
         required
+        // Browsers without a month picker show free text; the server accepts only YYYY-MM.
+        pattern="[0-9]{4}-(0[1-9]|1[0-2])"
+        placeholder="2026-11"
+        title={t("Mes en formato AAAA-MM.", "Mes en formato AAAA-MM.")}
         label={t("Mes publicado", "Mes publicado")}
       />
     </>
