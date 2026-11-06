@@ -37,11 +37,22 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     enabled: !!id,
     queryFn: async ({ signal }) => {
       const [locale, theme] = await Promise.all([
-        api<{ locale: Locale | null }>("/api/me/preferences", { signal }),
-        api<{ theme: Theme | null }>("/api/me/theme", { signal }),
+        api<{ locale: Locale | null }>(
+          "/api/me/preferences",
+          { signal },
+          visitor.locale,
+        ),
+        api<{ theme: Theme | null }>(
+          "/api/me/theme",
+          { signal },
+          visitor.locale,
+        ),
       ]);
       return { ...locale, ...theme };
     },
+    // Preferences change only through this provider; focus refetches would spend the shared private-read budget.
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
   const locale = id ? (query.data?.locale ?? visitor.locale) : visitor.locale;
   const theme = id ? (query.data?.theme ?? null) : visitor.theme;
