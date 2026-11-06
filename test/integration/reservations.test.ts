@@ -1229,7 +1229,7 @@ test("reservation confirmation validates real calendars and commits every effect
         assert.equal(
           (
             await domain.query(
-              "SELECT * FROM domain.own_reservations(NULL,NULL)",
+              "SELECT * FROM domain.own_reservations(NULL,NULL,NULL)",
             )
           ).rowCount,
           0,
