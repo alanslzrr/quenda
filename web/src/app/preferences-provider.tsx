@@ -14,6 +14,7 @@ import {
   type Theme,
 } from "./preferences";
 import { useSession } from "./session";
+import { browserStorage } from "./storage.ts";
 
 interface Preferences {
   locale: Locale;
@@ -27,11 +28,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const { account } = useSession();
   const client = useQueryClient();
   const [visitor, setVisitor] = useState(() => {
-    let storage: Storage | undefined;
-    try {
-      storage = localStorage;
-    } catch {}
-    return readVisitorPreferences(storage, navigator.languages);
+    return readVisitorPreferences(browserStorage("local"), navigator.languages);
   });
   const [pending, setPending] = useState(false);
   const id = account?.accountId;
@@ -74,11 +71,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       } else {
         const next = { ...visitor, ...patch };
         setVisitor(next);
-        let storage: Storage | undefined;
-        try {
-          storage = localStorage;
-        } catch {}
-        saveVisitorPreferences(storage, next);
+        saveVisitorPreferences(browserStorage("local"), next);
       }
     } finally {
       setPending(false);
