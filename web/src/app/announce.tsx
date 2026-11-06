@@ -20,7 +20,6 @@ export function Announcer() {
   );
   return (
     <div
-      role="status"
       aria-live="polite"
       aria-atomic="true"
       style={{
