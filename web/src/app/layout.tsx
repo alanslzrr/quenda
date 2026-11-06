@@ -13,7 +13,7 @@ import { SettingsMenu } from "./settings-menu";
 import { useStaffEntry } from "./staff-entry";
 
 export function Layout() {
-  const { t } = usePreferences();
+  const { t, locale } = usePreferences();
   const { account } = useSession();
   const location = useLocation();
   const main = useRef<HTMLElement>(null);
@@ -35,7 +35,7 @@ export function Layout() {
     location.pathname === "/" ||
     location.pathname === "/reservar" ||
     location.pathname.startsWith("/municipios/");
-  const staff = useStaffEntry(account?.accountId, !resource);
+  const staff = useStaffEntry(account?.accountId, !resource, locale);
   return (
     <MfaBoundary key={account?.accountId ?? "guest"}>
       <div className={`${styles.shell} ${styles.product}`}>
