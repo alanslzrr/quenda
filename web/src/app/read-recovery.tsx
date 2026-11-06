@@ -11,6 +11,16 @@ export function discardEditor(error: unknown) {
     error.code !== "REAUTHENTICATION_REQUIRED"
   );
 }
+// A failed background refresh keeps its data; only a read that never succeeded, or lost authority, replaces the view.
+export function blocksEditor(query: {
+  isError: boolean;
+  error: unknown;
+  data: unknown;
+}) {
+  return (
+    query.isError && (query.data === undefined || discardEditor(query.error))
+  );
+}
 const ReadBlocked = createContext(false);
 export function useReadBlocked() {
   const failedRead = useContext(ReadBlocked);
