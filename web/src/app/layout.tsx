@@ -1,12 +1,14 @@
 import { Building2, CalendarPlus } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { Link, Outlet, useLocation, useMatch } from "react-router";
+import { Link, Outlet, useLocation, useMatch, useParams } from "react-router";
 import { MfaBoundary, MfaNotice } from "../features/account/mfa-dialog";
 import { useBookingEntry } from "../features/catalog/journey";
 import { useMunicipality } from "../features/catalog/municipality";
 import { BookingNavigation } from "./booking-navigation";
 import { Failure } from "./feedback";
+import { hasInvalidIds } from "./ids.ts";
 import styles from "./layout.module.css";
+import { NotFound } from "./not-found";
 import { usePreferences } from "./preferences-provider";
 import { useSession } from "./session";
 import { SettingsMenu } from "./settings-menu";
@@ -18,6 +20,7 @@ export function Layout() {
   const location = useLocation();
   const main = useRef<HTMLElement>(null);
   const previous = useRef(location.pathname);
+  const params = useParams();
   const place = useMatch("/municipios/:tenantId/*");
   const tenantId = place?.params.tenantId;
   const municipality = useMunicipality(tenantId);
@@ -142,7 +145,7 @@ export function Layout() {
             <BookingNavigation />
           )}
           {!resource && <MfaNotice />}
-          <Outlet />
+          {hasInvalidIds(params) ? <NotFound /> : <Outlet />}
         </main>
         {!resource && (
           <footer className={styles.footer}>

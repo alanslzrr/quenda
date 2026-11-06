@@ -2,20 +2,18 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "motion/react";
 import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Link, Route, Routes } from "react-router";
+import { BrowserRouter, Route, Routes } from "react-router";
 import "./ui/foundation.css";
 import "./ui/fonts.css";
 import "./ui/accessibility.css";
 import "./app/global.css";
 import { RouteBoundary, reloadForNewVersion } from "./app/error-boundary";
 import { Layout } from "./app/layout";
-import {
-  PreferencesProvider,
-  usePreferences,
-} from "./app/preferences-provider";
+import { NotFound } from "./app/not-found";
+import { PreferencesProvider } from "./app/preferences-provider";
 import { createQueryClient } from "./app/query";
 import { SessionProvider } from "./app/session";
-import { ThemeProvider, useMunicipalTheme } from "./app/theme-provider";
+import { ThemeProvider } from "./app/theme-provider";
 import { Home } from "./features/catalog/directory";
 
 const MunicipalityPage = lazy(() =>
@@ -231,16 +229,6 @@ window.addEventListener("vite:preloadError", (event) => {
   event.preventDefault();
   reloadForNewVersion();
 });
-function Missing() {
-  useMunicipalTheme(undefined);
-  const { t } = usePreferences();
-  return (
-    <>
-      <h1>{t("Página no encontrada", "Páxina non atopada")}</h1>
-      <Link to="/">{t("Volver al inicio", "Volver ao inicio")}</Link>
-    </>
-  );
-}
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing application root");
 createRoot(root).render(
@@ -460,7 +448,7 @@ createRoot(root).render(
                             />
                           </Route>
                         </Route>
-                        <Route path="*" element={<Missing />} />
+                        <Route path="*" element={<NotFound />} />
                       </Route>
                     </Routes>
                   </Suspense>
