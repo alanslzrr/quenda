@@ -31,6 +31,8 @@ test("account responses are never cacheable unless a route chose its own policy"
       const failure = await server.inject({ url });
       assert.equal(failure.headers["cache-control"], "no-store", url);
       assert.equal(failure.headers["x-content-type-options"], "nosniff", url);
+      // The hook must pass the serialized error through untouched.
+      assert.equal(typeof failure.json().error.code, "string", url);
     }
   } finally {
     await server.close();
