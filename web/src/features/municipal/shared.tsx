@@ -8,6 +8,7 @@ import { Outlet, useParams } from "react-router";
 import { ActionForm } from "../../app/action";
 import { ApiError, api, type Navigation, type Page } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
+import { ActionLink } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { canRefetch } from "../../app/query";
 import {
@@ -270,7 +271,15 @@ export function MunicipalLayout() {
   });
   if (query.isPending) return <Loading />;
   if (query.isError && (!query.data || discardEditor(query.error)))
-    return <Failure error={query.error} retry={() => void query.refetch()} />;
+    return (
+      <>
+        <Failure error={query.error} retry={() => void query.refetch()} />
+        {/* The management shell is not drawn here, so offer the way out. */}
+        <ActionLink to="/administracion">
+          {t("Volver a Gestión", "Volver a Xestión")}
+        </ActionLink>
+      </>
+    );
   const context = query.data;
   if (!context) return null;
   return (

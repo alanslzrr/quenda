@@ -14,6 +14,7 @@ import { Input } from "../../ui/input/input";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs/tabs";
 import { CalendarEditor, RulesEditor } from "./configuration";
+import { landingSection } from "./landing.ts";
 import styles from "./municipal.module.css";
 import resourceStyles from "./resource.module.css";
 import {
@@ -44,8 +45,25 @@ export function Catalog() {
   const hasCatalog =
     m.administrator ||
     m.permissions.some((p) => p.operation.startsWith("CATALOG_"));
-  if (!hasCatalog)
-    return <Navigate replace to={`${municipalPath(m.id)}/agenda`} />;
+  if (!hasCatalog) {
+    const landing = landingSection(m);
+    if (landing !== null)
+      return <Navigate replace to={`${municipalPath(m.id)}${landing}`} />;
+    return (
+      <>
+        <h1>{t("Sin secciones de gestión", "Sen seccións de xestión")}</h1>
+        <p>
+          {t(
+            "Tus permisos en este municipio no abren ninguna sección de gestión.",
+            "Os teus permisos neste municipio non abren ningunha sección de xestión.",
+          )}
+        </p>
+        <Link to="/administracion">
+          {t("Volver a Gestión", "Volver a Xestión")}
+        </Link>
+      </>
+    );
+  }
   return (
     <>
       <h1>{t("Instalaciones y unidades", "Instalacións e unidades")}</h1>
