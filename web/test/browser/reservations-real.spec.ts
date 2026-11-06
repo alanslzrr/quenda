@@ -114,6 +114,8 @@ test("real reservation, overlapping reschedule, notices, history filter and canc
   await expect(
     page.getByRole("heading", { name: "Reserva cancelada", exact: true }),
   ).toBeVisible();
+  // The cancel dialog and its trigger are gone; focus must not fall back to the document body.
+  await expect(page.locator("#content")).toBeFocused();
   const free = await page.request.get(
     `/api/public/municipalities/${tenant}/units/${unit}/availability?date=${day}&durationMinutes=60`,
   );

@@ -48,3 +48,14 @@ test("a request for more contrast strengthens muted text and control borders", a
   expect(more.border).toBe(more.foreground);
   expect(more.muted).toBe(more.secondary);
 });
+
+test("the booking step is announced through a live region that survives page changes", async ({
+  page,
+}) => {
+  await page.goto("/reservar");
+  await expect(
+    page.locator('div[aria-live="polite"][aria-atomic="true"]', {
+      hasText: /Paso 1 de 5: Municipio/,
+    }),
+  ).toHaveCount(1);
+});

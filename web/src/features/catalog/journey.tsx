@@ -2,6 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Star } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
+import { announce } from "../../app/announce";
 import { api, type Municipality, type Page } from "../../app/api";
 import { useFavorite } from "../../app/favorite";
 import { usePreferences } from "../../app/preferences-provider";
@@ -92,6 +93,21 @@ export function BookingSteps({
 }) {
   const { t } = usePreferences();
   const navigate = useNavigate();
+  const stepNames = [
+    t("Municipio", "Municipio"),
+    t("Instalación", "Instalación"),
+    t("Espacio", "Espazo"),
+    t("Día y hora", "Día e hora"),
+    t("Revisar y confirmar", "Revisar e confirmar"),
+  ];
+  const position = t(
+    `Paso ${current + 1} de ${stepNames.length}: ${stepNames[current]}`,
+    `Paso ${current + 1} de ${stepNames.length}: ${stepNames[current]}`,
+  );
+  // The stepper remounts with every page, so its own live region never sees a change; announce through the persistent one.
+  useEffect(() => {
+    announce(position);
+  }, [position]);
   const paths = [
     `${pickerPath}${query}`,
     tenantId ? municipalityPath(tenantId, query) : undefined,
