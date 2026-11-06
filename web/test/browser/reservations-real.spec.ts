@@ -15,7 +15,7 @@ const checkout = (tenant: string, unit: string, start: string, end: string) =>
 const acceptance =
   /He leído y acepto las normas de uso|Lin e acepto as normas de uso/;
 async function selectDay(page: Page, date: string, locale: string) {
-  await page.getByRole("button", { name: "Día", exact: true }).click();
+  await page.getByRole("button", { name: /^Día/ }).click();
   const today = new Date();
   const target = calendarDate(date);
   if (
