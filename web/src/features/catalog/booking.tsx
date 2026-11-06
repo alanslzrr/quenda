@@ -52,11 +52,13 @@ export function bookingQuery(values: {
   date?: string;
   duration?: number;
   facility?: string;
+  unit?: string;
 }) {
   const query = new URLSearchParams();
   if (values.date) query.set("fecha", values.date);
   if (values.duration) query.set("duracion", String(values.duration));
   if (values.facility) query.set("instalacion", values.facility);
+  if (values.unit) query.set("unidad", values.unit);
   const text = query.toString();
   return text ? `?${text}` : "";
 }
