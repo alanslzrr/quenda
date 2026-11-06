@@ -460,7 +460,7 @@ export function AdministrativeAction({
         if (!account || disabled) return;
         const policy = await api<CommandPolicy>(
           "/api/public/reservation-command-policy",
-          {},
+          { signal: AbortSignal.timeout(15000) },
           locale,
         );
         const command = {
