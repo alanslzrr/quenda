@@ -49,10 +49,15 @@ function Fallback({ chunk }: { chunk: boolean }) {
 }
 
 class Catcher extends Component<
-  { children: ReactNode },
+  { children: ReactNode; resetKey: string },
   { failed: boolean; chunk: boolean }
 > {
   state = { failed: false, chunk: false };
+  componentDidUpdate(previous: { resetKey: string }) {
+    // Navigating away from the failure gives the next page a fresh start without remounting healthy pages.
+    if (this.state.failed && previous.resetKey !== this.props.resetKey)
+      this.setState({ failed: false, chunk: false });
+  }
   static getDerivedStateFromError(error: unknown) {
     return { failed: true, chunk: isChunkError(error) };
   }
@@ -73,8 +78,8 @@ class Catcher extends Component<
   }
 }
 
-/** Contains render and lazy-chunk failures; each navigation gets a fresh boundary. */
+/** Contains render and lazy-chunk failures; leaving a failed page clears the failure. */
 export function RouteBoundary({ children }: { children: ReactNode }) {
   const location = useLocation();
-  return <Catcher key={location.key}>{children}</Catcher>;
+  return <Catcher resetKey={location.key}>{children}</Catcher>;
 }
