@@ -33,47 +33,52 @@ export function CollaborationAction({
   const client = useQueryClient();
   const navigate = useNavigate();
   const [pending, setPending] = useState(false);
-  if (pending || (account && readCommand(account.accountId)))
-    return <PendingLink />;
+  // Keep the form mounted so typed text survives; only submission is blocked while a result is unconfirmed.
+  const blocked = pending || !!(account && readCommand(account.accountId));
   return (
-    <ActionForm
-      label={label}
-      danger={danger}
-      resetOnSuccess={false}
-      submit={async (data) => {
-        if (!account) return;
-        const content = JSON.stringify(body(data));
-        const policy = await api<CommandPolicy>(
-          "/api/public/reservation-command-policy",
-          {},
-          locale,
-        );
-        const command = {
-          owner: account.accountId,
-          path,
-          key: crypto.randomUUID(),
-          body: content,
-          createdAt: Date.parse(policy.serverTime),
-          retentionSeconds: policy.retentionSeconds,
-        };
-        try {
-          const result = await sendCommand<CommandResult>(command, locale);
-          await client.invalidateQueries({
-            queryKey: ["private", account.accountId, "municipal"],
-          });
-          await client.invalidateQueries({ queryKey: ["public"] });
-          if (onResult) onResult(result);
-          else navigate(commandResultPath(command, result), { replace: true });
-        } catch (error) {
-          if (readCommand(account.accountId)) {
-            setPending(true);
-            return;
+    <>
+      {blocked && <PendingLink />}
+      <ActionForm
+        label={label}
+        disabled={blocked}
+        danger={danger}
+        resetOnSuccess={false}
+        submit={async (data) => {
+          if (!account) return;
+          const content = JSON.stringify(body(data));
+          const policy = await api<CommandPolicy>(
+            "/api/public/reservation-command-policy",
+            {},
+            locale,
+          );
+          const command = {
+            owner: account.accountId,
+            path,
+            key: crypto.randomUUID(),
+            body: content,
+            createdAt: Date.parse(policy.serverTime),
+            retentionSeconds: policy.retentionSeconds,
+          };
+          try {
+            const result = await sendCommand<CommandResult>(command, locale);
+            await client.invalidateQueries({
+              queryKey: ["private", account.accountId, "municipal"],
+            });
+            await client.invalidateQueries({ queryKey: ["public"] });
+            if (onResult) onResult(result);
+            else
+              navigate(commandResultPath(command, result), { replace: true });
+          } catch (error) {
+            if (readCommand(account.accountId)) {
+              setPending(true);
+              return;
+            }
+            throw error;
           }
-          throw error;
-        }
-      }}
-    >
-      {children}
-    </ActionForm>
+        }}
+      >
+        {children}
+      </ActionForm>
+    </>
   );
 }
