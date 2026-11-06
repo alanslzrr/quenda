@@ -6,6 +6,7 @@ import { api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
 import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
+import { useServerOffset } from "../../app/server-clock.ts";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Alert } from "../../ui/alert/alert";
@@ -48,11 +49,13 @@ export function ReservationDetail() {
       ),
     retry: false,
   });
-  const [now, setNow] = useState(Date.now());
+  const offset = useServerOffset();
+  const [, tick] = useState(0);
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const timer = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(timer);
   }, []);
+  const now = Date.now() + offset;
   if (query.isPending) return <Loading />;
   if (query.isError)
     return <Failure error={query.error} retry={() => void query.refetch()} />;
