@@ -147,7 +147,8 @@ export async function readAgreementVersion(
         })),
         approvals: approvals.rows.map((a) => ({
           tenantId: a.tenant_id,
-          approvedBy: a.approved_by,
+          // Another participant's approver is that municipality's own data; evidence of its approval remains.
+          approvedBy: a.tenant_id === tenantId ? a.approved_by : null,
           approvedAt: a.approved_at.toISOString(),
           correlationId: a.correlation_id,
         })),
