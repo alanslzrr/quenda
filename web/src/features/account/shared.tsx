@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   CalendarCheck2,
@@ -8,9 +8,9 @@ import {
   SlidersHorizontal,
   UserRound,
 } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
+import { type ComponentProps, type ReactNode, useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
-import { api } from "../../app/api";
+import { ApiError, api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
@@ -25,7 +25,9 @@ export function RequireAccount() {
   const location = useLocation();
   if (loading) return <Loading />;
   if (error && (!account || discardEditor(error)))
-    return <Failure error={error} />;
+    return (
+      <Failure error={error} retry={() => void refresh().catch(() => {})} />
+    );
   if (!account)
     return (
       <Navigate
@@ -125,14 +127,38 @@ export interface AuthSession {
 }
 export function useAuthSession() {
   const { account } = useSession();
-  return useQuery({
+  const { locale, t } = usePreferences();
+  const client = useQueryClient();
+  const query = useQuery({
     queryKey: ["private", account?.accountId, "auth-session"],
     enabled: !!account,
-    queryFn: ({ signal }) =>
-      api<AuthSession>("/api/auth/get-session", { signal }),
+    queryFn: async ({ signal }) => {
+      // better-auth answers 200 with a null body once the session is gone.
+      const session = await api<AuthSession | null>(
+        "/api/auth/get-session",
+        { signal },
+        locale,
+      );
+      if (!session)
+        throw new ApiError(
+          401,
+          "UNAUTHENTICATED",
+          t(
+            "Tu sesión ya no está activa. Accede de nuevo.",
+            "A túa sesión xa non está activa. Accede de novo.",
+          ),
+        );
+      return session;
+    },
     retry: false,
     gcTime: 0,
   });
+  const lost = query.error instanceof ApiError && query.error.status === 401;
+  useEffect(() => {
+    // Let the account session resolve so protected routes send the person to sign in.
+    if (lost) void client.invalidateQueries({ queryKey: ["session"] });
+  }, [lost, client]);
+  return query;
 }
 export function safeReturnPath(value: string | null) {
   if (
