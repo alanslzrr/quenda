@@ -177,7 +177,7 @@ test("public catalog uses municipal scope and restores Quenda theme on exit", as
     page.getByRole("combobox", { name: /^Duración$/ }),
   ).toContainText("1 h 30 min");
   await expect(page.getByText(/(No|Non) quedan horarios/)).toBeVisible();
-  await page.getByRole("button", { name: /^Día/ }).click();
+  await page.getByRole("button", { name: /^Día \S+,/ }).click();
   await expect(page.getByRole("dialog")).toHaveCSS("opacity", "1");
   await expect(
     page.getByRole("grid", {
@@ -348,7 +348,7 @@ test("current-day marker follows the municipality rather than browser timezone",
 }, info) => {
   await page.clock.setFixedTime(new Date("2026-10-22T22:30:00Z"));
   await page.goto(`/municipios/${tenant}/unidades/${unit}`);
-  await page.getByRole("button", { name: /^Día/ }).click();
+  await page.getByRole("button", { name: /^Día \S+,/ }).click();
   await expect(
     page.getByRole("gridcell", {
       name:

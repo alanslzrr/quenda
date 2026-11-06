@@ -15,7 +15,7 @@ const checkout = (tenant: string, unit: string, start: string, end: string) =>
 const acceptance =
   /He leído y acepto las normas de uso|Lin e acepto as normas de uso/;
 async function selectDay(page: Page, date: string, locale: string) {
-  await page.getByRole("button", { name: /^Día/ }).click();
+  await page.getByRole("button", { name: /^Día \S+,/ }).click();
   const today = new Date();
   const target = calendarDate(date);
   if (
@@ -181,6 +181,8 @@ test("municipal search offers a ninety minute booking and keeps its context on r
     });
     if (await option.isEnabled()) await option.click();
     else await page.keyboard.press("Escape");
+    // The modal menu hides the page from assistive technology until it has fully closed.
+    await expect(page.getByRole("menu")).toHaveCount(0);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     expect(
       await page.evaluate(

@@ -143,7 +143,7 @@ test("review can return through the same municipality without losing date or dur
   await expect(page.getByRole("combobox", { name: "Duración" })).toContainText(
     "1 h 30 min",
   );
-  await expect(page.getByRole("button", { name: /^Día/ })).toContainText("26");
+  await expect(page.getByRole("button", { name: /^Día \S+,/ })).toContainText("26");
   await page.reload();
   await expect(page.getByRole("combobox", { name: "Duración" })).toContainText(
     "1 h 30 min",
@@ -173,7 +173,7 @@ test("changing municipality retains preferences but revalidates the selected spa
   await expect(
     page.getByText(/(No admite|Non admite) reservas de 1 h 30 min/),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Día/ })).toContainText("26");
+  await expect(page.getByRole("button", { name: /^Día \S+,/ })).toContainText("26");
   await expect(
     page.getByRole("link", { name: /^Cambiar esp(acio|azo)$/ }),
   ).toHaveAttribute(
