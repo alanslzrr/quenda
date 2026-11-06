@@ -76,8 +76,11 @@ test("a lazy chunk that no longer exists shows recovery instead of a blank page"
   page,
 }) => {
   await mockAccount(page);
-  await page.route("**/features/account/security*", (route) => route.abort());
-  await page.goto("/perfil/seguridad");
+  // Only reachable through React.lazy, unlike modules the layout imports statically.
+  await page.route("**/features/catalog/facility*", (route) => route.abort());
+  await page.goto(
+    `/municipios/${tenant}/instalaciones/00000000-0000-4000-8000-000000000021`,
+  );
   await expect(
     page
       .getByRole("heading", { name: /Hay una versión nueva|Algo ha fallado/ })
