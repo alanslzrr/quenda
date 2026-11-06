@@ -86,7 +86,6 @@ export interface Page<T> {
 export interface Account {
   accountId: string;
   email: string;
-  mfaVerified: boolean;
 }
 export interface Municipality {
   id: string;
