@@ -7,6 +7,7 @@ import "./ui/foundation.css";
 import "./ui/fonts.css";
 import "./ui/accessibility.css";
 import "./app/global.css";
+import { RouteBoundary, reloadForNewVersion } from "./app/error-boundary";
 import { Layout } from "./app/layout";
 import {
   PreferencesProvider,
@@ -225,6 +226,11 @@ const MonthlyReview = lazy(() =>
   })),
 );
 const client = createQueryClient();
+// A stale tab asks for chunks that a newer deployment removed.
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  reloadForNewVersion();
+});
 function Missing() {
   useMunicipalTheme(undefined);
   const { t } = usePreferences();
@@ -245,210 +251,220 @@ createRoot(root).render(
           <PreferencesProvider>
             <ThemeProvider>
               <BrowserRouter>
-                <Suspense fallback={<Loading />}>
-                  <Routes>
-                    <Route element={<Layout />}>
-                      <Route index element={<Home />} />
-                      <Route path="reservar" element={<Home />} />
-                      <Route
-                        path="municipios/:tenantId"
-                        element={<MunicipalityPage />}
-                      />
-                      <Route
-                        path="municipios/:tenantId/horarios"
-                        element={<SearchPage />}
-                      />
-                      <Route
-                        path="municipios/:tenantId/instalaciones/:facilityId"
-                        element={<FacilityPage />}
-                      />
-                      <Route
-                        path="municipios/:tenantId/unidades/:unitId"
-                        element={<UnitPage />}
-                      />
-                      <Route path="acceso" element={<SignIn />} />
-                      <Route
-                        path="registro"
-                        element={<SignIn key="register" register />}
-                      />
-                      <Route
-                        path="recuperar"
-                        element={<RecoveryRequest key="reset" kind="reset" />}
-                      />
-                      <Route
-                        path="reactivar"
-                        element={
-                          <RecoveryRequest key="reactivate" kind="reactivate" />
-                        }
-                      />
-                      <Route
-                        path="verificar-correo"
-                        element={<RecoveryRequest key="verify" kind="verify" />}
-                      />
-                      <Route
-                        path="account/reset-password"
-                        element={<ResetPassword />}
-                      />
-                      <Route
-                        path="account/reactivation"
-                        element={<ReactivateAccount />}
-                      />
-                      <Route
-                        path="account/email-change/approve"
-                        element={
-                          <EmailChangeConfirmation
-                            key="approve"
-                            step="approve"
-                          />
-                        }
-                      />
-                      <Route
-                        path="account/email-change/confirm"
-                        element={
-                          <EmailChangeConfirmation
-                            key="confirm"
-                            step="confirm"
-                          />
-                        }
-                      />
-                      <Route element={<RequireAccount />}>
-                        <Route path="plataforma" element={<Platform />} />
+                <RouteBoundary>
+                  <Suspense fallback={<Loading />}>
+                    <Routes>
+                      <Route element={<Layout />}>
+                        <Route index element={<Home />} />
+                        <Route path="reservar" element={<Home />} />
                         <Route
-                          path="plataforma/gestion/:section"
-                          element={<Platform />}
+                          path="municipios/:tenantId"
+                          element={<MunicipalityPage />}
                         />
                         <Route
-                          path="plataforma/privacidad/:section?"
-                          element={<GlobalPrivacy />}
+                          path="municipios/:tenantId/horarios"
+                          element={<SearchPage />}
                         />
                         <Route
-                          path="administracion"
-                          element={<Administration />}
+                          path="municipios/:tenantId/instalaciones/:facilityId"
+                          element={<FacilityPage />}
                         />
                         <Route
-                          path="administracion/:tenantId"
-                          element={<MunicipalLayout />}
-                        >
-                          <Route index element={<Catalog />} />
+                          path="municipios/:tenantId/unidades/:unitId"
+                          element={<UnitPage />}
+                        />
+                        <Route path="acceso" element={<SignIn />} />
+                        <Route
+                          path="registro"
+                          element={<SignIn key="register" register />}
+                        />
+                        <Route
+                          path="recuperar"
+                          element={<RecoveryRequest key="reset" kind="reset" />}
+                        />
+                        <Route
+                          path="reactivar"
+                          element={
+                            <RecoveryRequest
+                              key="reactivate"
+                              kind="reactivate"
+                            />
+                          }
+                        />
+                        <Route
+                          path="verificar-correo"
+                          element={
+                            <RecoveryRequest key="verify" kind="verify" />
+                          }
+                        />
+                        <Route
+                          path="account/reset-password"
+                          element={<ResetPassword />}
+                        />
+                        <Route
+                          path="account/reactivation"
+                          element={<ReactivateAccount />}
+                        />
+                        <Route
+                          path="account/email-change/approve"
+                          element={
+                            <EmailChangeConfirmation
+                              key="approve"
+                              step="approve"
+                            />
+                          }
+                        />
+                        <Route
+                          path="account/email-change/confirm"
+                          element={
+                            <EmailChangeConfirmation
+                              key="confirm"
+                              step="confirm"
+                            />
+                          }
+                        />
+                        <Route element={<RequireAccount />}>
+                          <Route path="plataforma" element={<Platform />} />
                           <Route
-                            path="indicadores"
-                            element={<MunicipalIndicators />}
+                            path="plataforma/gestion/:section"
+                            element={<Platform />}
                           />
                           <Route
-                            path="exportaciones"
-                            element={<MunicipalIndicators exporting />}
-                          />
-                          <Route path="informes" element={<MonthlyReport />} />
-                          <Route
-                            path="informes/revision"
-                            element={<MonthlyReview />}
+                            path="plataforma/privacidad/:section?"
+                            element={<GlobalPrivacy />}
                           />
                           <Route
-                            path="privacidad/:section?"
-                            element={<MunicipalPrivacy />}
+                            path="administracion"
+                            element={<Administration />}
                           />
                           <Route
-                            path="instalaciones/:resourceId"
-                            element={<ResourcePage />}
-                          />
-                          <Route
-                            path="instalaciones/:resourceId/nueva-unidad"
-                            element={<NewUnit />}
-                          />
-                          <Route
-                            path="unidades/:resourceId"
-                            element={<ResourcePage unit />}
-                          />
-                          <Route
-                            path="condiciones"
-                            element={<BookingPolicy />}
-                          />
-                          <Route
-                            path="apariencia"
-                            element={<MunicipalAppearance />}
-                          />
-                          <Route path="convenios" element={<Agreements />} />
-                          <Route
-                            path="convenios/nuevo"
-                            element={<NewAgreement />}
-                          />
-                          <Route
-                            path="convenios/:agreementId/versiones/:version"
-                            element={<AgreementPage />}
-                          />
-                          <Route
-                            path="convenios/:agreementId/versiones/:version/nueva-version"
-                            element={<AgreementPage edit />}
-                          />
-                          <Route
-                            path="convenios/:agreementId/versiones/:version/acreditar"
-                            element={<IssueCredential />}
-                          />
-                          <Route
-                            path="convenios/unidades/:unitId/reapertura"
-                            element={<Reopening />}
-                          />
-                          <Route
-                            path="acreditaciones"
-                            element={<Credentials />}
-                          />
-                          <Route path="agenda" element={<Agenda />} />
-                          <Route
-                            path="personal/:section?"
-                            element={<MunicipalStaff />}
-                          />
-                          <Route
-                            path="reservas/:reservationId"
-                            element={<AdministrativeReservation />}
-                          />
-                        </Route>
+                            path="administracion/:tenantId"
+                            element={<MunicipalLayout />}
+                          >
+                            <Route index element={<Catalog />} />
+                            <Route
+                              path="indicadores"
+                              element={<MunicipalIndicators />}
+                            />
+                            <Route
+                              path="exportaciones"
+                              element={<MunicipalIndicators exporting />}
+                            />
+                            <Route
+                              path="informes"
+                              element={<MonthlyReport />}
+                            />
+                            <Route
+                              path="informes/revision"
+                              element={<MonthlyReview />}
+                            />
+                            <Route
+                              path="privacidad/:section?"
+                              element={<MunicipalPrivacy />}
+                            />
+                            <Route
+                              path="instalaciones/:resourceId"
+                              element={<ResourcePage />}
+                            />
+                            <Route
+                              path="instalaciones/:resourceId/nueva-unidad"
+                              element={<NewUnit />}
+                            />
+                            <Route
+                              path="unidades/:resourceId"
+                              element={<ResourcePage unit />}
+                            />
+                            <Route
+                              path="condiciones"
+                              element={<BookingPolicy />}
+                            />
+                            <Route
+                              path="apariencia"
+                              element={<MunicipalAppearance />}
+                            />
+                            <Route path="convenios" element={<Agreements />} />
+                            <Route
+                              path="convenios/nuevo"
+                              element={<NewAgreement />}
+                            />
+                            <Route
+                              path="convenios/:agreementId/versiones/:version"
+                              element={<AgreementPage />}
+                            />
+                            <Route
+                              path="convenios/:agreementId/versiones/:version/nueva-version"
+                              element={<AgreementPage edit />}
+                            />
+                            <Route
+                              path="convenios/:agreementId/versiones/:version/acreditar"
+                              element={<IssueCredential />}
+                            />
+                            <Route
+                              path="convenios/unidades/:unitId/reapertura"
+                              element={<Reopening />}
+                            />
+                            <Route
+                              path="acreditaciones"
+                              element={<Credentials />}
+                            />
+                            <Route path="agenda" element={<Agenda />} />
+                            <Route
+                              path="personal/:section?"
+                              element={<MunicipalStaff />}
+                            />
+                            <Route
+                              path="reservas/:reservationId"
+                              element={<AdministrativeReservation />}
+                            />
+                          </Route>
 
-                        <Route
-                          path="municipios/:tenantId/unidades/:unitId/reservar"
-                          element={<Checkout />}
-                        />
-                        <Route
-                          path="reservas"
-                          element={<ReservationHistory />}
-                        />
-                        <Route path="avisos" element={<Notices />} />
-                        <Route
-                          path="reservas/recuperacion"
-                          element={<CommandRecovery />}
-                        />
-                        <Route
-                          path="reservas/:tenantId/:reservationId"
-                          element={<ReservationDetail />}
-                        />
-                        <Route
-                          path="reservas/:tenantId/:reservationId/modificar"
-                          element={<ModifyReservation />}
-                        />
-                        <Route
-                          path="reservas/:tenantId/:reservationId/confirmar"
-                          element={<Checkout />}
-                        />
-                        <Route path="perfil" element={<AccountLayout />}>
-                          <Route index element={<Profile />} />
                           <Route
-                            path="invitaciones"
-                            element={<Invitations />}
-                          />
-                          <Route path="datos" element={<PersonalDetails />} />
-                          <Route
-                            path="seguridad"
-                            element={<AccountSecurity />}
+                            path="municipios/:tenantId/unidades/:unitId/reservar"
+                            element={<Checkout />}
                           />
                           <Route
-                            path="privacidad"
-                            element={<AccountPrivacy />}
+                            path="reservas"
+                            element={<ReservationHistory />}
                           />
+                          <Route path="avisos" element={<Notices />} />
+                          <Route
+                            path="reservas/recuperacion"
+                            element={<CommandRecovery />}
+                          />
+                          <Route
+                            path="reservas/:tenantId/:reservationId"
+                            element={<ReservationDetail />}
+                          />
+                          <Route
+                            path="reservas/:tenantId/:reservationId/modificar"
+                            element={<ModifyReservation />}
+                          />
+                          <Route
+                            path="reservas/:tenantId/:reservationId/confirmar"
+                            element={<Checkout />}
+                          />
+                          <Route path="perfil" element={<AccountLayout />}>
+                            <Route index element={<Profile />} />
+                            <Route
+                              path="invitaciones"
+                              element={<Invitations />}
+                            />
+                            <Route path="datos" element={<PersonalDetails />} />
+                            <Route
+                              path="seguridad"
+                              element={<AccountSecurity />}
+                            />
+                            <Route
+                              path="privacidad"
+                              element={<AccountPrivacy />}
+                            />
+                          </Route>
                         </Route>
+                        <Route path="*" element={<Missing />} />
                       </Route>
-                      <Route path="*" element={<Missing />} />
-                    </Route>
-                  </Routes>
-                </Suspense>
+                    </Routes>
+                  </Suspense>
+                </RouteBoundary>
               </BrowserRouter>
             </ThemeProvider>
           </PreferencesProvider>
