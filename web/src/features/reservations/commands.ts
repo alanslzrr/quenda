@@ -25,6 +25,9 @@ export function commandTime(policy: CommandPolicy, createdAt?: number) {
     throw new Error("Cannot establish command recovery deadline");
   return time;
 }
+/** Only these command endpoints may be stored, replayed or sent; the ids are lower-case UUID characters. */
+export const commandPath =
+  /^\/api\/municipalities\/[\da-f-]+(?:\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?|\/blocks(?:\/[\da-f-]+\/release)?|\/agreements(?:\/[\da-f-]+\/(?:versions|approve|activate|suspend|reports\/\d{4}-(?:0[1-9]|1[0-2])\/reviews))?|\/credentials(?:\/[\da-f-]+\/revoke)?|\/units\/[\da-f-]+\/agreement-restriction\/release)$/;
 export function readCommand(
   owner: string,
   storage: Storage | undefined = browserStorage("session"),
@@ -36,9 +39,7 @@ export function readCommand(
     const item = JSON.parse(value) as PendingCommand;
     if (item.owner !== owner) return null;
     if (
-      !/^\/api\/municipalities\/[\da-f-]+(?:\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?|\/blocks(?:\/[\da-f-]+\/release)?|\/agreements(?:\/[\da-f-]+\/(?:versions|approve|activate|suspend|reports\/\d{4}-(?:0[1-9]|1[0-2])\/reviews))?|\/credentials(?:\/[\da-f-]+\/revoke)?|\/units\/[\da-f-]+\/agreement-restriction\/release)$/.test(
-        item.path,
-      ) ||
+      !commandPath.test(item.path) ||
       typeof item.body !== "string" ||
       typeof item.key !== "string" ||
       !Number.isFinite(item.createdAt) ||
@@ -91,6 +92,8 @@ export async function sendCommand<T>(
         : "Comproba a operación anterior antes de enviar outra.",
     );
   if (inFlight) throw busy();
+  if (!commandPath.test(item.path))
+    throw new ApiError(0, "INVALID_COMMAND", "Invalid command path");
   // Without a durable marker an uncertain response could not be recovered, so nothing is sent.
   if (!storage)
     throw new ApiError(

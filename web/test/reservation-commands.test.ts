@@ -333,3 +333,28 @@ test("unavailable or inconsistent recovery clocks never imply expiry or send a w
     globalThis.fetch = original;
   }
 });
+
+test("a command whose path is not a known command endpoint is never sent", async () => {
+  const original = globalThis.fetch;
+  let requests = 0;
+  globalThis.fetch = async () => {
+    requests += 1;
+    return Response.json({});
+  };
+  try {
+    for (const path of [
+      "/api/municipalities/00000000-0000-4000-8000-000000000101/reservations/../x",
+      "/api/municipalities/a%2Fb/reservations",
+      "/api/me/reservations",
+    ])
+      await assert.rejects(
+        sendCommand({ ...command(), path }, "es", false, storage()),
+        {
+          code: "INVALID_COMMAND",
+        },
+      );
+    assert.equal(requests, 0);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
