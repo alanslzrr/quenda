@@ -112,7 +112,7 @@ export async function sendCommand<T>(
       throw busy();
     const policy = await api<CommandPolicy>(
       "/api/public/reservation-command-policy",
-      {},
+      { signal: AbortSignal.timeout(15000) },
       locale,
     );
     if (
