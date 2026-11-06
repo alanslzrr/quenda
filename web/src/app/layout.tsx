@@ -7,7 +7,7 @@ import { useMunicipality } from "../features/catalog/municipality";
 import { Announcer } from "./announce";
 import { BookingNavigation } from "./booking-navigation";
 import { Failure } from "./feedback";
-import { hasInvalidIds } from "./ids.ts";
+import { hasInvalidIds, isUuid } from "./ids.ts";
 import styles from "./layout.module.css";
 import { NotFound } from "./not-found";
 import { usePreferences } from "./preferences-provider";
@@ -23,7 +23,10 @@ export function Layout() {
   const previous = useRef(location.pathname);
   const params = useParams();
   const place = useMatch("/municipios/:tenantId/*");
-  const tenantId = place?.params.tenantId;
+  // A malformed id is shown as not found and must not be requested.
+  const tenantId = isUuid(place?.params.tenantId)
+    ? place?.params.tenantId
+    : undefined;
   const municipality = useMunicipality(tenantId);
   useEffect(() => {
     if (previous.current !== location.pathname) {
