@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ActionForm, textField } from "../../app/action";
 import { api, type Municipality } from "../../app/api";
@@ -7,6 +7,7 @@ import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
+import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { useSession } from "../../app/session";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
@@ -75,18 +76,29 @@ function AgendaData() {
   const units = useMunicipalPages<PlanningUnit>(
     `${endpoint(m.id)}/agenda/units`,
   );
+  // The unit directory is a short id/name list that every selector and row label needs, so load it whole.
+  const { hasNextPage, isFetching, isError, fetchNextPage } = units;
+  useEffect(() => {
+    if (hasNextPage && !isFetching && !isError) void fetchNextPage();
+  }, [hasNextPage, isFetching, isError, fetchNextPage]);
   if (q.isPending || units.isPending) return <Loading />;
-  if (q.isError || units.isError)
-    return <Failure error={q.error ?? units.error} />;
-  if (!q.data) return null;
+  const retry = () => {
+    if (q.isError) void q.refetch();
+    if (units.isError) void units.refetch();
+  };
+  if (blocksEditor(q) || blocksEditor(units) || !q.data || !units.data)
+    return <Failure error={q.error ?? units.error} retry={retry} />;
   return (
-    <>
+    <EditorRecovery
+      error={q.isError ? q.error : units.isError ? units.error : null}
+      retry={retry}
+    >
       <AgendaDay
         timeZone={q.data.timeZone}
         units={units.data.pages.flatMap((p) => p.items)}
       />
-      <More query={units} />
-    </>
+      {units.isError && <More query={units} />}
+    </EditorRecovery>
   );
 }
 function AgendaDay({
