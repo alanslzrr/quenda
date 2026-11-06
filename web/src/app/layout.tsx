@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation, useMatch, useParams } from "react-router";
 import { MfaBoundary, MfaNotice } from "../features/account/mfa-dialog";
 import { useBookingEntry } from "../features/catalog/journey";
 import { useMunicipality } from "../features/catalog/municipality";
+import { Announcer } from "./announce";
 import { BookingNavigation } from "./booking-navigation";
 import { Failure } from "./feedback";
 import { hasInvalidIds } from "./ids.ts";
@@ -42,6 +43,7 @@ export function Layout() {
   return (
     <MfaBoundary key={account?.accountId ?? "guest"}>
       <div className={`${styles.shell} ${styles.product}`}>
+        <Announcer />
         <a className={styles.skip} href="#content">
           {t("Saltar al contenido", "Saltar ao contido")}
         </a>
