@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { browserStorage } from "./storage.ts";
 
 const key = "quenda.municipality";
 const changed = "quenda:favorite";
@@ -8,7 +9,12 @@ export function readFavorite(
 ): string | null {
   try {
     const value = storage?.getItem(key) ?? null;
-    return value && /^[0-9a-f-]{36}$/i.test(value) ? value : null;
+    return value &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        value,
+      )
+      ? value
+      : null;
   } catch {
     return null;
   }
@@ -42,11 +48,11 @@ function subscribe(notify: () => void) {
 export function useFavorite() {
   const favorite = useSyncExternalStore(
     subscribe,
-    () => readFavorite(window.localStorage),
+    () => readFavorite(browserStorage("local")),
     () => null,
   );
   const setFavorite = (tenantId: string | null) => {
-    saveFavorite(window.localStorage, tenantId);
+    saveFavorite(browserStorage("local"), tenantId);
     window.dispatchEvent(new Event(changed));
   };
   return [favorite, setFavorite] as const;

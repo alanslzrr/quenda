@@ -31,8 +31,10 @@ export async function inspectCatalogResource(
               name: string;
               withdrawn_at: Date | null;
               published_at: Date | null;
+              profile_version: number;
+              profile: unknown;
             }>(
-              "SELECT id,name,published_at,withdrawn_at FROM domain.facility WHERE tenant_id=$1 AND id=$2",
+              "SELECT f.id,f.name,f.published_at,f.withdrawn_at,f.profile_version,domain.facility_profile_json(f) AS profile FROM domain.facility f WHERE f.tenant_id=$1 AND f.id=$2",
               [tenantId, id],
             )
           : await client.query<{
@@ -41,8 +43,10 @@ export async function inspectCatalogResource(
               withdrawn_at: Date | null;
               published_at: Date | null;
               facility_id: string;
+              profile_version: number;
+              profile: unknown;
             }>(
-              "SELECT id,name,published_at,withdrawn_at,facility_id FROM domain.reservable_unit WHERE tenant_id=$1 AND id=$2",
+              "SELECT u.id,u.name,u.published_at,u.withdrawn_at,u.facility_id,u.profile_version,domain.unit_profile_json(u) AS profile FROM domain.reservable_unit u WHERE u.tenant_id=$1 AND u.id=$2",
               [tenantId, id],
             );
       const row = result.rows[0];
@@ -53,6 +57,8 @@ export async function inspectCatalogResource(
         name: row.name,
         withdrawnAt: row.withdrawn_at?.toISOString() ?? null,
         publishedAt: row.published_at?.toISOString() ?? null,
+        profile: row.profile,
+        profileVersion: row.profile_version,
       };
     },
   );

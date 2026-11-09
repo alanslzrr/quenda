@@ -1,4 +1,5 @@
 import { ApiError, api } from "../../app/api.ts";
+import { browserStorage } from "../../app/storage.ts";
 export const pendingKey = "quenda.reservation-command";
 export interface PendingCommand {
   owner: string;
@@ -24,19 +25,21 @@ export function commandTime(policy: CommandPolicy, createdAt?: number) {
     throw new Error("Cannot establish command recovery deadline");
   return time;
 }
+/** Only these command endpoints may be stored, replayed or sent; the ids are lower-case UUID characters. */
+export const commandPath =
+  /^\/api\/municipalities\/[\da-f-]+(?:\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?|\/blocks(?:\/[\da-f-]+\/release)?|\/agreements(?:\/[\da-f-]+\/(?:versions|approve|activate|suspend|reports\/\d{4}-(?:0[1-9]|1[0-2])\/reviews))?|\/credentials(?:\/[\da-f-]+\/revoke)?|\/units\/[\da-f-]+\/agreement-restriction\/release)$/;
 export function readCommand(
   owner: string,
-  storage: Storage = sessionStorage,
+  storage: Storage | undefined = browserStorage("session"),
 ): PendingCommand | null {
   try {
+    if (!storage) return null;
     const value = storage.getItem(pendingKey);
     if (!value) return null;
     const item = JSON.parse(value) as PendingCommand;
     if (item.owner !== owner) return null;
     if (
-      !/^\/api\/municipalities\/[\da-f-]+(?:\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?|\/blocks(?:\/[\da-f-]+\/release)?|\/agreements(?:\/[\da-f-]+\/(?:versions|approve|activate|suspend|reports\/\d{4}-(?:0[1-9]|1[0-2])\/reviews))?|\/credentials(?:\/[\da-f-]+\/revoke)?|\/units\/[\da-f-]+\/agreement-restriction\/release)$/.test(
-        item.path,
-      ) ||
+      !commandPath.test(item.path) ||
       typeof item.body !== "string" ||
       typeof item.key !== "string" ||
       !Number.isFinite(item.createdAt) ||
@@ -52,9 +55,11 @@ export function readCommand(
     return null;
   }
 }
-export function forgetCommand(storage: Storage = sessionStorage) {
+export function forgetCommand(
+  storage: Storage | undefined = browserStorage("session"),
+) {
   try {
-    storage.removeItem(pendingKey);
+    storage?.removeItem(pendingKey);
   } catch {
     /* No stored command when storage is unavailable. */
   }
@@ -76,7 +81,7 @@ export async function sendCommand<T>(
   item: PendingCommand,
   locale: "es" | "gl",
   retry = false,
-  storage: Storage = sessionStorage,
+  storage: Storage | undefined = browserStorage("session"),
 ): Promise<T> {
   const busy = () =>
     new ApiError(
@@ -87,6 +92,17 @@ export async function sendCommand<T>(
         : "Comproba a operación anterior antes de enviar outra.",
     );
   if (inFlight) throw busy();
+  if (!commandPath.test(item.path))
+    throw new ApiError(0, "INVALID_COMMAND", "Invalid command path");
+  // Without a durable marker an uncertain response could not be recovered, so nothing is sent.
+  if (!storage)
+    throw new ApiError(
+      0,
+      "STORAGE_UNAVAILABLE",
+      locale === "es"
+        ? "Este navegador bloquea el almacenamiento necesario para proteger la operación. Permite los datos del sitio e inténtalo de nuevo."
+        : "Este navegador bloquea o almacenamento necesario para protexer a operación. Permite os datos do sitio e téntao de novo.",
+    );
   inFlight = true;
   try {
     const existing = readCommand(item.owner, storage);
@@ -99,7 +115,7 @@ export async function sendCommand<T>(
       throw busy();
     const policy = await api<CommandPolicy>(
       "/api/public/reservation-command-policy",
-      {},
+      { signal: AbortSignal.timeout(15000) },
       locale,
     );
     if (
@@ -116,7 +132,17 @@ export async function sendCommand<T>(
           ? "El plazo de reintento ha terminado. Comprueba el resultado antes de enviar otra operación."
           : "O prazo de reintento rematou. Comproba o resultado antes de enviar outra operación.",
       );
-    storage.setItem(pendingKey, JSON.stringify(item));
+    try {
+      storage.setItem(pendingKey, JSON.stringify(item));
+    } catch {
+      throw new ApiError(
+        0,
+        "STORAGE_UNAVAILABLE",
+        locale === "es"
+          ? "No se puede guardar el marcador de seguridad de la operación en este navegador. No se ha enviado nada."
+          : "Non se pode gardar o marcador de seguridade da operación neste navegador. Non se enviou nada.",
+      );
+    }
     try {
       const result = await api<T>(
         item.path,

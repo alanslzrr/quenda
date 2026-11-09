@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { calendarSchema } from "./calendar-routes.ts";
+import { facilityProfileSchema, unitProfileSchema } from "./profile-schema.ts";
 import {
   publicAvailability,
   publicAvailabilitySearch,
@@ -160,7 +161,12 @@ export async function registerPublicCatalog(
         querystring: query,
         response: {
           ...errors,
-          200: page({ id: uuid, name: text, units: { type: "integer" } }),
+          200: page({
+            id: uuid,
+            name: text,
+            units: { type: "integer" },
+            profile: facilityProfileSchema,
+          }),
         },
       },
     },
@@ -192,6 +198,7 @@ export async function registerPublicCatalog(
             facilityId: uuid,
             minimumMinutes: { type: "integer" },
             maximumMinutes: { type: "integer" },
+            profile: unitProfileSchema,
           }),
         },
       },
@@ -232,6 +239,8 @@ export async function registerPublicCatalog(
               "usageRulesVersion",
               "calendarVersion",
               "calendar",
+              "profile",
+              "facilityProfile",
             ],
             properties: {
               id: uuid,
@@ -245,6 +254,8 @@ export async function registerPublicCatalog(
               usageRulesVersion: { type: "integer", minimum: 1 },
               calendarVersion: { type: "integer" },
               calendar: calendarSchema,
+              profile: unitProfileSchema,
+              facilityProfile: facilityProfileSchema,
             },
           },
         },

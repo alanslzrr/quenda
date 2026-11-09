@@ -58,7 +58,7 @@ const detail = {
     type: "array",
     items: object({
       tenantId: uuid,
-      approvedBy: text,
+      approvedBy: { ...text, nullable: true },
       approvedAt: instant,
       correlationId: uuid,
     }),

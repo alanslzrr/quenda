@@ -71,7 +71,7 @@ El convenio define identificador estable, versiones, municipios participantes, u
 | Sustituir o reactivar | Nueva versión, aprobaciones y acto de activación. |
 | Finalizar | Vencimiento o terminación acordada, con conservación de evidencias según su política. |
 
-Los estados almacenados son `BORRADOR`, `APROBADO`, `ACTIVADO` y `SUSPENDIDO`. Solo una versión `ACTIVADO` dentro de su vigencia habilita operaciones. La aprobación no sustituye al acto de activación.
+Los estados almacenados son `BORRADOR`, `APROBADO`, `ACTIVADO` y `SUSPENDIDO`. Solo una versión `ACTIVADO` dentro de su vigencia habilita operaciones. La aprobación no sustituye al acto de activación. La consulta de una versión muestra a cada participante la existencia y la fecha de las aprobaciones de todos, pero la cuenta que aprobó solo se revela al municipio aprobador.
 
 Existe como máximo una versión efectiva por convenio e instante. Sustituirla cierra atómicamente la vigencia anterior y conserva sus evidencias. Cada operación comprueba el vencimiento sin depender de un trabajo programado. Para reservar, el convenio debe estar activo al confirmar y cubrir todo el intervalo solicitado.
 

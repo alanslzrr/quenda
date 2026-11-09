@@ -217,7 +217,12 @@ export async function registerMonthlyReportRoutes(
         operationId: "deliverMonthlyReport",
         description:
           "Entrega el último informe mensual autorizado y registra su entrega atómicamente. Exige REPORT_READ municipal y MFA, capacidad vigente y revisiones favorables de todos los participantes. No admite filtros ni elección de revisión. NOT_PUBLISHABLE no incluye métricas ni causas.",
-        querystring: { type: "object", additionalProperties: false },
+        // Without "properties" the generated contract invents query parameters named after the keywords.
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          properties: {},
+        },
         response: {
           ...errors,
           200: {

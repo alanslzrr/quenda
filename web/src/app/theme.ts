@@ -71,9 +71,15 @@ export function themeVariables(
   theme: Theme,
   appearance = defaultAppearance,
 ): Record<string, string> {
+  // The appearance comes from the server; an unknown palette must not take the whole interface down.
+  const requested =
+    theme === "light" ? appearance?.lightPalette : appearance?.darkPalette;
   const palette =
     paletteColors[theme][
-      theme === "light" ? appearance.lightPalette : appearance.darkPalette
+      typeof requested === "string" &&
+      Object.hasOwn(paletteColors[theme], requested)
+        ? (requested as keyof (typeof paletteColors)[typeof theme])
+        : "neutral"
     ];
   return {
     "--background": palette.background,

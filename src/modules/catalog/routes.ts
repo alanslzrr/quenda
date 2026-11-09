@@ -11,6 +11,17 @@ import {
   inspectCatalogResource,
   renameCatalogResource,
 } from "./maintenance.ts";
+import {
+  type FacilityProfileInput,
+  saveCatalogProfile,
+  type UnitProfileInput,
+} from "./profile.ts";
+import {
+  facilityProfileBody,
+  facilityProfileSchema,
+  unitProfileBody,
+  unitProfileSchema,
+} from "./profile-schema.ts";
 import { registerPublicCatalog } from "./public-routes.ts";
 import { publishCatalogResource } from "./publication.ts";
 import { listCatalogResources } from "./queries.ts";
@@ -206,6 +217,8 @@ export async function registerCatalog(
       required: ["tenantId", "id"],
       properties: { tenantId: uuid, id: uuid },
     };
+    const profileSchema =
+      kind === "facility" ? facilityProfileSchema : unitProfileSchema;
     const response = {
       ...errors,
       200: {
@@ -221,6 +234,19 @@ export async function registerCatalog(
         },
       },
     };
+    // Only the administrative read carries the profile; changes answer with the short form above.
+    const inspected = {
+      ...errors,
+      200: {
+        ...response[200],
+        required: [...response[200].required, "profile", "profileVersion"],
+        properties: {
+          ...response[200].properties,
+          profile: profileSchema,
+          profileVersion: { type: "integer", minimum: 1 },
+        },
+      },
+    };
     app.get<{ Params: { tenantId: string; id: string } }>(
       `/api/municipalities/:tenantId/${resource}/:id`,
       {
@@ -229,7 +255,7 @@ export async function registerCatalog(
           tags: ["Catalog"],
           security: [{ quendaSession: [] }],
           params,
-          response,
+          response: inspected,
         },
       },
       async (request, reply) =>
@@ -346,6 +372,45 @@ export async function registerCatalog(
           kind,
           request.params.id,
           request.body,
+        ),
+    );
+    app.put<{
+      Params: { tenantId: string; id: string };
+      Body: FacilityProfileInput | UnitProfileInput;
+    }>(
+      `/api/municipalities/:tenantId/${resource}/:id/profile`,
+      {
+        schema: {
+          operationId: `save_${kind}_profile`,
+          tags: ["Catalog"],
+          security: [{ quendaSession: [] }],
+          description:
+            "Sustituye la ficha completa: los campos ausentes se borran, de modo que leer, editar y reenviar es el flujo completo. Exige CATALOG_MANAGE sobre el recurso, MFA reciente y expectedVersion igual a profileVersion; una versión distinta devuelve CONFLICT. No publica nada. Cada cambio queda auditado.",
+          params,
+          body: kind === "facility" ? facilityProfileBody : unitProfileBody,
+          response: {
+            ...errors,
+            200: {
+              type: "object",
+              additionalProperties: false,
+              required: ["profile", "profileVersion"],
+              properties: {
+                profile: profileSchema,
+                profileVersion: { type: "integer", minimum: 1 },
+              },
+            },
+          },
+        },
+      },
+      async (request, reply) =>
+        saveCatalogProfile(
+          pool,
+          await actor(request, reply),
+          request.params.tenantId,
+          kind,
+          request.params.id,
+          request.body,
+          request.id,
         ),
     );
     app.patch<{

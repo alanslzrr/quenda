@@ -104,7 +104,7 @@ Una persona puede ejercer varias funciones, sin que una amplíe los permisos de 
 - **Precondiciones:** municipio incorporado, sesión con MFA y permisos sobre la operación y los recursos.
 
 **Flujo principal**
-1. El actor registra la instalación y sus unidades; configura horarios, excepciones, duración, antelación y normas.
+1. El actor registra la instalación y sus unidades; completa su ficha pública (dirección, ubicación, descripción, accesibilidad, contacto, tipo y aforo, en gallego y castellano); configura horarios, excepciones, duración, antelación y normas.
 2. Solicita publicar una unidad físicamente independiente.
 3. Quenda valida la configuración, registra la actuación y la incorpora al catálogo disponible.
 
@@ -112,6 +112,7 @@ Una persona puede ejercer varias funciones, sin que una amplíe los permisos de 
 - Sin normas, mantiene el borrador y responde: «Añade las normas de uso para publicar esta unidad» (`USAGE_RULES_REQUIRED`).
 - Un cambio de calendario o bloqueo incompatible con reservas confirmadas se rechaza hasta resolverlas mediante CU-03.
 - Un bloqueo válido impide nuevas reservas en su intervalo.
+- La ficha es opcional y se sustituye completa: un campo ausente se borra. Si otra persona la modificó antes, el guardado se rechaza por versión y no sobrescribe su cambio.
 - Retirar una unidad la oculta sin borrar reservas ni historial. Cambiar normas no sobrescribe las versiones aceptadas.
 
 **Resultado esperado:** catálogo y calendario persistidos sin invalidar reservas existentes.
@@ -187,7 +188,7 @@ Una persona puede ejercer varias funciones, sin que una amplíe los permisos de 
 
 **Flujo principal**
 1. El usuario solicita su historial y, si lo necesita, lo delimita por municipio.
-2. Quenda devuelve sus reservas conservadas de la instancia.
+2. Quenda devuelve sus reservas conservadas de la instancia, de la más reciente a la más antigua por inicio; a igual inicio, el orden es estable por identificador y municipio. El filtro ofrece los municipios donde la cuenta tiene reservas, con independencia de las páginas cargadas, sin constituir un directorio de municipios.
 3. Al consultar una reserva, muestra su estado y la evidencia de normas aceptadas o pendientes.
 
 **Alternativas y excepciones**

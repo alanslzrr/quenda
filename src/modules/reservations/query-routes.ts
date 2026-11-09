@@ -8,6 +8,7 @@ import {
 import { acceptanceProperties } from "./acceptance.ts";
 import {
   listMunicipalReservations,
+  listOwnReservationMunicipalities,
   listOwnReservations,
   readReservation,
 } from "./queries.ts";
@@ -120,7 +121,7 @@ export async function registerReservationQueries(
           tags: ["Reservations"],
           security: [{ quendaSession: [] }],
           description: own
-            ? "Reservas del usuario autenticado entre municipios de esta instancia, incluidas unidades retiradas. tenantId filtra un municipio sin ampliar el acceso. Páginas de 20, orden estable por ID y municipio. Mantener el filtro al continuar con nextCursor; al cambiarlo, iniciar sin cursor. El cursor no identifica otro usuario."
+            ? "Reservas del usuario autenticado entre municipios de esta instancia, incluidas unidades retiradas. tenantId filtra un municipio sin ampliar el acceso. Páginas de 20, de la más reciente a la más antigua por inicio, con desempate estable por ID y municipio. nextCursor codifica esa clave completa (inicio|ID|municipio) y es opaco para el cliente: mantener el filtro al continuar con él y, al cambiarlo, iniciar sin cursor. Un cursor con otro formato se rechaza con 400. El cursor no identifica otro usuario."
             : "Reservas del municipio incluidas en los permisos RESERVATION_READ o RESERVATION_MANAGE. Requiere MFA. Páginas de 20 por ID; unitId filtra una unidad sin ampliar permisos. date selecciona intervalos que se solapan con ese día en la zona municipal antes de paginar; incluye reservas canceladas.",
           ...(!own
             ? {
@@ -136,7 +137,7 @@ export async function registerReservationQueries(
             type: "object",
             additionalProperties: false,
             properties: own
-              ? { after: { type: "string", maxLength: 73 }, tenantId: uuid }
+              ? { after: { type: "string", maxLength: 128 }, tenantId: uuid }
               : {
                   after: uuid,
                   unitId: uuid,
@@ -216,4 +217,52 @@ export async function registerReservationQueries(
       },
     );
   }
+  app.get<{ Querystring: { after?: string } }>(
+    "/api/me/reservations/municipalities",
+    {
+      schema: {
+        operationId: "ownReservationMunicipalities",
+        tags: ["Reservations"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Municipios en los que la cuenta autenticada tiene reservas, para filtrar su historial. No es un directorio: solo refleja la huella de la propia cuenta, sin ampliar el acceso. Páginas de 20 ordenadas por ID de municipio; nextCursor es el último ID devuelto.",
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          properties: { after: uuid },
+        },
+        response: {
+          ...Object.fromEntries(
+            [400, 401, 403, 429, 500, 503].map((s) => [
+              s,
+              { $ref: "ErrorResponse#" },
+            ]),
+          ),
+          200: {
+            type: "object",
+            additionalProperties: false,
+            required: ["items", "nextCursor"],
+            properties: {
+              nextCursor: { ...uuid, nullable: true },
+              items: {
+                type: "array",
+                maxItems: 20,
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["tenantId", "name"],
+                  properties: { tenantId: uuid, name: { type: "string" } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const account = await actor(request, reply);
+      reply.header("cache-control", "no-store");
+      return listOwnReservationMunicipalities(pool, account, request.query);
+    },
+  );
 }

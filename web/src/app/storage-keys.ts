@@ -78,4 +78,25 @@ export const storageEntries: readonly StorageEntry[] = [
       "Ata confirmar a comprobación ou pechar a lapela",
     ],
   },
+  {
+    key: "quenda.municipal-uncertain",
+    store: "session",
+    purpose: [
+      "Marca de un cambio municipal sin confirmar, para comprobarlo sin repetirlo. No guarda su contenido.",
+      "Marca dun cambio municipal sen confirmar, para comprobalo sen repetilo. Non garda o seu contido.",
+    ],
+    duration: [
+      "Hasta confirmar la comprobación o cerrar la pestaña",
+      "Ata confirmar a comprobación ou pechar a lapela",
+    ],
+  },
+  {
+    key: "quenda.chunk-reload",
+    store: "session",
+    purpose: [
+      "Marca de que la aplicación se recargó una vez tras publicarse una versión nueva, para no recargar en bucle.",
+      "Marca de que a aplicación se recargou unha vez tras publicarse unha versión nova, para non recargar en bucle.",
+    ],
+    duration: ["Hasta cerrar la pestaña", "Ata pechar a lapela"],
+  },
 ];

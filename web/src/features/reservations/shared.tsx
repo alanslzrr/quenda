@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ActionForm } from "../../app/action";
+import { restoreFocus } from "../../app/announce";
 import { api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
@@ -138,7 +139,7 @@ export function ReservationAction({
         if (!account) return;
         const policy = await api<CommandPolicy>(
           "/api/public/reservation-command-policy",
-          {},
+          { signal: AbortSignal.timeout(15000) },
           locale,
         );
         const item = {
@@ -156,6 +157,7 @@ export function ReservationAction({
             queryKey: ["private", account.accountId],
           });
           navigate(detailPath(result.tenantId, result.id), { replace: true });
+          restoreFocus();
         } catch (error) {
           if (readCommand(account.accountId)) {
             setUncertain(true);
@@ -184,7 +186,7 @@ export function CommandRecovery() {
     queryFn: async ({ signal }) => {
       const value = await api<CommandPolicy>(
         "/api/public/reservation-command-policy",
-        { signal },
+        { signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]) },
         locale,
       );
       commandTime(value, pending?.createdAt);
@@ -218,7 +220,7 @@ export function CommandRecovery() {
               "Non se recibiu unha confirmación. A operación pode terse completado. Consulta o estado actual antes de enviar outra solicitude.",
             )}
           </p>
-          {policy.isPending || policy.isFetching ? (
+          {policy.isPending ? (
             <Loading />
           ) : policy.isError ? (
             <Failure error={policy.error} retry={() => void policy.refetch()} />

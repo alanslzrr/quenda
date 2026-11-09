@@ -3,6 +3,7 @@ import type { Appearance } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
 import layout from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
+import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { defaultAppearance } from "../../app/theme";
 import { useAppearancePreview } from "../../app/theme-provider";
 import { Button } from "../../ui/button/button";
@@ -37,11 +38,14 @@ function AppearanceEditor() {
       </p>
       {q.isPending ? (
         <Loading />
-      ) : q.isError ? (
-        <Failure error={q.error} />
+      ) : blocksEditor(q) || !q.data ? (
+        <Failure error={q.error} retry={() => void q.refetch()} />
       ) : (
         q.data && (
-          <>
+          <EditorRecovery
+            error={q.isError ? q.error : null}
+            retry={() => void q.refetch()}
+          >
             <AppearanceForm key={reset} initial={q.data} />
             <Button
               type="button"
@@ -56,7 +60,7 @@ function AppearanceEditor() {
                 "Descartar borrador e recargar",
               )}
             </Button>
-          </>
+          </EditorRecovery>
         )
       )}
     </>

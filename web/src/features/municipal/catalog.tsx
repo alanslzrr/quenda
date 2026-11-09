@@ -13,8 +13,11 @@ import { Dialog, DialogContent, DialogTrigger } from "../../ui/dialog/dialog";
 import { Input } from "../../ui/input/input";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs/tabs";
+import type { FacilityProfile, UnitProfile } from "../catalog/profile";
 import { CalendarEditor, RulesEditor } from "./configuration";
+import { landingSection } from "./landing.ts";
 import styles from "./municipal.module.css";
+import { FacilityProfileEditor, UnitProfileEditor } from "./profile-editor";
 import resourceStyles from "./resource.module.css";
 import {
   Denied,
@@ -37,6 +40,8 @@ export type Resource = {
   facilityId: string;
   publishedAt: string | null;
   withdrawnAt: string | null;
+  profile?: FacilityProfile & UnitProfile;
+  profileVersion?: number;
 };
 export function Catalog() {
   const m = useMunicipality();
@@ -44,8 +49,25 @@ export function Catalog() {
   const hasCatalog =
     m.administrator ||
     m.permissions.some((p) => p.operation.startsWith("CATALOG_"));
-  if (!hasCatalog)
-    return <Navigate replace to={`${municipalPath(m.id)}/agenda`} />;
+  if (!hasCatalog) {
+    const landing = landingSection(m);
+    if (landing !== null)
+      return <Navigate replace to={`${municipalPath(m.id)}${landing}`} />;
+    return (
+      <>
+        <h1>{t("Sin secciones de gestión", "Sen seccións de xestión")}</h1>
+        <p>
+          {t(
+            "Tus permisos en este municipio no abren ninguna sección de gestión.",
+            "Os teus permisos neste municipio non abren ningunha sección de xestión.",
+          )}
+        </p>
+        <Link to="/administracion">
+          {t("Volver a Gestión", "Volver a Xestión")}
+        </Link>
+      </>
+    );
+  }
   return (
     <>
       <h1>{t("Instalaciones y unidades", "Instalacións e unidades")}</h1>
@@ -262,6 +284,11 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
         <h1>{resource.data.name}</h1>
         <p>{state}</p>
         {nameForm}
+        <FacilityProfileEditor
+          path={path}
+          profile={resource.data.profile ?? {}}
+          version={resource.data.profileVersion ?? 1}
+        />
         <Publication path={path} unit={false} />
         <section className={styles.section}>
           <h2>{t("Retirar del catálogo", "Retirar do catálogo")}</h2>
@@ -297,20 +324,22 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
           }
           actions={
             <>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Globe size={16} aria-hidden="true" />
-                    {t("Publicar unidad", "Publicar unidade")}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent
-                  title={t("Publicar unidad", "Publicar unidade")}
-                  closeLabel={t("Cerrar", "Pechar")}
-                >
-                  <UnitPublication path={path} />
-                </DialogContent>
-              </Dialog>
+              {!resource.data.withdrawnAt && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Globe size={16} aria-hidden="true" />
+                      {t("Publicar unidad", "Publicar unidade")}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent
+                    title={t("Publicar unidad", "Publicar unidade")}
+                    closeLabel={t("Cerrar", "Pechar")}
+                  >
+                    <UnitPublication path={path} />
+                  </DialogContent>
+                </Dialog>
+              )}
               {!resource.data.withdrawnAt && (
                 <Dialog>
                   <DialogTrigger asChild>
@@ -332,6 +361,10 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
         />
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList
+            scrollLabels={{
+              previous: t("Anterior", "Anterior"),
+              next: t("Siguiente", "Seguinte"),
+            }}
             aria-label={t(
               "Configuración de la unidad",
               "Configuración da unidade",
@@ -340,6 +373,10 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
             <TabsTrigger value="data">
               <Settings2 size={16} aria-hidden="true" />
               {t("Datos", "Datos")}
+            </TabsTrigger>
+            <TabsTrigger value="profile">
+              <FileText size={16} aria-hidden="true" />
+              {t("Ficha", "Ficha")}
             </TabsTrigger>
             <TabsTrigger value="calendar">
               <Clock3 size={16} aria-hidden="true" />
@@ -371,6 +408,13 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
                 )}
               </div>
             )}
+          </TabsContent>
+          <TabsContent value="profile" forceMount>
+            <UnitProfileEditor
+              path={path}
+              profile={resource.data.profile ?? {}}
+              version={resource.data.profileVersion ?? 1}
+            />
           </TabsContent>
           <TabsContent value="calendar" forceMount>
             <CalendarEditor path={path} />

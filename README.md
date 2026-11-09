@@ -136,6 +136,8 @@ Cada permiso se limita a una operación y unidad real del municipio; `unitId: nu
 
 `GET /api/municipalities/{tenantId}/facilities/{id}` y `GET /api/municipalities/{tenantId}/units/{id}` consultan un recurso para mantenimiento. `PATCH` sobre esas mismas rutas recibe `{ "name": "..." }` y registra el nombre anterior y el nuevo en la misma transacción. Requieren `CATALOG_MANAGE` y MFA reciente: ámbito municipal para instalaciones, municipal o de la unidad concreta para unidades. No permiten cambiar identificadores ni trasladar unidades entre instalaciones o municipios. Si falla la auditoría, el cambio se revierte.
 
+`PUT /api/municipalities/{tenantId}/facilities/{id}/profile` y `/units/{id}/profile` sustituyen la ficha pública completa: instalaciones con `address`, `postalCode`, `location`, `description`, `accessibility` y `contact`; unidades con `kind`, `indoor`, `capacity` y `description`. Los textos llevan variantes `gl` y `es`; un campo ausente se borra. Exigen `CATALOG_MANAGE` sobre el recurso, MFA reciente y `expectedVersion` igual a `profileVersion` (la lectura administrativa lo devuelve); una versión distinta responde `409`. Cada cambio guarda el estado anterior y el nuevo.
+
 `GET /api/municipalities/{tenantId}/facilities` y `GET /api/municipalities/{tenantId}/units` listan los recursos visibles para la cuenta con MFA reciente. Devuelven hasta 20 elementos y `nextCursor`; la página siguiente utiliza `?after=...`. RLS filtra antes de paginar: un gestor limitado a determinadas unidades no obtiene las restantes ni acceso municipal a instalaciones. Sin recursos autorizados, la respuesta es una lista vacía. Estos listados son administrativos, no publicaciones del catálogo público.
 
 `POST /api/municipalities/{tenantId}/facilities/{id}/withdraw` y la ruta equivalente `/units/{id}/withdraw` reciben `{ "reason": "..." }`. Registran la retirada y su motivo sin eliminar el recurso. Repetir la retirada devuelve el mismo instante sin duplicar el evento. Las consultas administrativas incluyen `withdrawnAt`; `null` indica que no se ha retirado, no que esté publicado. Una instalación retirada conserva sus unidades y no admite nuevas altas. Las reservas comprueban la retirada de la unidad y de su instalación.
@@ -172,9 +174,9 @@ Sin sesión, bajo `/api/public/municipalities/{tenantId}`:
 
 - `GET /booking-durations`: duraciones admitidas por alguna unidad publicada, con `recommended`, la que admiten más unidades; en caso de empate, la más corta.
 - `GET /availability-search?date=AAAA-MM-DD&durationMinutes=N`: unidades con franjas libres, recorridas por páginas; `facilityId` limita la búsqueda a una instalación. Una página vacía con `nextCursor` no indica que se haya agotado el catálogo.
-- `GET /facilities`: instalaciones publicadas con `units`, el número de unidades que se pueden reservar, hasta 20 por página; `?after=nextCursor` continúa el listado.
+- `GET /facilities`: instalaciones publicadas con `units`, el número de unidades que se pueden reservar, y su `profile`, hasta 20 por página; `?after=nextCursor` continúa el listado.
 - `GET /facilities/{facilityId}/units`: unidades publicadas de una instalación publicada y no retirada, con `minimumMinutes` y `maximumMinutes` de su calendario vigente y la misma paginación.
-- `GET /units/{unitId}`: nombre, instalación, zona, límites, calendario, `usageRulesVersion` y `bookingPolicyVersion`, sin datos de auditoría.
+- `GET /units/{unitId}`: nombre, instalación, `profile` del espacio y `facilityProfile`, zona, límites, calendario, `usageRulesVersion` y `bookingPolicyVersion`, sin datos de auditoría.
 - `GET /units/{unitId}/usage-rules`: texto plano y versión de las normas vigentes, sin autor ni motivo internos.
 - `GET /units/{unitId}/availability?date=AAAA-MM-DD&durationMinutes=N`: franjas libres con UTC, hora local, desplazamientos, versión y momento de cálculo.
 
@@ -299,6 +301,8 @@ PG_BIN=/ruta/a/postgresql-17.11/bin pnpm test:integration
 pnpm build
 pnpm --silent openapi > /tmp/quenda-openapi.json
 ```
+
+El contrato generado se valida también con herramientas ajenas al repositorio: `pnpm test` lo comprueba con `@apidevtools/swagger-parser` y, desde fuera, `npx @redocly/cli lint /tmp/quenda-openapi.json` debe terminar sin errores. Cada operación declara resumen, etiqueta, identificador único y sus requisitos de sesión (vacíos en las públicas); `servers` apunta al mismo origen que la aplicación.
 
 Las pruebas de integración crean una instancia PostgreSQL temporal con contraseñas aleatorias y la eliminan al terminar; no utilizan la base de desarrollo. Requieren los binarios locales `initdb`, `pg_ctl` y `postgres` de la versión indicada. En macOS con Homebrew, `PG_BIN` puede ser `/opt/homebrew/opt/postgresql@17/bin` si contiene esa versión.
 
