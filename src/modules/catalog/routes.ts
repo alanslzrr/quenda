@@ -7,6 +7,8 @@ import {
 } from "../identity/index.ts";
 import { registerCalendarRoutes } from "./calendar-routes.ts";
 import { createFacility, createReservableUnit } from "./drafts.ts";
+import { exportCatalog } from "./export.ts";
+import { catalogExportExample, catalogExportSchema } from "./export-schema.ts";
 import {
   inspectCatalogResource,
   renameCatalogResource,
@@ -141,6 +143,42 @@ export async function registerCatalog(
             request.body,
           ),
         ),
+  );
+  app.get<{ Params: { tenantId: string } }>(
+    "/api/municipalities/:tenantId/exports/catalog",
+    {
+      schema: {
+        operationId: "exportCatalog",
+        tags: ["Catalog"],
+        security: [{ quendaSession: [] }],
+        description:
+          "JSON quenda.catalog v1: ajustes del municipio, instalaciones y unidades con su ficha, calendario vigente, normas vigentes y estado de publicación. No incluye reservas ni datos personales. Exige administración del municipio y MFA reciente. Es una copia de lectura para archivo, auditoría o traslado manual; no hay operación de importación.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId"],
+          properties: { tenantId: uuid },
+        },
+        response: {
+          ...errors,
+          200: { ...catalogExportSchema, example: catalogExportExample },
+        },
+      },
+    },
+    async (request, reply) => {
+      const document = await exportCatalog(
+        pool,
+        await actor(request, reply),
+        request.params.tenantId,
+      );
+      return reply
+        .header("cache-control", "no-store")
+        .header(
+          "content-disposition",
+          'attachment; filename="quenda-catalog-v1.json"',
+        )
+        .send(document);
+    },
   );
   for (const kind of ["facility", "unit"] as const) {
     const resource = kind === "facility" ? "facilities" : "units";
