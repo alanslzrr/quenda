@@ -53,6 +53,12 @@ Las credenciales de autenticación, dominio y migraciones tienen permisos separa
 
 **Justificación:** evita prolongar sesiones o permisos revocados y mantiene los límites de acceso al distribuir peticiones entre réplicas. [Sesiones](https://better-auth.com/docs/concepts/session-management), [seguridad](https://better-auth.com/docs/reference/security), [límites](https://better-auth.com/docs/concepts/rate-limit).
 
+## Información al interesado y accesibilidad
+
+Cada municipio publica su información sobre privacidad, su aviso legal y su declaración de accesibilidad, y el operador publica los de la instancia. Los campos son fijos: responsable y contacto, delegado de protección de datos, finalidades, base jurídica, destinatarios, plazos de conservación, ejercicio de derechos y autoridad de control; denominación, NIF, domicilio y contacto; y, para la accesibilidad, estado de conformidad, contenido no accesible, método y fecha de evaluación, medio de contacto y procedimiento de reclamación. No admiten formato ni enlaces. Cada publicación es una versión nueva y las anteriores no se modifican ni se borran.
+
+La plataforma aporta únicamente lo que hace la aplicación: qué datos trata, que no incluye analítica, publicidad ni cookies de terceros, cómo ejercer los derechos desde la cuenta y qué guarda en el navegador. Esa última lista se genera desde `web/src/app/storage-keys.ts` y una prueba falla si el código usa una clave que no aparece. El responsable del tratamiento, las finalidades y los plazos los fija cada municipio; mientras no los publique, la página lo indica expresamente. El estado de conformidad de accesibilidad lo declara la entidad tras su evaluación; la aplicación no lo presume.
+
 ## Baja y conservación
 
 La comprobación de reservas confirmadas futuras o en curso de una baja abarca la cuenta en toda la instancia, sin devolver actividad de otros municipios. La auditoría conserva cuenta afectada, fecha, correlación y número de sesiones revocadas; no almacena tokens. Un fallo de auditoría revierte la baja y la revocación.

@@ -138,3 +138,7 @@ Validación final de esta corrección:
 
 La suite de integración backend no se repitió para esta corrección de frontend; sus
 295 resultados anteriores pertenecen a la validación previa, no a esta ejecución.
+
+## Textos legales
+
+El pie de página enlaza con «Privacidad», «Aviso legal» y «Accesibilidad». Dentro de un municipio (`/municipios/{tenantId}/…`) los enlaces apuntan a los textos de ese municipio; fuera de él, a los de la instancia (`/privacidad`, `/aviso-legal`, `/accesibilidad`). Al crear una cuenta se enlaza la información sobre privacidad. El administrador los publica desde «Textos legales» en la gestión del municipio (`/administracion/{tenantId}/textos-legales`) y el operador desde la sección del mismo nombre de la plataforma. Si una entidad aún no ha publicado un texto, la página muestra lo que hace la aplicación y un aviso de que falta el contenido propio de la entidad.
