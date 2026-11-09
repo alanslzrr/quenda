@@ -22,6 +22,7 @@ import {
   durationLabel,
   durationOptions,
 } from "./dates";
+import { FacilityDetails } from "./facility-details";
 import {
   BookingSteps,
   facilityPath,
@@ -29,6 +30,12 @@ import {
   useJourneyQuery,
 } from "./journey";
 import { useMunicipality, usePublicAppearance } from "./municipality";
+import {
+  type FacilityProfile,
+  localized,
+  type UnitProfile,
+  unitFacts,
+} from "./profile";
 
 export interface Unit {
   id: string;
@@ -41,6 +48,8 @@ export interface Unit {
   bookingPolicyVersion: number;
   usageRulesVersion: number;
   calendarVersion: number;
+  profile?: UnitProfile;
+  facilityProfile?: FacilityProfile;
   calendar: {
     minimumMinutes: number;
     maximumMinutes: number;
@@ -199,6 +208,17 @@ export function UnitAvailability({
               {[municipality, unit.facilityName].filter(Boolean).join(" · ")}
             </p>
             <h1 className={styles.title}>{unit.name}</h1>
+            {unitFacts(unit.profile, locale).length > 0 && (
+              <p className={styles.context}>
+                {unitFacts(unit.profile, locale).join(" · ")}
+              </p>
+            )}
+            {localized(unit.profile?.description, locale) && (
+              <p className={styles.lead}>
+                {localized(unit.profile?.description, locale)}
+              </p>
+            )}
+            <FacilityDetails profile={unit.facilityProfile} />
             <p className={styles.lead}>
               {t(
                 "Elige el día, la duración y una hora libre.",
