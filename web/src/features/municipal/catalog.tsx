@@ -13,9 +13,11 @@ import { Dialog, DialogContent, DialogTrigger } from "../../ui/dialog/dialog";
 import { Input } from "../../ui/input/input";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs/tabs";
+import type { FacilityProfile, UnitProfile } from "../catalog/profile";
 import { CalendarEditor, RulesEditor } from "./configuration";
 import { landingSection } from "./landing.ts";
 import styles from "./municipal.module.css";
+import { FacilityProfileEditor, UnitProfileEditor } from "./profile-editor";
 import resourceStyles from "./resource.module.css";
 import {
   Denied,
@@ -38,6 +40,8 @@ export type Resource = {
   facilityId: string;
   publishedAt: string | null;
   withdrawnAt: string | null;
+  profile?: FacilityProfile & UnitProfile;
+  profileVersion?: number;
 };
 export function Catalog() {
   const m = useMunicipality();
@@ -280,6 +284,11 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
         <h1>{resource.data.name}</h1>
         <p>{state}</p>
         {nameForm}
+        <FacilityProfileEditor
+          path={path}
+          profile={resource.data.profile ?? {}}
+          version={resource.data.profileVersion ?? 1}
+        />
         <Publication path={path} unit={false} />
         <section className={styles.section}>
           <h2>{t("Retirar del catálogo", "Retirar do catálogo")}</h2>
@@ -365,6 +374,10 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
               <Settings2 size={16} aria-hidden="true" />
               {t("Datos", "Datos")}
             </TabsTrigger>
+            <TabsTrigger value="profile">
+              <FileText size={16} aria-hidden="true" />
+              {t("Ficha", "Ficha")}
+            </TabsTrigger>
             <TabsTrigger value="calendar">
               <Clock3 size={16} aria-hidden="true" />
               {t("Horarios", "Horarios")}
@@ -395,6 +408,13 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
                 )}
               </div>
             )}
+          </TabsContent>
+          <TabsContent value="profile" forceMount>
+            <UnitProfileEditor
+              path={path}
+              profile={resource.data.profile ?? {}}
+              version={resource.data.profileVersion ?? 1}
+            />
           </TabsContent>
           <TabsContent value="calendar" forceMount>
             <CalendarEditor path={path} />

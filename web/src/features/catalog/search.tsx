@@ -19,6 +19,7 @@ import {
 } from "./booking";
 import styles from "./booking.module.css";
 import { calendarDate, durationLabel } from "./dates";
+import type { FacilityProfile } from "./profile";
 
 interface SearchResult {
   id: string;
@@ -35,6 +36,7 @@ export interface Facility {
   name: string;
   /** Units a visitor can book right now. */
   units: number;
+  profile?: FacilityProfile;
 }
 
 export function useFacilities(tenantId: string) {

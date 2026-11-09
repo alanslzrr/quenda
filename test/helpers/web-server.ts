@@ -61,6 +61,9 @@ await withDatabase(async ({ auth, domain, migration, worker }) => {
   for (const index of [
     ...Array.from({ length: 10 }, (_, i) => i + 1),
     ...Array.from({ length: 10 }, (_, i) => i + 35),
+    // Catalog profile editing owns these two so it never shares state with another spec.
+    45,
+    46,
   ])
     municipalFixtures.push(
       await seedMunicipalBrowser(app, auth, domain, migration, index),
