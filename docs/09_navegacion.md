@@ -138,3 +138,7 @@ Validación final de esta corrección:
 
 La suite de integración backend no se repitió para esta corrección de frontend; sus
 295 resultados anteriores pertenecen a la validación previa, no a esta ejecución.
+
+## Descargas
+
+En «Gestión», los administradores descargan la copia del catálogo desde la página de instalaciones y las reservas en JSON o CSV desde «Exportar reservas». En el detalle de una reserva, el titular puede añadirla a su calendario (o quitarla, si está cancelada) y, en «Mis reservas», descargar las próximas. Son enlaces o botones de descarga: abrirlos no modifica nada, y los archivos no se conservan en el almacenamiento del navegador.
