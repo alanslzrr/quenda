@@ -35,6 +35,7 @@
     "licenses:inventory": "node scripts/license-inventory.ts",
     "source:archive": "node scripts/source-archive.ts",
     "image:build": "node scripts/build-image.ts",
+    "image:build:web": "docker build --file web/Dockerfile --tag quenda-web:local --build-arg SOURCE_REVISION=$(git rev-parse HEAD) .",
     "test:performance": "node test/performance/run.ts",
     "demo:local": "node test/demo/server.ts",
     "demo:code": "node test/demo/access.ts",
