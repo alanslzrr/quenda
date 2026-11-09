@@ -7,6 +7,7 @@ import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import styles from "./booking.module.css";
 import { durationLabel } from "./dates";
+import { FacilityDetails } from "./facility-details";
 import {
   BookingSteps,
   Choice,
@@ -21,6 +22,7 @@ import {
   useMunicipality,
   usePublicAppearance,
 } from "./municipality";
+import { type UnitProfile, unitFacts } from "./profile";
 import { useFacilities } from "./search";
 
 interface UnitChoice {
@@ -29,6 +31,7 @@ interface UnitChoice {
   facilityId: string;
   minimumMinutes: number;
   maximumMinutes: number;
+  profile?: UnitProfile;
 }
 
 function useUnits(tenantId: string, facilityId: string) {
@@ -152,6 +155,7 @@ export function FacilityPage() {
             "Cada espazo resérvase enteiro e por separado. Despois escollerás o día e a hora.",
           )}
         </p>
+        <FacilityDetails profile={facility.profile} />
         <div className={styles.introActions}>
           <Link className={styles.textLink} to={back}>
             {t("Cambiar instalación", "Cambiar instalación")}
@@ -190,7 +194,9 @@ export function FacilityPage() {
                 key={unit.id}
                 to={unitPath(tenantId, unit.id, query)}
                 title={unit.name}
-                meta={lengths(unit)}
+                meta={[...unitFacts(unit.profile, locale), lengths(unit)].join(
+                  " · ",
+                )}
               />
             ))}
           </Choices>
