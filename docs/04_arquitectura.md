@@ -83,7 +83,7 @@ El frontend es una SPA con React 19, TypeScript y Vite. Utiliza React Router par
 
 **Justificación:** CSS Modules evita colisiones de estilos; las variables CSS permiten configurar la apariencia municipal sin duplicar componentes. Radix proporciona comportamientos de teclado y foco, y Motion permite respetar movimiento reducido. La aplicación mantiene la responsabilidad sobre etiquetas, contraste y accesibilidad de los flujos. [Radix](https://www.radix-ui.com/primitives/docs/overview/accessibility), [Motion](https://motion.dev/docs/react-accessibility).
 
-React Router y TanStack Query cubren funciones que Vite no incluye. Los comandos locales comprueban los tipos por separado, ya que Vite transpila TypeScript sin comprobarlo. La plantilla de CI sigue inactiva y cubre backend; no existe todavía automatización frontend activa. [React](https://react.dev/learn/build-a-react-app-from-scratch), [Vite](https://vite.dev/guide/features.html#typescript).
+React Router y TanStack Query cubren funciones que Vite no incluye. Los comandos locales comprueban los tipos por separado, ya que Vite transpila TypeScript sin comprobarlo. La integración continua ejecuta esas comprobaciones, la compilación y las pruebas de navegador de la aplicación web en cada pull request. [React](https://react.dev/learn/build-a-react-app-from-scratch), [Vite](https://vite.dev/guide/features.html#typescript).
 
 La aplicación web reside en `web/`, con compilación y dependencias separadas del backend. Los componentes, estilos, helpers y fuentes son archivos locales; no dependen de otra biblioteca privada ni de su directorio de desarrollo. Las pantallas se cargan por ruta.
 

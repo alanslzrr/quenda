@@ -304,25 +304,27 @@ La comprobación de arquitectura impide dependencias circulares y accesos a arch
 
 ### Integración continua
 
-La configuración está en [ci/workflows/backend.yml](ci/workflows/backend.yml), fuera de `.github/workflows`: no se ejecuta en GitHub mientras permanezca en esa ubicación. Al activarla, comprueba cada pull request y los cambios incorporados a `main`, sin filtros de rutas que puedan omitir una regresión. También admite ejecución manual. [Ubicación y eventos de los workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax).
+Los workflows están en [.github/workflows](.github/workflows): `backend.yml` y `web.yml`. Comprueban cada pull request y los cambios incorporados a `main`, sin filtros de rutas que puedan omitir una regresión, y admiten ejecución manual. [Ubicación y eventos de los workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax).
 
 | Comprobación | Contenido | Ejecución |
 |---|---|---|
 | `Backend checks` | `pnpm check`, compilación y generación de OpenAPI. Las pruebas existentes validan los contratos HTTP y de exportación. | Ordinaria. |
 | `Backend PostgreSQL` | Suite completa de integración, incluidas RLS, concurrencia, migraciones y recuperación. | Tras superar `Backend checks`. |
-| `Backend OCI` | Construcción desde la revisión examinada y pruebas de la imagen local, sin publicarla. | Tras superar `Backend checks`, en otro ejecutor. |
+| `OCI images` | Construcción de las imágenes de API y web desde la revisión examinada, validación de la composición de referencia y pruebas de ambas imágenes locales, sin publicarlas. | Tras superar `Backend checks`, en otro ejecutor. |
 | `Backend performance` | Escenario completo de diez minutos, sin abreviarlo ni modificar umbrales. | Manual con `extended=true`, tras superar las tres comprobaciones anteriores. |
 | `Backend licenses` | Inventario existente de dependencias y evidencias. `REVIEW_REQUIRED` hace fallar la comprobación; no se convierte en aprobación. | Manual con `extended=true`, tras superar las tres comprobaciones ordinarias. |
+| `Web checks` | Tipos, lint, pruebas unitarias y compilación del paquete estático. | Ordinaria. |
+| `Web browser` | Pruebas Playwright de escritorio y móvil, con axe, sobre PostgreSQL 17.11 temporal. Conserva trazas solo de las pruebas fallidas. | Tras superar `Web checks`. |
 
 Los ejecutores utilizan Ubuntu 24.04, Node de `.nvmrc` y pnpm de `package.json`. La instalación respeta el lockfile y no ejecuta scripts de dependencias. [La preparación de PostgreSQL](ci/setup-postgres.sh) compila la versión de `.postgres-version` y `btree_gist` desde fuentes oficiales verificadas con el [SHA-256 fijado](ci/postgresql-source.sha256). Los clústeres siguen siendo temporales y exclusivos de las pruebas; se ejecutan como máximo dos archivos de integración a la vez, sin cambiar sus límites de tiempo. [Compilación de PostgreSQL](https://www.postgresql.org/docs/17/install-make.html).
 
-Las acciones externas están fijadas por SHA, el token solo permite leer el repositorio y no se conserva en Git. No se utilizan secretos de aplicación, cachés compartidas, servicios reales ni credenciales cloud. Solo se conservan OpenAPI, la revisión y los informes de rendimiento o licencias durante siete días; no se suben bases, copias, correos ni archivos de credenciales. Los fallos detienen su comprobación. [Seguridad de GitHub Actions](https://docs.github.com/en/actions/reference/security/secure-use).
+Las acciones externas están fijadas por SHA, el token solo permite leer el repositorio y no se conserva en Git. No se utilizan secretos de aplicación, cachés compartidas, servicios reales ni credenciales cloud. Solo se conservan OpenAPI, la revisión, las trazas de pruebas web fallidas y los informes de rendimiento o licencias durante siete días; no se suben bases, copias, correos ni archivos de credenciales. Los fallos detienen su comprobación. [Seguridad de GitHub Actions](https://docs.github.com/en/actions/reference/security/secure-use).
 
-Para activar la CI:
+Para exigir las comprobaciones en el repositorio:
 
-1. Mover `ci/workflows/backend.yml` a `.github/workflows/backend.yml` y versionar el cambio; mantener `ci/actions/setup` y los archivos de preparación de PostgreSQL en sus ubicaciones. Desde ese momento se aplican los eventos configurados.
-2. Revisar la primera ejecución ordinaria. Solicitar `extended=true` desde Actions para obtener también rendimiento y licencias; sus resultados se revisan por separado. El inventario no sustituye la revisión de compatibilidad y atribuciones descrita en [licencias de dependencias](#inventario-de-licencias-de-dependencias).
-3. Exigir `Backend checks`, `Backend PostgreSQL` y `Backend OCI` para incorporar cambios a `main`, una vez validados en el ejecutor. Las comprobaciones ampliadas no se exigen en cada pull request.
+1. Revisar la primera ejecución ordinaria de ambos workflows.
+2. Solicitar `extended=true` desde Actions para obtener también rendimiento y licencias; sus resultados se revisan por separado. El inventario no sustituye la revisión de compatibilidad y atribuciones descrita en [licencias de dependencias](#inventario-de-licencias-de-dependencias).
+3. Exigir `Backend checks`, `Backend PostgreSQL`, `OCI images`, `Web checks` y `Web browser` para incorporar cambios a `main`. Las comprobaciones ampliadas no se exigen en cada pull request.
 
 Al actualizar PostgreSQL, revisar conjuntamente `.postgres-version`, el checksum, la versión exigida por las pruebas y el digest OCI. El rendimiento se compara con mediciones del mismo entorno, no con tiempos de otro equipo. La configuración no despliega servicios ni ejecuta Terraform.
 
