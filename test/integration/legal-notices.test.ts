@@ -5,15 +5,15 @@ import Fastify from "fastify";
 import { initializeOperator } from "../../scripts/lib/initialize-operator.ts";
 import { registerErrors } from "../../src/http/errors.ts";
 import type { Authentication } from "../../src/modules/identity/auth.ts";
+import { registerLegalNoticeRoutes } from "../../src/modules/identity/legal-notice-routes.ts";
+import {
+  publicNotice,
+  saveNotice,
+} from "../../src/modules/identity/legal-notices.ts";
 import {
   acceptAdministratorInvitation,
   createMunicipality,
 } from "../../src/modules/identity/municipality.ts";
-import {
-  publicNotice,
-  registerLegalNotices,
-  saveNotice,
-} from "../../src/modules/legal/index.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
 test("legal texts are versioned, append-only, scoped to their owner and published only through permission", {
@@ -311,7 +311,7 @@ test("legal texts are versioned, append-only, scoped to their owner and publishe
       });
       registerErrors(app);
       let current = actor("admin");
-      await registerLegalNotices(
+      await registerLegalNoticeRoutes(
         app,
         domain,
         { authenticate: async () => current } as unknown as Authentication,

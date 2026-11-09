@@ -3,11 +3,9 @@ import type { Pool } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import { civilDate } from "../../shared/civil-date.ts";
-import {
-  type AuthenticatedAccount,
-  requireAdministrator,
-  requireOperator,
-} from "../identity/index.ts";
+import { requireAdministrator } from "./administrator.ts";
+import type { AuthenticatedAccount } from "./auth.ts";
+import { requireOperator } from "./operator.ts";
 
 export const noticeKinds = ["privacy", "legal", "accessibility"] as const;
 export type NoticeKind = (typeof noticeKinds)[number];

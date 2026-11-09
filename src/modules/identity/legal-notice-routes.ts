@@ -1,11 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { publicRateLimit } from "../../http/public-rate-limit.ts";
-import {
-  type AuthConfiguration,
-  type Authentication,
-  createRequestActor,
-} from "../identity/index.ts";
+import type { AuthConfiguration, Authentication } from "./auth.ts";
 import {
   conformanceStatuses,
   type NoticeBody,
@@ -14,7 +10,8 @@ import {
   noticeKinds,
   publicNotice,
   saveNotice,
-} from "./notices.ts";
+} from "./legal-notices.ts";
+import { createRequestActor } from "./request-actor.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
 const errors = Object.fromEntries(
@@ -58,7 +55,7 @@ const description =
   `${fieldList("privacy")}; legal: ${fieldList("legal")}; accessibility: ${fieldList("accessibility")}, ` +
   "más status (full, partial, none), preparedOn y reviewedOn. Los textos se recortan, los vacíos se descartan y no admiten campos ajenos al tipo.";
 
-export async function registerLegalNotices(
+export async function registerLegalNoticeRoutes(
   app: FastifyInstance,
   pool: Pool,
   auth: Authentication,

@@ -19,7 +19,6 @@ import {
   registerAuthentication,
   registerMunicipalIdentity,
 } from "./modules/identity/index.ts";
-import { registerLegalNotices } from "./modules/legal/index.ts";
 
 import { registerReservations } from "./modules/reservations/index.ts";
 
@@ -116,12 +115,6 @@ export async function buildApp(options: {
         options.identity.config,
         options.idempotencyRetentionSeconds ??
           defaultIdempotencyRetentionSeconds,
-      );
-      await registerLegalNotices(
-        app,
-        options.domain,
-        options.identity.authentication,
-        options.identity.config,
       );
       await registerReservations(
         app,
