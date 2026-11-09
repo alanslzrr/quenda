@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation, useMatch } from "react-router";
 import { MfaBoundary, MfaNotice } from "../features/account/mfa-dialog";
 import { useBookingEntry } from "../features/catalog/journey";
 import { useMunicipality } from "../features/catalog/municipality";
+import { kindShort, kinds, noticePath } from "../features/legal/notices";
 import { BookingNavigation } from "./booking-navigation";
 import { Failure } from "./feedback";
 import styles from "./layout.module.css";
@@ -13,7 +14,7 @@ import { SettingsMenu } from "./settings-menu";
 import { useStaffEntry } from "./staff-entry";
 
 export function Layout() {
-  const { t } = usePreferences();
+  const { t, locale } = usePreferences();
   const { account } = useSession();
   const location = useLocation();
   const main = useRef<HTMLElement>(null);
@@ -151,6 +152,16 @@ export function Layout() {
               "Instalaciones deportivas municipales",
               "Instalacións deportivas municipais",
             )}
+            <nav
+              className={styles.legalLinks}
+              aria-label={t("Información legal", "Información legal")}
+            >
+              {kinds.map((kind) => (
+                <Link key={kind} to={noticePath(kind, tenantId)}>
+                  {kindShort[kind][locale === "gl" ? 1 : 0]}
+                </Link>
+              ))}
+            </nav>
           </footer>
         )}
       </div>
