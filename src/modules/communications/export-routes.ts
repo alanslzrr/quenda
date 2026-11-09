@@ -5,11 +5,33 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
+import { toCsv } from "./csv.ts";
 import {
   reservationExportExample,
   reservationExportSchema,
 } from "./export-schema.ts";
 import { exportReservations } from "./reservation-export.ts";
+
+// Long rule texts stay in the JSON export; the table keeps one scalar per column.
+export const reservationCsvColumns = [
+  "id",
+  "unitId",
+  "accountId",
+  "startsAt",
+  "endsAt",
+  "timeZone",
+  "status",
+  "revision",
+  "calendarVersion",
+  "cancellationMinutes",
+  "usageRulesUnitId",
+  "usageRulesVersion",
+  "rulesAcceptedAt",
+  "pendingUsageRulesVersion",
+  "bookingPolicyVersion",
+  "conditionsAcceptedAt",
+  "nonCancellableAccepted",
+] as const;
 
 export async function registerExportRoutes(
   app: FastifyInstance,
@@ -22,7 +44,12 @@ export async function registerExportRoutes(
   const date = { type: "string", format: "date" };
   app.get<{
     Params: { tenantId: string };
-    Querystring: { from: string; to: string; unitId?: string };
+    Querystring: {
+      from: string;
+      to: string;
+      unitId?: string;
+      format?: "json" | "csv";
+    };
   }>(
     "/api/municipalities/:tenantId/exports/reservations",
     {
@@ -42,7 +69,12 @@ export async function registerExportRoutes(
           type: "object",
           additionalProperties: false,
           required: ["from", "to"],
-          properties: { from: date, to: date, unitId: uuid },
+          properties: {
+            from: date,
+            to: date,
+            unitId: uuid,
+            format: { type: "string", enum: ["json", "csv"] },
+          },
         },
         response: {
           ...Object.fromEntries(
@@ -52,8 +84,17 @@ export async function registerExportRoutes(
             ]),
           ),
           200: {
-            ...reservationExportSchema,
-            example: reservationExportExample,
+            description:
+              "JSON quenda.reservations v3 (por defecto) o, con format=csv, una fila por reserva con las columnas de reservationCsvColumns.",
+            content: {
+              "application/json": {
+                schema: {
+                  ...reservationExportSchema,
+                  example: reservationExportExample,
+                },
+              },
+              "text/csv": { schema: { type: "string" } },
+            },
           },
         },
       },
@@ -68,6 +109,21 @@ export async function registerExportRoutes(
         request.query.to,
         request.query.unitId ?? null,
       );
+      if (request.query.format === "csv")
+        return reply
+          .header("cache-control", "no-store")
+          .header("content-type", "text/csv; charset=utf-8")
+          .header(
+            "content-disposition",
+            'attachment; filename="quenda-reservations-v3.csv"',
+          )
+          .send(
+            toCsv(
+              reservationCsvColumns,
+              (document as { reservations: Record<string, never>[] })
+                .reservations,
+            ),
+          );
       return reply
         .header("cache-control", "no-store")
         .header(
