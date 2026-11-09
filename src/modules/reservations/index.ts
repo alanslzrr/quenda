@@ -9,6 +9,7 @@ export { createReservation } from "./create.ts";
 export { modifyReservation } from "./modify.ts";
 export {
   listMunicipalReservations,
+  listOwnReservationMunicipalities,
   listOwnReservations,
   readReservation,
 } from "./queries.ts";

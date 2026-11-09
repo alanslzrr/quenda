@@ -138,3 +138,7 @@ Validación final de esta corrección:
 
 La suite de integración backend no se repitió para esta corrección de frontend; sus
 295 resultados anteriores pertenecen a la validación previa, no a esta ejecución.
+
+## Historial de reservas
+
+«Mis reservas» muestra primero la reserva más reciente por inicio y pagina de 20 en 20 con una clave de continuación opaca que codifica la clave de orden completa (inicio, identificador y municipio); una clave con otro formato se rechaza y la interfaz la recupera volviendo a leer desde la primera página. El filtro por municipio se alimenta de `GET /api/me/reservations/municipalities`, que solo refleja los municipios donde la propia cuenta tiene reservas, y por eso no depende de las páginas cargadas ni crea un directorio intermunicipal. Si dos municipios comparten nombre, el filtro añade el final de su identificador.

@@ -53,6 +53,25 @@ Las credenciales de autenticación, dominio y migraciones tienen permisos separa
 
 **Justificación:** evita prolongar sesiones o permisos revocados y mantiene los límites de acceso al distribuir peticiones entre réplicas. [Sesiones](https://better-auth.com/docs/concepts/session-management), [seguridad](https://better-auth.com/docs/reference/security), [límites](https://better-auth.com/docs/concepts/rate-limit).
 
+## Cabeceras del origen web
+
+La aplicación y la API se sirven bajo el mismo origen, por lo que la política de cabeceras tiene dos responsables.
+
+**La API** (`src/http/security-headers.ts`) añade a toda respuesta `X-Content-Type-Options: nosniff` y, bajo `/api/` salvo `/api/public/`, `Cache-Control: no-store` cuando la ruta no fija otra política. Así, ninguna respuesta de cuenta, ni siquiera un error, queda en cachés compartidas o del navegador. El catálogo público conserva su caché.
+
+**El borde que entrega la aplicación web** (proxy inverso o CDN) debe fijar, como requisito de despliegue:
+
+| Cabecera | Valor mínimo | Motivo |
+|---|---|---|
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'` | Limita el origen de código y datos; impide el embebido. |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | Acceso solo por HTTPS. |
+| `X-Content-Type-Options` | `nosniff` | También para los activos estáticos. |
+| `Referrer-Policy` | `no-referrer` | Los enlaces de acción llevan el secreto en el fragmento y no deben filtrarse. |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | La aplicación no usa esas capacidades. |
+| `Cross-Origin-Opener-Policy` | `same-origin` | Aísla el contexto de navegación. |
+
+`style-src 'unsafe-inline'` es necesario hoy porque la apariencia municipal inyecta un elemento `<style>` y algunos componentes usan atributos `style`. Sustituirlos por clases y variables CSS permitiría una política de estilos estricta y se trata como mejora posterior. La recarga automática ante un fragmento obsoleto y la ausencia de scripts en línea son compatibles con `script-src 'self'`. Antes de una nueva versión deben conservarse los activos de la anterior durante el plazo de las pestañas abiertas, o la aplicación mostrará la pantalla de recarga.
+
 ## Baja y conservación
 
 La comprobación de reservas confirmadas futuras o en curso de una baja abarca la cuenta en toda la instancia, sin devolver actividad de otros municipios. La auditoría conserva cuenta afectada, fecha, correlación y número de sesiones revocadas; no almacena tokens. Un fallo de auditoría revierte la baja y la revocación.

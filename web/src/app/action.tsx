@@ -18,6 +18,7 @@ export function ActionForm({
   success,
   danger = false,
   resetOnSuccess = true,
+  clearOnSuccess = [],
   disabled = false,
   secondary,
 }: {
@@ -28,6 +29,8 @@ export function ActionForm({
   success?: string;
   danger?: boolean;
   resetOnSuccess?: boolean;
+  /** Fields to empty after success when the rest of the form must stay as edited, such as a one-off reason. */
+  clearOnSuccess?: string[];
   disabled?: boolean;
 }) {
   const lock = useRef(false);
@@ -47,6 +50,11 @@ export function ActionForm({
       await submit(data);
       setDone(true);
       if (resetOnSuccess) form.reset();
+      else
+        for (const name of clearOnSuccess) {
+          const field = form.elements.namedItem(name);
+          if (field instanceof HTMLInputElement) field.value = "";
+        }
     } catch (failure) {
       setError(failure);
     } finally {

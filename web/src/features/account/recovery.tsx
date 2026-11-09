@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router";
 import { ActionForm, textField } from "../../app/action";
 import { api } from "../../app/api";
 import styles from "../../app/layout.module.css";
+import { releaseLinkToken, takeLinkToken } from "../../app/link-token.ts";
 import { usePreferences } from "../../app/preferences-provider";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Alert } from "../../ui/alert/alert";
@@ -13,15 +14,23 @@ import { PageTitle, SecretField } from "./shared";
 // Keep action tokens in component memory; never persist them or mutate by GET.
 function useLinkToken(query = false) {
   const [token] = useState(() =>
-    query
-      ? (new URLSearchParams(location.search).get("token") ?? "")
-      : location.hash.slice(1),
+    takeLinkToken(
+      location.pathname,
+      query
+        ? (new URLSearchParams(location.search).get("token") ?? "")
+        : location.hash.slice(1),
+    ),
   );
   useEffect(() => {
+    const path = location.pathname;
     const url = new URL(location.href);
     url.hash = "";
     url.searchParams.delete("token");
     history.replaceState(history.state, "", url);
+    // A remount on the same page keeps the token; leaving the page discards it.
+    return () => {
+      if (location.pathname !== path) releaseLinkToken(path);
+    };
   }, []);
   return token;
 }

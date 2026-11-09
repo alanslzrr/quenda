@@ -7,6 +7,7 @@ import type { DatabaseHealth } from "./database/pools.ts";
 import { HttpError, registerErrors } from "./http/errors.ts";
 import { registerHttpMetrics } from "./http/metrics.ts";
 import { operationSummary } from "./http/openapi-summary.ts";
+import { registerSecurityHeaders } from "./http/security-headers.ts";
 import { registerSourceOffer, type SourceOffer } from "./http/source-offer.ts";
 import { registerCatalog } from "./modules/catalog/index.ts";
 import { registerCollaboration } from "./modules/collaboration/index.ts";
@@ -68,6 +69,7 @@ export async function buildApp(options: {
       "Request completed",
     );
   });
+  registerSecurityHeaders(app);
   registerErrors(
     app,
     options.domain ? accessFailureAudit(options.domain) : undefined,

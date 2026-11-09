@@ -1,25 +1,32 @@
 import { Building2, CalendarPlus } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { Link, Outlet, useLocation, useMatch } from "react-router";
+import { Link, Outlet, useLocation, useMatch, useParams } from "react-router";
 import { MfaBoundary, MfaNotice } from "../features/account/mfa-dialog";
 import { useBookingEntry } from "../features/catalog/journey";
 import { useMunicipality } from "../features/catalog/municipality";
+import { Announcer } from "./announce";
 import { BookingNavigation } from "./booking-navigation";
 import { Failure } from "./feedback";
+import { hasInvalidIds, isUuid } from "./ids.ts";
 import styles from "./layout.module.css";
+import { NotFound } from "./not-found";
 import { usePreferences } from "./preferences-provider";
 import { useSession } from "./session";
 import { SettingsMenu } from "./settings-menu";
 import { useStaffEntry } from "./staff-entry";
 
 export function Layout() {
-  const { t } = usePreferences();
+  const { t, locale } = usePreferences();
   const { account } = useSession();
   const location = useLocation();
   const main = useRef<HTMLElement>(null);
   const previous = useRef(location.pathname);
+  const params = useParams();
   const place = useMatch("/municipios/:tenantId/*");
-  const tenantId = place?.params.tenantId;
+  // A malformed id is shown as not found and must not be requested.
+  const tenantId = isUuid(place?.params.tenantId)
+    ? place?.params.tenantId
+    : undefined;
   const municipality = useMunicipality(tenantId);
   useEffect(() => {
     if (previous.current !== location.pathname) {
@@ -35,10 +42,11 @@ export function Layout() {
     location.pathname === "/" ||
     location.pathname === "/reservar" ||
     location.pathname.startsWith("/municipios/");
-  const staff = useStaffEntry(account?.accountId, !resource);
+  const staff = useStaffEntry(account?.accountId, !resource, locale);
   return (
     <MfaBoundary key={account?.accountId ?? "guest"}>
       <div className={`${styles.shell} ${styles.product}`}>
+        <Announcer />
         <a className={styles.skip} href="#content">
           {t("Saltar al contenido", "Saltar ao contido")}
         </a>
@@ -142,7 +150,7 @@ export function Layout() {
             <BookingNavigation />
           )}
           {!resource && <MfaNotice />}
-          <Outlet />
+          {hasInvalidIds(params) ? <NotFound /> : <Outlet />}
         </main>
         {!resource && (
           <footer className={styles.footer}>

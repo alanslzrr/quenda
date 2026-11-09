@@ -8,6 +8,7 @@ import { api, type Navigation, type Page } from "../../app/api";
 import { ConfirmedAction } from "../../app/confirmed-action";
 import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
+import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Denied } from "../municipal/shared";
@@ -24,9 +25,18 @@ export function OperatorGuard({ children }: { children: ReactNode }) {
     retry: false,
   });
   if (query.isPending) return <Loading />;
-  if (query.isError)
+  if (blocksEditor(query) || !query.data)
     return <Failure error={query.error} retry={() => void query.refetch()} />;
-  return query.data.platform.operator ? children : <Denied />;
+  return query.data.platform.operator ? (
+    <EditorRecovery
+      error={query.isError ? query.error : null}
+      retry={() => void query.refetch()}
+    >
+      {children}
+    </EditorRecovery>
+  ) : (
+    <Denied />
+  );
 }
 export function usePlatformPages<T>(path: string) {
   const { account } = useSession();

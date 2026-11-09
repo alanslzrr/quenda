@@ -36,7 +36,7 @@ function agreement() {
     ],
     approvals: [] as {
       tenantId: string;
-      approvedBy: string;
+      approvedBy: string | null;
       approvedAt: string;
     }[],
   };
@@ -481,4 +481,23 @@ test("recorded activation does not bypass effective-version checks when issuing 
     }),
   ).toContainText("Cuenta vinculada");
   await expect(page.getByText(/Acreditación emitida\./)).toHaveCount(0);
+});
+
+test("an approval by another municipality shows that it exists without naming its approver", async ({
+  page,
+}) => {
+  const a = agreement();
+  a.approvals = [
+    {
+      tenantId: tenant,
+      approvedBy: "responsable",
+      approvedAt: "2026-10-02T10:00:00Z",
+    },
+    { tenantId: foreign, approvedBy: null, approvedAt: "2026-10-03T10:00:00Z" },
+  ];
+  await fixture(page, a);
+  await page.goto(view);
+  await expect(page.getByText(/Aprobada por responsable/)).toBeVisible();
+  await expect(page.getByText(/^Aprobada · /)).toBeVisible();
+  await expect(page.getByText("null")).toHaveCount(0);
 });

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, useParams } from "react-router";
 import { textField } from "../../app/action";
+import { announce } from "../../app/announce";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link } from "../../app/link-button";
@@ -112,7 +113,16 @@ function Administrators() {
                 render: (_, r) => (
                   <Button
                     variant="ghost"
-                    onClick={() => setSelected(r.accountId)}
+                    aria-pressed={selected === r.accountId}
+                    onClick={() => {
+                      setSelected(r.accountId);
+                      announce(
+                        t(
+                          "Detalle de la asignación abierto bajo la tabla.",
+                          "Detalle da asignación aberto baixo a táboa.",
+                        ),
+                      );
+                    }}
                   >
                     <AccountLabel id={r.accountId} label={r.accountLabel} />
                   </Button>
@@ -271,9 +281,16 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
                 render: (_, r) => (
                   <Button
                     variant="ghost"
+                    aria-pressed={selected === r.invitationId}
                     onClick={() => {
                       setSelected(r.invitationId);
                       setReplacing(false);
+                      announce(
+                        t(
+                          "Detalle de la invitación abierto bajo la tabla.",
+                          "Detalle da invitación aberto baixo a táboa.",
+                        ),
+                      );
                     }}
                   >
                     <AccountLabel id={r.accountId} label={r.accountLabel} />

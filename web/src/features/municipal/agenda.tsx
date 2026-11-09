@@ -1,12 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ActionForm, textField } from "../../app/action";
-import { api, type Municipality } from "../../app/api";
+import { announce, restoreFocus } from "../../app/announce";
+import { ApiError, api, type Municipality } from "../../app/api";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
+import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { useSession } from "../../app/session";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
@@ -26,6 +28,7 @@ import {
   type Reservation,
   ReservationSummary,
 } from "../reservations/shared";
+import { admissibleDuration } from "./calendar-model";
 import { localInstants } from "./local-instants";
 import styles from "./municipal.module.css";
 import {
@@ -75,18 +78,29 @@ function AgendaData() {
   const units = useMunicipalPages<PlanningUnit>(
     `${endpoint(m.id)}/agenda/units`,
   );
+  // The unit directory is a short id/name list that every selector and row label needs, so load it whole.
+  const { hasNextPage, isFetching, isError, fetchNextPage } = units;
+  useEffect(() => {
+    if (hasNextPage && !isFetching && !isError) void fetchNextPage();
+  }, [hasNextPage, isFetching, isError, fetchNextPage]);
   if (q.isPending || units.isPending) return <Loading />;
-  if (q.isError || units.isError)
-    return <Failure error={q.error ?? units.error} />;
-  if (!q.data) return null;
+  const retry = () => {
+    if (q.isError) void q.refetch();
+    if (units.isError) void units.refetch();
+  };
+  if (blocksEditor(q) || blocksEditor(units) || !q.data || !units.data)
+    return <Failure error={q.error ?? units.error} retry={retry} />;
   return (
-    <>
+    <EditorRecovery
+      error={q.isError ? q.error : units.isError ? units.error : null}
+      retry={retry}
+    >
       <AgendaDay
         timeZone={q.data.timeZone}
         units={units.data.pages.flatMap((p) => p.items)}
       />
-      <More query={units} />
-    </>
+      {units.isError && <More query={units} />}
+    </EditorRecovery>
   );
 }
 function AgendaDay({
@@ -288,6 +302,7 @@ function BlockList({
                   <AdministrativeAction
                     path={`${endpoint(m.id)}/blocks/${b.id}/release`}
                     label={t("Liberar bloqueo", "Liberar bloqueo")}
+                    success={t("Bloqueo liberado.", "Bloqueo liberado.")}
                     body={(d) => ({ reason: textField(d, "reason") })}
                   >
                     <Reason />
@@ -380,6 +395,10 @@ function CreateBlock({
     <AdministrativeAction
       path={`${endpoint(m.id)}/blocks`}
       label={t("Crear bloqueo", "Crear bloqueo")}
+      success={t(
+        "Bloqueo creado. Consulta el día afectado en la agenda.",
+        "Bloqueo creado. Consulta o día afectado na axenda.",
+      )}
       body={(d) => ({
         unitId: unit,
         startsAt: start,
@@ -424,12 +443,14 @@ export function AdministrativeAction({
   path,
   body,
   label,
+  success,
   children,
   disabled = false,
 }: {
   path: string;
   body: (d: FormData) => unknown;
   label: string;
+  success: string;
   children: ReactNode;
   disabled?: boolean;
 }) {
@@ -444,11 +465,12 @@ export function AdministrativeAction({
     <ActionForm
       disabled={disabled}
       label={label}
+      success={success}
       submit={async (d) => {
         if (!account || disabled) return;
         const policy = await api<CommandPolicy>(
           "/api/public/reservation-command-policy",
-          {},
+          { signal: AbortSignal.timeout(15000) },
           locale,
         );
         const command = {
@@ -469,6 +491,8 @@ export function AdministrativeAction({
           });
           await client.invalidateQueries({ queryKey: ["public"] });
           navigate(commandResultPath(command, result), { replace: true });
+          announce(success);
+          restoreFocus();
         } catch (error) {
           if (readCommand(account.accountId)) {
             setUncertain(true);
@@ -634,6 +658,10 @@ function ReservationOperations({
             "Cancelar administrativamente",
             "Cancelar administrativamente",
           )}
+          success={t(
+            "Reserva cancelada administrativamente.",
+            "Reserva cancelada administrativamente.",
+          )}
           body={(d) => ({
             expectedRevision: r.revision,
             administrative: true,
@@ -664,11 +692,24 @@ function Relocation({
   target: string;
 }) {
   const m = useMunicipality();
+  const { t } = usePreferences();
   const q = useMunicipalQuery<Unit>(
     `/api/public/municipalities/${m.id}/units/${target}`,
   );
   if (q.isPending) return <Loading />;
-  if (q.isError) return <Failure error={q.error} />;
+  if (q.isError) {
+    // Staff plan over every unit, but only a published unit can receive a booking.
+    if (q.error instanceof ApiError && q.error.status === 404)
+      return (
+        <p role="status">
+          {t(
+            "Esta unidad está retirada o sin publicar y no admite reubicaciones. Elige otra unidad de destino.",
+            "Esta unidade está retirada ou sen publicar e non admite reubicacións. Escolle outra unidade de destino.",
+          )}
+        </p>
+      );
+    return <Failure error={q.error} retry={() => void q.refetch()} />;
+  }
   return q.data ? (
     <RelocationSlots key={target} reservation={reservation} unit={q.data} />
   ) : null;
@@ -684,6 +725,17 @@ function RelocationSlots({
   const { locale, t } = usePreferences();
   const [date, setDate] = useState(() => municipalToday(unit.timeZone));
   const [duration, setDuration] = useState(unit.calendar.minimumMinutes);
+  // The field keeps what is typed; only an admissible value settles into a query, so typing never spends reads.
+  const [typed, setTyped] = useState(String(unit.calendar.minimumMinutes));
+  const admissible = admissibleDuration(typed, unit.calendar);
+  useEffect(() => {
+    if (admissible === null || admissible === duration) return;
+    const timer = window.setTimeout(() => {
+      setDuration(admissible);
+      setSlot("");
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [admissible, duration]);
   const [slot, setSlot] = useState("");
   const q = useMunicipalQuery<Availability>(
     `${endpoint(m.id)}/reservations/${r.id}/availability?administrative=true&unitId=${unit.id}&date=${date}&durationMinutes=${duration}`,
@@ -706,14 +758,19 @@ function RelocationSlots({
           type="number"
           required
           label={t("Duración (minutos)", "Duración (minutos)")}
-          value={duration}
+          value={typed}
           min={unit.calendar.minimumMinutes}
           max={unit.calendar.maximumMinutes}
           step={unit.calendar.stepMinutes}
-          onChange={(e) => {
-            setDuration(Number(e.target.value));
-            setSlot("");
-          }}
+          error={
+            admissible === null
+              ? t(
+                  `Indica entre ${unit.calendar.minimumMinutes} y ${unit.calendar.maximumMinutes} minutos, en múltiplos de ${unit.calendar.stepMinutes}.`,
+                  `Indica entre ${unit.calendar.minimumMinutes} e ${unit.calendar.maximumMinutes} minutos, en múltiplos de ${unit.calendar.stepMinutes}.`,
+                )
+              : undefined
+          }
+          onChange={(e) => setTyped(e.target.value)}
         />
       </div>
       {q.isPending ? (
@@ -748,6 +805,7 @@ function RelocationSlots({
         <AdministrativeAction
           path={`${endpoint(m.id)}/reservations/${r.id}/modify`}
           label={t("Confirmar reubicación", "Confirmar reubicación")}
+          success={t("Reserva reubicada.", "Reserva reubicada.")}
           body={(d) => ({
             expectedRevision: r.revision,
             unitId: unit.id,
