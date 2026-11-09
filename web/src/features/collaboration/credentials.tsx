@@ -6,6 +6,7 @@ import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
+import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
@@ -36,7 +37,7 @@ function Issue() {
   const query = useAgreement();
   const [receipt, setReceipt] = useState<string>();
   if (query.isPending) return <Loading />;
-  if (query.isError || !query.data)
+  if (blocksEditor(query) || !query.data)
     return <Failure error={query.error} retry={() => void query.refetch()} />;
   const a = query.data;
   if (
@@ -53,7 +54,10 @@ function Issue() {
       </p>
     );
   return (
-    <>
+    <EditorRecovery
+      error={query.isError ? query.error : null}
+      retry={() => void query.refetch()}
+    >
       <Link to={agreementPath(m.id, a.agreementId, a.version)}>
         {a.name} · {a.version}
       </Link>
@@ -144,7 +148,7 @@ function Issue() {
           />
         </CollaborationAction>
       )}
-    </>
+    </EditorRecovery>
   );
 }
 export function Credentials() {
@@ -154,10 +158,16 @@ function Revoke() {
   const m = useMunicipality();
   const { t, locale } = usePreferences();
   const [search] = useSearchParams();
-  const [id, setId] = useState(search.get("referencia") ?? "");
+  const [id, setId] = useState(() => {
+    const reference = search.get("referencia") ?? "";
+    // Pending-command recovery only accepts lower-case ids, and a malformed link must not start blocked.
+    return new RegExp(`^${uuidPattern}$`).test(reference)
+      ? reference.toLowerCase()
+      : "";
+  });
   const [confirmed, setConfirmed] = useState(false);
   function changeId(value: string) {
-    setId(value);
+    setId(value.trim().toLowerCase());
     setConfirmed(false);
   }
   const [receipt, setReceipt] = useState<string>();
@@ -256,7 +266,6 @@ function Revoke() {
             )}
           >
             <Input
-              pattern={uuidPattern}
               label={t(
                 "Identificador de acreditación",
                 "Identificador de acreditación",

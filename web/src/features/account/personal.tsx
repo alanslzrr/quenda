@@ -4,6 +4,7 @@ import { api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
+import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { Input } from "../../ui/input/input";
 import { PageTitle, SecretField, useAuthSession } from "./shared";
 
@@ -11,16 +12,20 @@ export function PersonalDetails() {
   const { t, locale } = usePreferences();
   const session = useAuthSession();
   if (session.isPending) return <Loading />;
-  if (session.isError)
+  const auth = session.data;
+  if (blocksEditor(session) || !auth)
     return (
       <Failure error={session.error} retry={() => void session.refetch()} />
     );
   return (
-    <>
+    <EditorRecovery
+      error={session.isError ? session.error : null}
+      retry={() => void session.refetch()}
+    >
       <PageTitle title={t("Datos personales", "Datos persoais")} />
       <p>
         {t("Identificador de cuenta", "Identificador de conta")}:{" "}
-        <code>{session.data.user.id}</code>
+        <code>{auth.user.id}</code>
       </p>
       <section className={styles.section}>
         <h2>{t("Nombre", "Nome")}</h2>
@@ -40,10 +45,10 @@ export function PersonalDetails() {
           }}
         >
           <Input
-            key={session.data.user.name}
+            key={auth.user.name}
             label={t("Nombre", "Nome")}
             name="name"
-            defaultValue={session.data.user.name}
+            defaultValue={auth.user.name}
             required
             maxLength={200}
             autoComplete="name"
@@ -52,7 +57,7 @@ export function PersonalDetails() {
       </section>
       <section className={styles.section}>
         <h2>{t("Correo electrónico", "Correo electrónico")}</h2>
-        <p>{session.data.user.email}</p>
+        <p>{auth.user.email}</p>
         <p>
           {t(
             "Autoriza el cambio desde tu correo actual y verifica el nuevo. Al completarlo se cerrarán todas tus sesiones.",
@@ -98,7 +103,7 @@ export function PersonalDetails() {
             name="password"
           />
         </ActionForm>
-        {session.data.user.twoFactorEnabled && (
+        {auth.user.twoFactorEnabled && (
           <p>
             <Link to="/perfil/seguridad">
               {t(
@@ -109,6 +114,6 @@ export function PersonalDetails() {
           </p>
         )}
       </section>
-    </>
+    </EditorRecovery>
   );
 }

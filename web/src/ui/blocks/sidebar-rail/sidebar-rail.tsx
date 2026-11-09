@@ -438,6 +438,8 @@ function RailBody() {
         (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
       )
         return;
+      // A single-character shortcut is active only while focus is inside the navigation (WCAG 2.1.4).
+      if (!target || !document.getElementById(sidebarId)?.contains(target)) return;
       const rect = shell.current!.getBoundingClientRect();
       if (!rect.width || rect.bottom < 0 || rect.top > window.innerHeight) return;
       event.preventDefault();

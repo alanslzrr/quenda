@@ -120,3 +120,10 @@ export function durationOptions(calendar: {
     result.push(n);
   return result;
 }
+
+/** A duration in the URL is a positive whole number of minutes; anything else is treated as absent. */
+export function parseDuration(value: string | null) {
+  return value !== null && /^[1-9][0-9]{0,9}$/.test(value)
+    ? Number(value)
+    : undefined;
+}

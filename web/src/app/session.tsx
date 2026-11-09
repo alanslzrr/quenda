@@ -8,7 +8,12 @@ import {
 } from "react";
 import { forgetCommand } from "../features/reservations/commands";
 import { type Account, ApiError, api } from "./api";
+import { readVisitorPreferences } from "./preferences.ts";
+import { browserStorage } from "./storage.ts";
 
+// The provider sits above the preferences, so errors use the visitor language.
+const visitorLocale = () =>
+  readVisitorPreferences(browserStorage("local"), navigator.languages).locale;
 const SessionContext = createContext<{
   account: Account | null | undefined;
   loading: boolean;
@@ -22,7 +27,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryKey: ["session"],
     queryFn: async ({ signal }) => {
       try {
-        return await api<Account>("/api/me", { signal });
+        return await api<Account>("/api/me", { signal }, visitorLocale());
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) return null;
         throw error;
@@ -44,7 +49,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [client, query.data]);
   async function refresh() {
     await client.cancelQueries({ queryKey: ["session"] });
-    const next = await api<Account>("/api/me");
+    const next = await api<Account>("/api/me", {}, visitorLocale());
     const current = client.getQueryData<Account | null>(["session"]);
     if (current?.accountId !== next.accountId) {
       await client.cancelQueries({ queryKey: ["private"] });
@@ -53,7 +58,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     client.setQueryData(["session"], next);
   }
   async function signOut() {
-    await api("/api/auth/sign-out", { method: "POST", body: "{}" });
+    await api(
+      "/api/auth/sign-out",
+      { method: "POST", body: "{}" },
+      visitorLocale(),
+    );
     forgetCommand();
     await client.cancelQueries();
     client.removeQueries({ queryKey: ["private"] });

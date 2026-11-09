@@ -3,6 +3,7 @@ import { textField } from "../../app/action";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
+import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
@@ -119,13 +120,18 @@ export function useAgreement() {
 function VersionPage({ edit }: { edit: boolean }) {
   const query = useAgreement();
   if (query.isPending) return <Loading />;
-  if (query.isError || !query.data)
+  if (blocksEditor(query) || !query.data)
     return <Failure error={query.error} retry={() => void query.refetch()} />;
   return edit ? (
-    <AgreementEditor
-      key={`${query.data.agreementId}:${query.data.version}`}
-      original={query.data}
-    />
+    <EditorRecovery
+      error={query.isError ? query.error : null}
+      retry={() => void query.refetch()}
+    >
+      <AgreementEditor
+        key={`${query.data.agreementId}:${query.data.version}`}
+        original={query.data}
+      />
+    </EditorRecovery>
   ) : (
     <VersionDetails item={query.data} />
   );

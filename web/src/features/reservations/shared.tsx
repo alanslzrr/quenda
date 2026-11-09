@@ -138,7 +138,7 @@ export function ReservationAction({
         if (!account) return;
         const policy = await api<CommandPolicy>(
           "/api/public/reservation-command-policy",
-          {},
+          { signal: AbortSignal.timeout(15000) },
           locale,
         );
         const item = {
@@ -184,7 +184,7 @@ export function CommandRecovery() {
     queryFn: async ({ signal }) => {
       const value = await api<CommandPolicy>(
         "/api/public/reservation-command-policy",
-        { signal },
+        { signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]) },
         locale,
       );
       commandTime(value, pending?.createdAt);
@@ -218,7 +218,7 @@ export function CommandRecovery() {
               "Non se recibiu unha confirmación. A operación pode terse completado. Consulta o estado actual antes de enviar outra solicitude.",
             )}
           </p>
-          {policy.isPending || policy.isFetching ? (
+          {policy.isPending ? (
             <Loading />
           ) : policy.isError ? (
             <Failure error={policy.error} retry={() => void policy.refetch()} />

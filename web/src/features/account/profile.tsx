@@ -9,11 +9,14 @@ import { Select } from "../../ui/select/select";
 import { ThemeSwitch } from "../../ui/theme-switch/theme-switch";
 export function Profile() {
   useMunicipalTheme(undefined);
-  const { account, loading, error } = useSession();
+  const { account, loading, error, refresh } = useSession();
   const { locale, theme, save, pending, t } = usePreferences();
   const [failure, setFailure] = useState<unknown>();
   if (loading) return <Loading />;
-  if (error) return <Failure error={error} />;
+  if (error)
+    return (
+      <Failure error={error} retry={() => void refresh().catch(() => {})} />
+    );
   if (!account) return <Navigate to="/acceso" replace />;
   const update = (patch: Parameters<typeof save>[0]) => {
     setFailure(undefined);
