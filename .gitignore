@@ -6,6 +6,7 @@ coverage/
 .env.*
 !.env.example
 !.env.migration.example
+!.env.production.example
 *.log
 .DS_Store
 .local/

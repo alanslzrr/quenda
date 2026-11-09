@@ -1,0 +1,136 @@
+# Reference topology for one Quenda installation on a single host.
+# It is an example to adapt, not a managed offering: sizing, TLS termination,
+# backups and monitoring remain decisions of the operating entity (PD-OPERACION).
+#
+#   First installation:
+#     docker compose --env-file .env.production -f compose.production.example.yaml up -d db
+#     docker compose --env-file .env.production -f compose.production.example.yaml --profile setup run --rm bootstrap
+#     docker compose --env-file .env.production -f compose.production.example.yaml up -d
+#   Upgrade: pull or build the new images, then run `up -d`; `migrate` runs first.
+name: quenda
+
+x-hardened: &hardened
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+x-mail: &mail
+  AUTH_ORIGIN: ${AUTH_ORIGIN:?Set the public HTTPS origin}
+  MAIL_TRANSPORT: ${MAIL_TRANSPORT:-smtp}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  SMTP_FROM: ${SMTP_FROM:-}
+  SMTP_TLS: ${SMTP_TLS:-starttls}
+  EMAIL_LOCALE: ${EMAIL_LOCALE:-gl}
+
+services:
+  db:
+    image: postgres:17.11@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: quenda
+      POSTGRES_USER: quenda_bootstrap
+      POSTGRES_PASSWORD: ${BOOTSTRAP_DATABASE_PASSWORD:?Set the bootstrap password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quenda_bootstrap -d quenda"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  bootstrap:
+    <<: *hardened
+    restart: "no"
+    profiles: ["setup"]
+    image: ${QUENDA_BACKEND_IMAGE:?Set the backend image}
+    command: ["scripts/bootstrap.ts"]
+    environment:
+      BOOTSTRAP_DATABASE_URL: postgresql://quenda_bootstrap:${BOOTSTRAP_DATABASE_PASSWORD}@db:5432/quenda
+      MIGRATION_DATABASE_PASSWORD: ${MIGRATION_DATABASE_PASSWORD:?}
+      DOMAIN_DATABASE_PASSWORD: ${DOMAIN_DATABASE_PASSWORD:?}
+      AUTH_DATABASE_PASSWORD: ${AUTH_DATABASE_PASSWORD:?}
+      WORKER_DATABASE_PASSWORD: ${WORKER_DATABASE_PASSWORD:?}
+    networks: [data]
+    depends_on:
+      db: { condition: service_healthy }
+
+  migrate:
+    <<: *hardened
+    restart: "no"
+    image: ${QUENDA_BACKEND_IMAGE:?Set the backend image}
+    command: ["scripts/migrate.ts"]
+    environment:
+      MIGRATION_DATABASE_URL: postgresql://quenda_migrator:${MIGRATION_DATABASE_PASSWORD}@db:5432/quenda
+    networks: [data]
+    depends_on:
+      db: { condition: service_healthy }
+
+  api:
+    <<: *hardened
+    image: ${QUENDA_BACKEND_IMAGE:?Set the backend image}
+    environment:
+      <<: *mail
+      HOST: 0.0.0.0
+      PORT: "3000"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+      AUTH_SECRET: ${AUTH_SECRET:?Set a random secret of at least 32 characters}
+      DOMAIN_DATABASE_URL: postgresql://quenda_domain:${DOMAIN_DATABASE_PASSWORD}@db:5432/quenda
+      AUTH_DATABASE_URL: postgresql://quenda_auth:${AUTH_DATABASE_PASSWORD}@db:5432/quenda
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-172.28.10.0/24}
+    networks: [data, edge]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
+      interval: 10s
+      timeout: 4s
+      retries: 6
+      start_period: 10s
+
+  worker:
+    <<: *hardened
+    image: ${QUENDA_BACKEND_IMAGE:?Set the backend image}
+    command: ["dist/email-worker.js"]
+    environment:
+      <<: *mail
+      WORKER_DATABASE_URL: postgresql://quenda_worker:${WORKER_DATABASE_PASSWORD}@db:5432/quenda
+    networks: [data, edge]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  web:
+    <<: *hardened
+    image: ${QUENDA_WEB_IMAGE:?Set the web image}
+    environment:
+      QUENDA_API_UPSTREAM: api:3000
+    ports:
+      - "${QUENDA_HTTP_BIND:-127.0.0.1}:${QUENDA_HTTP_PORT:-8080}:8080"
+    tmpfs:
+      - /tmp
+      - /etc/nginx/conf.d:uid=101,gid=101
+    networks:
+      edge:
+        ipv4_address: 172.28.10.10
+    depends_on:
+      api: { condition: service_healthy }
+
+networks:
+  data:
+    internal: true
+  edge:
+    ipam:
+      config:
+        - subnet: 172.28.10.0/24
+
+volumes:
+  postgres-data:
