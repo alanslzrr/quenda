@@ -1,0 +1,38 @@
+name: Web CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: 'true'
+  TZ: UTC
+
+jobs:
+  checks:
+    name: Web checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./ci/actions/setup
+      - name: Instalar dependencias de la aplicación web
+        run: pnpm --dir web install --frozen-lockfile --ignore-scripts
+      - name: Tipos, lint y pruebas unitarias
+        run: pnpm --dir web check
+      - name: Compilar el paquete estático
+        run: pnpm --dir web build

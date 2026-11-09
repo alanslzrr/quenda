@@ -1,0 +1,40 @@
+name: Backend CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: 'true'
+  TZ: UTC
+
+jobs:
+  checks:
+    name: Backend checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./ci/actions/setup
+      - name: Tipos, lint y pruebas unitarias y HTTP
+        run: pnpm check
+      - name: Compilar y generar OpenAPI
+        run: |
+          pnpm build
+          pnpm --silent openapi > "$RUNNER_TEMP/quenda-ci/openapi.json"
+      - name: Validar la composición de referencia
+        run: docker compose --env-file .env.production.example --file compose.production.example.yaml config --quiet

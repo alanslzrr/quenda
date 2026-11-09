@@ -318,29 +318,26 @@ La comprobación de arquitectura impide dependencias circulares y accesos a arch
 
 `pnpm build` genera `dist/`. Para comprobar el artefacto compilado con la configuración local: `node --env-file=.env.local dist/server.js`. En ejecución, `pnpm start` recibe las variables desde el entorno. SIGINT y SIGTERM cierran el servidor y sus pools.
 
+### Validación antes de abrir una pull request
+
+Las validaciones largas se ejecutan en local, no en GitHub Actions. Con PostgreSQL 17.11 disponible en `PG_BIN` y los puertos 3000 y 5173 libres, desde un árbol limpio y con la revisión que se va a enviar:
+
+```sh
+PG_BIN=/ruta/a/postgresql-17.11/bin pnpm validate
+```
+
+`pnpm validate` encadena, y se detiene en el primer fallo: `pnpm check` (tipos, lint, pruebas unitarias y HTTP, incluido el contrato OpenAPI), `pnpm --dir web check` y `pnpm --dir web build`, la suite de integración PostgreSQL, las pruebas de navegador de escritorio y móvil con axe, la construcción de las imágenes de API y web y `pnpm test:oci`. Requiere Docker y `pnpm --dir web exec playwright install chromium`. Tarda decenas de minutos; una pull request se abre cuando todo termina bien. Para ensayar el rendimiento o inventariar licencias, que no forman parte del encadenado, usar `pnpm test:performance` y `pnpm licenses:inventory`; sus resultados se conservan fuera de Git y se comparan solo con mediciones del mismo entorno.
+
 ### Integración continua
 
-La configuración está en [ci/workflows/backend.yml](ci/workflows/backend.yml), fuera de `.github/workflows`: no se ejecuta en GitHub mientras permanezca en esa ubicación. Al activarla, comprueba cada pull request y los cambios incorporados a `main`, sin filtros de rutas que puedan omitir una regresión. También admite ejecución manual. [Ubicación y eventos de los workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax).
+Los workflows están en [.github/workflows](.github/workflows) y se limitan a comprobaciones básicas de menos de cinco minutos en cada pull request y en cada cambio incorporado a `main`:
 
-| Comprobación | Contenido | Ejecución |
-|---|---|---|
-| `Backend checks` | `pnpm check`, compilación y generación de OpenAPI. Las pruebas existentes validan los contratos HTTP y de exportación. | Ordinaria. |
-| `Backend PostgreSQL` | Suite completa de integración, incluidas RLS, concurrencia, migraciones y recuperación. | Tras superar `Backend checks`. |
-| `Backend OCI` | Construcción desde la revisión examinada y pruebas de la imagen local, sin publicarla. | Tras superar `Backend checks`, en otro ejecutor. |
-| `Backend performance` | Escenario completo de diez minutos, sin abreviarlo ni modificar umbrales. | Manual con `extended=true`, tras superar las tres comprobaciones anteriores. |
-| `Backend licenses` | Inventario existente de dependencias y evidencias. `REVIEW_REQUIRED` hace fallar la comprobación; no se convierte en aprobación. | Manual con `extended=true`, tras superar las tres comprobaciones ordinarias. |
+| Comprobación | Contenido |
+|---|---|
+| `Backend checks` | `pnpm check`, compilación, generación de OpenAPI y validación de sintaxis de la composición de referencia. |
+| `Web checks` | Tipos, lint, pruebas unitarias y compilación del paquete estático. |
 
-Los ejecutores utilizan Ubuntu 24.04, Node de `.nvmrc` y pnpm de `package.json`. La instalación respeta el lockfile y no ejecuta scripts de dependencias. [La preparación de PostgreSQL](ci/setup-postgres.sh) compila la versión de `.postgres-version` y `btree_gist` desde fuentes oficiales verificadas con el [SHA-256 fijado](ci/postgresql-source.sha256). Los clústeres siguen siendo temporales y exclusivos de las pruebas; se ejecutan como máximo dos archivos de integración a la vez, sin cambiar sus límites de tiempo. [Compilación de PostgreSQL](https://www.postgresql.org/docs/17/install-make.html).
-
-Las acciones externas están fijadas por SHA, el token solo permite leer el repositorio y no se conserva en Git. No se utilizan secretos de aplicación, cachés compartidas, servicios reales ni credenciales cloud. Solo se conservan OpenAPI, la revisión y los informes de rendimiento o licencias durante siete días; no se suben bases, copias, correos ni archivos de credenciales. Los fallos detienen su comprobación. [Seguridad de GitHub Actions](https://docs.github.com/en/actions/reference/security/secure-use).
-
-Para activar la CI:
-
-1. Mover `ci/workflows/backend.yml` a `.github/workflows/backend.yml` y versionar el cambio; mantener `ci/actions/setup` y los archivos de preparación de PostgreSQL en sus ubicaciones. Desde ese momento se aplican los eventos configurados.
-2. Revisar la primera ejecución ordinaria. Solicitar `extended=true` desde Actions para obtener también rendimiento y licencias; sus resultados se revisan por separado. El inventario no sustituye la revisión de compatibilidad y atribuciones descrita en [licencias de dependencias](#inventario-de-licencias-de-dependencias).
-3. Exigir `Backend checks`, `Backend PostgreSQL` y `Backend OCI` para incorporar cambios a `main`, una vez validados en el ejecutor. Las comprobaciones ampliadas no se exigen en cada pull request.
-
-Al actualizar PostgreSQL, revisar conjuntamente `.postgres-version`, el checksum, la versión exigida por las pruebas y el digest OCI. El rendimiento se compara con mediciones del mismo entorno, no con tiempos de otro equipo. La configuración no despliega servicios ni ejecuta Terraform.
+Los ejecutores utilizan Ubuntu 24.04, Node de `.nvmrc` y pnpm de `package.json`. La instalación respeta el lockfile y no ejecuta scripts de dependencias. Las acciones externas están fijadas por SHA, el token solo permite leer el repositorio y no se conserva en Git. No se utilizan secretos de aplicación, cachés compartidas, servicios reales ni credenciales cloud. La configuración no despliega servicios ni ejecuta Terraform. [Seguridad de GitHub Actions](https://docs.github.com/en/actions/reference/security/secure-use).
 
 ## Licencia
 
@@ -488,6 +485,23 @@ La duración acumulada y máxima se expresan en milisegundos e incluyen espera d
 El entrypoint es `node`; el comando predeterminado inicia `dist/server.js`. El mismo artefacto admite `dist/email-worker.js`, `dist/monthly-report-worker.js` y `scripts/migrate.ts`. Cada proceso recibe exclusivamente su configuración y credenciales; el proceso API no necesita la URL del migrador ni del worker. La imagen usa `NODE_ENV=production`: API y correo requieren la configuración SMTP y HTTPS ya descrita. No contiene datos de demo ni configura alojamiento.
 
 Las pruebas OCI requieren Docker local y las imágenes oficiales referenciadas por digest. Crean una red interna efímera, sin publicar puertos, y dos bases PostgreSQL con credenciales aleatorias independientes. Ejecutan bootstrap/migraciones desde la imagen, verifican repetición de migraciones, catálogo de dos municipios en una instancia y uno en otra, rechazo de credenciales cruzadas, readiness durante caída/recuperación de PostgreSQL y persistencia tras reiniciar la API. El worker arranca con sus propias credenciales y procesa una cola vacía; esta prueba no verifica entrega SMTP ni sustituye las pruebas de correo. Los datos del catálogo son fixtures sintéticos, no evidencia del recorrido completo de alta por API. Los contenedores, volúmenes temporales, red y archivos privados de configuración se retiran al terminar.
+
+### Imagen web y despliegue de referencia
+
+`pnpm image:build:web` construye `quenda-web:local` desde la revisión actual. La imagen compila `web/` con el lockfile y sirve únicamente `dist` con nginx sin privilegios (usuario 101, puerto 8080); no incluye mapas de código, herramientas de compilación ni credenciales, y las licencias de las dependencias empaquetadas permanecen en `/licenses`. Nginx devuelve la aplicación para cualquier ruta que no sea un archivo, pero responde 404 a un activo con hash ausente para que la recarga por actualización de versión no reciba HTML. Los activos con hash se sirven con `Cache-Control: public, max-age=31536000, immutable` y `index.html` con `no-cache`.
+
+Las respuestas estáticas llevan `Content-Security-Policy` (`default-src 'self'`, sin `unsafe-eval` ni scripts en línea, `connect-src 'self'`, `frame-ancestors 'none'`), `X-Content-Type-Options`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` y `Cross-Origin-Resource-Policy`. `Strict-Transport-Security` se emite cuando `X-Forwarded-Proto` indica HTTPS, de modo que la terminación TLS corresponde a la entrada del ayuntamiento o a un proxy delante del contenedor. `/api/`, `/health/` y `/legal/source` se dirigen a `QUENDA_API_UPSTREAM` (por defecto `api:3000`), añaden `X-Forwarded-For` y `X-Forwarded-Proto` y sustituyen las cabeceras de seguridad de la API por una política `default-src 'none'`. El cuerpo máximo es 1 MB. `/healthz` responde sin consultar la API.
+
+[compose.production.example.yaml](compose.production.example.yaml) y [.env.production.example](.env.production.example) describen una instancia en un único servidor: PostgreSQL 17.11, tarea `bootstrap` (perfil `setup`, una vez), tarea `migrate` previa a la API, API, worker de correo y web. La base y las tareas están en una red interna sin salida; la API y el worker se conectan también a la red de entrada para SMTP. Todos los contenedores de aplicación son de solo lectura, sin capacidades y sin elevación de privilegios. Copiar el archivo de entorno a `.env.production`, restringir su acceso y sustituir cada valor; no guardarlo en Git. Es una referencia para adaptar, no una oferta gestionada: dimensionamiento, almacenamiento de secretos, TLS, copias y monitorización los decide la entidad que opera la instancia ([PD-OPERACION](docs/06_decisiones_y_validacion.md#decisiones-pendientes)).
+
+```sh
+pnpm image:build quenda-backend:local && pnpm image:build:web
+docker compose --env-file .env.production -f compose.production.example.yaml up -d db
+docker compose --env-file .env.production -f compose.production.example.yaml --profile setup run --rm bootstrap
+docker compose --env-file .env.production -f compose.production.example.yaml up -d
+```
+
+`TRUSTED_PROXY_CIDRS` debe incluir la red del contenedor web y, si hay otro proxy delante, su dirección; sin ello la API no confía en las cabeceras reenviadas. `AUTH_ORIGIN` es el origen HTTPS público. Una actualización construye o descarga las imágenes nuevas y repite `up -d`: `migrate` se ejecuta antes de reemplazar la API y, si falla, la API no arranca; aplicar [la recuperación de una actualización fallida](#recuperación-de-una-actualización-fallida). Las copias y restauraciones siguen los procedimientos de [copia lógica](#copia-lógica-de-postgresql) y [restauración cerrada](#restauración-cerrada-a-la-aplicación), ejecutados con el cliente PostgreSQL 17 desde fuera de estos contenedores. `pnpm test:oci` verifica ambas imágenes locales (`QUENDA_IMAGE`, `QUENDA_WEB_IMAGE`) y la integración continua valida además la sintaxis de la composición.
 
 ### Métricas HTTP
 
