@@ -322,6 +322,17 @@ test("the catalog and reservations leave the system as open files, and calendar 
               "Consultar ou cambiar a reserva",
             ),
           );
+          // The language chosen in the application wins over the browser's header.
+          const chosen = await app.inject({
+            url: `/api/municipalities/${tenant}/reservations/${upcoming[0]}/calendar.ics?lang=es`,
+            headers: { "accept-language": "gl" },
+          });
+          assert.ok(chosen.body.includes("Consultar o cambiar la reserva"));
+          assert.equal(
+            (await app.inject("/api/me/reservations/calendar.ics?lang=fr"))
+              .statusCode,
+            400,
+          );
         });
       });
 
