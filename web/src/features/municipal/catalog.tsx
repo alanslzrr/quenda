@@ -1,7 +1,9 @@
 import { Archive, Clock3, FileText, Globe, Settings2 } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useParams } from "react-router";
-import { textField } from "../../app/action";
+import { ActionForm, textField } from "../../app/action";
+import { api } from "../../app/api";
+import { saveFile } from "../../app/download";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
@@ -43,6 +45,40 @@ export type Resource = {
   profile?: FacilityProfile & UnitProfile;
   profileVersion?: number;
 };
+function CatalogDownload() {
+  const m = useMunicipality();
+  const { locale, t } = usePreferences();
+  return (
+    <section className={styles.section}>
+      <h2>{t("Copia del catálogo", "Copia do catálogo")}</h2>
+      <p>
+        {t(
+          "Descarga un archivo JSON con los ajustes del municipio, las instalaciones y espacios con su ficha, los horarios y las normas vigentes. No incluye reservas ni datos personales.",
+          "Descarga un arquivo JSON cos axustes do municipio, as instalacións e espazos coa súa ficha, os horarios e as normas vixentes. Non inclúe reservas nin datos persoais.",
+        )}
+      </p>
+      <ActionForm
+        label={t("Descargar catálogo", "Descargar catálogo")}
+        success={t(
+          "Archivo preparado para descargar.",
+          "Arquivo preparado para descargar.",
+        )}
+        resetOnSuccess={false}
+        submit={async () => {
+          saveFile(
+            "quenda-catalog-v1.json",
+            JSON.stringify(
+              await api(`${endpoint(m.id)}/exports/catalog`, {}, locale),
+              null,
+              2,
+            ),
+            "application/json",
+          );
+        }}
+      />
+    </section>
+  );
+}
 export function Catalog() {
   const m = useMunicipality();
   const { t } = usePreferences();
@@ -73,6 +109,7 @@ export function Catalog() {
       <h1>{t("Instalaciones y unidades", "Instalacións e unidades")}</h1>
       <ResourceList kind="facilities" />
       <ResourceList kind="units" />
+      {m.administrator && <CatalogDownload />}
       {permitted(m, "CATALOG_CREATE") && (
         <section className={styles.section}>
           <h2>{t("Nueva instalación", "Nova instalación")}</h2>

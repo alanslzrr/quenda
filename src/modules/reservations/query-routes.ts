@@ -1,11 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { language } from "../../http/errors.ts";
 import {
   type AuthConfiguration,
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
 import { acceptanceProperties } from "./acceptance.ts";
+import { reservationCalendar, upcomingCalendar } from "./personal-calendar.ts";
 import {
   listMunicipalReservations,
   listOwnReservationMunicipalities,
@@ -217,6 +219,92 @@ export async function registerReservationQueries(
       },
     );
   }
+  const calendarResponse = (summary: string) => ({
+    ...Object.fromEntries(
+      [400, 401, 403, 404, 429, 500, 503].map((status) => [
+        status,
+        { $ref: "ErrorResponse#" },
+      ]),
+    ),
+    200: {
+      description: summary,
+      content: { "text/calendar": { schema: { type: "string" } } },
+    },
+  });
+  const attachment = (reply: import("fastify").FastifyReply, name: string) =>
+    reply
+      .header("cache-control", "no-store")
+      .header("content-type", "text/calendar; charset=utf-8")
+      .header("content-disposition", `attachment; filename="${name}"`);
+  const lang = {
+    type: "object",
+    additionalProperties: false,
+    properties: { lang: { type: "string", enum: ["es", "gl"] } },
+  } as const;
+  app.get<{ Querystring: { lang?: "es" | "gl" } }>(
+    "/api/me/reservations/calendar.ics",
+    {
+      schema: {
+        operationId: "ownReservationsCalendar",
+        tags: ["Reservations"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Archivo iCalendar (RFC 5545) con las próximas reservas confirmadas de la cuenta, hasta 100, de la más cercana a la más lejana. Las horas van en UTC; cada reserva tiene un UID estable y SEQUENCE igual a su revisión, de modo que volver a importar el archivo actualiza en vez de duplicar. El idioma del texto sigue a lang (es o gl) o, si falta, a Accept-Language. Es una descarga puntual: no crea enlaces de suscripción ni secretos.",
+        querystring: lang,
+        response: calendarResponse("Calendario con las próximas reservas"),
+      },
+    },
+    async (request, reply) => {
+      const account = await actor(request, reply);
+      return attachment(reply, "quenda-proximas-reservas.ics").send(
+        await upcomingCalendar(
+          pool,
+          account,
+          config.origin,
+          request.query.lang ?? language(request.headers["accept-language"]),
+        ),
+      );
+    },
+  );
+  app.get<{
+    Params: { tenantId: string; reservationId: string };
+    Querystring: { lang?: "es" | "gl" };
+  }>(
+    "/api/municipalities/:tenantId/reservations/:reservationId/calendar.ics",
+    {
+      schema: {
+        operationId: "reservationCalendar",
+        tags: ["Reservations"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Archivo iCalendar (RFC 5545) de una reserva del titular, en cualquier estado. Una reserva cancelada se publica con STATUS:CANCELLED y el mismo UID, para que el calendario retire el evento. Solo el titular puede descargarlo; otra cuenta recibe 404.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId", "reservationId"],
+          properties: { tenantId: uuid, reservationId: uuid },
+        },
+        querystring: lang,
+        response: calendarResponse("Calendario con la reserva"),
+      },
+    },
+    async (request, reply) => {
+      const account = await actor(request, reply);
+      return attachment(
+        reply,
+        `quenda-reserva-${request.params.reservationId.slice(0, 8)}.ics`,
+      ).send(
+        await reservationCalendar(
+          pool,
+          account,
+          request.params.tenantId,
+          request.params.reservationId,
+          config.origin,
+          request.query.lang ?? language(request.headers["accept-language"]),
+        ),
+      );
+    },
+  );
   app.get<{ Querystring: { after?: string } }>(
     "/api/me/reservations/municipalities",
     {

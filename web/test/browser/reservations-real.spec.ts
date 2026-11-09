@@ -61,6 +61,25 @@ test("real reservation, overlapping reschedule, notices, history filter and canc
   await expect(
     page.getByRole("heading", { name: "Reserva confirmada", exact: true }),
   ).toBeVisible();
+  // The holder can take the reservation to a personal calendar.
+  const calendar = page.getByRole("link", {
+    name: /Añadir a mi calendario|Engadir ao meu calendario/,
+  });
+  await expect(calendar).toHaveAttribute(
+    "href",
+    new RegExp(
+      `/api/municipalities/${tenant}/reservations/${id}/calendar\\.ics\\?lang=(es|gl)$`,
+    ),
+  );
+  const file = await page.request.get(
+    (await calendar.getAttribute("href")) ?? "",
+  );
+  expect(file.status()).toBe(200);
+  expect(file.headers()["content-type"]).toMatch(/^text\/calendar/);
+  const ics = await file.text();
+  expect(ics).toContain("BEGIN:VCALENDAR");
+  expect(ics).toContain(`UID:${id}@`);
+  expect(ics).toContain("STATUS:CONFIRMED");
   await page
     .getByRole("link", { name: "Cambiar horario", exact: true })
     .click();

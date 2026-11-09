@@ -55,6 +55,12 @@ export async function api<T>(
         )
       : undefined;
   if (response.status === 204) return undefined as T;
+  // Files such as CSV are returned as text; errors always arrive as JSON.
+  if (
+    response.ok &&
+    (response.headers.get("content-type") ?? "").startsWith("text/")
+  )
+    return (await response.text()) as T;
   const data = await response.json().catch((error: unknown) => {
     // A proxy can reject the request with HTML rather than our JSON envelope.
     // Preserve the cooldown even then; never replay a mutation automatically.

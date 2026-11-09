@@ -186,6 +186,14 @@ Estas consultas no crean cuentas ni perfiles. Los recursos no publicados o retir
 
 `GET /api/public/notices/{kind}` y `GET /api/public/municipalities/{tenantId}/notices/{kind}` devuelven el último texto publicado de la instancia o del municipio (`kind`: `privacy`, `legal` o `accessibility`). Con `version` 0 y `body` vacío todavía no hay texto. `PUT /api/municipalities/{tenantId}/notices/{kind}` (administrador) y `PUT /api/platform/notices/{kind}` (operador) publican una versión nueva con `{ "expectedVersion": N, "body": { "gl": {…}, "es": {…} } }`; exigen MFA reciente y una versión distinta devuelve `409`. Los campos admitidos por tipo están en la descripción OpenAPI. Las versiones se guardan sin posibilidad de modificarlas ni borrarlas.
 
+## Portabilidad y calendario personal
+
+`GET /api/municipalities/{tenantId}/exports/catalog` (administrador, MFA reciente) devuelve el JSON `quenda.catalog` v1: ajustes del municipio, instalaciones y espacios con su ficha, calendario y normas vigentes y estado de publicación. No contiene reservas ni datos personales; su esquema y su ejemplo están en la respuesta OpenAPI. Es una copia de lectura para archivo o traslado manual: la importación de archivos sigue fuera de alcance.
+
+`GET /api/municipalities/{tenantId}/exports/reservations` admite `format=csv`: una fila por reserva (columnas en `reservationCsvColumns`), RFC 4180, UTF-8 con marca de orden de bytes y las celdas que empiezan por `=`, `+`, `-`, `@` o tabulación precedidas de `'`. Los textos largos de normas quedan solo en el JSON.
+
+`GET /api/municipalities/{tenantId}/reservations/{reservationId}/calendar.ics` y `GET /api/me/reservations/calendar.ics` devuelven archivos iCalendar (RFC 5545) de una reserva del titular, en cualquier estado, o de sus próximas reservas confirmadas (hasta 100). Las horas van en UTC; el `UID` es estable, `SEQUENCE` es la revisión y una cancelación lleva `STATUS:CANCELLED`, de modo que volver a importar actualiza el evento. `lang=es|gl` fija el idioma del texto; sin él se usa `Accept-Language`. Es una descarga puntual: no existe enlace de suscripción ni secreto de larga duración.
+
 ## Consulta de reservas
 
 - `GET /api/municipalities/{tenantId}/reservations/{reservationId}`: estado actual de una reserva. Admite al titular sin MFA y al personal con permisos vigentes sobre la unidad y MFA. Un identificador de otro municipio o fuera del ámbito autorizado no revela la reserva.
