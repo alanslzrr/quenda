@@ -7,10 +7,23 @@ import {
 } from "../identity/index.ts";
 import { registerCalendarRoutes } from "./calendar-routes.ts";
 import { createFacility, createReservableUnit } from "./drafts.ts";
+import { exportCatalog } from "./export.ts";
+import { catalogExportExample, catalogExportSchema } from "./export-schema.ts";
 import {
   inspectCatalogResource,
   renameCatalogResource,
 } from "./maintenance.ts";
+import {
+  type FacilityProfileInput,
+  saveCatalogProfile,
+  type UnitProfileInput,
+} from "./profile.ts";
+import {
+  facilityProfileBody,
+  facilityProfileSchema,
+  unitProfileBody,
+  unitProfileSchema,
+} from "./profile-schema.ts";
 import { registerPublicCatalog } from "./public-routes.ts";
 import { publishCatalogResource } from "./publication.ts";
 import { listCatalogResources } from "./queries.ts";
@@ -131,6 +144,42 @@ export async function registerCatalog(
           ),
         ),
   );
+  app.get<{ Params: { tenantId: string } }>(
+    "/api/municipalities/:tenantId/exports/catalog",
+    {
+      schema: {
+        operationId: "exportCatalog",
+        tags: ["Catalog"],
+        security: [{ quendaSession: [] }],
+        description:
+          "JSON quenda.catalog v1: ajustes del municipio, instalaciones y unidades con su ficha, calendario vigente, normas vigentes y estado de publicación. No incluye reservas ni datos personales. Exige administración del municipio y MFA reciente. Es una copia de lectura para archivo, auditoría o traslado manual; no hay operación de importación.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId"],
+          properties: { tenantId: uuid },
+        },
+        response: {
+          ...errors,
+          200: { ...catalogExportSchema, example: catalogExportExample },
+        },
+      },
+    },
+    async (request, reply) => {
+      const document = await exportCatalog(
+        pool,
+        await actor(request, reply),
+        request.params.tenantId,
+      );
+      return reply
+        .header("cache-control", "no-store")
+        .header(
+          "content-disposition",
+          'attachment; filename="quenda-catalog-v1.json"',
+        )
+        .send(document);
+    },
+  );
   for (const kind of ["facility", "unit"] as const) {
     const resource = kind === "facility" ? "facilities" : "units";
 
@@ -206,6 +255,8 @@ export async function registerCatalog(
       required: ["tenantId", "id"],
       properties: { tenantId: uuid, id: uuid },
     };
+    const profileSchema =
+      kind === "facility" ? facilityProfileSchema : unitProfileSchema;
     const response = {
       ...errors,
       200: {
@@ -221,6 +272,19 @@ export async function registerCatalog(
         },
       },
     };
+    // Only the administrative read carries the profile; changes answer with the short form above.
+    const inspected = {
+      ...errors,
+      200: {
+        ...response[200],
+        required: [...response[200].required, "profile", "profileVersion"],
+        properties: {
+          ...response[200].properties,
+          profile: profileSchema,
+          profileVersion: { type: "integer", minimum: 1 },
+        },
+      },
+    };
     app.get<{ Params: { tenantId: string; id: string } }>(
       `/api/municipalities/:tenantId/${resource}/:id`,
       {
@@ -229,7 +293,7 @@ export async function registerCatalog(
           tags: ["Catalog"],
           security: [{ quendaSession: [] }],
           params,
-          response,
+          response: inspected,
         },
       },
       async (request, reply) =>
@@ -346,6 +410,45 @@ export async function registerCatalog(
           kind,
           request.params.id,
           request.body,
+        ),
+    );
+    app.put<{
+      Params: { tenantId: string; id: string };
+      Body: FacilityProfileInput | UnitProfileInput;
+    }>(
+      `/api/municipalities/:tenantId/${resource}/:id/profile`,
+      {
+        schema: {
+          operationId: `save_${kind}_profile`,
+          tags: ["Catalog"],
+          security: [{ quendaSession: [] }],
+          description:
+            "Sustituye la ficha completa: los campos ausentes se borran, de modo que leer, editar y reenviar es el flujo completo. Exige CATALOG_MANAGE sobre el recurso, MFA reciente y expectedVersion igual a profileVersion; una versión distinta devuelve CONFLICT. No publica nada. Cada cambio queda auditado.",
+          params,
+          body: kind === "facility" ? facilityProfileBody : unitProfileBody,
+          response: {
+            ...errors,
+            200: {
+              type: "object",
+              additionalProperties: false,
+              required: ["profile", "profileVersion"],
+              properties: {
+                profile: profileSchema,
+                profileVersion: { type: "integer", minimum: 1 },
+              },
+            },
+          },
+        },
+      },
+      async (request, reply) =>
+        saveCatalogProfile(
+          pool,
+          await actor(request, reply),
+          request.params.tenantId,
+          kind,
+          request.params.id,
+          request.body,
+          request.id,
         ),
     );
     app.patch<{

@@ -138,3 +138,15 @@ Validación final de esta corrección:
 
 La suite de integración backend no se repitió para esta corrección de frontend; sus
 295 resultados anteriores pertenecen a la validación previa, no a esta ejecución.
+
+## Historial de reservas
+
+«Mis reservas» muestra primero la reserva más reciente por inicio y pagina de 20 en 20 con una clave de continuación opaca que codifica la clave de orden completa (inicio, identificador y municipio); una clave con otro formato se rechaza y la interfaz la recupera volviendo a leer desde la primera página. El filtro por municipio se alimenta de `GET /api/me/reservations/municipalities`, que solo refleja los municipios donde la propia cuenta tiene reservas, y por eso no depende de las páginas cargadas ni crea un directorio intermunicipal. Si dos municipios comparten nombre, el filtro añade el final de su identificador.
+
+## Textos legales
+
+El pie de página enlaza con «Privacidad», «Aviso legal» y «Accesibilidad». Dentro de un municipio (`/municipios/{tenantId}/…`) los enlaces apuntan a los textos de ese municipio; fuera de él, a los de la instancia (`/privacidad`, `/aviso-legal`, `/accesibilidad`). Al crear una cuenta se enlaza la información sobre privacidad. El administrador los publica desde «Textos legales» en la gestión del municipio (`/administracion/{tenantId}/textos-legales`) y el operador desde la sección del mismo nombre de la plataforma. Si una entidad aún no ha publicado un texto, la página muestra lo que hace la aplicación y un aviso de que falta el contenido propio de la entidad.
+
+## Descargas
+
+En «Gestión», los administradores descargan la copia del catálogo desde la página de instalaciones y las reservas en JSON o CSV desde «Exportar reservas». En el detalle de una reserva, el titular puede añadirla a su calendario (o quitarla, si está cancelada) y, en «Mis reservas», descargar las próximas. Son enlaces o botones de descarga: abrirlos no modifica nada, y los archivos no se conservan en el almacenamiento del navegador.

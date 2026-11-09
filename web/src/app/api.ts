@@ -1,4 +1,5 @@
 import { retryAfterDeadline } from "./retry-after.ts";
+import { recordServerDate } from "./server-clock.ts";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -43,6 +44,7 @@ export async function api<T>(
     cache: "no-store",
     redirect: "error",
   });
+  recordServerDate(response.headers.get("date"));
   const retryAt =
     response.status === 429 ||
     (response.status === 503 && response.headers.has("retry-after"))
@@ -53,6 +55,12 @@ export async function api<T>(
         )
       : undefined;
   if (response.status === 204) return undefined as T;
+  // Files such as CSV are returned as text; errors always arrive as JSON.
+  if (
+    response.ok &&
+    (response.headers.get("content-type") ?? "").startsWith("text/")
+  )
+    return (await response.text()) as T;
   const data = await response.json().catch((error: unknown) => {
     // A proxy can reject the request with HTML rather than our JSON envelope.
     // Preserve the cooldown even then; never replay a mutation automatically.
@@ -84,7 +92,6 @@ export interface Page<T> {
 export interface Account {
   accountId: string;
   email: string;
-  mfaVerified: boolean;
 }
 export interface Municipality {
   id: string;

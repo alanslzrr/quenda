@@ -27,6 +27,7 @@ import {
   searchPath,
   useJourneyQuery,
 } from "./journey";
+import { addressLine } from "./profile";
 import { AvailabilitySearch, useFacilities } from "./search";
 
 export function useMunicipality(tenantId: string | undefined) {
@@ -192,7 +193,8 @@ export function MunicipalityPage() {
                     : undefined
                 }
                 title={item.name}
-                meta={
+                meta={[
+                  addressLine(item.profile),
                   item.units === 0
                     ? t(
                         "Sin espacios reservables por ahora",
@@ -203,8 +205,10 @@ export function MunicipalityPage() {
                       : t(
                           `${item.units} espacios reservables`,
                           `${item.units} espazos reservables`,
-                        )
-                }
+                        ),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               />
             ))}
           </Choices>

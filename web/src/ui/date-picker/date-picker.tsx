@@ -73,6 +73,8 @@ export function DatePicker({
 }: DatePickerProps) {
   const generatedId = useId();
   const controlId = id ?? generatedId;
+  const labelId = `${controlId}-label`;
+  const valueId = `${controlId}-value`;
   const hintId = description ? `${controlId}-description` : undefined;
   const [open, setOpen] = useState(false);
   const [month, setMonth] = useState(monthStart(value ?? today ?? new Date()));
@@ -157,7 +159,7 @@ export function DatePicker({
       ref={rootRef}
       onBlur={onBlur}
     >
-      <label className={styles.label} htmlFor={controlId}>
+      <label className={styles.label} htmlFor={controlId} id={labelId}>
         {label}
       </label>
       <div className={styles.anchor}>
@@ -167,6 +169,7 @@ export function DatePicker({
           id={controlId}
           type="button"
           disabled={disabled}
+          aria-labelledby={`${labelId} ${valueId}`}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-describedby={hintId}
@@ -175,7 +178,9 @@ export function DatePicker({
           onKeyDown={onTriggerKeyDown}
         >
           <CalendarDays size={16} strokeWidth={1.75} aria-hidden="true" />
-          <span className={styles.srOnly}>{shown}</span>
+          <span className={styles.srOnly} id={valueId}>
+            {shown}
+          </span>
           <span className={styles.valueText} aria-hidden="true">
             <AnimatePresence mode="popLayout" initial={false} custom={direction}>
               <motion.span

@@ -136,6 +136,8 @@ Cada permiso se limita a una operación y unidad real del municipio; `unitId: nu
 
 `GET /api/municipalities/{tenantId}/facilities/{id}` y `GET /api/municipalities/{tenantId}/units/{id}` consultan un recurso para mantenimiento. `PATCH` sobre esas mismas rutas recibe `{ "name": "..." }` y registra el nombre anterior y el nuevo en la misma transacción. Requieren `CATALOG_MANAGE` y MFA reciente: ámbito municipal para instalaciones, municipal o de la unidad concreta para unidades. No permiten cambiar identificadores ni trasladar unidades entre instalaciones o municipios. Si falla la auditoría, el cambio se revierte.
 
+`PUT /api/municipalities/{tenantId}/facilities/{id}/profile` y `/units/{id}/profile` sustituyen la ficha pública completa: instalaciones con `address`, `postalCode`, `location`, `description`, `accessibility` y `contact`; unidades con `kind`, `indoor`, `capacity` y `description`. Los textos llevan variantes `gl` y `es`; un campo ausente se borra. Exigen `CATALOG_MANAGE` sobre el recurso, MFA reciente y `expectedVersion` igual a `profileVersion` (la lectura administrativa lo devuelve); una versión distinta responde `409`. Cada cambio guarda el estado anterior y el nuevo.
+
 `GET /api/municipalities/{tenantId}/facilities` y `GET /api/municipalities/{tenantId}/units` listan los recursos visibles para la cuenta con MFA reciente. Devuelven hasta 20 elementos y `nextCursor`; la página siguiente utiliza `?after=...`. RLS filtra antes de paginar: un gestor limitado a determinadas unidades no obtiene las restantes ni acceso municipal a instalaciones. Sin recursos autorizados, la respuesta es una lista vacía. Estos listados son administrativos, no publicaciones del catálogo público.
 
 `POST /api/municipalities/{tenantId}/facilities/{id}/withdraw` y la ruta equivalente `/units/{id}/withdraw` reciben `{ "reason": "..." }`. Registran la retirada y su motivo sin eliminar el recurso. Repetir la retirada devuelve el mismo instante sin duplicar el evento. Las consultas administrativas incluyen `withdrawnAt`; `null` indica que no se ha retirado, no que esté publicado. Una instalación retirada conserva sus unidades y no admite nuevas altas. Las reservas comprueban la retirada de la unidad y de su instalación.
@@ -172,13 +174,25 @@ Sin sesión, bajo `/api/public/municipalities/{tenantId}`:
 
 - `GET /booking-durations`: duraciones admitidas por alguna unidad publicada, con `recommended`, la que admiten más unidades; en caso de empate, la más corta.
 - `GET /availability-search?date=AAAA-MM-DD&durationMinutes=N`: unidades con franjas libres, recorridas por páginas; `facilityId` limita la búsqueda a una instalación. Una página vacía con `nextCursor` no indica que se haya agotado el catálogo.
-- `GET /facilities`: instalaciones publicadas con `units`, el número de unidades que se pueden reservar, hasta 20 por página; `?after=nextCursor` continúa el listado.
+- `GET /facilities`: instalaciones publicadas con `units`, el número de unidades que se pueden reservar, y su `profile`, hasta 20 por página; `?after=nextCursor` continúa el listado.
 - `GET /facilities/{facilityId}/units`: unidades publicadas de una instalación publicada y no retirada, con `minimumMinutes` y `maximumMinutes` de su calendario vigente y la misma paginación.
-- `GET /units/{unitId}`: nombre, instalación, zona, límites, calendario, `usageRulesVersion` y `bookingPolicyVersion`, sin datos de auditoría.
+- `GET /units/{unitId}`: nombre, instalación, `profile` del espacio y `facilityProfile`, zona, límites, calendario, `usageRulesVersion` y `bookingPolicyVersion`, sin datos de auditoría.
 - `GET /units/{unitId}/usage-rules`: texto plano y versión de las normas vigentes, sin autor ni motivo internos.
 - `GET /units/{unitId}/availability?date=AAAA-MM-DD&durationMinutes=N`: franjas libres con UTC, hora local, desplazamientos, versión y momento de cálculo.
 
 Estas consultas no crean cuentas ni perfiles. Los recursos no publicados o retirados no aparecen. Las unidades sin normas válidas tampoco se ofrecen; su detalle responde `404`. La disponibilidad lee calendario y ocupaciones en una misma transacción y descarta cualquier solape con una ocupación no liberada. Solo expone franjas, no titulares, identificadores de reservas ni motivos de bloqueos. Consultar no garantiza ni confirma una reserva. Las rutas públicas comparten un límite de 60 peticiones por 60 segundos y dirección reconocida por Fastify, incluso entre réplicas. Al superarlo devuelven `429 RATE_LIMITED` y `Retry-After`, antes de validar parámetros o calcular franjas. No confían en cabeceras de proxy enviadas por el cliente. PostgreSQL conserva una huella HMAC con clave compartida, no la IP en claro; cada petición elimina hasta 100 contadores cuya ventana tiene más de diez minutos. Sin tráfico, la limpieza se reanuda en la próxima petición; no constituye una garantía de borrado exactamente a los diez minutos. Las réplicas deben compartir `AUTH_SECRET`; rotarlo también reinicia la identidad de estos contadores.
+
+## Textos legales
+
+`GET /api/public/notices/{kind}` y `GET /api/public/municipalities/{tenantId}/notices/{kind}` devuelven el último texto publicado de la instancia o del municipio (`kind`: `privacy`, `legal` o `accessibility`). Con `version` 0 y `body` vacío todavía no hay texto. `PUT /api/municipalities/{tenantId}/notices/{kind}` (administrador) y `PUT /api/platform/notices/{kind}` (operador) publican una versión nueva con `{ "expectedVersion": N, "body": { "gl": {…}, "es": {…} } }`; exigen MFA reciente y una versión distinta devuelve `409`. Los campos admitidos por tipo están en la descripción OpenAPI. Las versiones se guardan sin posibilidad de modificarlas ni borrarlas.
+
+## Portabilidad y calendario personal
+
+`GET /api/municipalities/{tenantId}/exports/catalog` (administrador, MFA reciente) devuelve el JSON `quenda.catalog` v1: ajustes del municipio, instalaciones y espacios con su ficha, calendario y normas vigentes y estado de publicación. No contiene reservas ni datos personales; su esquema y su ejemplo están en la respuesta OpenAPI. Es una copia de lectura para archivo o traslado manual: la importación de archivos sigue fuera de alcance.
+
+`GET /api/municipalities/{tenantId}/exports/reservations` admite `format=csv`: una fila por reserva (columnas en `reservationCsvColumns`), RFC 4180, UTF-8 con marca de orden de bytes y las celdas que empiezan por `=`, `+`, `-`, `@` o tabulación precedidas de `'`. Los textos largos de normas quedan solo en el JSON.
+
+`GET /api/municipalities/{tenantId}/reservations/{reservationId}/calendar.ics` y `GET /api/me/reservations/calendar.ics` devuelven archivos iCalendar (RFC 5545) de una reserva del titular, en cualquier estado, o de sus próximas reservas confirmadas (hasta 100). Las horas van en UTC; el `UID` es estable, `SEQUENCE` es la revisión y una cancelación lleva `STATUS:CANCELLED`, de modo que volver a importar actualiza el evento. `lang=es|gl` fija el idioma del texto; sin él se usa `Accept-Language`. Es una descarga puntual: no existe enlace de suscripción ni secreto de larga duración.
 
 ## Consulta de reservas
 
@@ -295,6 +309,8 @@ PG_BIN=/ruta/a/postgresql-17.11/bin pnpm test:integration
 pnpm build
 pnpm --silent openapi > /tmp/quenda-openapi.json
 ```
+
+El contrato generado se valida también con herramientas ajenas al repositorio: `pnpm test` lo comprueba con `@apidevtools/swagger-parser` y, desde fuera, `npx @redocly/cli lint /tmp/quenda-openapi.json` debe terminar sin errores. Cada operación declara resumen, etiqueta, identificador único y sus requisitos de sesión (vacíos en las públicas); `servers` apunta al mismo origen que la aplicación.
 
 Las pruebas de integración crean una instancia PostgreSQL temporal con contraseñas aleatorias y la eliminan al terminar; no utilizan la base de desarrollo. Requieren los binarios locales `initdb`, `pg_ctl` y `postgres` de la versión indicada. En macOS con Homebrew, `PG_BIN` puede ser `/opt/homebrew/opt/postgresql@17/bin` si contiene esa versión.
 

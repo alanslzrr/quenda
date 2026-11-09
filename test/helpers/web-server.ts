@@ -61,6 +61,15 @@ await withDatabase(async ({ auth, domain, migration, worker }) => {
   for (const index of [
     ...Array.from({ length: 10 }, (_, i) => i + 1),
     ...Array.from({ length: 10 }, (_, i) => i + 35),
+    // Catalog profile editing owns these two so it never shares state with another spec.
+    45,
+    46,
+    // Legal text publication owns these two so it never shares state with another spec.
+    47,
+    48,
+    // The catalog download owns these two.
+    49,
+    50,
   ])
     municipalFixtures.push(
       await seedMunicipalBrowser(app, auth, domain, migration, index),
@@ -139,7 +148,10 @@ await withDatabase(async ({ auth, domain, migration, worker }) => {
     "web/test-results/reporting-fixtures.json",
     JSON.stringify(reportingFixtures),
   );
-  await app.listen({ host: "127.0.0.1", port: 3000 });
+  await app.listen({
+    host: "127.0.0.1",
+    port: Number(process.env.QUENDA_TEST_API_PORT ?? 3000),
+  });
   try {
     await Promise.race([once(process, "SIGTERM"), once(process, "SIGINT")]);
   } finally {

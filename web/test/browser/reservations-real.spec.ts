@@ -15,7 +15,7 @@ const checkout = (tenant: string, unit: string, start: string, end: string) =>
 const acceptance =
   /He leído y acepto las normas de uso|Lin e acepto as normas de uso/;
 async function selectDay(page: Page, date: string, locale: string) {
-  await page.getByRole("button", { name: "Día", exact: true }).click();
+  await page.getByRole("button", { name: /^Día \S+,/ }).click();
   const today = new Date();
   const target = calendarDate(date);
   if (
@@ -61,6 +61,25 @@ test("real reservation, overlapping reschedule, notices, history filter and canc
   await expect(
     page.getByRole("heading", { name: "Reserva confirmada", exact: true }),
   ).toBeVisible();
+  // The holder can take the reservation to a personal calendar.
+  const calendar = page.getByRole("link", {
+    name: /Añadir a mi calendario|Engadir ao meu calendario/,
+  });
+  await expect(calendar).toHaveAttribute(
+    "href",
+    new RegExp(
+      `/api/municipalities/${tenant}/reservations/${id}/calendar\\.ics\\?lang=(es|gl)$`,
+    ),
+  );
+  const file = await page.request.get(
+    (await calendar.getAttribute("href")) ?? "",
+  );
+  expect(file.status()).toBe(200);
+  expect(file.headers()["content-type"]).toMatch(/^text\/calendar/);
+  const ics = await file.text();
+  expect(ics).toContain("BEGIN:VCALENDAR");
+  expect(ics).toContain(`UID:${id}@`);
+  expect(ics).toContain("STATUS:CONFIRMED");
   await page
     .getByRole("link", { name: "Cambiar horario", exact: true })
     .click();
@@ -114,6 +133,8 @@ test("real reservation, overlapping reschedule, notices, history filter and canc
   await expect(
     page.getByRole("heading", { name: "Reserva cancelada", exact: true }),
   ).toBeVisible();
+  // The cancel dialog and its trigger are gone; focus must not fall back to the document body.
+  await expect(page.locator("#content")).toBeFocused();
   const free = await page.request.get(
     `/api/public/municipalities/${tenant}/units/${unit}/availability?date=${day}&durationMinutes=60`,
   );
@@ -179,6 +200,8 @@ test("municipal search offers a ninety minute booking and keeps its context on r
     });
     if (await option.isEnabled()) await option.click();
     else await page.keyboard.press("Escape");
+    // The modal menu hides the page from assistive technology until it has fully closed.
+    await expect(page.getByRole("menu")).toHaveCount(0);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     expect(
       await page.evaluate(

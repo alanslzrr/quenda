@@ -44,3 +44,11 @@ test("unavailable storage leaves booking without a favourite instead of failing"
   assert.doesNotThrow(() => saveFavorite(broken, tenant));
   assert.equal(readFavorite(undefined), null);
 });
+
+test("a value made only of dashes or hex is not a municipality id", () => {
+  const storage = memory();
+  storage.setItem("quenda.municipality", "-".repeat(36));
+  assert.equal(readFavorite(storage), null);
+  storage.setItem("quenda.municipality", "a".repeat(36));
+  assert.equal(readFavorite(storage), null);
+});

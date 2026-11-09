@@ -177,6 +177,7 @@
 .destructive .icon {
   color: var(--danger);
 }
+.item[aria-current="true"] { font-weight: 600; }
 .item[data-disabled] {
   opacity: 0.45;
   cursor: default;

@@ -8,6 +8,7 @@ import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
 import { Textarea } from "../../ui/textarea/textarea";
 import {
+  calendarProblem,
   emptyCalendar,
   minuteLabel,
   parseMinute,
@@ -337,20 +338,47 @@ function CalendarForm({
             if (!r.closed) e.intervals.push(parse(r));
             grouped.set(r.date, e);
           }
+          const calendar = {
+            minimumMinutes: Number(d.get("min")),
+            maximumMinutes: Number(d.get("max")),
+            stepMinutes: Number(d.get("step")),
+            advanceDays:
+              textField(d, "advance") === "" ? null : Number(d.get("advance")),
+            weekly: weekly.map((r) => ({ ...parse(r), day: Number(r.day) })),
+            exceptions: [...grouped.values()],
+          };
+          const problem = calendarProblem(calendar);
+          if (problem)
+            throw new ApiError(
+              400,
+              "INVALID_INPUT",
+              {
+                range: t(
+                  "Revisa la duración: el mínimo no puede superar al máximo y el paso debe ser mayor que cero.",
+                  "Revisa a duración: o mínimo non pode superar o máximo e o paso debe ser maior que cero.",
+                ),
+                step: t(
+                  "La duración mínima y la máxima deben ser múltiplos del paso de horarios.",
+                  "A duración mínima e a máxima deben ser múltiplos do paso de horarios.",
+                ),
+                advance: t(
+                  "La antelación debe ser un número entero de días, o quedar vacía.",
+                  "A antelación debe ser un número enteiro de días, ou quedar baleira.",
+                ),
+                overlap: t(
+                  "Hay franjas semanales que se solapan en un mismo día.",
+                  "Hai franxas semanais que se solapan nun mesmo día.",
+                ),
+                exceptionOverlap: t(
+                  "Hay franjas que se solapan en una misma excepción.",
+                  "Hai franxas que se solapan nunha mesma excepción.",
+                ),
+              }[problem],
+            );
           return {
             expectedVersion: version,
             reason: textField(d, "reason"),
-            calendar: {
-              minimumMinutes: Number(d.get("min")),
-              maximumMinutes: Number(d.get("max")),
-              stepMinutes: Number(d.get("step")),
-              advanceDays:
-                textField(d, "advance") === ""
-                  ? null
-                  : Number(d.get("advance")),
-              weekly: weekly.map((r) => ({ ...parse(r), day: Number(r.day) })),
-              exceptions: [...grouped.values()],
-            },
+            calendar,
           };
         }}
       >
@@ -388,8 +416,8 @@ function CalendarForm({
               "Antelación da unidade (días)",
             )}
             description={t(
-              "Vacío: utiliza el límite municipal.",
-              "Baleiro: utiliza o límite municipal.",
+              "Vacío: utiliza el límite municipal. No puede superarlo.",
+              "Baleiro: utiliza o límite municipal. Non pode superalo.",
             )}
             name="advance"
             type="number"
