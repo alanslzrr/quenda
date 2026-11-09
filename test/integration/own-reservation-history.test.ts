@@ -70,7 +70,9 @@ test("own history filters before pagination and never broadens account access", 
         rows.rows
           .filter((r) => r.account_id === "holder")
           .map((r) => r.id)
-          .sort(),
+          // Most recent first: the fixture start grows with the id.
+          .sort()
+          .reverse(),
       );
     }
     const actor = (accountId: string) => ({
@@ -147,18 +149,29 @@ test("own history filters before pagination and never broadens account access", 
       await t.test(
         "unfiltered history preserves the composite cursor and the other holder remains isolated",
         async () => {
-          const seen: string[] = [];
+          const items: { id: string; tenantId: string; startsAt: string }[] =
+            [];
           let after: string | null = null;
           do {
             const page = await listOwnReservations(domain, actor("holder"), {
               after,
             });
-            seen.push(...page.items.map((r) => `${r.id}:${r.tenantId}`));
+            items.push(...page.items);
             after = page.nextCursor;
           } while (after);
+          const seen = items.map((r) => `${r.id}:${r.tenantId}`);
           assert.equal(seen.length, 50);
           assert.equal(new Set(seen).size, 50);
-          assert.deepEqual(seen, [...seen].sort());
+          // Both municipalities share every start, so ties must break by id and then municipality.
+          assert.deepEqual(
+            items,
+            [...items].sort(
+              (a, b) =>
+                b.startsAt.localeCompare(a.startsAt) ||
+                b.id.localeCompare(a.id) ||
+                b.tenantId.localeCompare(a.tenantId),
+            ),
+          );
           for (const tenant of tenants) {
             const result = await app.inject({
               url: `/api/me/reservations?tenantId=${tenant}`,
@@ -180,6 +193,66 @@ test("own history filters before pagination and never broadens account access", 
         },
       );
       await t.test(
+        "the history filter lists only municipalities where the account has reservations",
+        async () => {
+          const page = await app.inject({
+            url: "/api/me/reservations/municipalities",
+            headers: { "x-test-account": "holder" },
+          });
+          assert.equal(page.statusCode, 200, page.body);
+          assert.equal(page.headers["cache-control"], "no-store");
+          assert.deepEqual(
+            page
+              .json()
+              .items.map((m: { tenantId: string }) => m.tenantId)
+              .sort(),
+            [...tenants].sort(),
+          );
+          assert.equal(page.json().nextCursor, null);
+          assert.deepEqual(Object.keys(page.json().items[0]).sort(), [
+            "name",
+            "tenantId",
+          ]);
+          const first = [...tenants].sort()[0];
+          const after = await app.inject({
+            url: `/api/me/reservations/municipalities?after=${first}`,
+            headers: { "x-test-account": "holder" },
+          });
+          assert.deepEqual(
+            after.json().items.map((m: { tenantId: string }) => m.tenantId),
+            [...tenants].sort().slice(1),
+          );
+          const stranger = await app.inject({
+            url: "/api/me/reservations/municipalities",
+            headers: { "x-test-account": "other" },
+          });
+          assert.equal(stranger.statusCode, 200, stranger.body);
+          assert.equal(
+            (await app.inject({ url: "/api/me/reservations/municipalities" }))
+              .statusCode,
+            401,
+          );
+          for (const query of ["after=invalid", "after=", "unknown=1"])
+            assert.equal(
+              (
+                await app.inject({
+                  url: `/api/me/reservations/municipalities?${query}`,
+                  headers: { "x-test-account": "holder" },
+                })
+              ).statusCode,
+              400,
+              query,
+            );
+          for (const pool of [auth, worker])
+            await assert.rejects(
+              pool.query(
+                "SELECT * FROM domain.own_reservation_municipalities(NULL)",
+              ),
+              { code: "42501" },
+            );
+        },
+      );
+      await t.test(
         "empty scopes, validation and direct SQL cannot bypass account isolation",
         async () => {
           const empty = await app.inject({
@@ -193,6 +266,10 @@ test("own history filters before pagination and never broadens account access", 
             "tenantId=",
             `tenantId=${tenants[0]}&accountId=other`,
             `tenantId=${tenants[0]}&after=invalid`,
+            // The previous id:municipality cursor is no longer a valid position.
+            `after=${randomUUID()}:${tenants[0]}`,
+            `after=2024-01-01T00:00:00Z|${randomUUID()}|${tenants[0]}`,
+            `after=2024-01-01T00:00:00.000000Z|${randomUUID()}`,
           ])
             assert.equal(
               (
@@ -220,7 +297,7 @@ test("own history filters before pagination and never broadens account access", 
           assert.equal(
             (
               await domain.query(
-                "SELECT * FROM domain.own_reservations(NULL,NULL,$1)",
+                "SELECT * FROM domain.own_reservations(NULL,NULL,NULL,$1)",
                 [tenants[0]],
               )
             ).rowCount,
@@ -230,7 +307,7 @@ test("own history filters before pagination and never broadens account access", 
             domain,
             (client) =>
               client.query(
-                "SELECT * FROM domain.own_reservations(NULL,NULL,$1)",
+                "SELECT * FROM domain.own_reservations(NULL,NULL,NULL,$1)",
                 [tenants[0]],
               ),
             { accountId: "other", tenantId: tenants[1] },
@@ -246,7 +323,7 @@ test("own history filters before pagination and never broadens account access", 
           for (const pool of [auth, worker])
             await assert.rejects(
               pool.query(
-                "SELECT * FROM domain.own_reservations(NULL,NULL,$1)",
+                "SELECT * FROM domain.own_reservations(NULL,NULL,NULL,$1)",
                 [tenants[0]],
               ),
               { code: "42501" },

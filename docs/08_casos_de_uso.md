@@ -187,7 +187,7 @@ Una persona puede ejercer varias funciones, sin que una amplíe los permisos de 
 
 **Flujo principal**
 1. El usuario solicita su historial y, si lo necesita, lo delimita por municipio.
-2. Quenda devuelve sus reservas conservadas de la instancia.
+2. Quenda devuelve sus reservas conservadas de la instancia, de la más reciente a la más antigua por inicio; a igual inicio, el orden es estable por identificador y municipio. El filtro ofrece los municipios donde la cuenta tiene reservas, con independencia de las páginas cargadas, sin constituir un directorio de municipios.
 3. Al consultar una reserva, muestra su estado y la evidencia de normas aceptadas o pendientes.
 
 **Alternativas y excepciones**

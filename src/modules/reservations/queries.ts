@@ -8,12 +8,26 @@ import type { AuthenticatedAccount } from "../identity/index.ts";
 import { present, type Reservation } from "./state.ts";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function ownCursor(after: string | null) {
-  if (after === null) return [null, null];
-  const parts = after.split(":");
-  if (parts.length !== 2 || parts.some((part) => !uuid.test(part)))
+// start|id|municipality: the whole sort key, so rows sharing a start are neither repeated nor skipped.
+const cursorStart = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/;
+function ownCursor(
+  after: string | null,
+): [string | null, string | null, string | null] {
+  if (after === null) return [null, null, null];
+  const parts = after.split("|");
+  const [start, id, tenant] = parts;
+  if (
+    parts.length !== 3 ||
+    !start ||
+    !cursorStart.test(start) ||
+    Number.isNaN(Date.parse(start)) ||
+    !id ||
+    !uuid.test(id) ||
+    !tenant ||
+    !uuid.test(tenant)
+  )
     throw new HttpError("INVALID_INPUT");
-  return parts;
+  return [start, id, tenant];
 }
 function current(row: Omit<Reservation, "account_id">, now: number) {
   return {
@@ -42,8 +56,9 @@ export async function listOwnReservations(
         Omit<Reservation, "account_id"> & {
           municipality: string;
           unit_name: string;
+          cursor_start: string;
         }
-      >("SELECT * FROM domain.own_reservations($1,$2,$3)", [
+      >("SELECT * FROM domain.own_reservations($1,$2,$3,$4)", [
         ...cursor,
         tenantId,
       ]);
@@ -57,8 +72,32 @@ export async function listOwnReservations(
         })),
         nextCursor:
           result.rows.length > 20
-            ? `${page.at(-1)?.id}:${page.at(-1)?.tenant_id}`
+            ? `${page.at(-1)?.cursor_start}|${page.at(-1)?.id}|${page.at(-1)?.tenant_id}`
             : null,
+      };
+    },
+  );
+}
+export async function listOwnReservationMunicipalities(
+  pool: Pool,
+  actor: AuthenticatedAccount,
+  options: { after?: string | null } = {},
+) {
+  const after = options.after ?? null;
+  if (after !== null && !uuid.test(after)) throw new HttpError("INVALID_INPUT");
+  return command(
+    pool,
+    { accountId: actor.accountId, tenantId: null },
+    async (client) => {
+      const result = await client.query<{ tenant_id: string; name: string }>(
+        "SELECT * FROM domain.own_reservation_municipalities($1)",
+        [after],
+      );
+      const page = result.rows.slice(0, 20);
+      return {
+        items: page.map((row) => ({ tenantId: row.tenant_id, name: row.name })),
+        nextCursor:
+          result.rows.length > 20 ? (page.at(-1)?.tenant_id ?? null) : null,
       };
     },
   );
