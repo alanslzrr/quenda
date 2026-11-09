@@ -1,0 +1,75 @@
+upstream quenda_api {
+  server ${QUENDA_API_UPSTREAM};
+  keepalive 16;
+}
+
+map $http_x_forwarded_proto $quenda_proto {
+  default $http_x_forwarded_proto;
+  "" $scheme;
+}
+
+# Browsers ignore HSTS received over plain HTTP; an empty value is not emitted.
+map $quenda_proto $quenda_hsts {
+  https "max-age=31536000";
+  default "";
+}
+
+server {
+  listen 8080;
+  server_name _;
+  root /usr/share/nginx/html;
+  server_tokens off;
+  client_max_body_size 1m;
+  client_body_timeout 10s;
+  client_header_timeout 10s;
+  keepalive_timeout 30s;
+  absolute_redirect off;
+  port_in_redirect off;
+
+  gzip on;
+  gzip_vary on;
+  gzip_comp_level 5;
+  gzip_min_length 512;
+  gzip_types text/css application/javascript text/javascript application/json image/svg+xml text/plain;
+
+  location = /healthz {
+    access_log off;
+    default_type text/plain;
+    return 200 "ok\n";
+  }
+
+  location ~ ^/(?:api/|health/|legal/source$) {
+    proxy_pass http://quenda_api;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $quenda_proto;
+    proxy_connect_timeout 5s;
+    proxy_read_timeout 30s;
+    proxy_send_timeout 30s;
+    proxy_hide_header X-Content-Type-Options;
+    proxy_hide_header Referrer-Policy;
+    proxy_hide_header Content-Security-Policy;
+    add_header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Strict-Transport-Security $quenda_hsts always;
+  }
+
+  location /assets/ {
+    try_files $uri =404;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+    include /etc/nginx/snippets/security-headers.conf;
+  }
+
+  location ~ \.map$ {
+    return 404;
+  }
+
+  location / {
+    try_files $uri /index.html;
+    add_header Cache-Control "no-cache" always;
+    include /etc/nginx/snippets/security-headers.conf;
+  }
+}
