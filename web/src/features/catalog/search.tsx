@@ -113,7 +113,8 @@ export function AvailabilitySearch({
       locale,
     ],
     initialPageParam: null as string | null,
-    enabled: !!duration && duration > 0,
+    // A requested facility is applied only once the list can confirm it; never search everything meanwhile.
+    enabled: !!duration && duration > 0 && !(params.facility && all.loading),
     queryFn: ({ pageParam, signal }) => {
       const search = new URLSearchParams({
         date: params.date,
@@ -174,6 +175,13 @@ export function AvailabilitySearch({
     }));
   const day = calendarLabel(calendarDate(params.date), locale, "day");
   const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const facilityDropped =
+    !!params.facility && !all.loading && !all.isError && facility === "";
+  const durationDropped =
+    requested !== undefined &&
+    durations.isSuccess &&
+    duration !== undefined &&
+    duration !== requested;
   const scanning =
     query.isLoading ||
     (!query.isError && !items.length && (query.hasNextPage ?? false));
@@ -186,6 +194,26 @@ export function AvailabilitySearch({
           title={t(
             "El día elegido no es válido o ya ha pasado; mostramos hoy.",
             "O día elixido non é válido ou xa pasou; amosamos hoxe.",
+          )}
+        />
+      )}
+      {facilityDropped && (
+        <Alert
+          className={styles.adjusted}
+          tone="info"
+          title={t(
+            "La instalación elegida ya no está disponible; mostramos todas.",
+            "A instalación elixida xa non está dispoñible; amosamos todas.",
+          )}
+        />
+      )}
+      {durationDropped && (
+        <Alert
+          className={styles.adjusted}
+          tone="info"
+          title={t(
+            "La duración elegida no se admite aquí; mostramos la recomendada.",
+            "A duración elixida non se admite aquí; amosamos a recomendada.",
           )}
         />
       )}

@@ -182,6 +182,10 @@ Sin sesión, bajo `/api/public/municipalities/{tenantId}`:
 
 Estas consultas no crean cuentas ni perfiles. Los recursos no publicados o retirados no aparecen. Las unidades sin normas válidas tampoco se ofrecen; su detalle responde `404`. La disponibilidad lee calendario y ocupaciones en una misma transacción y descarta cualquier solape con una ocupación no liberada. Solo expone franjas, no titulares, identificadores de reservas ni motivos de bloqueos. Consultar no garantiza ni confirma una reserva. Las rutas públicas comparten un límite de 60 peticiones por 60 segundos y dirección reconocida por Fastify, incluso entre réplicas. Al superarlo devuelven `429 RATE_LIMITED` y `Retry-After`, antes de validar parámetros o calcular franjas. No confían en cabeceras de proxy enviadas por el cliente. PostgreSQL conserva una huella HMAC con clave compartida, no la IP en claro; cada petición elimina hasta 100 contadores cuya ventana tiene más de diez minutos. Sin tráfico, la limpieza se reanuda en la próxima petición; no constituye una garantía de borrado exactamente a los diez minutos. Las réplicas deben compartir `AUTH_SECRET`; rotarlo también reinicia la identidad de estos contadores.
 
+## Textos legales
+
+`GET /api/public/notices/{kind}` y `GET /api/public/municipalities/{tenantId}/notices/{kind}` devuelven el último texto publicado de la instancia o del municipio (`kind`: `privacy`, `legal` o `accessibility`). Con `version` 0 y `body` vacío todavía no hay texto. `PUT /api/municipalities/{tenantId}/notices/{kind}` (administrador) y `PUT /api/platform/notices/{kind}` (operador) publican una versión nueva con `{ "expectedVersion": N, "body": { "gl": {…}, "es": {…} } }`; exigen MFA reciente y una versión distinta devuelve `409`. Los campos admitidos por tipo están en la descripción OpenAPI. Las versiones se guardan sin posibilidad de modificarlas ni borrarlas.
+
 ## Portabilidad y calendario personal
 
 `GET /api/municipalities/{tenantId}/exports/catalog` (administrador, MFA reciente) devuelve el JSON `quenda.catalog` v1: ajustes del municipio, instalaciones y espacios con su ficha, calendario y normas vigentes y estado de publicación. No contiene reservas ni datos personales; su esquema y su ejemplo están en la respuesta OpenAPI. Es una copia de lectura para archivo o traslado manual: la importación de archivos sigue fuera de alcance.
@@ -305,6 +309,8 @@ PG_BIN=/ruta/a/postgresql-17.11/bin pnpm test:integration
 pnpm build
 pnpm --silent openapi > /tmp/quenda-openapi.json
 ```
+
+El contrato generado se valida también con herramientas ajenas al repositorio: `pnpm test` lo comprueba con `@apidevtools/swagger-parser` y, desde fuera, `npx @redocly/cli lint /tmp/quenda-openapi.json` debe terminar sin errores. Cada operación declara resumen, etiqueta, identificador único y sus requisitos de sesión (vacíos en las públicas); `servers` apunta al mismo origen que la aplicación.
 
 Las pruebas de integración crean una instancia PostgreSQL temporal con contraseñas aleatorias y la eliminan al terminar; no utilizan la base de desarrollo. Requieren los binarios locales `initdb`, `pg_ctl` y `postgres` de la versión indicada. En macOS con Homebrew, `PG_BIN` puede ser `/opt/homebrew/opt/postgresql@17/bin` si contiene esa versión.
 

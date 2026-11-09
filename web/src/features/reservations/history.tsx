@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { CalendarPlus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { api, type Page } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
@@ -39,21 +39,54 @@ function useHistory(tenant: string) {
   });
 }
 
+// The filter lists the municipalities where this account has bookings, whichever history page is loaded.
+function useHistoryMunicipalities() {
+  const { account } = useSession();
+  const { locale } = usePreferences();
+  const query = useInfiniteQuery({
+    queryKey: [
+      "private",
+      account?.accountId,
+      "reservation-municipalities",
+      locale,
+    ],
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam, signal }) =>
+      api<Page<{ tenantId: string; name: string }>>(
+        `/api/me/reservations/municipalities${pageParam ? `?after=${encodeURIComponent(pageParam)}` : ""}`,
+        { signal },
+        locale,
+      ),
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    retry: false,
+  });
+  const { hasNextPage, isFetching, isError, fetchNextPage } = query;
+  const loaded = query.data?.pages.length ?? 0;
+  useEffect(() => {
+    // The list is the account's own footprint and small; stop on error or after a safety cap.
+    if (hasNextPage && !isFetching && !isError && loaded < 10)
+      void fetchNextPage();
+  }, [hasNextPage, isFetching, isError, loaded, fetchNextPage]);
+  return query;
+}
+
 export function ReservationHistory() {
   useMunicipalTheme(undefined);
   const { locale, t } = usePreferences();
   const [tenant, setTenant] = useState("all");
   const entry = useBookingEntry();
-  const all = useHistory("all");
   const query = useHistory(tenant);
-  const municipalities = [
-    ...new Map(
-      (all.data?.pages.flatMap((page) => page.items) ?? []).map((item) => [
-        item.tenantId,
-        item.municipality,
-      ]),
-    ),
-  ].sort((a, b) => a[1].localeCompare(b[1], locale));
+  const footprint = useHistoryMunicipalities();
+  const known = footprint.data?.pages.flatMap((page) => page.items) ?? [];
+  const municipalities: [string, string][] = known
+    .map((m): [string, string] => [
+      m.tenantId,
+      // Names are not unique: a repeated name carries the end of its id.
+      known.filter((other) => other.name === m.name).length > 1
+        ? `${m.name} · ${m.tenantId.slice(-6)}`
+        : m.name,
+    ])
+    .sort((a, b) => a[1].localeCompare(b[1], locale));
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
   const status = (value: Reservation["status"]) =>
     value === "CONFIRMADA"

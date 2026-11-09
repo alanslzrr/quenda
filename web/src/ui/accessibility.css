@@ -61,3 +61,37 @@
 
 /* Native input reset is explicit; host inputs and authored control padding stay untouched. */
 [data-lumen] [data-lumen-reset-input] { margin: 0; padding: 0; }
+
+/* Windows high contrast removes backgrounds, so a selected state must not depend on them. */
+@media (forced-colors: active) {
+  [data-lumen] [role="tab"][data-state="active"],
+  [data-lumen] [aria-pressed="true"],
+  [data-lumen] [role="radio"][aria-checked="true"],
+  [data-lumen] [role="option"][aria-selected="true"],
+  [data-lumen] [aria-current="page"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+    forced-color-adjust: none;
+    color: ButtonText;
+    background: ButtonFace;
+  }
+  [data-lumen] [role="checkbox"][data-state="checked"],
+  [data-lumen] [role="checkbox"][data-state="indeterminate"] {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+  [data-lumen] input,
+  [data-lumen] textarea,
+  [data-lumen] [role="combobox"] {
+    border-color: ButtonText;
+  }
+}
+
+/* Users who ask for more contrast get the strongest neutral text and control boundaries. */
+@media (prefers-contrast: more) {
+  :root,
+  :root[data-theme="dark"] {
+    --text-muted: var(--text-secondary) !important;
+    --border-strong: var(--foreground) !important;
+  }
+}

@@ -131,7 +131,7 @@ export function SignIn({ register = false }: { register?: boolean }) {
       ) : (
         <form className={styles.form} onSubmit={submit}>
           {challenge ? (
-            <FactorField />
+            <FactorField focus />
           ) : (
             <>
               {register && (
@@ -162,6 +162,16 @@ export function SignIn({ register = false }: { register?: boolean }) {
               />
             </>
           )}
+          {register && !challenge && (
+            <p>
+              <Link to="/privacidad">
+                {t(
+                  "Cómo se tratan tus datos al crear la cuenta",
+                  "Como se tratan os teus datos ao crear a conta",
+                )}
+              </Link>
+            </p>
+          )}
           {failure !== undefined && <Failure error={failure} />}
           <Button type="submit" loading={busy} disabled={busy}>
             {challenge
@@ -170,6 +180,20 @@ export function SignIn({ register = false }: { register?: boolean }) {
                 ? t("Crear cuenta", "Crear conta")
                 : t("Entrar", "Entrar")}
           </Button>
+          {challenge && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => {
+                // The second-factor window may have expired; start again from the password step.
+                setChallenge(false);
+                setFailure(undefined);
+              }}
+            >
+              {t("Volver al acceso", "Volver ao acceso")}
+            </Button>
+          )}
           {!challenge && !register && (
             <nav
               className={styles.fields}

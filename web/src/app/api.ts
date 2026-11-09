@@ -1,4 +1,5 @@
 import { retryAfterDeadline } from "./retry-after.ts";
+import { recordServerDate } from "./server-clock.ts";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -43,6 +44,7 @@ export async function api<T>(
     cache: "no-store",
     redirect: "error",
   });
+  recordServerDate(response.headers.get("date"));
   const retryAt =
     response.status === 429 ||
     (response.status === 503 && response.headers.has("retry-after"))
@@ -90,7 +92,6 @@ export interface Page<T> {
 export interface Account {
   accountId: string;
   email: string;
-  mfaVerified: boolean;
 }
 export interface Municipality {
   id: string;

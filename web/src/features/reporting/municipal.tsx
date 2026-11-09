@@ -107,7 +107,7 @@ function Query({ exporting }: { exporting: boolean }) {
                   "quenda-reservations-v3.csv",
                   await api<string>(
                     `${endpoint(m.id)}/exports/reservations?${params}`,
-                    {},
+                    { signal: AbortSignal.timeout(60_000) },
                     locale,
                   ),
                   "text/csv;charset=utf-8",
@@ -118,7 +118,7 @@ function Query({ exporting }: { exporting: boolean }) {
                   JSON.stringify(
                     await api(
                       `${endpoint(m.id)}/exports/reservations?${params}`,
-                      {},
+                      { signal: AbortSignal.timeout(60_000) },
                       locale,
                     ),
                     null,
@@ -131,7 +131,7 @@ function Query({ exporting }: { exporting: boolean }) {
               setResult(
                 await api<Indicators>(
                   `${endpoint(m.id)}${unitId ? `/units/${encodeURIComponent(unitId)}` : ""}/indicators?${params}`,
-                  {},
+                  { signal: AbortSignal.timeout(60_000) },
                   locale,
                 ),
               );

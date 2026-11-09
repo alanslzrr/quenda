@@ -13,6 +13,7 @@ import {
   revokeAdministrator,
   revokeAdministratorInvitation,
 } from "./invitations.ts";
+import { registerLegalNoticeRoutes } from "./legal-notice-routes.ts";
 import { registerManagerRoutes } from "./manager-routes.ts";
 import { registerMunicipalContinuityRoutes } from "./municipal-continuity-routes.ts";
 import {
@@ -48,6 +49,7 @@ export async function registerMunicipalIdentity(
   const actor = createRequestActor(pool, auth, config);
   await registerNavigationRoutes(app, pool, auth, config);
   await registerAppearanceRoutes(app, pool, auth, config);
+  await registerLegalNoticeRoutes(app, pool, auth, config);
   await registerPrivacyPermissionRoutes(app, pool, auth, config);
   await registerConservationRoutes(app, pool, auth, config);
   await registerPersonalDataRoutes(app, pool, auth, config);

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { ApiError, api, type Page } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
+import { isUuid } from "../../app/ids.ts";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
@@ -40,8 +41,15 @@ export function ModifyReservation() {
         locale,
       ),
   });
-  const [facility, setFacility] = useState<string>();
-  const [selectedUnit, setSelectedUnit] = useState<string>();
+  // Returning from the change review restores the chosen space.
+  const [facility, setFacility] = useState<string | undefined>(() => {
+    const value = search.get("instalacion");
+    return isUuid(value ?? undefined) ? (value ?? undefined) : undefined;
+  });
+  const [selectedUnit, setSelectedUnit] = useState<string | undefined>(() => {
+    const value = search.get("unidad");
+    return isUuid(value ?? undefined) ? (value ?? undefined) : undefined;
+  });
   const facilityId = facility ?? current.data?.facilityId ?? "";
   const unitId =
     selectedUnit ?? (facility === undefined ? current.data?.id : undefined);

@@ -71,6 +71,14 @@ test.beforeEach(async ({ page }, info) => {
         ],
         nextCursor: null,
       };
+    else if (url.pathname === "/api/me/reservations/municipalities")
+      body = {
+        items: [
+          { tenantId: tenant, name: "Oleiros" },
+          { tenantId: other, name: "A Coruña" },
+        ],
+        nextCursor: null,
+      };
     else if (url.pathname === "/api/me/reservations")
       body = {
         items: [
@@ -263,7 +271,9 @@ test("history retains municipality on pagination and resets its cursor when scop
             unitName: "Pista 1",
           },
         ],
-        nextCursor: url.searchParams.has("after") ? null : `${id}:${tenant}`,
+        nextCursor: url.searchParams.has("after")
+          ? null
+          : `2026-12-01T10:00:00.000000Z|${id}|${tenant}`,
       },
     });
   });
@@ -573,3 +583,53 @@ for (const failure of ["429", "503", "offline"] as const)
       page.getByRole("combobox", { name: "Instalación", exact: true }),
     ).toContainText("Centro");
   });
+test("the municipality filter lists every municipality even when the first history page shows only one", async ({
+  page,
+}) => {
+  await page.route("**/api/me/reservations*", (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          { ...reservation, municipality: "Oleiros", unitName: "Pista 1" },
+        ],
+        nextCursor: `2026-12-01T10:00:00.000000Z|${id}|${tenant}`,
+      },
+    }),
+  );
+  await page.goto("/reservas");
+  await page.getByRole("combobox", { name: "Municipio", exact: true }).click();
+  await expect(
+    page.getByRole("option", { name: "Oleiros", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("option", { name: "A Coruña", exact: true }),
+  ).toBeVisible();
+});
+
+test("homonymous municipalities in the filter are told apart", async ({
+  page,
+}) => {
+  await page.route("**/api/me/reservations/municipalities", (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          { tenantId: tenant, name: "Oleiros" },
+          { tenantId: other, name: "Oleiros" },
+        ],
+        nextCursor: null,
+      },
+    }),
+  );
+  await page.goto("/reservas");
+  await page.getByRole("combobox", { name: "Municipio", exact: true }).click();
+  await expect(
+    page.getByRole("option", {
+      name: new RegExp(`Oleiros · ${tenant.slice(-6)}`),
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("option", {
+      name: new RegExp(`Oleiros · ${other.slice(-6)}`),
+    }),
+  ).toBeVisible();
+});

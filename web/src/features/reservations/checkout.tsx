@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { ApiError, api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
+import { isUuid } from "../../app/ids.ts";
 import { usePreferences } from "../../app/preferences-provider";
 import { Alert } from "../../ui/alert/alert";
 import { Checkbox } from "../../ui/checkbox/checkbox";
@@ -14,9 +15,9 @@ import {
 } from "../catalog/booking";
 import booking from "../catalog/booking.module.css";
 import { durationLabel, intervalLabel, municipalToday } from "../catalog/dates";
-import { BookingSteps, unitPath } from "../catalog/journey";
+import { BookingSteps, municipalityPath, unitPath } from "../catalog/journey";
 import { useMunicipality, usePublicAppearance } from "../catalog/municipality";
-import { usePublicUnit } from "../catalog/unit";
+import { UnitUnavailable, usePublicUnit } from "../catalog/unit";
 import type { CommandPolicy } from "./commands";
 import {
   dateTime,
@@ -25,10 +26,29 @@ import {
   useReservation,
 } from "./shared";
 
+function InvalidSlot({ back, label }: { back: string; label: string }) {
+  const { t } = usePreferences();
+  return (
+    <div className={booking.page}>
+      <BackLink to={back}>{label}</BackLink>
+      <div className={booking.empty}>
+        <p>
+          {t(
+            "Este horario no es válido. Elige otro en la lista de horarios libres.",
+            "Este horario non é válido. Escolle outro na lista de horarios libres.",
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function Checkout() {
   const { tenantId = "", unitId: routeUnit, reservationId = "" } = useParams();
   const [search] = useSearchParams();
-  const unitId = routeUnit ?? search.get("unidad") ?? "";
+  const requestedUnit = routeUnit ?? search.get("unidad") ?? "";
+  // The unit id is interpolated into API paths, so anything but a UUID is treated as missing.
+  const unitId = isUuid(requestedUnit) ? requestedUnit : "";
   const startsAt = search.get("inicio") ?? "";
   const endsAt = search.get("fin") ?? "";
   const { locale, t } = usePreferences();
@@ -51,6 +71,7 @@ export function Checkout() {
         { signal },
         locale,
       ),
+    enabled: !!unitId,
     staleTime: 0,
   });
   const policy = useQuery({
@@ -63,6 +84,20 @@ export function Checkout() {
       ),
     staleTime: 0,
   });
+  const changeBack = reservationId
+    ? `/reservas/${tenantId}/${reservationId}/modificar`
+    : municipalityPath(tenantId);
+  if (!unitId)
+    return (
+      <InvalidSlot
+        back={changeBack}
+        label={
+          reservationId
+            ? t("Elegir horario", "Escoller horario")
+            : t("Elegir espacio", "Escoller espazo")
+        }
+      />
+    );
   if (
     unit.isPending ||
     rules.isPending ||
@@ -79,6 +114,20 @@ export function Checkout() {
       ...(reservationId ? [original.refetch()] : []),
     ]);
   };
+  const gone = [unit.error, rules.error].some(
+    (error) => error instanceof ApiError && error.status === 404,
+  );
+  if (gone)
+    return (
+      <UnitUnavailable
+        to={changeBack}
+        label={
+          reservationId
+            ? t("Elegir otro espacio", "Escoller outro espazo")
+            : undefined
+        }
+      />
+    );
   if (unit.isError || rules.isError || policy.isError || original.isError)
     return (
       <Failure
@@ -93,8 +142,16 @@ export function Checkout() {
       : undefined,
     duration: minutes > 0 ? minutes : undefined,
   });
+  // Going back from a change review keeps the chosen space, day and duration.
   const back = reservationId
-    ? `/reservas/${tenantId}/${reservationId}/modificar`
+    ? `/reservas/${tenantId}/${reservationId}/modificar${bookingQuery({
+        date: Number.isFinite(Date.parse(startsAt))
+          ? municipalToday(unit.data.timeZone, new Date(startsAt))
+          : undefined,
+        duration: minutes > 0 ? minutes : undefined,
+        facility: unit.data.facilityId,
+        unit: unitId,
+      })}`
     : unitPath(tenantId, unitId, query);
   if (
     !Number.isFinite(Date.parse(startsAt)) ||
@@ -102,17 +159,10 @@ export function Checkout() {
     minutes <= 0
   )
     return (
-      <div className={booking.page}>
-        <BackLink to={back}>{t("Elegir horario", "Escoller horario")}</BackLink>
-        <div className={booking.empty}>
-          <p>
-            {t(
-              "Este horario no es válido. Elige otro en la lista de horarios libres.",
-              "Este horario non é válido. Escolle outro na lista de horarios libres.",
-            )}
-          </p>
-        </div>
-      </div>
+      <InvalidSlot
+        back={back}
+        label={t("Elegir horario", "Escoller horario")}
+      />
     );
   const now =
     Date.parse(policy.data.serverTime) +
@@ -208,8 +258,8 @@ export function Checkout() {
             >
               <p>
                 {t(
-                  "Se ha ocupado mientras revisabas. No se ha creado ninguna reserva; elige otra hora.",
-                  "Ocupouse mentres revisabas. Non se creou ningunha reserva; escolle outra hora.",
+                  "No hemos podido confirmar este horario: puede haberse ocupado mientras revisabas. No se ha creado ninguna reserva; elige otra hora o vuelve a intentarlo.",
+                  "Non puidemos confirmar este horario: pode ocuparse mentres revisabas. Non se creou ningunha reserva; escolle outra hora ou volve intentalo.",
                 )}
               </p>
               <p>
@@ -253,8 +303,8 @@ export function Checkout() {
               {!nonCancellable && (
                 <li>
                   {t(
-                    "Después no podrás cancelarla ni cambiarla para evitar ese plazo.",
-                    "Despois non poderás cancelala nin cambiala para evitar ese prazo.",
+                    "Pasado ese plazo, no podrás cancelarla ni cambiarla.",
+                    "Pasado ese prazo, non poderás cancelala nin cambiala.",
                   )}
                 </li>
               )}
@@ -283,7 +333,7 @@ export function Checkout() {
             <p>
               {t(
                 "Léelas antes de confirmar. Quedará registrada la versión que aceptes.",
-                "Leas antes de confirmar. Quedará rexistrada a versión que aceptes.",
+                "Le antes de confirmar. Quedará rexistrada a versión que aceptes.",
               )}
             </p>
             <RulesText label={t("Texto de las normas", "Texto das normas")}>

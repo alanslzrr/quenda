@@ -79,10 +79,35 @@ export function usePublicUnit(tenantId: string, unitId: string | undefined) {
   });
 }
 
+/** A space the municipality withdrew or changed cannot be booked; offer the step that still works. */
+export function UnitUnavailable({ to, label }: { to: string; label?: string }) {
+  const { t } = usePreferences();
+  return (
+    <div className={styles.page}>
+      <div className={styles.empty}>
+        <p>
+          {t(
+            "Este espacio no está disponible para reservar.",
+            "Este espazo non está dispoñible para reservar.",
+          )}
+        </p>
+        <span>
+          {t(
+            "Puede que el ayuntamiento lo haya retirado o cambiado. Elige otro espacio.",
+            "Pode que o concello o retirase ou cambiase. Escolle outro espazo.",
+          )}
+        </span>
+      </div>
+      <LinkButton to={to} variant="primary">
+        {label ?? t("Ver instalaciones", "Ver instalacións")}
+      </LinkButton>
+    </div>
+  );
+}
+
 /** Fourth step: day, duration and time for one unit. */
 export function UnitPage() {
   const { tenantId = "", unitId } = useParams();
-  const { t } = usePreferences();
   const query = useJourneyQuery();
   const unit = usePublicUnit(tenantId, unitId);
   const municipality = useMunicipality(tenantId);
@@ -90,25 +115,7 @@ export function UnitPage() {
   if (unit.isPending) return <Loading />;
   if (unit.isError)
     return unit.error instanceof ApiError && unit.error.status === 404 ? (
-      <div className={styles.page}>
-        <div className={styles.empty}>
-          <p>
-            {t(
-              "Este espacio no está disponible para reservar.",
-              "Este espazo non está dispoñible para reservar.",
-            )}
-          </p>
-          <span>
-            {t(
-              "Puede que el ayuntamiento lo haya retirado o cambiado. Elige otro espacio.",
-              "Pode que o concello o retirase ou cambiase. Escolle outro espazo.",
-            )}
-          </span>
-        </div>
-        <LinkButton to={municipalityPath(tenantId, query)} variant="primary">
-          {t("Ver instalaciones", "Ver instalacións")}
-        </LinkButton>
-      </div>
+      <UnitUnavailable to={municipalityPath(tenantId, query)} />
     ) : (
       <Failure error={unit.error} retry={() => void unit.refetch()} />
     );

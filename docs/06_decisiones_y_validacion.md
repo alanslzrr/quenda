@@ -35,6 +35,7 @@ Cada prueba registra versión del sistema, datos, entorno, resultado y evidencia
 | T-29 | RF-33; RNF-02, RNF-07 | El catálogo exportado valida contra su esquema, refleja el estado del municipio, no incluye reservas ni datos personales ni datos de otros municipios, y solo lo obtiene el administrador con MFA reciente. |
 | T-30 | RF-34, RF-35; RNF-02, RNF-07 | El CSV tiene las mismas filas que el JSON y neutraliza fórmulas. El archivo iCalendar se interpreta con un analizador independiente, conserva la identidad y sube la revisión, publica una cancelación como cancelada, se limita a 100 próximas reservas confirmadas y solo lo descarga el titular. |
 | T-27 | RF-31; RNF-02, RNF-15 | La ficha se sustituye completa con permiso sobre el recurso y MFA reciente, rechaza versiones obsoletas y valores inválidos, deja auditoría con el estado anterior y el nuevo, no se muestra mientras el recurso no esté publicado y se presenta en el idioma activo o, si falta, en el otro. |
+| T-28 | RF-32; RNF-03, RNF-04, RNF-15 | Los textos se publican por versiones, no admiten campos ajenos a su tipo ni fechas incoherentes, rechazan una versión obsoleta y publicaciones simultáneas, no pueden modificarse ni borrarse, solo los publica el propietario del ámbito con MFA reciente y las páginas públicas siguen la última versión con respaldo de idioma. La lista de almacenamiento del navegador coincide con el código. |
 
 ## Escenario de rendimiento
 

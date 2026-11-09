@@ -122,3 +122,25 @@ test("calendar labels retain Galician month and weekday names without browser lo
   );
   assert.equal(calendarLabel(date, "es", "weekday"), "jue");
 });
+
+test("an unknown or missing palette from the server falls back to neutral instead of throwing", async () => {
+  const { themeVariables, defaultAppearance } = await import(
+    "../src/app/theme.ts"
+  );
+  const neutral = themeVariables("light", defaultAppearance);
+  assert.deepEqual(
+    themeVariables("light", {
+      ...defaultAppearance,
+      lightPalette: "magenta" as never,
+    }),
+    neutral,
+  );
+  assert.deepEqual(
+    themeVariables("dark", {
+      ...defaultAppearance,
+      darkPalette: "__proto__" as never,
+    }),
+    themeVariables("dark", defaultAppearance),
+  );
+  assert.doesNotThrow(() => themeVariables("light", {} as never));
+});

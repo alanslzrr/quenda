@@ -33,7 +33,11 @@ function write(value: Stored) {
 }
 
 /** Private reads share a per-account request budget, so a full reload within a minute reuses the last answer. */
-export function useStaffEntry(accountId: string | undefined, enabled: boolean) {
+export function useStaffEntry(
+  accountId: string | undefined,
+  enabled: boolean,
+  locale: "es" | "gl",
+) {
   const stored = accountId ? read(accountId) : undefined;
   const query = useQuery({
     queryKey: ["private", accountId, "navigation", "entry"],
@@ -44,7 +48,7 @@ export function useStaffEntry(accountId: string | undefined, enabled: boolean) {
     initialDataUpdatedAt: stored?.at,
     queryFn: async ({ signal }) => {
       const to = staffEntry(
-        await api<Navigation>("/api/me/navigation", { signal }),
+        await api<Navigation>("/api/me/navigation", { signal }, locale),
       );
       if (accountId) write({ accountId, at: Date.now(), to });
       return to;
