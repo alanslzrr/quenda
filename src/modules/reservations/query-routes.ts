@@ -235,7 +235,12 @@ export async function registerReservationQueries(
       .header("cache-control", "no-store")
       .header("content-type", "text/calendar; charset=utf-8")
       .header("content-disposition", `attachment; filename="${name}"`);
-  app.get(
+  const lang = {
+    type: "object",
+    additionalProperties: false,
+    properties: { lang: { type: "string", enum: ["es", "gl"] } },
+  } as const;
+  app.get<{ Querystring: { lang?: "es" | "gl" } }>(
     "/api/me/reservations/calendar.ics",
     {
       schema: {
@@ -243,7 +248,8 @@ export async function registerReservationQueries(
         tags: ["Reservations"],
         security: [{ quendaSession: [] }],
         description:
-          "Archivo iCalendar (RFC 5545) con las próximas reservas confirmadas de la cuenta, hasta 100, de la más cercana a la más lejana. Las horas van en UTC; cada reserva tiene un UID estable y SEQUENCE igual a su revisión, de modo que volver a importar el archivo actualiza en vez de duplicar. Es una descarga puntual: no crea enlaces de suscripción ni secretos.",
+          "Archivo iCalendar (RFC 5545) con las próximas reservas confirmadas de la cuenta, hasta 100, de la más cercana a la más lejana. Las horas van en UTC; cada reserva tiene un UID estable y SEQUENCE igual a su revisión, de modo que volver a importar el archivo actualiza en vez de duplicar. El idioma del texto sigue a lang (es o gl) o, si falta, a Accept-Language. Es una descarga puntual: no crea enlaces de suscripción ni secretos.",
+        querystring: lang,
         response: calendarResponse("Calendario con las próximas reservas"),
       },
     },
@@ -254,12 +260,15 @@ export async function registerReservationQueries(
           pool,
           account,
           config.origin,
-          language(request.headers["accept-language"]),
+          request.query.lang ?? language(request.headers["accept-language"]),
         ),
       );
     },
   );
-  app.get<{ Params: { tenantId: string; reservationId: string } }>(
+  app.get<{
+    Params: { tenantId: string; reservationId: string };
+    Querystring: { lang?: "es" | "gl" };
+  }>(
     "/api/municipalities/:tenantId/reservations/:reservationId/calendar.ics",
     {
       schema: {
@@ -274,6 +283,7 @@ export async function registerReservationQueries(
           required: ["tenantId", "reservationId"],
           properties: { tenantId: uuid, reservationId: uuid },
         },
+        querystring: lang,
         response: calendarResponse("Calendario con la reserva"),
       },
     },
@@ -289,7 +299,7 @@ export async function registerReservationQueries(
           request.params.tenantId,
           request.params.reservationId,
           config.origin,
-          language(request.headers["accept-language"]),
+          request.query.lang ?? language(request.headers["accept-language"]),
         ),
       );
     },
