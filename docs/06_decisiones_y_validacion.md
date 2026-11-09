@@ -15,7 +15,7 @@ Cada prueba registra versión del sistema, datos, entorno, resultado y evidencia
 | T-07 | RNF-02 | API, formularios, exportaciones, worker y SQL de ejecución respetan ámbitos y capacidades en lecturas, escrituras, referencias y conexiones reutilizadas. |
 | T-08 | RF-07; RNF-11 | Las caídas antes o después del envío y el vencimiento de concesiones no pierden eventos ni alteran reservas; se comprueban orden y duplicados. |
 | T-09 | RF-12 | Los indicadores reproducen un conjunto conocido con calendario histórico, denominador cero, periodo y zona horaria. |
-| T-10 | RF-13; RNF-08 | El alta de otro municipio y el despliegue de una instancia independiente utilizan los mismos artefactos sin cambiar código. |
+| T-10 | RF-13; RNF-08 | El alta de otro municipio y el despliegue de una instancia independiente utilizan los mismos artefactos sin cambiar código. La imagen web se ejecuta sin privilegios, aplica las cabeceras de seguridad, sirve la aplicación y los activos con hash con la caché prevista y delega la API en el backend. |
 | T-11 | RF-14, RF-17 | Registro, invitaciones y cambios persisten tras reiniciar; rechazan entradas inválidas, duplicados y aumentos de permisos. Cerrar sesión impide reutilizarla. La baja exige contraseña actual y MFA reciente cuando esté habilitado; rechaza reservas futuras o en curso de cualquier municipio. Revoca sesiones y autoridad propia y se coordina con accesos, cambios de credenciales y reservas concurrentes. Reactivar verifica contraseña, correo y MFA sin restaurar permisos ni levantar suspensiones. Relevo, retirada por seguridad y recuperación preservan sus ámbitos y auditoría. |
 | T-12 | RF-18; RNF-07 | La exportación v3 contiene el periodo y entidades autorizados, con normas aceptadas, pendientes y ausencia explícita de evidencia. Su esquema versionado puede validarse con herramientas independientes. |
 | T-13 | RNF-04, RNF-05, RNF-15 | Teclado, lector de pantalla, contraste, zoom, móvil, movimiento reducido y traducciones permiten completar todos los flujos sin depender solo de color o arrastre. |
@@ -60,3 +60,18 @@ El procedimiento de recuperación comprueba reservas, ocupaciones, cuotas y actu
 | PD-AUTH-PUBLICA | Obtener de AGASOL el significado y la evidencia exigidos para «autenticación pública», sin incluir Cl@ve en el alcance inicial. | Aceptación de RF-15. |
 | PD-OPERACION | Definir piloto, presupuesto, proveedor, región, capacidad, topología, disponibilidad, RTO, RPO, conservación y proveedor de correo. | Puesta en servicio de cada instancia. |
 | PD-DEMO | Seleccionar alojamiento y configuración de ejecución con datos sintéticos. | Despliegue de la demo; misma funcionalidad y artefactos que el producto. |
+
+### Propuesta de partida para PD-OPERACION
+
+Valores para discutir con la entidad que opere la instancia; **no están aprobados** ni constituyen un compromiso de servicio. Cada uno debe confirmarse, ajustarse o rechazarse antes de la puesta en servicio.
+
+| Aspecto | Propuesta de partida | Fundamento y comprobación |
+|---|---|---|
+| Piloto | Un municipio con una a tres instalaciones y personal gestor reducido. | Permite validar catálogo, reglas y avisos con datos reales antes de ampliar. |
+| Topología | Un servidor con la [composición de referencia](../README.md#imagen-web-y-despliegue-de-referencia); PostgreSQL gestionado o con almacenamiento replicado si la entidad lo dispone. | La referencia no incluye alta disponibilidad; multizona y Kubernetes no son requisitos. |
+| Capacidad | Partir de 2 vCPU, 4 GB de memoria y almacenamiento con margen para crecimiento y copias; ajustar con el ensayo de rendimiento de la instancia. | El escenario de rendimiento mide una configuración concreta, no una capacidad comprometida. |
+| RPO | Máximo 24 horas con una copia lógica diaria; menos exige archivado continuo o réplica, con coste adicional. | Si el RPO admite pérdida, conciliar las reservas confirmadas posteriores al corte. |
+| RTO | Máximo 4 horas con ensayo de restauración trimestral. | T-17 informa tiempos de una fixture pequeña; el RTO real debe medirse con los datos y el proveedor elegidos. |
+| Conservación de copias | 30 días cifradas, con acceso restringido y una copia fuera del servidor principal. | Las copias contienen datos personales y material de autenticación. |
+| Correo | SMTP de la entidad o de un proveedor contratado por ella, con TLS. | El worker usa la configuración SMTP existente; el proveedor y su contrato los determina la entidad. |
+| Disponibilidad | Objetivo y horario de soporte a definir por la entidad. | Depende de topología, presupuesto y obligaciones del servicio. |
