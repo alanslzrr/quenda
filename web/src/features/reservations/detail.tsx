@@ -97,6 +97,23 @@ export function ReservationDetail() {
             <CalendarPlus size={16} aria-hidden="true" />
             {t("Nueva reserva", "Nova reserva")}
           </LinkButton>
+          {r.accountId === account?.accountId && r.status !== "FINALIZADA" && (
+            <a
+              className={booking.textLink}
+              href={`${reservationPath(tenantId, reservationId)}/calendar.ics?lang=${locale}`}
+              download
+            >
+              {r.status === "CANCELADA"
+                ? t(
+                    "Quitar de mi calendario (.ics)",
+                    "Quitar do meu calendario (.ics)",
+                  )
+                : t(
+                    "Añadir a mi calendario (.ics)",
+                    "Engadir ao meu calendario (.ics)",
+                  )}
+            </a>
+          )}
         </div>
       </header>
       <div className={booking.split}>
