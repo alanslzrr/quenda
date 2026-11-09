@@ -296,6 +296,8 @@ pnpm build
 pnpm --silent openapi > /tmp/quenda-openapi.json
 ```
 
+El contrato generado se valida también con herramientas ajenas al repositorio: `pnpm test` lo comprueba con `@apidevtools/swagger-parser` y, desde fuera, `npx @redocly/cli lint /tmp/quenda-openapi.json` debe terminar sin errores. Cada operación declara resumen, etiqueta, identificador único y sus requisitos de sesión (vacíos en las públicas); `servers` apunta al mismo origen que la aplicación.
+
 Las pruebas de integración crean una instancia PostgreSQL temporal con contraseñas aleatorias y la eliminan al terminar; no utilizan la base de desarrollo. Requieren los binarios locales `initdb`, `pg_ctl` y `postgres` de la versión indicada. En macOS con Homebrew, `PG_BIN` puede ser `/opt/homebrew/opt/postgresql@17/bin` si contiene esa versión.
 
 La comprobación de arquitectura impide dependencias circulares y accesos a archivos privados de otro módulo. Cada módulo expone su API por `src/modules/<nombre>/index.ts`; la composición inyecta los puertos que evitan dependencias inversas. Las migraciones aplicadas son inmutables y su hash se verifica antes de aplicar otras.
