@@ -1,0 +1,40 @@
+.page {
+  max-width: 72ch;
+  margin: 0 auto;
+  display: grid;
+  gap: 20px;
+}
+.title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+}
+.owner {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+}
+.meta {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.page h2 {
+  margin: 0 0 6px;
+  font-size: var(--text-lg);
+}
+.page p,
+.page li {
+  overflow-wrap: anywhere;
+}
+.text {
+  white-space: pre-line;
+  margin: 0;
+}
+.page code {
+  font-size: 0.92em;
+}
+@media print {
+  .page {
+    max-width: none;
+  }
+}
