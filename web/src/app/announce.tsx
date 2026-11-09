@@ -37,11 +37,15 @@ export function Announcer() {
   );
 }
 
-/** After a success removes the focused control, keep keyboard users in the page instead of on the body. */
+/**
+ * After a success removes the focused control, keep keyboard users in the page instead of on the body.
+ * It checks twice because a closing dialog returns focus to its (already removed) trigger a moment later.
+ */
 export function restoreFocus() {
-  window.setTimeout(() => {
-    const active = document.activeElement;
-    if (!active || active === document.body)
-      document.getElementById("content")?.focus({ preventScroll: true });
-  }, 0);
+  for (const delay of [0, 300])
+    window.setTimeout(() => {
+      const active = document.activeElement;
+      if (!active || active === document.body)
+        document.getElementById("content")?.focus({ preventScroll: true });
+    }, delay);
 }

@@ -14,6 +14,7 @@ export function ConfirmedAction<T>({
   children,
   onResult,
   danger = false,
+  timeoutMs = 15000,
 }: {
   storageKey: string;
   path: string;
@@ -22,6 +23,8 @@ export function ConfirmedAction<T>({
   children: ReactNode;
   onResult: (result: T) => void | Promise<void>;
   danger?: boolean;
+  /** Large downloads are slow without being uncertain; the default suits ordinary commands. */
+  timeoutMs?: number;
 }) {
   const { locale, t } = usePreferences();
   const [uncertain, setUncertain] = useState(() => {
@@ -60,7 +63,7 @@ export function ConfirmedAction<T>({
               {
                 method: "POST",
                 body: content,
-                signal: AbortSignal.timeout(15000),
+                signal: AbortSignal.timeout(timeoutMs),
               },
               locale,
             );

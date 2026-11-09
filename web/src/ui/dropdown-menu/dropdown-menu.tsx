@@ -26,6 +26,8 @@ export interface DropdownItem {
   to?: string;
   onSelect?: () => void;
   disabled?: boolean;
+  /** Marks the choice currently in effect, for assistive technology and for sighted emphasis. */
+  current?: boolean;
   icon?: ReactNode;
   destructive?: boolean;
   separatorBefore?: boolean;
@@ -239,6 +241,7 @@ export const DropdownMenu = forwardRef<HTMLButtonElement, DropdownMenuProps>(
                   data-tone={item.destructive ? "danger" : undefined}
                   style={{ "--i": index } as CSSProperties}
                   disabled={item.disabled}
+                  aria-current={item.current ? "true" : undefined}
                   asChild={!!item.to && !item.disabled}
                   onSelect={item.onSelect}
                 >

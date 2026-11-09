@@ -352,6 +352,10 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
         />
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList
+            scrollLabels={{
+              previous: t("Anterior", "Anterior"),
+              next: t("Siguiente", "Seguinte"),
+            }}
             aria-label={t(
               "Configuración de la unidad",
               "Configuración da unidade",

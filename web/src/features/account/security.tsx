@@ -17,7 +17,14 @@ import { Input } from "../../ui/input/input";
 import { sessionDevice } from "./session-device";
 import { SecretField, useAuthSession } from "./shared";
 
-export function FactorField({ optional = false }: { optional?: boolean }) {
+export function FactorField({
+  optional = false,
+  focus = false,
+}: {
+  optional?: boolean;
+  /** Moves focus to the code field, for a step the person just reached. */
+  focus?: boolean;
+}) {
   const { t } = usePreferences();
   const [backup, setBackup] = useState(false);
   return (
@@ -36,6 +43,7 @@ export function FactorField({ optional = false }: { optional?: boolean }) {
             : t("Código de autenticación", "Código de autenticación")
         }
         required={!optional}
+        autoFocus={focus}
         autoComplete="one-time-code"
         inputMode={backup ? "text" : "numeric"}
         pattern={backup ? "[A-Za-z0-9]{5}-[A-Za-z0-9]{5}" : "[0-9]{6}"}

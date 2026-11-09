@@ -45,6 +45,7 @@ export function PersonalDownload() {
         <PrivacyForm<PersonalData>
           path={`${s.base}/accounts/${encodeURIComponent(id)}/personal-data`}
           label={t("Preparar copia", "Preparar copia")}
+          timeoutMs={60_000}
           body={(d) => ({
             authorizationReference: textField(
               d,
@@ -62,7 +63,7 @@ export function PersonalDownload() {
             link.href = url;
             link.download = "quenda-personal-data.json";
             link.click();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            setTimeout(() => URL.revokeObjectURL(url), 60_000);
             setDone(true);
           }}
         >

@@ -98,7 +98,7 @@ function Query({ exporting }: { exporting: boolean }) {
               if (unitId) params.set("unitId", unitId);
               const payload = await api(
                 `${endpoint(m.id)}/exports/reservations?${params}`,
-                {},
+                { signal: AbortSignal.timeout(60_000) },
                 locale,
               );
               const url = URL.createObjectURL(
@@ -110,13 +110,13 @@ function Query({ exporting }: { exporting: boolean }) {
               link.href = url;
               link.download = "quenda-reservations-v3.json";
               link.click();
-              setTimeout(() => URL.revokeObjectURL(url), 1000);
+              setTimeout(() => URL.revokeObjectURL(url), 60_000);
               setDownload(true);
             } else
               setResult(
                 await api<Indicators>(
                   `${endpoint(m.id)}${unitId ? `/units/${encodeURIComponent(unitId)}` : ""}/indicators?${params}`,
-                  {},
+                  { signal: AbortSignal.timeout(60_000) },
                   locale,
                 ),
               );
