@@ -32,6 +32,8 @@ Cada prueba registra versión del sistema, datos, entorno, resultado y evidencia
 | T-24 | RF-23; RNF-11 | Versionar o retirar unidades no reinicia consumos. Reprogramar del convenio A al B libera A y consume B; un comando sin cambios conserva la atribución. |
 | T-25 | RF-24; RNF-03 | Los controles detectan grupos pequeños y reconstrucciones en los casos de prueba mediante datos propios o entregas anteriores; suprimen los resultados inseguros sin representarlos como cero. |
 | T-26 | RF-30; RNF-02, RNF-04, RNF-05 y RNF-15 | Se verifican apariencia por municipio, revisión concurrente, restauración de valores, auditoría atómica, contraste de las combinaciones, cambio de ámbito y preferencias compartidas entre perfil y menú superior. |
+| T-29 | RF-33; RNF-02, RNF-07 | El catálogo exportado valida contra su esquema, refleja el estado del municipio, no incluye reservas ni datos personales ni datos de otros municipios, y solo lo obtiene el administrador con MFA reciente. |
+| T-30 | RF-34, RF-35; RNF-02, RNF-07 | El CSV tiene las mismas filas que el JSON y neutraliza fórmulas. El archivo iCalendar se interpreta con un analizador independiente, conserva la identidad y sube la revisión, publica una cancelación como cancelada, se limita a 100 próximas reservas confirmadas y solo lo descarga el titular. |
 | T-27 | RF-31; RNF-02, RNF-15 | La ficha se sustituye completa con permiso sobre el recurso y MFA reciente, rechaza versiones obsoletas y valores inválidos, deja auditoría con el estado anterior y el nuevo, no se muestra mientras el recurso no esté publicado y se presenta en el idioma activo o, si falta, en el otro. |
 
 ## Escenario de rendimiento
