@@ -1,0 +1,15 @@
+*
+!LICENSE
+!web/Dockerfile
+!web/package.json
+!web/pnpm-lock.yaml
+!web/.npmrc
+!web/tsconfig.json
+!web/vite.config.ts
+!web/index.html
+!web/public/
+!web/public/**
+!web/src/
+!web/src/**
+!web/nginx/
+!web/nginx/**
