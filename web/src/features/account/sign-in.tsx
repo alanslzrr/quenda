@@ -162,6 +162,16 @@ export function SignIn({ register = false }: { register?: boolean }) {
               />
             </>
           )}
+          {register && !challenge && (
+            <p>
+              <Link to="/privacidad">
+                {t(
+                  "Cómo se tratan tus datos al crear la cuenta",
+                  "Como se tratan os teus datos ao crear a conta",
+                )}
+              </Link>
+            </p>
+          )}
           {failure !== undefined && <Failure error={failure} />}
           <Button type="submit" loading={busy} disabled={busy}>
             {challenge

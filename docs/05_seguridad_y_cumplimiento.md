@@ -72,6 +72,12 @@ La aplicación y la API se sirven bajo el mismo origen, por lo que la política 
 
 `style-src 'unsafe-inline'` es necesario hoy porque la apariencia municipal inyecta un elemento `<style>` y algunos componentes usan atributos `style`. Sustituirlos por clases y variables CSS permitiría una política de estilos estricta y se trata como mejora posterior. La recarga automática ante un fragmento obsoleto y la ausencia de scripts en línea son compatibles con `script-src 'self'`. Antes de una nueva versión deben conservarse los activos de la anterior durante el plazo de las pestañas abiertas, o la aplicación mostrará la pantalla de recarga.
 
+## Información al interesado y accesibilidad
+
+Cada municipio publica su información sobre privacidad, su aviso legal y su declaración de accesibilidad, y el operador publica los de la instancia. Los campos son fijos: responsable y contacto, delegado de protección de datos, finalidades, base jurídica, destinatarios, plazos de conservación, ejercicio de derechos y autoridad de control; denominación, NIF, domicilio y contacto; y, para la accesibilidad, estado de conformidad, contenido no accesible, método y fecha de evaluación, medio de contacto y procedimiento de reclamación. No admiten formato ni enlaces. Cada publicación es una versión nueva y las anteriores no se modifican ni se borran.
+
+La plataforma aporta únicamente lo que hace la aplicación: qué datos trata, que no incluye analítica, publicidad ni cookies de terceros, cómo ejercer los derechos desde la cuenta y qué guarda en el navegador. Esa última lista se genera desde `web/src/app/storage-keys.ts` y una prueba falla si el código usa una clave que no aparece. El responsable del tratamiento, las finalidades y los plazos los fija cada municipio; mientras no los publique, la página lo indica expresamente. El estado de conformidad de accesibilidad lo declara la entidad tras su evaluación; la aplicación no lo presume.
+
 ## Baja y conservación
 
 La comprobación de reservas confirmadas futuras o en curso de una baja abarca la cuenta en toda la instancia, sin devolver actividad de otros municipios. La auditoría conserva cuenta afectada, fecha, correlación y número de sesiones revocadas; no almacena tokens. Un fallo de auditoría revierte la baja y la revocación.

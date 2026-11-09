@@ -23,6 +23,8 @@ export {
   revokeAdministrator,
   revokeAdministratorInvitation,
 } from "./invitations.ts";
+export type { NoticeBody, NoticeKind, PublicNotice } from "./legal-notices.ts";
+export { normalizeNotice, publicNotice, saveNotice } from "./legal-notices.ts";
 export type { ManagerInvitationInput, Operation } from "./manager.ts";
 export {
   acceptManager,

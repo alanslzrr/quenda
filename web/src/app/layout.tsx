@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation, useMatch, useParams } from "react-router";
 import { MfaBoundary, MfaNotice } from "../features/account/mfa-dialog";
 import { useBookingEntry } from "../features/catalog/journey";
 import { useMunicipality } from "../features/catalog/municipality";
+import { kindShort, kinds, noticePath } from "../features/legal/notices";
 import { Announcer } from "./announce";
 import { BookingNavigation } from "./booking-navigation";
 import { Failure } from "./feedback";
@@ -159,6 +160,16 @@ export function Layout() {
               "Instalaciones deportivas municipales",
               "Instalacións deportivas municipais",
             )}
+            <nav
+              className={styles.legalLinks}
+              aria-label={t("Información legal", "Información legal")}
+            >
+              {kinds.map((kind) => (
+                <Link key={kind} to={noticePath(kind, tenantId)}>
+                  {kindShort[kind][locale === "gl" ? 1 : 0]}
+                </Link>
+              ))}
+            </nav>
           </footer>
         )}
       </div>

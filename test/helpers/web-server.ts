@@ -64,6 +64,9 @@ await withDatabase(async ({ auth, domain, migration, worker }) => {
     // Catalog profile editing owns these two so it never shares state with another spec.
     45,
     46,
+    // Legal text publication owns these two so it never shares state with another spec.
+    47,
+    48,
   ])
     municipalFixtures.push(
       await seedMunicipalBrowser(app, auth, domain, migration, index),
