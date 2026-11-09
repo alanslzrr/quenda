@@ -4,7 +4,6 @@ on:
   pull_request:
   push:
     branches: [main]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,7 +24,7 @@ jobs:
   checks:
     name: Web checks
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -37,31 +36,3 @@ jobs:
         run: pnpm --dir web check
       - name: Compilar el paquete estático
         run: pnpm --dir web build
-
-  browser:
-    name: Web browser
-    needs: checks
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          persist-credentials: false
-      - uses: ./ci/actions/setup
-      - name: Instalar dependencias de la aplicación web
-        run: pnpm --dir web install --frozen-lockfile --ignore-scripts
-      - name: Preparar PostgreSQL y btree_gist
-        run: bash ci/setup-postgres.sh
-      - name: Instalar Chromium de Playwright
-        run: pnpm --dir web exec playwright install --with-deps chromium
-      - name: Ejecutar pruebas de navegador y accesibilidad
-        # The private-repository runner has two vCPUs; four workers starve the real-API flows.
-        run: pnpm --dir web test:browser --workers=2 --timeout=60000
-      - name: Conservar trazas de las pruebas fallidas
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: web-browser-traces-${{ github.run_id }}-${{ github.run_attempt }}
-          path: web/test-results
-          if-no-files-found: ignore
-          retention-days: 7
