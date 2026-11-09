@@ -318,31 +318,26 @@ La comprobación de arquitectura impide dependencias circulares y accesos a arch
 
 `pnpm build` genera `dist/`. Para comprobar el artefacto compilado con la configuración local: `node --env-file=.env.local dist/server.js`. En ejecución, `pnpm start` recibe las variables desde el entorno. SIGINT y SIGTERM cierran el servidor y sus pools.
 
+### Validación antes de abrir una pull request
+
+Las validaciones largas se ejecutan en local, no en GitHub Actions. Con PostgreSQL 17.11 disponible en `PG_BIN` y los puertos 3000 y 5173 libres, desde un árbol limpio y con la revisión que se va a enviar:
+
+```sh
+PG_BIN=/ruta/a/postgresql-17.11/bin pnpm validate
+```
+
+`pnpm validate` encadena, y se detiene en el primer fallo: `pnpm check` (tipos, lint, pruebas unitarias y HTTP, incluido el contrato OpenAPI), `pnpm --dir web check` y `pnpm --dir web build`, la suite de integración PostgreSQL, las pruebas de navegador de escritorio y móvil con axe, la construcción de las imágenes de API y web y `pnpm test:oci`. Requiere Docker y `pnpm --dir web exec playwright install chromium`. Tarda decenas de minutos; una pull request se abre cuando todo termina bien. Para ensayar el rendimiento o inventariar licencias, que no forman parte del encadenado, usar `pnpm test:performance` y `pnpm licenses:inventory`; sus resultados se conservan fuera de Git y se comparan solo con mediciones del mismo entorno.
+
 ### Integración continua
 
-Los workflows están en [.github/workflows](.github/workflows): `backend.yml` y `web.yml`. Comprueban cada pull request y los cambios incorporados a `main`, sin filtros de rutas que puedan omitir una regresión, y admiten ejecución manual. [Ubicación y eventos de los workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax).
+Los workflows están en [.github/workflows](.github/workflows) y se limitan a comprobaciones básicas de menos de cinco minutos en cada pull request y en cada cambio incorporado a `main`:
 
-| Comprobación | Contenido | Ejecución |
-|---|---|---|
-| `Backend checks` | `pnpm check`, compilación y generación de OpenAPI. Las pruebas existentes validan los contratos HTTP y de exportación. | Ordinaria. |
-| `Backend PostgreSQL` | Suite completa de integración, incluidas RLS, concurrencia, migraciones y recuperación. | Tras superar `Backend checks`. |
-| `OCI images` | Construcción de las imágenes de API y web desde la revisión examinada, validación de la composición de referencia y pruebas de ambas imágenes locales, sin publicarlas. | Tras superar `Backend checks`, en otro ejecutor. |
-| `Backend performance` | Escenario completo de diez minutos, sin abreviarlo ni modificar umbrales. | Manual con `extended=true`, tras superar las tres comprobaciones anteriores. |
-| `Backend licenses` | Inventario existente de dependencias y evidencias. `REVIEW_REQUIRED` hace fallar la comprobación; no se convierte en aprobación. | Manual con `extended=true`, tras superar las tres comprobaciones ordinarias. |
-| `Web checks` | Tipos, lint, pruebas unitarias y compilación del paquete estático. | Ordinaria. |
-| `Web browser` | Pruebas Playwright de escritorio y móvil, con axe, sobre PostgreSQL 17.11 temporal. Conserva trazas solo de las pruebas fallidas. | Tras superar `Web checks`. |
+| Comprobación | Contenido |
+|---|---|
+| `Backend checks` | `pnpm check`, compilación, generación de OpenAPI y validación de sintaxis de la composición de referencia. |
+| `Web checks` | Tipos, lint, pruebas unitarias y compilación del paquete estático. |
 
-Los ejecutores utilizan Ubuntu 24.04, Node de `.nvmrc` y pnpm de `package.json`. La instalación respeta el lockfile y no ejecuta scripts de dependencias. [La preparación de PostgreSQL](ci/setup-postgres.sh) compila la versión de `.postgres-version` y `btree_gist` desde fuentes oficiales verificadas con el [SHA-256 fijado](ci/postgresql-source.sha256). Los clústeres siguen siendo temporales y exclusivos de las pruebas; se ejecutan como máximo dos archivos de integración a la vez, sin cambiar sus límites de tiempo. [Compilación de PostgreSQL](https://www.postgresql.org/docs/17/install-make.html).
-
-Las acciones externas están fijadas por SHA, el token solo permite leer el repositorio y no se conserva en Git. No se utilizan secretos de aplicación, cachés compartidas, servicios reales ni credenciales cloud. Solo se conservan OpenAPI, la revisión, las trazas de pruebas web fallidas y los informes de rendimiento o licencias durante siete días; no se suben bases, copias, correos ni archivos de credenciales. Los fallos detienen su comprobación. [Seguridad de GitHub Actions](https://docs.github.com/en/actions/reference/security/secure-use).
-
-Para exigir las comprobaciones en el repositorio:
-
-1. Revisar la primera ejecución ordinaria de ambos workflows.
-2. Solicitar `extended=true` desde Actions para obtener también rendimiento y licencias; sus resultados se revisan por separado. El inventario no sustituye la revisión de compatibilidad y atribuciones descrita en [licencias de dependencias](#inventario-de-licencias-de-dependencias).
-3. Exigir `Backend checks`, `Backend PostgreSQL`, `OCI images`, `Web checks` y `Web browser` para incorporar cambios a `main`. Las comprobaciones ampliadas no se exigen en cada pull request.
-
-Al actualizar PostgreSQL, revisar conjuntamente `.postgres-version`, el checksum, la versión exigida por las pruebas y el digest OCI. El rendimiento se compara con mediciones del mismo entorno, no con tiempos de otro equipo. La configuración no despliega servicios ni ejecuta Terraform.
+Los ejecutores utilizan Ubuntu 24.04, Node de `.nvmrc` y pnpm de `package.json`. La instalación respeta el lockfile y no ejecuta scripts de dependencias. Las acciones externas están fijadas por SHA, el token solo permite leer el repositorio y no se conserva en Git. No se utilizan secretos de aplicación, cachés compartidas, servicios reales ni credenciales cloud. La configuración no despliega servicios ni ejecuta Terraform. [Seguridad de GitHub Actions](https://docs.github.com/en/actions/reference/security/secure-use).
 
 ## Licencia
 
