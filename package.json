@@ -60,6 +60,7 @@
     "@types/pg": "8.23.1",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
+    "ical.js": "2.2.1",
     "typescript": "6.0.3"
   }
 }
