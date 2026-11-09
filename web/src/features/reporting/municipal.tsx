@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { ActionForm, textField } from "../../app/action";
 import { ApiError, api } from "../../app/api";
+import { saveFile } from "../../app/download";
 import { usePreferences } from "../../app/preferences-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { MetricCard } from "../../ui/metric-card/metric-card";
+import { Select } from "../../ui/select/select";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
 import { PeriodFields, ScopeField } from "./fields";
 import {
@@ -31,6 +33,7 @@ function Query({ exporting }: { exporting: boolean }) {
     { t, locale } = usePreferences();
   const [result, setResult] = useState<Indicators>();
   const [download, setDownload] = useState(false);
+  const [format, setFormat] = useState<"json" | "csv">("json");
   return (
     <div className={styles.surface}>
       <h1>
@@ -41,8 +44,8 @@ function Query({ exporting }: { exporting: boolean }) {
       <p>
         {exporting
           ? t(
-              "JSON quenda.reservations, versión 3. Incluye reservas que solapan el periodo, conservando sus intervalos completos y evidencias de normas aceptadas o pendientes. No es una copia de seguridad ni acredita asistencia.",
-              "JSON quenda.reservations, versión 3. Inclúe reservas que solapan o período, conservando os seus intervalos completos e evidencias de normas aceptadas ou pendentes. Non é unha copia de seguridade nin acredita asistencia.",
+              "JSON quenda.reservations, versión 3, o una tabla CSV con una fila por reserva. Incluye reservas que solapan el periodo, conservando sus intervalos completos. El JSON añade evidencias de normas aceptadas o pendientes con su texto; el CSV solo sus versiones y fechas. No es una copia de seguridad ni acredita asistencia.",
+              "JSON quenda.reservations, versión 3, ou unha táboa CSV cunha fila por reserva. Inclúe reservas que solapan o período, conservando os seus intervalos completos. O JSON engade evidencias de normas aceptadas ou pendentes co seu texto; o CSV só as súas versións e datas. Non é unha copia de seguridade nin acredita asistencia.",
             )
           : t(
               "Los indicadores describen reservas, no asistencia. El total municipal incluye unidades retiradas y calcula la ocupación sobre la suma de minutos, no sobre la media de porcentajes.",
@@ -58,7 +61,9 @@ function Query({ exporting }: { exporting: boolean }) {
         <ActionForm
           label={
             exporting
-              ? t("Descargar JSON", "Descargar JSON")
+              ? format === "csv"
+                ? t("Descargar CSV", "Descargar CSV")
+                : t("Descargar JSON", "Descargar JSON")
               : t("Consultar indicadores", "Consultar indicadores")
           }
           resetOnSuccess={false}
@@ -96,21 +101,31 @@ function Query({ exporting }: { exporting: boolean }) {
             const params = new URLSearchParams({ from, to });
             if (exporting) {
               if (unitId) params.set("unitId", unitId);
-              const payload = await api(
-                `${endpoint(m.id)}/exports/reservations?${params}`,
-                {},
-                locale,
-              );
-              const url = URL.createObjectURL(
-                new Blob([JSON.stringify(payload, null, 2)], {
-                  type: "application/json",
-                }),
-              );
-              const link = document.createElement("a");
-              link.href = url;
-              link.download = "quenda-reservations-v3.json";
-              link.click();
-              setTimeout(() => URL.revokeObjectURL(url), 1000);
+              if (format === "csv") {
+                params.set("format", "csv");
+                saveFile(
+                  "quenda-reservations-v3.csv",
+                  await api<string>(
+                    `${endpoint(m.id)}/exports/reservations?${params}`,
+                    {},
+                    locale,
+                  ),
+                  "text/csv;charset=utf-8",
+                );
+              } else
+                saveFile(
+                  "quenda-reservations-v3.json",
+                  JSON.stringify(
+                    await api(
+                      `${endpoint(m.id)}/exports/reservations?${params}`,
+                      {},
+                      locale,
+                    ),
+                    null,
+                    2,
+                  ),
+                  "application/json",
+                );
               setDownload(true);
             } else
               setResult(
@@ -126,6 +141,21 @@ function Query({ exporting }: { exporting: boolean }) {
           <PeriodFields />
           {exporting && (
             <>
+              <Select
+                label={t("Formato", "Formato")}
+                value={format}
+                onValueChange={(value) => setFormat(value as "json" | "csv")}
+                options={[
+                  { value: "json", label: "JSON (quenda.reservations v3)" },
+                  {
+                    value: "csv",
+                    label: t(
+                      "CSV para hojas de cálculo",
+                      "CSV para follas de cálculo",
+                    ),
+                  },
+                ]}
+              />
               <p>
                 {t(
                   "Incluye identificadores de titulares, no nombres, correos ni credenciales. Más de 10.000 reservas se rechazan sin archivo parcial: reduce el periodo o elige una unidad.",
