@@ -10,10 +10,12 @@ export async function publicFacilities(
   tenantId: string,
   after: string | null = null,
 ) {
-  const result = await pool.query<{ id: string; name: string; units: number }>(
-    "SELECT * FROM domain.public_facilities($1,$2)",
-    [tenantId, after],
-  );
+  const result = await pool.query<{
+    id: string;
+    name: string;
+    units: number;
+    profile: unknown;
+  }>("SELECT * FROM domain.public_facilities($1,$2)", [tenantId, after]);
   return {
     items: result.rows.slice(0, 20),
     nextCursor: result.rows.length > 20 ? (result.rows[19]?.id ?? null) : null,
@@ -31,6 +33,7 @@ export async function publicUnits(
     facility_id: string;
     minimum_minutes: number;
     maximum_minutes: number;
+    profile: unknown;
   }>("SELECT * FROM domain.public_units($1,$2,$3)", [
     tenantId,
     facilityId,
@@ -43,6 +46,7 @@ export async function publicUnits(
       facilityId: row.facility_id,
       minimumMinutes: row.minimum_minutes,
       maximumMinutes: row.maximum_minutes,
+      profile: row.profile,
     })),
     nextCursor: result.rows.length > 20 ? (result.rows[19]?.id ?? null) : null,
   };
@@ -64,6 +68,8 @@ export async function publicUnitCalendar(
     version: number;
     calendar: UnitCalendarInput;
     facility_name: string;
+    profile: unknown;
+    facility_profile: unknown;
   }>("SELECT * FROM domain.public_unit_calendar($1,$2)", [tenantId, unitId]);
   const row = result.rows[0];
   if (!row) throw new HttpError("NOT_FOUND");
@@ -79,6 +85,8 @@ export async function publicUnitCalendar(
     usageRulesVersion: row.usage_rules_version,
     calendarVersion: row.version,
     calendar: row.calendar,
+    profile: row.profile,
+    facilityProfile: row.facility_profile,
   };
 }
 export async function publicAvailability(
