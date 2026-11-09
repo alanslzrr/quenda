@@ -224,6 +224,14 @@ const MonthlyReview = lazy(() =>
     default: m.MonthlyReview,
   })),
 );
+const LegalPage = lazy(() =>
+  import("./features/legal/legal-page").then((m) => ({ default: m.LegalPage })),
+);
+const MunicipalNotices = lazy(() =>
+  import("./features/legal/notice-editor").then((m) => ({
+    default: m.MunicipalNotices,
+  })),
+);
 const client = createQueryClient();
 function Missing() {
   useMunicipalTheme(undefined);
@@ -265,6 +273,30 @@ createRoot(root).render(
                       <Route
                         path="municipios/:tenantId/unidades/:unitId"
                         element={<UnitPage />}
+                      />
+                      <Route
+                        path="privacidad"
+                        element={<LegalPage kind="privacy" />}
+                      />
+                      <Route
+                        path="aviso-legal"
+                        element={<LegalPage kind="legal" />}
+                      />
+                      <Route
+                        path="accesibilidad"
+                        element={<LegalPage kind="accessibility" />}
+                      />
+                      <Route
+                        path="municipios/:tenantId/privacidad"
+                        element={<LegalPage kind="privacy" />}
+                      />
+                      <Route
+                        path="municipios/:tenantId/aviso-legal"
+                        element={<LegalPage kind="legal" />}
+                      />
+                      <Route
+                        path="municipios/:tenantId/accesibilidad"
+                        element={<LegalPage kind="accessibility" />}
                       />
                       <Route path="acceso" element={<SignIn />} />
                       <Route
@@ -391,6 +423,10 @@ createRoot(root).render(
                           <Route
                             path="acreditaciones"
                             element={<Credentials />}
+                          />
+                          <Route
+                            path="textos-legales"
+                            element={<MunicipalNotices />}
                           />
                           <Route path="agenda" element={<Agenda />} />
                           <Route

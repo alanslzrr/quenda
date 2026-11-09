@@ -2,6 +2,7 @@ import { useParams, useSearchParams } from "react-router";
 import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
+import { InstanceNotices } from "../legal/notice-editor";
 import styles from "../privacy/privacy.module.css";
 import { Invite, Revoke, SuspendAccount } from "./authority";
 import { Operators, PlatformInvitations } from "./lists";
@@ -37,6 +38,11 @@ function Workspace() {
         "Permisos de privacidade global",
       ),
       component: <PlatformInvitations privacy />,
+    },
+    {
+      id: "textos-legales",
+      label: t("Textos legales de la instancia", "Textos legais da instancia"),
+      component: <InstanceNotices />,
     },
     {
       id: "nuevo-municipio",

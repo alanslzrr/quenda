@@ -9,6 +9,7 @@ import {
   Handshake,
   Landmark,
   Palette,
+  Scale,
   ShieldCheck,
   SlidersHorizontal,
   TicketCheck,
@@ -94,6 +95,11 @@ export function ResourceShell({
                 Users,
               ),
               item("/convenios", "Convenios", Handshake),
+              item(
+                "/textos-legales",
+                t("Textos legales", "Textos legais"),
+                Scale,
+              ),
               item(
                 "/acreditaciones",
                 t("Acreditaciones de uso", "Acreditacións de uso"),
