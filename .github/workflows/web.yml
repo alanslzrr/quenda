@@ -42,7 +42,7 @@ jobs:
     name: Web browser
     needs: checks
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -55,7 +55,8 @@ jobs:
       - name: Instalar Chromium de Playwright
         run: pnpm --dir web exec playwright install --with-deps chromium
       - name: Ejecutar pruebas de navegador y accesibilidad
-        run: pnpm --dir web test:browser
+        # The private-repository runner has two vCPUs; four workers starve the real-API flows.
+        run: pnpm --dir web test:browser --workers=2 --timeout=60000
       - name: Conservar trazas de las pruebas fallidas
         if: ${{ failure() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
