@@ -46,6 +46,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-28 | Ejecutar actuaciones individuales de privacidad | El personal con permiso específico registra autorización y motivo para suprimir o bloquear un conjunto admitido. El sistema distingue actuación realizada, conflicto y ausencia; conserva auditoría sin eliminar datos de otro ámbito. |
 | RF-29 | Cambiar el correo global | El usuario confirma contraseña y MFA cuando corresponda, autoriza desde el correo actual y verifica el nuevo antes del cambio. La pérdida del correo anterior requiere recuperación asistida verificada; un permiso municipal no habilita esta operación. |
 | RF-30 | Configurar apariencia municipal | El administrador selecciona combinaciones predefinidas para claro y oscuro, previsualiza, guarda o restaura los valores. Se aplican únicamente a la interfaz pública de su municipio, sin colores libres ni estilos por componente. |
+| RF-31 | Describir instalaciones y espacios | El administrador o gestor autorizado completa la ficha de una instalación (dirección, ubicación, descripción, accesibilidad y contacto) y de sus espacios (tipo, interior o exterior, aforo y descripción), en gallego y castellano. Todos los campos son opcionales, no condicionan la publicación y se muestran en el catálogo público solo cuando el recurso está publicado. Cada cambio comprueba la versión conocida y queda auditado. |
 
 ## Requisitos no funcionales
 
