@@ -6,6 +6,7 @@ import { type Config, defaultIdempotencyRetentionSeconds } from "./config.ts";
 import type { DatabaseHealth } from "./database/pools.ts";
 import { HttpError, registerErrors } from "./http/errors.ts";
 import { registerHttpMetrics } from "./http/metrics.ts";
+import { operationSummary } from "./http/openapi-summary.ts";
 import { registerSourceOffer, type SourceOffer } from "./http/source-offer.ts";
 import { registerCatalog } from "./modules/catalog/index.ts";
 import { registerCollaboration } from "./modules/collaboration/index.ts";
@@ -72,8 +73,22 @@ export async function buildApp(options: {
     options.domain ? accessFailureAudit(options.domain) : undefined,
   );
   await app.register(swagger, {
+    transform: ({ schema, url }) => ({
+      schema: schema
+        ? {
+            ...schema,
+            summary: operationSummary(schema),
+            // An operation without a session requirement says so, instead of leaving it undeclared.
+            security: schema.security ?? [],
+          }
+        : schema,
+      url,
+    }),
     openapi: {
       openapi: "3.0.3",
+      servers: [
+        { url: "/", description: "Mismo origen que la aplicación web" },
+      ],
       components: {
         securitySchemes: {
           quendaSession: {
