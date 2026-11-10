@@ -38,6 +38,12 @@
   padding: 0.4rem 0.75rem;
   text-align: start;
 }
+/* Headers wrap between words, never inside them; the frame scrolls instead. */
+.table th,
+.heatmap th {
+  overflow-wrap: normal;
+  hyphens: none;
+}
 .table td {
   text-align: end;
 }
