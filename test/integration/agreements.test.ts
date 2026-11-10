@@ -98,6 +98,15 @@ test("agreement drafts preserve participant ownership and do not activate capabi
       );
     let agreement = "";
     await t.test(
+      "a time zone the database does not list is invalid input",
+      async () => {
+        await assert.rejects(
+          create("lowercase-zone", { ...input, timeZone: "europe/madrid" }),
+          { code: "INVALID_INPUT" },
+        );
+      },
+    );
+    await t.test(
       "requires a participating administrator with recent MFA and rejects cross-owner references atomically",
       async () => {
         await assert.rejects(
