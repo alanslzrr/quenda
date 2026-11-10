@@ -60,7 +60,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RNF-02 | Aislamiento | Los accesos respetan titularidad y permisos municipales; los convenios habilitan exclusivamente sus capacidades. |
 | RNF-03 | Privacidad | Cada tratamiento tiene finalidad, base jurídica, datos, conservación y accesos definidos. No se asignan plazos legales por defecto; los datos bloqueados quedan fuera de consultas, exportaciones y procesamiento ordinarios. Los procedimientos de derechos distinguen su alcance técnico de la resolución administrativa. |
 | RNF-04 | Accesibilidad | Los flujos de usuario y administración cumplen WCAG 2.1 AA mediante comprobaciones automáticas y manuales. |
-| RNF-05 | Adaptabilidad | Las funciones están disponibles en móvil y escritorio, sin acciones exclusivas de un tamaño de pantalla. |
+| RNF-05 | Adaptabilidad | Las funciones están disponibles en móvil, tableta y escritorio, sin acciones exclusivas de un tamaño de pantalla. |
 | RNF-06 | Modularidad | Los módulos respetan las responsabilidades e interfaces definidas en la arquitectura. |
 | RNF-07 | Interoperabilidad | Las interfaces y formatos abiertos disponen de esquemas y ejemplos validables con herramientas independientes. |
 | RNF-08 | Replicabilidad | Una instancia independiente utiliza los mismos artefactos y migraciones mediante configuración propia. |
