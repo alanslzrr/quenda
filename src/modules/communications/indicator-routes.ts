@@ -8,6 +8,7 @@ import {
 import {
   readMunicipalIndicators,
   readUnitIndicators,
+  readUsageAnalytics,
 } from "./indicator-query.ts";
 export async function registerIndicatorRoutes(
   app: FastifyInstance,
@@ -142,6 +143,112 @@ export async function registerIndicatorRoutes(
             pool,
             account,
             request.params.tenantId,
+            request.query.from,
+            request.query.to,
+          ),
+        );
+    },
+  );
+  const minutes = { type: "number", minimum: 0 };
+  const share = { type: "number", nullable: true };
+  const object = (properties: Record<string, unknown>) => ({
+    type: "object",
+    additionalProperties: false,
+    required: Object.keys(properties),
+    properties,
+  });
+  const analytics = object({
+    tenantId: uuid,
+    unitId: { ...uuid, nullable: true },
+    from: date,
+    to: date,
+    timeZone: { type: "string" },
+    asOf: { type: "string", format: "date-time" },
+    weekdayHours: {
+      type: "array",
+      items: object({
+        weekday: { type: "integer", minimum: 1, maximum: 7 },
+        hour: { type: "integer", minimum: 0, maximum: 23 },
+        offeredMinutes: minutes,
+        reservedMinutes: minutes,
+        occupancyPercent: share,
+      }),
+    },
+    units: {
+      type: "array",
+      items: object({
+        unitId: uuid,
+        name: { type: "string", nullable: true },
+        offeredMinutes: minutes,
+        reservedMinutes: minutes,
+        occupancyPercent: share,
+      }),
+    },
+    cancellations: object({
+      reservations: count,
+      cancelled: count,
+      byHolder: count,
+      administrative: count,
+      cancelledPercent: share,
+    }),
+    leadTime: object({
+      lessThanOneDay: count,
+      oneToThreeDays: count,
+      threeToSevenDays: count,
+      sevenToFourteenDays: count,
+      fourteenDaysOrMore: count,
+    }),
+    attendance: object({
+      finished: count,
+      arrived: count,
+      arrivedPercent: share,
+    }),
+  });
+  app.get<{
+    Params: { tenantId: string };
+    Querystring: { from: string; to: string; unitId?: string };
+  }>(
+    "/api/municipalities/:tenantId/analytics",
+    {
+      schema: {
+        operationId: "usageAnalytics",
+        tags: ["Communications"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Análisis de uso del municipio o de una unidad (unitId) en el periodo local [from,to), máximo 366 días. REPORT_READ municipal o de la unidad y MFA. weekdayHours reparte minutos ofertados y reservados por día ISO (1 = lunes) y hora local; units, por unidad, con los mismos minutos que los indicadores básicos. cancellations, leadTime (desde la creación hasta el inicio) y attendance (llegadas registradas sobre reservas confirmadas finalizadas) cuentan las reservas que empiezan en el periodo. Solo devuelve agregados, sin titulares. Hasta 20000 reservas; reducir el periodo si se excede.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId"],
+          properties: { tenantId: uuid },
+        },
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          required: ["from", "to"],
+          properties: { from: date, to: date, unitId: uuid },
+        },
+        response: {
+          ...Object.fromEntries(
+            [400, 401, 403, 404, 409, 429, 500, 503].map((status) => [
+              status,
+              { $ref: "ErrorResponse#" },
+            ]),
+          ),
+          200: analytics,
+        },
+      },
+    },
+    async (request, reply) => {
+      const account = await actor(request, reply);
+      return reply
+        .header("cache-control", "no-store")
+        .send(
+          await readUsageAnalytics(
+            pool,
+            account,
+            request.params.tenantId,
+            request.query.unitId ?? null,
             request.query.from,
             request.query.to,
           ),
