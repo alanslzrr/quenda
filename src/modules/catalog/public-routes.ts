@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { calendarSchema } from "./calendar-routes.ts";
 import { facilityProfileSchema, unitProfileSchema } from "./profile-schema.ts";
 import {
+  nextPublicAvailability,
   publicAvailability,
   publicAvailabilitySearch,
   publicBookingDurations,
@@ -297,6 +298,62 @@ export async function registerPublicCatalog(
         request.params.tenantId,
         request.params.unitId,
         request.query.date,
+        Number(request.query.durationMinutes),
+      ),
+  );
+
+  const { date: _date, ...suggestionProperties } =
+    availabilityResponse.properties;
+  app.get<{
+    Params: { tenantId: string; unitId: string };
+    Querystring: { from: string; durationMinutes: string };
+  }>(
+    "/api/public/municipalities/:tenantId/units/:unitId/next-availability",
+    {
+      onRequest: limit,
+      schema: {
+        operationId: "publicNextAvailability",
+        description:
+          "Sugiere las tres primeras franjas libres de la duración indicada desde la fecha from (incluida), dentro de la antelación permitida y como mucho 62 días. Se calcula como la disponibilidad pública, sin exponer reservas, y no garantiza la franja al confirmar. Una lista vacía indica que no hay huecos en ese horizonte.",
+        tags: ["Public catalog"],
+        security: [],
+        params: params({ unitId: uuid }),
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          required: ["from", "durationMinutes"],
+          properties: {
+            from: { type: "string", format: "date" },
+            durationMinutes: { type: "string", pattern: "^[1-9][0-9]{0,9}$" },
+          },
+        },
+        response: {
+          ...errors,
+          200: {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "unitId",
+              "from",
+              "timeZone",
+              "calendarVersion",
+              "calculatedAt",
+              "slots",
+            ],
+            properties: {
+              ...suggestionProperties,
+              from: { type: "string", format: "date" },
+            },
+          },
+        },
+      },
+    },
+    (request) =>
+      nextPublicAvailability(
+        pool,
+        request.params.tenantId,
+        request.params.unitId,
+        request.query.from,
         Number(request.query.durationMinutes),
       ),
   );
