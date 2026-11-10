@@ -8,6 +8,7 @@ import { localMail } from "../../src/mail/local.ts";
 import { createAuthentication } from "../../src/modules/identity/index.ts";
 import { withDatabase } from "./postgres.ts";
 import { browserCatalog, seedWebCatalog } from "./web-catalog.ts";
+import { seedImportBrowser } from "./web-import.ts";
 import { seedMunicipalBrowser } from "./web-municipal.ts";
 import { seedPlatformBrowser } from "./web-platform.ts";
 import { seedPrivacyBrowser } from "./web-privacy.ts";
@@ -150,6 +151,16 @@ await withDatabase(async ({ auth, domain, migration, worker }) => {
   await writeFile(
     "web/test-results/reporting-fixtures.json",
     JSON.stringify(reportingFixtures),
+  );
+  // Catalog import owns municipal indexes 57 and 58, one per project.
+  const importFixtures = [];
+  for (const index of [57, 58])
+    importFixtures.push(
+      await seedImportBrowser(app, auth, domain, migration, index),
+    );
+  await writeFile(
+    "web/test-results/import-fixtures.json",
+    JSON.stringify(importFixtures),
   );
   await app.listen({
     host: "127.0.0.1",
