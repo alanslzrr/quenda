@@ -89,7 +89,7 @@ test("a facility profile is edited, audited by version and shown on the public p
   expect(
     (
       await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
         .analyze()
     ).violations,
   ).toEqual([]);

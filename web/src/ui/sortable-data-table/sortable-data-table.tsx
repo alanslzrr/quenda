@@ -201,6 +201,20 @@ export function SortableDataTable<T extends Record<string, unknown>>({ rows, col
     return () => observer.disconnect();
   }, [reduced, sort?.key, widths]);
 
+  // A table wider than its frame scrolls sideways; the frame is then reachable and scrollable from the keyboard.
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
+  useLayoutEffect(() => {
+    const scroller = scrollerRef.current, table = tableRef.current;
+    if (!scroller || !table) return;
+    const update = () => setOverflowing(scroller.scrollWidth > scroller.clientWidth && getComputedStyle(scroller).overflowX !== "visible");
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(scroller);
+    observer.observe(table);
+    return () => observer.disconnect();
+  }, []);
+
   const shownCount = selectedCount || keys.length;
   const noun = selectedCount ? "selected" : keys.length === 1 ? itemName.one : itemName.other;
   const [lastCount, setLastCount] = useState(shownCount);
@@ -268,7 +282,7 @@ export function SortableDataTable<T extends Record<string, unknown>>({ rows, col
   }
 
   return <div data-lumen="" className={styles.wrapper}>
-    <div className={styles.scroller}>
+    <div className={styles.scroller} ref={scrollerRef} {...(overflowing ? { tabIndex: 0, role: "group", "aria-label": caption } : {})}>
       {band ? <span className={styles.band} style={{ left: band.left, width: band.width }} aria-hidden="true" /> : null}
       <table onKeyDown={onKeyDown} data-static={columns.every(column => column.sortable === false) || undefined} ref={tableRef} className={styles.table} data-fixed={widths ? "" : undefined} data-selectable={selectable || undefined}>
         <caption>{caption}</caption>

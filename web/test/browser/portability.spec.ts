@@ -52,7 +52,7 @@ test("an administrator downloads the catalog as a versioned JSON file without re
   expect(
     (
       await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
         .analyze()
     ).violations,
   ).toEqual([]);

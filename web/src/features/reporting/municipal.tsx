@@ -7,12 +7,14 @@ import { Checkbox } from "../../ui/checkbox/checkbox";
 import { MetricCard } from "../../ui/metric-card/metric-card";
 import { Select } from "../../ui/select/select";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
+import { UsageAnalysis } from "./analytics";
 import { PeriodFields, ScopeField } from "./fields";
 import {
   allowed,
   canEnter,
   canExport,
   type Indicators,
+  type UsageAnalytics,
   validPeriod,
 } from "./model";
 import styles from "./reporting.module.css";
@@ -32,6 +34,9 @@ function Query({ exporting }: { exporting: boolean }) {
   const m = useMunicipality(),
     { t, locale } = usePreferences();
   const [result, setResult] = useState<Indicators>();
+  // Requested on demand for the period and scope of the indicators shown.
+  const [analytics, setAnalytics] = useState<UsageAnalytics>();
+  const [scope, setScope] = useState<string>();
   const [download, setDownload] = useState(false);
   const [format, setFormat] = useState<"json" | "csv">("json");
   return (
@@ -55,6 +60,8 @@ function Query({ exporting }: { exporting: boolean }) {
       <div
         onChange={() => {
           setResult(undefined);
+          setAnalytics(undefined);
+          setScope(undefined);
           setDownload(false);
         }}
       >
@@ -69,6 +76,8 @@ function Query({ exporting }: { exporting: boolean }) {
           resetOnSuccess={false}
           submit={async (d) => {
             setResult(undefined);
+            setAnalytics(undefined);
+            setScope(undefined);
             setDownload(false);
             const from = textField(d, "from"),
               to = textField(d, "to"),
@@ -127,7 +136,9 @@ function Query({ exporting }: { exporting: boolean }) {
                   "application/json",
                 );
               setDownload(true);
-            } else
+            } else {
+              const scoped = new URLSearchParams(params);
+              if (unitId) scoped.set("unitId", unitId);
               setResult(
                 await api<Indicators>(
                   `${endpoint(m.id)}${unitId ? `/units/${encodeURIComponent(unitId)}` : ""}/indicators?${params}`,
@@ -135,6 +146,8 @@ function Query({ exporting }: { exporting: boolean }) {
                   locale,
                 ),
               );
+              setScope(scoped.toString());
+            }
           }}
         >
           <ScopeField exporting={exporting} />
@@ -253,6 +266,31 @@ function Query({ exporting }: { exporting: boolean }) {
           </div>
         </section>
       )}
+      {result && scope && !analytics && (
+        <div className={styles.analysis}>
+          <ActionForm
+            label={t("Analizar el uso", "Analizar o uso")}
+            resetOnSuccess={false}
+            submit={async () =>
+              setAnalytics(
+                await api<UsageAnalytics>(
+                  `${endpoint(m.id)}/analytics?${scope}`,
+                  { signal: AbortSignal.timeout(60_000) },
+                  locale,
+                ),
+              )
+            }
+          >
+            <p>
+              {t(
+                "Ocupación por día y hora y por espacio, cancelaciones, antelación y llegadas registradas del mismo periodo y ámbito.",
+                "Ocupación por día e hora e por espazo, cancelacións, antelación e chegadas rexistradas do mesmo período e ámbito.",
+              )}
+            </p>
+          </ActionForm>
+        </div>
+      )}
+      {result && analytics && <UsageAnalysis analytics={analytics} />}
     </div>
   );
 }

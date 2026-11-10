@@ -8,8 +8,10 @@ import {
 import { registerUsageRulesAcceptanceRoute } from "./accept-usage-rules-route.ts";
 import { acceptanceProperties, acceptanceSchema } from "./acceptance.ts";
 import { registerAgendaRoutes } from "./agenda-routes.ts";
+import { registerArrivalRoute } from "./arrival-routes.ts";
 import { registerReservationAvailability } from "./availability-routes.ts";
 import { registerBlockRoutes } from "./block-routes.ts";
+import { registerCalendarSubscriptionRoutes } from "./calendar-subscription-routes.ts";
 import { registerCancellationRoute } from "./cancel-routes.ts";
 import { type CreateReservationInput, createReservation } from "./create.ts";
 import { registerModificationRoute } from "./modify-routes.ts";
@@ -34,6 +36,8 @@ export async function registerReservations(
   await registerAgendaRoutes(app, pool, auth, config);
   const actor = createRequestActor(pool, auth, config);
   await registerReservationQueries(app, pool, auth, config);
+  await registerCalendarSubscriptionRoutes(app, pool, auth, config);
+  await registerArrivalRoute(app, pool, auth, config);
   await registerBlockRoutes(app, pool, auth, config, retentionSeconds);
   await registerModificationRoute(app, pool, auth, config, retentionSeconds);
   await registerCancellationRoute(app, pool, auth, config, retentionSeconds);

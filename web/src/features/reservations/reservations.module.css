@@ -69,6 +69,31 @@
   outline: 2px solid var(--foreground);
   outline-offset: 1px;
 }
+.subscriptionUrl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+.subscriptionUrl button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.subscriptionUrl button:hover {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}
+.subscriptionUrl button:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 1px;
+}
 .srOnly {
   position: absolute;
   width: 1px;

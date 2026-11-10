@@ -39,7 +39,9 @@ pnpm --dir web exec playwright install chromium
 PG_BIN=/ruta/a/postgresql-17.11/bin pnpm --dir web test:browser
 ```
 
-`build` comprueba tipos y genera archivos estáticos en `web/dist`. Las pruebas de navegador del catálogo utilizan respuestas controladas para comprobar presentación, errores, preferencias y accesibilidad. Las de cuenta, reservas y administración municipal y de plataforma utilizan Better Auth, una base PostgreSQL temporal, municipios sintéticos aislados y correo local, sin credenciales de la instancia de desarrollo. Las respuestas controladas verifican también cambios de normas, cuotas, recuperación de respuestas perdidas y aceptación pendiente. Requieren los puertos 3000 y 5173 libres. Las pruebas PostgreSQL verifican los contratos y el aislamiento. Las fuentes conservan sus avisos en `web/public/licenses`; la compilación añade las [licencias de las dependencias empaquetadas](https://vite.dev/config/build-options.html#build-license) en `web/dist/licenses/dependencies.md`.
+`build` comprueba tipos y genera archivos estáticos en `web/dist`. `test:browser` ejecuta la suite dos veces, cada una con su servidor y su base temporal: primero escritorio y móvil, después tableta. Los argumentos, como un archivo de pruebas, se aplican a las dos. Ambas ejecuciones necesitan los puertos 3000 y 5173 libres. Las pruebas de navegador del catálogo utilizan respuestas controladas para comprobar presentación, errores, preferencias y accesibilidad. Las de cuenta, reservas y administración municipal y de plataforma utilizan Better Auth, una base PostgreSQL temporal, municipios sintéticos aislados y correo local, sin credenciales de la instancia de desarrollo. Las respuestas controladas verifican también cambios de normas, cuotas, recuperación de respuestas perdidas y aceptación pendiente. Requieren los puertos 3000 y 5173 libres. Las pruebas PostgreSQL verifican los contratos y el aislamiento. Las fuentes conservan sus avisos en `web/public/licenses`; la compilación añade las [licencias de las dependencias empaquetadas](https://vite.dev/config/build-options.html#build-license) en `web/dist/licenses/dependencies.md`.
+
+La aplicación se puede instalar desde el navegador en móvil, tableta u ordenador («Instalar aplicación» o «Añadir a pantalla de inicio»). Se abre en su propia ventana con el icono de Quenda y es la misma web: no hay una versión aparte que publicar ni mantener. No funciona sin conexión ni envía notificaciones, porque reservas y disponibilidad se consultan siempre en el servidor. En iOS la aplicación instalada guarda su propia sesión, separada de Safari. Nombre e iconos están en `web/public/manifest.webmanifest` y `web/public/icons/`; nginx sirve el manifiesto como `application/manifest+json`.
 
 La reserva recorre municipio, instalación, espacio, día y hora, y revisión; «Reservar» está siempre en la navegación y parte del municipio favorito si lo hay. El [mapa de navegación](docs/09_navegacion.md) describe rutas, contexto entre pasos y dónde se guarda el favorito. Día y duración viajan en la URL (`fecha`, `duracion`) hasta la revisión de la reserva.
 
@@ -193,7 +195,9 @@ Estas consultas no crean cuentas ni perfiles. Los recursos no publicados o retir
 
 `GET /api/municipalities/{tenantId}/exports/reservations` admite `format=csv`: una fila por reserva (columnas en `reservationCsvColumns`), RFC 4180, UTF-8 con marca de orden de bytes y las celdas que empiezan por `=`, `+`, `-`, `@` o tabulación precedidas de `'`. Los textos largos de normas quedan solo en el JSON.
 
-`GET /api/municipalities/{tenantId}/reservations/{reservationId}/calendar.ics` y `GET /api/me/reservations/calendar.ics` devuelven archivos iCalendar (RFC 5545) de una reserva del titular, en cualquier estado, o de sus próximas reservas confirmadas (hasta 100). Las horas van en UTC; el `UID` es estable, `SEQUENCE` es la revisión y una cancelación lleva `STATUS:CANCELLED`, de modo que volver a importar actualiza el evento. `lang=es|gl` fija el idioma del texto; sin él se usa `Accept-Language`. Es una descarga puntual: no existe enlace de suscripción ni secreto de larga duración.
+`GET /api/municipalities/{tenantId}/reservations/{reservationId}/calendar.ics` y `GET /api/me/reservations/calendar.ics` devuelven archivos iCalendar (RFC 5545) de una reserva del titular, en cualquier estado, o de sus próximas reservas confirmadas (hasta 100). Las horas van en UTC; el `UID` es estable, `SEQUENCE` es la revisión y una cancelación lleva `STATUS:CANCELLED`, de modo que volver a importar actualiza el evento. `lang=es|gl` fija el idioma del texto; sin él se usa `Accept-Language`. Son descargas puntuales.
+
+Para que el calendario se actualice solo, el titular crea una suscripción desde «Mis reservas» (`POST /api/me/calendar-subscription`, con `Origin` autorizado). La respuesta trae, una única vez, `url` y `webcalUrl`: `GET /api/calendars/{secreto}.ics` devuelve sin sesión las próximas reservas confirmadas de la cuenta (hasta 100), con la misma identidad y revisión que las descargas; una reserva cancelada o finalizada desaparece del calendario. El secreto son 32 bytes aleatorios y la base guarda solo su SHA-256, así que una copia de la base no permite reconstruir la URL. Crear de nuevo sustituye el secreto; `POST /api/me/calendar-subscription/revoke` lo retira, y la baja, la suspensión o la supresión de la cuenta también, sin que una reactivación lo recupere. Una URL desconocida o retirada responde `404`. El límite es de 60 peticiones por minuto por URL, porque las aplicaciones de calendario consultan desde direcciones compartidas; las URL desconocidas cuentan además contra la dirección de origen. La imagen web no registra en su log estas rutas. Quien tenga la URL ve esas reservas: la interfaz lo advierte y no vuelve a mostrarla.
 
 ## Consulta de reservas
 
@@ -254,6 +258,12 @@ El titular cancela con `ahora ≤ inicio − plazo aceptado` y siempre `ahora < 
 `administrative: true` exige permiso `RESERVATION_MANAGE`, MFA reciente y `reason`; permite omitir el plazo del titular, pero nunca cancelar una reserva ya iniciada. Una versión obsoleta produce `409`. Reserva, liberación de ocupación y cuota, evento y avisos se confirman juntos. La autorización se comprueba también al recuperar un resultado idempotente.
 
 Una reserva de última hora exige aceptar que no puede cancelarse por cuenta propia. Ante una excepción, el usuario contacta directamente con el municipio; no se crea un ticket. El titular conserva su responsabilidad y puede reorganizar participantes según las normas, sin transferir la reserva. La ausencia conserva tiempo reservado e historial, sin inferir asistencia ni generar automáticamente incidencias o penalizaciones.
+
+## Acceso con código QR
+
+El detalle de una reserva confirmada muestra al titular un código QR. El código contiene la dirección de la reserva en la gestión municipal (`/administracion/{tenantId}/reservas/{reservationId}`), así que el personal lo escanea con la cámara de su teléfono, donde ya ha iniciado sesión, y ve si la reserva es válida en ese momento. No hace falta ningún lector ni acceso a la cámara desde la aplicación. El código no es un secreto: la página solo muestra la reserva a quien tiene permiso sobre su unidad.
+
+`POST /api/municipalities/{tenantId}/reservations/{reservationId}/arrival` registra la llegada. Exige `RESERVATION_READ` o `RESERVATION_MANAGE` sobre la unidad, sesión con MFA y `Origin` autorizado, y solo se admite en reservas confirmadas desde 30 minutos antes del inicio hasta el final (`409` fuera de esa ventana). La llegada queda en la propia reserva con instante y autor; repetir la petición devuelve el primer registro con `alreadyRecorded: true`. No cambia la revisión ni genera avisos. El rol de la aplicación no puede escribir esas columnas directamente. El titular ve la hora de llegada en su reserva y en la descarga de datos personales. La conservación la archiva o suprime junto con la reserva. Quenda no abre puertas ni tornos: el registro sirve para el control del personal y para los indicadores.
 
 ## Bloqueos de unidades
 
@@ -327,7 +337,7 @@ Las validaciones largas se ejecutan en local, no en GitHub Actions. Con PostgreS
 PG_BIN=/ruta/a/postgresql-17.11/bin pnpm validate
 ```
 
-`pnpm validate` encadena, y se detiene en el primer fallo: `pnpm check` (tipos, lint, pruebas unitarias y HTTP, incluido el contrato OpenAPI), `pnpm --dir web check` y `pnpm --dir web build`, la suite de integración PostgreSQL, las pruebas de navegador de escritorio y móvil con axe, la construcción de las imágenes de API y web y `pnpm test:oci`. Requiere Docker y `pnpm --dir web exec playwright install chromium`. Tarda decenas de minutos; una pull request se abre cuando todo termina bien. Para ensayar el rendimiento o inventariar licencias, que no forman parte del encadenado, usar `pnpm test:performance` y `pnpm licenses:inventory`; sus resultados se conservan fuera de Git y se comparan solo con mediciones del mismo entorno.
+`pnpm validate` encadena, y se detiene en el primer fallo: `pnpm check` (tipos, lint, pruebas unitarias y HTTP, incluido el contrato OpenAPI), `pnpm --dir web check` y `pnpm --dir web build`, la suite de integración PostgreSQL, las pruebas de navegador con axe (reglas WCAG 2.0 y 2.1, niveles A y AA), la construcción de las imágenes de API y web y `pnpm test:oci`. Requiere Docker y `pnpm --dir web exec playwright install chromium`. Tarda decenas de minutos; una pull request se abre cuando todo termina bien. Para ensayar el rendimiento o inventariar licencias, que no forman parte del encadenado, usar `pnpm test:performance` y `pnpm licenses:inventory`; sus resultados se conservan fuera de Git y se comparan solo con mediciones del mismo entorno.
 
 ### Integración continua
 
@@ -424,6 +434,18 @@ Nodemailer 10.1.7 está fijado en el lockfile e incluye tipos TypeScript y licen
 
 La oferta utiliza versiones de calendario y eventos históricos de publicación/retirada de instalación y unidad. Los cierres se recortan a su vigencia efectiva. Dos transiciones contradictorias de publicación con el mismo instante devuelven `409` en vez de inventar un orden. No se devuelven titulares, motivos ni eventos de auditoría. Las respuestas usan `Cache-Control: no-store`.
 
+### Análisis de uso
+
+`GET /api/municipalities/{tenantId}/analytics?from=…&to=…` (opcionalmente `unitId`) completa los indicadores con el mismo permiso (`REPORT_READ` municipal o de la unidad, con MFA), periodo y límite de 366 días. Devuelve:
+
+- `weekdayHours`: minutos ofertados y reservados, y su porcentaje, por día ISO (1 = lunes) y hora local.
+- `units`: los mismos minutos por unidad, con su nombre. Suman lo mismo que los indicadores básicos.
+- `cancellations`: canceladas por el titular y por el ayuntamiento, según el autor del evento de cancelación.
+- `leadTime`: reservas por tramos de antelación (de la creación al inicio).
+- `attendance`: llegadas registradas con el código QR sobre las reservas confirmadas ya finalizadas. Mide lo que registra el personal, no la asistencia real.
+
+Cancelaciones, antelación y llegadas cuentan las reservas que empiezan en el periodo, como los indicadores. Solo devuelve agregados, sin titulares. Rechaza más de 20.000 reservas. En la web se pide con «Analizar el uso» después de consultar los indicadores. El mapa por día y hora es una tabla con el porcentaje escrito en cada celda; el tono solo lo refuerza.
+
 ### Exportación de reservas
 
 `GET /api/municipalities/{tenantId}/exports/reservations?from=2030-01-01&to=2030-02-01` descarga JSON `quenda.reservations`, versión 3. El parámetro opcional `unitId` limita el conjunto a una unidad. Exige `DATA_EXPORT` y `RESERVATION_READ` o `RESERVATION_MANAGE` para el mismo ámbito, con MFA de los últimos cinco minutos. Sin `unitId`, ambos permisos deben ser municipales.
@@ -508,6 +530,14 @@ docker compose --env-file .env.production -f compose.production.example.yaml --p
 docker compose --env-file .env.production -f compose.production.example.yaml up -d
 ```
 
+En una instancia nueva todavía no hay operador de plataforma, y sin él no se puede dar de alta ningún municipio. Crear una cuenta desde la aplicación, verificar su correo, activar la verificación en dos pasos y copiar su identificador desde los datos de la cuenta. Después, una sola vez, con las credenciales de mantenimiento de la tarea `migrate`:
+
+```sh
+docker compose --env-file .env.production -f compose.production.example.yaml run --rm migrate scripts/initialize-operator.ts IDENTIFICADOR_DE_CUENTA
+```
+
+Se aplican las reglas de [Primer operador](#primer-operador).
+
 `TRUSTED_PROXY_CIDRS=172.28.10.10/32` limita la confianza de la API a la dirección fija del contenedor nginx. En nginx, `QUENDA_TRUSTED_PROXY_CIDR` identifica un único CIDR del proxy TLS inmediato; su valor inicial es loopback y debe ajustarse a la dirección real que llega al contenedor, que Docker puede traducir al publicar el puerto. El proxy de entrada debe sanear las cabeceras de cliente. Nginx ignora cabeceras reenviadas de otros pares y resuelve recursivamente la dirección del cliente solo en la cadena confiable; no configurar redes completas de clientes como proxies. `AUTH_ORIGIN` es el origen HTTPS público. Una actualización construye o descarga las imágenes nuevas y repite `up -d`: `migrate` se ejecuta antes de reemplazar la API y, si falla, la API no arranca; aplicar [la recuperación de una actualización fallida](#recuperación-de-una-actualización-fallida). Las copias y restauraciones siguen los procedimientos de [copia lógica](#copia-lógica-de-postgresql) y [restauración cerrada](#restauración-cerrada-a-la-aplicación), ejecutados con el cliente PostgreSQL 17 desde fuera de estos contenedores. `pnpm test:oci` verifica ambas imágenes locales (`QUENDA_IMAGE`, `QUENDA_WEB_IMAGE`) y la integración continua valida además la sintaxis de la composición.
 
 ### Métricas HTTP
@@ -522,7 +552,7 @@ La API emite `HTTP_METRICS` cada 30 segundos con acumulados locales de solicitud
 
 El archivo se prepara con modo `0600`, se sincroniza y solo se publica al terminar sin errores ni diagnósticos de `pg_dump`; un destino existente nunca se reemplaza. El SHA-256 permite comprobar integridad, no cifra ni autentica la copia. El almacenamiento debe tener cifrado, acceso y conservación aprobados para sus datos. Las copias contienen información personal y material de autenticación.
 
-La copia incluye datos, esquemas, permisos e historial de migraciones de una base, no roles globales, contraseñas de roles ni secretos externos. Estos se provisionan por separado en el destino. El formato se restaura con `pg_restore`; una copia debe proceder de una fuente confiable porque puede contener código SQL ejecutable. [Documentación de pg_dump](https://www.postgresql.org/docs/17/app-pgdump.html). El runtime OCI no instala herramientas PostgreSQL: ejecutar este comando en el entorno operativo de copias con el cliente 17 disponible.
+La copia incluye datos, esquemas, permisos e historial de migraciones de una base, no roles globales, contraseñas de roles ni secretos externos. Estos se provisionan por separado en el destino. `AUTH_SECRET` es la excepción: cifra los secretos TOTP y los códigos de respaldo guardados en la base, así que el destino debe recibir el mismo valor por un canal seguro. Con otro secreto la copia se restaura, pero ninguna cuenta puede verificar su segundo factor. El formato se restaura con `pg_restore`; una copia debe proceder de una fuente confiable porque puede contener código SQL ejecutable. [Documentación de pg_dump](https://www.postgresql.org/docs/17/app-pgdump.html). El runtime OCI no instala herramientas PostgreSQL: ejecutar este comando en el entorno operativo de copias con el cliente 17 disponible.
 
 `PG_BIN=/ruta/postgresql17/bin node --test test/integration/recovery.test.ts` ensaya la restauración en otro clúster temporal, con contraseñas de roles distintas. Compara cuentas, reservas, ocupaciones, convenios, consumos, eventos, avisos e idempotencia con el corte; comprueba aislamiento, rechazo de credenciales antiguas, replay sin duplicación y cancelación posterior. Informa de tiempos locales y de una reserva creada después de la copia que no se recupera. Son medidas de una fixture pequeña, no un RTO/RPO comprometido. La prueba no abre tráfico ni envía correo desde el destino restaurado.
 

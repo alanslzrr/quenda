@@ -4,7 +4,7 @@ import { HttpError } from "../../http/errors.ts";
 import type { AuthenticatedAccount } from "../identity/index.ts";
 import { type CalendarEvent, calendarFile } from "./icalendar.ts";
 
-interface Row {
+export interface CalendarRow {
   tenant_id: string;
   id: string;
   status: "CONFIRMADA" | "CANCELADA";
@@ -22,7 +22,7 @@ interface Row {
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const upcomingLimit = 100;
 
-const wording = {
+export const calendarWording = {
   es: {
     summary: (unit: string, municipality: string) =>
       `Reserva: ${unit} (${municipality})`,
@@ -43,11 +43,11 @@ const wording = {
 
 /** The calendar entry for a reservation: its start, end, place and a link back to the reservation. */
 export function toEvent(
-  row: Row,
+  row: CalendarRow,
   origin: string,
   locale: "es" | "gl",
 ): CalendarEvent {
-  const text = wording[locale];
+  const text = calendarWording[locale];
   const url = `${origin}/reservas/${row.tenant_id}/${row.id}`;
   const place = [row.facility_name, row.address, row.postal_code]
     .filter(Boolean)
@@ -82,7 +82,7 @@ export async function upcomingCalendar(
     { accountId: actor.accountId, tenantId: null },
     async (client) =>
       (
-        await client.query<Row>(
+        await client.query<CalendarRow>(
           "SELECT * FROM domain.own_calendar_reservations($1)",
           [upcomingLimit],
         )
@@ -90,7 +90,7 @@ export async function upcomingCalendar(
   );
   return calendarFile(
     rows.map((row) => toEvent(row, origin, locale)),
-    { name: wording[locale].calendar, stamp: now },
+    { name: calendarWording[locale].calendar, stamp: now },
   );
 }
 
@@ -111,7 +111,7 @@ export async function reservationCalendar(
     { accountId: actor.accountId, tenantId: null },
     async (client) =>
       (
-        await client.query<Row>(
+        await client.query<CalendarRow>(
           "SELECT * FROM domain.own_calendar_reservation($1,$2)",
           [tenantId, reservationId],
         )
@@ -119,7 +119,7 @@ export async function reservationCalendar(
   );
   if (!row) throw new HttpError("NOT_FOUND");
   return calendarFile([toEvent(row, origin, locale)], {
-    name: wording[locale].one,
+    name: calendarWording[locale].one,
     stamp: now,
   });
 }

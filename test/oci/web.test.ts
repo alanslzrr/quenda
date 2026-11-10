@@ -158,6 +158,25 @@ test("the web image serves the bundle with strict headers and proxies the API", 
     );
     assert.equal(trusted.data.forwardedProto, "https");
 
+    // The installable app: manifest with its own media type and every icon it names.
+    const manifest = await fetch(`${base}/manifest.webmanifest`);
+    assert.equal(manifest.status, 200);
+    assert.equal(
+      manifest.headers.get("content-type"),
+      "application/manifest+json",
+    );
+    assert.equal(manifest.headers.get("cache-control"), "no-cache");
+    assert.ok(manifest.headers.get("content-security-policy"));
+    const icons = ((await manifest.json()) as { icons: { src: string }[] })
+      .icons;
+    assert.ok(icons.length >= 3);
+    for (const icon of icons) {
+      const image = await fetch(`${base}${icon.src}`);
+      assert.equal(image.status, 200, icon.src);
+      assert.equal(image.headers.get("content-type"), "image/png");
+    }
+    assert.match(html, /<link rel="manifest" href="\/manifest\.webmanifest"/);
+
     const deep = await fetch(`${base}/municipios/ejemplo/unidades/otra`);
     assert.equal(deep.status, 200);
     assert.equal(await deep.text(), html);
@@ -221,6 +240,13 @@ test("the web image serves the bundle with strict headers and proxies the API", 
       ((await api.json()) as { url: string }).url,
       "/api/public/municipalities?limit=1",
     );
+    // Subscription URLs carry their secret in the path and stay out of the access log.
+    const secret = "S".repeat(43);
+    await fetch(`${base}/api/calendars/${secret}.ics`);
+    await delay(200);
+    const logged = (await docker("logs", site)).stdout;
+    assert.ok(!logged.includes(secret), "subscription secret was logged");
+    assert.ok(logged.includes("/api/public/municipalities"));
     const source = await fetch(`${base}/legal/source`);
     assert.equal(
       ((await source.json()) as { url: string }).url,
