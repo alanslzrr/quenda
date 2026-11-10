@@ -179,23 +179,29 @@ function Administrators() {
               {new Date(item.revokedAt).toLocaleString(locale)}
             </p>
           )}
-          {item.active && item.expiresAt && (
-            <MunicipalForm
-              path={`${endpoint(m.id)}/administrators/${encodeURIComponent(item.accountId)}/make-indefinite`}
-              label={t("Convertir en indefinido", "Converter en indefinido")}
-              body={(d) => ({ reason: textField(d, "reason").trim() })}
-              onSaved={() => saved()}
-            >
-              <Reason />
-              <Checkbox
-                required
-                label={t(
-                  "Confirmo el permiso sin caducidad",
-                  "Confirmo o permiso sen caducidade",
-                )}
-              />
-            </MunicipalForm>
-          )}
+          {item.active &&
+            item.expiresAt &&
+            item.accountId !== account?.accountId &&
+            rows.some(
+              (r) =>
+                r.accountId === account?.accountId && r.active && !r.expiresAt,
+            ) && (
+              <MunicipalForm
+                path={`${endpoint(m.id)}/administrators/${encodeURIComponent(item.accountId)}/make-indefinite`}
+                label={t("Convertir en indefinido", "Converter en indefinido")}
+                body={(d) => ({ reason: textField(d, "reason").trim() })}
+                onSaved={() => saved()}
+              >
+                <Reason />
+                <Checkbox
+                  required
+                  label={t(
+                    "Confirmo el permiso sin caducidad",
+                    "Confirmo o permiso sen caducidade",
+                  )}
+                />
+              </MunicipalForm>
+            )}
           {!item.revokedAt && (
             <MunicipalForm
               path={`${endpoint(m.id)}/administrators/${encodeURIComponent(item.accountId)}/revoke`}
