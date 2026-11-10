@@ -1,4 +1,5 @@
 import type { Client } from "pg";
+import { scramVerifier } from "./scram-verifier.ts";
 
 export interface DatabasePasswords {
   migration: string;
@@ -17,13 +18,19 @@ export async function bootstrap(
     throw new Error("Passwords must have at least 24 characters");
   if (new Set(Object.values(passwords)).size !== 4)
     throw new Error("Passwords must differ");
+  const verifiers = Object.fromEntries(
+    Object.entries(passwords).map(([role, password]) => [
+      role,
+      scramVerifier(password),
+    ]),
+  );
   await client.query("BEGIN");
   try {
     for (const [name, password] of [
-      ["quenda_migrator", passwords.migration],
-      ["quenda_domain", passwords.domain],
-      ["quenda_auth", passwords.auth],
-      ["quenda_worker", passwords.worker],
+      ["quenda_migrator", verifiers.migration],
+      ["quenda_domain", verifiers.domain],
+      ["quenda_auth", verifiers.auth],
+      ["quenda_worker", verifiers.worker],
     ]) {
       const formatted = await client.query<{ sql: string }>(
         "SELECT format('CREATE ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD %L', $1::text, $2::text) AS sql",

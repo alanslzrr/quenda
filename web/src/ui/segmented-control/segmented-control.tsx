@@ -40,6 +40,7 @@ export default function SegmentedControl({
   const track = useRef<HTMLDivElement>(null);
 
   // When the options are wider than the container, the track scrolls inside itself. Edges fade only on the side with more to see.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reobserve the replaced option elements after an options change.
   useLayoutEffect(() => {
     const node = track.current;
     if (!node) return;
@@ -62,6 +63,7 @@ export default function SegmentedControl({
 
   // The selected option is always scrolled fully into view, with a little room so it clears the fade.
   const first = useRef(true);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Selection and option changes must reveal the new active element.
   useEffect(() => {
     const node = track.current;
     if (!node) return;
@@ -120,6 +122,7 @@ export default function SegmentedControl({
   };
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: This named interaction group is not a form fieldset.
     <div
       className={`${styles.root} ${className ?? ""}`}
       role="group"

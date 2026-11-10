@@ -40,7 +40,8 @@ export async function idempotentCommand<T extends Json>(
   options: IdempotentOperation<T>,
 ): Promise<{ result: T; replayed: boolean; expiresAt: string }> {
   if (
-    !context.tenantId ||
+    (context.tenantId === null &&
+      options.operation !== "municipality.create") ||
     !/^[A-Za-z0-9._:-]{1,200}$/.test(options.key) ||
     !/^[A-Za-z0-9._:-]{1,100}$/.test(options.operation) ||
     !Number.isSafeInteger(options.retentionSeconds) ||
@@ -76,20 +77,21 @@ export async function idempotentCommand<T extends Json>(
       );
       const selected = await client.query(
         `SELECT fingerprint,result,expires_at,expires_at>clock_timestamp() AS active,result IS NOT NULL AS complete
-        FROM domain.idempotent_command WHERE (tenant_id,actor_id,operation,key)=($1,$2,$3,$4) FOR UPDATE`,
+        FROM domain.idempotent_command WHERE actor_id=$2 AND operation=$3 AND key=$4 AND tenant_id IS NOT DISTINCT FROM $1::uuid FOR UPDATE`,
         scope,
       );
       row = selected.rows[0];
     } catch (error) {
       if (error instanceof DatabaseError && error.code === "55P03")
-        throw new HttpError("CONFLICT");
+        throw new HttpError("COMMAND_IN_PROGRESS");
       throw error;
     }
     await client.query("SELECT set_config('lock_timeout',$1,true)", [
       previousTimeout,
     ]);
     if (row.complete && row.active) {
-      if (row.fingerprint !== fingerprint) throw new HttpError("CONFLICT");
+      if (row.fingerprint !== fingerprint)
+        throw new HttpError("IDEMPOTENCY_KEY_REUSED");
       return {
         result: row.result as T,
         replayed: true,
@@ -100,7 +102,7 @@ export async function idempotentCommand<T extends Json>(
       const updated = await client.query(
         `UPDATE domain.idempotent_command SET fingerprint=$5,result=NULL,
         created_at=clock_timestamp(),expires_at=clock_timestamp()+$6::integer*interval '1 second'
-        WHERE (tenant_id,actor_id,operation,key)=($1,$2,$3,$4) RETURNING expires_at`,
+        WHERE actor_id=$2 AND operation=$3 AND key=$4 AND tenant_id IS NOT DISTINCT FROM $1::uuid RETURNING expires_at`,
         [...scope, fingerprint, options.retentionSeconds],
       );
       row.expires_at = updated.rows[0].expires_at;
@@ -108,7 +110,7 @@ export async function idempotentCommand<T extends Json>(
     const result = await options.execute(client);
     const saved = await client.query(
       `UPDATE domain.idempotent_command SET result=$5::jsonb,expires_at=clock_timestamp()+$6::integer*interval '1 second'
-      WHERE (tenant_id,actor_id,operation,key)=($1,$2,$3,$4) RETURNING expires_at`,
+      WHERE actor_id=$2 AND operation=$3 AND key=$4 AND tenant_id IS NOT DISTINCT FROM $1::uuid RETURNING expires_at`,
       [...scope, JSON.stringify(result), options.retentionSeconds],
     );
     return {

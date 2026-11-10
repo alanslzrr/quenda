@@ -31,7 +31,7 @@ export function Avatar({
   // A photo that is already decoded shows at once. One that is still loading waits, then fades in from a soft blur.
   useLayoutEffect(() => {
     const node = image.current;
-    if (node && !node.complete) node.dataset.loading = "";
+    if (src && node && !node.complete) node.dataset.loading = "";
   }, [src]);
   const showImage = src && failedSrc !== src;
   return (

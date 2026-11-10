@@ -6,10 +6,10 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { forgetCommand } from "../features/reservations/commands";
 import { type Account, ApiError, api } from "./api";
 import { readVisitorPreferences } from "./preferences.ts";
 import { browserStorage } from "./storage.ts";
+import { clearSessionMarkers } from "./storage-keys";
 
 // The provider sits above the preferences, so errors use the visitor language.
 const visitorLocale = () =>
@@ -37,12 +37,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   });
   const previousAccount = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (query.data === null) forgetCommand();
     const current = query.data?.accountId;
     const previous = previousAccount.current;
-    previousAccount.current = current;
+    if (current) previousAccount.current = current;
     if (previous && previous !== current) {
-      forgetCommand();
+      if (current) clearSessionMarkers();
       void client.cancelQueries({ queryKey: ["private", previous] });
       client.removeQueries({ queryKey: ["private", previous] });
     }
@@ -63,7 +62,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       { method: "POST", body: "{}" },
       visitorLocale(),
     );
-    forgetCommand();
+    clearSessionMarkers();
     await client.cancelQueries();
     client.removeQueries({ queryKey: ["private"] });
     client.setQueryData(["session"], null);

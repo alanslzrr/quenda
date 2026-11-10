@@ -40,7 +40,8 @@ export async function ownModificationAvailability(
         );
         await requirePermission(client, actor, "RESERVATION_MANAGE", unitId);
       }
-      if (row.status !== "CONFIRMADA") throw new HttpError("CONFLICT");
+      if (row.status !== "CONFIRMADA")
+        throw new HttpError("RESERVATION_CANCELLED");
       const now = clock.now().getTime();
       if (
         now >= row.starts_at.getTime() ||

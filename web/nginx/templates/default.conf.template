@@ -3,9 +3,15 @@ upstream quenda_api {
   keepalive 16;
 }
 
-map $http_x_forwarded_proto $quenda_proto {
-  default $http_x_forwarded_proto;
-  "" $scheme;
+geo $realip_remote_addr $quenda_trusted_proxy {
+  default 0;
+  ${QUENDA_TRUSTED_PROXY_CIDR} 1;
+}
+
+map "$quenda_trusted_proxy:$http_x_forwarded_proto" $quenda_proto {
+  default $scheme;
+  "1:https" https;
+  "1:http" http;
 }
 
 # Browsers ignore HSTS received over plain HTTP; an empty value is not emitted.
@@ -25,8 +31,12 @@ server {
   keepalive_timeout 30s;
   absolute_redirect off;
   port_in_redirect off;
+  set_real_ip_from ${QUENDA_TRUSTED_PROXY_CIDR};
+  real_ip_header X-Forwarded-For;
+  real_ip_recursive on;
 
   gzip on;
+  gzip_http_version 1.0;
   gzip_vary on;
   gzip_comp_level 5;
   gzip_min_length 512;
@@ -43,7 +53,7 @@ server {
     proxy_http_version 1.1;
     proxy_set_header Connection "";
     proxy_set_header Host $http_host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-For $remote_addr;
     proxy_set_header X-Forwarded-Proto $quenda_proto;
     proxy_connect_timeout 5s;
     proxy_read_timeout 30s;

@@ -28,6 +28,9 @@ export async function registerCommunications(
     revision: { type: "integer", minimum: 1 },
     kind: { type: "string", enum: ["CONFIRMADA", "MODIFICADA", "CANCELADA"] },
     occurredAt: instant,
+    administrative: { type: "boolean" },
+    actorName: { type: "string", nullable: true },
+    reason: { type: "string", nullable: true },
     startsAt: instant,
     endsAt: instant,
     timeZone: { type: "string" },
@@ -46,7 +49,7 @@ export async function registerCommunications(
         tags: ["Communications"],
         security: [{ quendaSession: [] }],
         description:
-          "Avisos internos del usuario entre municipios. Páginas de 20 por identificador de evento y municipio, no por fecha. Cada aviso describe el evento histórico y enlaza al estado actual; no representa el estado del correo. pendingUsageRulesVersion identifica las normas de unitId pendientes de aceptación en ese evento, no una aceptación ni el estado actual. No expone actor, motivo administrativo ni correlación.",
+          "Avisos internos del usuario entre municipios. Páginas de 20 por identificador de evento y municipio, no por fecha. Cada aviso describe el evento histórico y enlaza al estado actual; no representa el estado del correo. pendingUsageRulesVersion identifica las normas de unitId pendientes de aceptación en ese evento, no una aceptación ni el estado actual. Las intervenciones administrativas incluyen el nombre capturado del autor (nulo para eventos históricos sin captura), el motivo y la fecha. No expone identificadores de cuenta ni correlación.",
         querystring: {
           type: "object",
           additionalProperties: false,

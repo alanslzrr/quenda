@@ -42,6 +42,9 @@ export async function processReservationEmail(
     kind: ReservationMailEvent["kind"];
     occurred_at: Date;
     after_state: {
+      administrative: boolean;
+      actorName: string | null;
+      reason: string | null;
       startsAt: string;
       endsAt: string;
       timezone: string;
@@ -67,6 +70,9 @@ export async function processReservationEmail(
           revision: job.revision,
           kind: job.kind,
           occurredAt: job.occurred_at.toISOString(),
+          administrative: job.after_state.administrative,
+          actorName: job.after_state.actorName,
+          reason: job.after_state.reason,
           startsAt: job.after_state.startsAt,
           endsAt: job.after_state.endsAt,
           timeZone: job.after_state.timezone,

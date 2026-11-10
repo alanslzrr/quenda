@@ -5,7 +5,7 @@ import {
   inviteOperator,
 } from "../../src/modules/identity/operator-lifecycle.ts";
 import { seedStaffRecipient } from "./web-staff.ts";
-// Each journey owns two verified identities. Only its initial operator grant is
+// Each journey owns three verified identities. Only its initial operator grant is
 // seeded; municipalities, invitations and security changes run through the UI.
 export async function seedPlatformBrowser(
   app: FastifyInstance,
@@ -16,6 +16,7 @@ export async function seedPlatformBrowser(
 ) {
   const operator = await seedStaffRecipient(app, auth, index);
   const recipient = await seedStaffRecipient(app, auth, index + 1);
+  const replacement = await seedStaffRecipient(app, auth, index + 100);
   const actor = (accountId: string) => ({
     accountId,
     email: `${accountId}@example.test`,
@@ -31,5 +32,5 @@ export async function seedPlatformBrowser(
     actor(operator.accountId),
     invitation.invitationId,
   );
-  return { operator, recipient };
+  return { operator, recipient, replacement };
 }

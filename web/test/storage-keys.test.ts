@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
-import { storageEntries } from "../src/app/storage-keys.ts";
+import {
+  clearSessionMarkers,
+  storageEntries,
+} from "../src/app/storage-keys.ts";
 
 // "quenda.personal-data" names the downloaded file format; it is never written to storage.
 const notStorage = new Set(["quenda.personal-data"]);
@@ -31,4 +34,29 @@ test("every described key has an explanation and a lifetime in both languages", 
       assert.ok(text.trim().length > 10, entry.key);
     assert.notEqual(entry.purpose[0], entry.purpose[1]);
   }
+});
+
+test("signout clears every scoped session marker and preserves unrelated storage", () => {
+  const entries = new Map([
+    ["quenda.reservation-command", "pending"],
+    ["quenda.privacy-uncertain:account:scope", "pending"],
+    ["quenda.platform-uncertain:account", "pending"],
+    ["quenda.municipal-uncertain:account:POST:path", "pending"],
+    ["unrelated", "keep"],
+  ]);
+  clearSessionMarkers({
+    get length() {
+      return entries.size;
+    },
+    key: (index) => [...entries.keys()][index] ?? null,
+    getItem: (key) => entries.get(key) ?? null,
+    setItem: (key, value) => {
+      entries.set(key, value);
+    },
+    removeItem: (key) => {
+      entries.delete(key);
+    },
+    clear: () => entries.clear(),
+  });
+  assert.deepEqual([...entries], [["unrelated", "keep"]]);
 });

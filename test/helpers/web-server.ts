@@ -70,6 +70,9 @@ await withDatabase(async ({ auth, domain, migration, worker }) => {
     // The catalog download owns these two.
     49,
     50,
+    // Lost-response creation recovery has separate accounts and resources.
+    51,
+    52,
   ])
     municipalFixtures.push(
       await seedMunicipalBrowser(app, auth, domain, migration, index),

@@ -30,3 +30,27 @@ test("mail configuration requires TLS and permits production only with SMTP", ()
   });
   assert.equal(config.mail.kind, "smtp");
 });
+
+test("SMTP TLS identity defaults to host and supports a mounted CA", () => {
+  const env = {
+    MAIL_TRANSPORT: "smtp",
+    SMTP_HOST: "192.0.2.1",
+    SMTP_FROM: "quenda@example.test",
+  };
+  assert.equal(
+    (
+      readMailConfiguration({ ...env, SMTP_SERVERNAME: "" }) as {
+        servername: string;
+      }
+    ).servername,
+    env.SMTP_HOST,
+  );
+  const configured = readMailConfiguration({
+    ...env,
+    SMTP_SERVERNAME: "mail.example.test",
+    SMTP_CA_FILE: "/run/quenda/smtp-ca.pem",
+  });
+  assert.ok(configured.kind === "smtp");
+  assert.equal(configured.servername, "mail.example.test");
+  assert.equal(configured.caFile, "/run/quenda/smtp-ca.pem");
+});

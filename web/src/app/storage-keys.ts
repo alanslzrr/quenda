@@ -1,3 +1,5 @@
+import { browserStorage } from "./storage.ts";
+
 /**
  * Everything the application writes to the browser. The privacy page is generated from this list,
  * and a test fails when the code uses a key that is not described here.
@@ -46,8 +48,8 @@ export const storageEntries: readonly StorageEntry[] = [
     key: "quenda.reservation-command",
     store: "session",
     purpose: [
-      "Marca de una operación de reserva sin confirmar, para comprobarla sin repetirla.",
-      "Marca dunha operación de reserva sen confirmar, para comprobala sen repetila.",
+      "Solicitud pendiente de reserva, colaboración o alta de municipio o recurso: conserva sus datos y clave para comprobar el resultado sin duplicarlo.",
+      "Solicitude pendente de reserva, colaboración ou alta de municipio ou recurso: conserva os seus datos e chave para comprobar o resultado sen duplicalo.",
     ],
     duration: [
       "Hasta confirmar la operación o cerrar sesión",
@@ -62,8 +64,8 @@ export const storageEntries: readonly StorageEntry[] = [
       "Marca dunha actuación de privacidade sen confirmar. Non garda o seu contido.",
     ],
     duration: [
-      "Hasta confirmar la comprobación o cerrar la pestaña",
-      "Ata confirmar a comprobación ou pechar a lapela",
+      "Hasta confirmar la comprobación o cerrar sesión",
+      "Ata confirmar a comprobación ou pechar sesión",
     ],
   },
   {
@@ -74,8 +76,8 @@ export const storageEntries: readonly StorageEntry[] = [
       "Marca dunha operación de plataforma sen confirmar. Non garda o seu contido.",
     ],
     duration: [
-      "Hasta confirmar la comprobación o cerrar la pestaña",
-      "Ata confirmar a comprobación ou pechar a lapela",
+      "Hasta confirmar la comprobación o cerrar sesión",
+      "Ata confirmar a comprobación ou pechar sesión",
     ],
   },
   {
@@ -86,8 +88,8 @@ export const storageEntries: readonly StorageEntry[] = [
       "Marca dun cambio municipal sen confirmar, para comprobalo sen repetilo. Non garda o seu contido.",
     ],
     duration: [
-      "Hasta confirmar la comprobación o cerrar la pestaña",
-      "Ata confirmar a comprobación ou pechar a lapela",
+      "Hasta confirmar la comprobación o cerrar sesión",
+      "Ata confirmar a comprobación ou pechar sesión",
     ],
   },
   {
@@ -100,3 +102,20 @@ export const storageEntries: readonly StorageEntry[] = [
     duration: ["Hasta cerrar la pestaña", "Ata pechar a lapela"],
   },
 ];
+
+/** Clear only this application's session data, preserving visitor preferences. */
+export function clearSessionMarkers(
+  storage: Storage | undefined = browserStorage("session"),
+) {
+  if (!storage) return;
+  try {
+    const keys = Array.from({ length: storage.length }, (_, i) =>
+      storage.key(i),
+    );
+    for (const key of keys) {
+      if (key?.startsWith("quenda.")) storage.removeItem(key);
+    }
+  } catch {
+    /* Storage may be revoked while signing out. */
+  }
+}

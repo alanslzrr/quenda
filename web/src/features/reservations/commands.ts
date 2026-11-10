@@ -27,7 +27,7 @@ export function commandTime(policy: CommandPolicy, createdAt?: number) {
 }
 /** Only these command endpoints may be stored, replayed or sent; the ids are lower-case UUID characters. */
 export const commandPath =
-  /^\/api\/municipalities\/[\da-f-]+(?:\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?|\/blocks(?:\/[\da-f-]+\/release)?|\/agreements(?:\/[\da-f-]+\/(?:versions|approve|activate|suspend|reports\/\d{4}-(?:0[1-9]|1[0-2])\/reviews))?|\/credentials(?:\/[\da-f-]+\/revoke)?|\/units\/[\da-f-]+\/agreement-restriction\/release)$/;
+  /^\/api\/municipalities(?:$|\/[\da-f-]+(?:\/facilities(?:\/[\da-f-]+\/units)?|\/reservations(?:\/[\da-f-]+\/(?:modify|cancel|accept-usage-rules))?|\/blocks(?:\/[\da-f-]+\/release)?|\/agreements(?:\/[\da-f-]+\/(?:versions|approve|activate|suspend|reports\/\d{4}-(?:0[1-9]|1[0-2])\/reviews))?|\/credentials(?:\/[\da-f-]+\/revoke)?|\/units\/[\da-f-]+\/agreement-restriction\/release))$/;
 export function readCommand(
   owner: string,
   storage: Storage | undefined = browserStorage("session"),
@@ -164,6 +164,8 @@ export async function sendCommand<T>(
         error instanceof ApiError &&
         error.status >= 400 &&
         error.status < 500 &&
+        error.code !== "COMMAND_IN_PROGRESS" &&
+        error.code !== "IDEMPOTENCY_KEY_REUSED" &&
         !retry &&
         readCommand(item.owner, storage)?.key === item.key
       )
@@ -178,6 +180,9 @@ export async function sendCommand<T>(
 export function commandReviewPath(item: PendingCommand) {
   const parts = item.path.split("/");
   const tenant = parts[3];
+  if (item.path === "/api/municipalities")
+    return "/plataforma/gestion/nuevo-municipio";
+  if (parts[4] === "facilities") return `/administracion/${tenant}`;
   const body = JSON.parse(item.body);
   if (parts[4] === "agreements" && parts[6] === "reports")
     return `/administracion/${tenant}/informes/revision`;
@@ -200,9 +205,16 @@ export interface CommandResult {
   reviewId?: string;
   decision?: "APPROVE" | "REJECT";
   unitId?: string;
+  facilityId?: string;
+  invitationId?: string;
 }
 export function commandResultPath(item: PendingCommand, result: CommandResult) {
   const review = commandReviewPath(item);
+  if (item.path === "/api/municipalities") return review;
+  if (item.path.includes("/facilities"))
+    return result.unitId
+      ? `/administracion/${result.tenantId}/unidades/${result.unitId}`
+      : `/administracion/${result.tenantId}/instalaciones/${result.facilityId}`;
   const parts = item.path.split("/");
   if (parts[4] === "agreements" && parts[6] === "reports") return review;
   if (parts[4] === "agreements")

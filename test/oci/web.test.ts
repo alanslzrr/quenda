@@ -41,9 +41,19 @@ test("the web image serves the bundle with strict headers and proxies the API", 
       "-e",
       upstream,
     );
+    const trustedAddress = (
+      await docker(
+        "inspect",
+        "--format",
+        "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
+        stub,
+      )
+    ).stdout.trim();
     await docker(
       "run",
       "-d",
+      "--env",
+      `QUENDA_TRUSTED_PROXY_CIDR=${trustedAddress}/32`,
       "--name",
       site,
       "--network",
@@ -126,8 +136,27 @@ test("the web image serves the bundle with strict headers and proxies the API", 
     });
     assert.equal(
       secure.headers.get("strict-transport-security"),
-      "max-age=31536000",
+      null,
+      "untrusted forwarded proto is ignored",
     );
+    const trusted = JSON.parse(
+      (
+        await docker(
+          "exec",
+          stub,
+          "node",
+          "-e",
+          `fetch('http://${site}:8080/api/check', { headers: { 'x-forwarded-for': '198.51.100.5, 192.0.2.20', 'x-forwarded-proto': 'https' } }).then(async r => console.log(JSON.stringify({ hsts: r.headers.get('strict-transport-security'), data: await r.json() })))`,
+        )
+      ).stdout,
+    );
+    assert.equal(trusted.hsts, "max-age=31536000");
+    assert.equal(
+      trusted.data.forwardedFor,
+      "192.0.2.20",
+      "rightmost untrusted hop determines client identity",
+    );
+    assert.equal(trusted.data.forwardedProto, "https");
 
     const deep = await fetch(`${base}/municipios/ejemplo/unidades/otra`);
     assert.equal(deep.status, 200);
@@ -137,6 +166,21 @@ test("the web image serves the bundle with strict headers and proxies the API", 
     assert.ok(asset, "index.html must reference a hashed script");
     const script = await fetch(`${base}${asset}`);
     assert.equal(script.status, 200);
+    // A raw HTTP/1.0 request exercises old proxy hops without fetch upgrading it.
+    const compressed = JSON.parse(
+      (
+        await docker(
+          "exec",
+          stub,
+          "node",
+          "-e",
+          String.raw`const net=require('net'),zlib=require('zlib'); const chunks=[]; const socket=net.connect(8080,'${site}',()=>socket.write('GET ${asset} HTTP/1.0\r\nHost: quenda.test\r\nAccept-Encoding: gzip\r\n\r\n'));socket.on('data',c=>chunks.push(c));socket.on('end',()=>{const all=Buffer.concat(chunks), split=all.indexOf('\r\n\r\n'); console.log(JSON.stringify({headers:all.subarray(0,split).toString(),bytes:zlib.gunzipSync(all.subarray(split+4)).length}));});`,
+        )
+      ).stdout,
+    );
+    assert.match(compressed.headers, /content-encoding: gzip/i);
+    assert.match(compressed.headers, /vary: Accept-Encoding/i);
+    assert.ok(compressed.bytes > 512);
     assert.equal(
       script.headers.get("cache-control"),
       "public, max-age=31536000, immutable",
@@ -151,7 +195,10 @@ test("the web image serves the bundle with strict headers and proxies the API", 
     );
 
     const health = await fetch(`${base}/health/ready`, {
-      headers: { "x-forwarded-proto": "https" },
+      headers: {
+        "x-forwarded-proto": "https",
+        "x-forwarded-for": "203.0.113.77",
+      },
     });
     assert.equal(health.status, 200);
     assert.equal(
@@ -165,8 +212,9 @@ test("the web image serves the bundle with strict headers and proxies the API", 
       forwardedProto: string | null;
     };
     assert.equal(forwarded.url, "/health/ready");
-    assert.equal(forwarded.forwardedProto, "https");
+    assert.equal(forwarded.forwardedProto, "http");
     assert.ok(forwarded.forwardedFor);
+    assert.notEqual(forwarded.forwardedFor, "203.0.113.77");
 
     const api = await fetch(`${base}/api/public/municipalities?limit=1`);
     assert.equal(

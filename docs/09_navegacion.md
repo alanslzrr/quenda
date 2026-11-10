@@ -109,3 +109,13 @@ El pie de página enlaza con «Privacidad», «Aviso legal» y «Accesibilidad»
 ## Descargas
 
 En «Gestión», los administradores descargan la copia del catálogo desde la página de instalaciones y las reservas en JSON o CSV desde «Exportar reservas». En el detalle de una reserva, el titular puede añadirla a su calendario (o quitarla, si está cancelada) y, en «Mis reservas», descargar las próximas. Son enlaces o botones de descarga: abrirlos no modifica nada, y los archivos no se conservan en el almacenamiento del navegador.
+
+## Sesión, contexto y actuaciones pendientes
+
+Cada pantalla actualiza el título del documento desde sus encabezados visibles, también al cambiar de idioma o de cuenta. Los selectores usan su etiqueta traducida como texto inicial.
+
+Ante una respuesta 401, la interfaz ofrece iniciar sesión y conserva la ruta y sus parámetros como destino de retorno. El acceso exige una acción expresa y no repite el comando que falló. Los marcadores de respuesta incierta pueden recuperarse tras autenticar de nuevo la misma cuenta; cerrar sesión explícitamente o cambiar de cuenta elimina todos los marcadores `quenda.*` de la pestaña y descarta consultas privadas.
+
+Las altas de municipios, instalaciones y unidades conservan la clave idempotente y el contenido exacto ante una respuesta perdida. «Comprobar resultado» reutiliza ese comando durante el plazo publicado, exige autorización vigente y abre el recurso creado (o muestra la invitación inicial municipal). No se reenvía por montar la pantalla, recuperar la conexión o iniciar sesión. Las restantes actuaciones administrativas sin recibo idempotente mantienen su bloqueo y comprobación manual del resultado.
+
+En «Conservación y derechos», la revisión compartida permite consultar una referencia conocida de reserva o acreditación, su municipio titular, actuación y plazo de bloqueo. Muestra los municipios responsables y sus aprobaciones, sin exponer el contenido personal. El municipio actual puede aprobar o retirar su aprobación con autorización y motivo. Esta revisión no ejecuta la supresión: la actuación individual o la política aplicable comprueban después unanimidad, elegibilidad y excepciones vigentes.

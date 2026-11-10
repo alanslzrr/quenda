@@ -17,6 +17,7 @@ import {
 } from "./operations";
 import styles from "./privacy.module.css";
 import { Policies, RetentionOverview } from "./queries";
+import { SharedRetention } from "./shared-retention";
 export function MunicipalPrivacy() {
   return (
     <MunicipalPrivacyScope>
@@ -37,6 +38,16 @@ function Workspace() {
   const { t } = usePreferences();
   const current = section ?? (s.read ? "politicas" : "aprobar");
   const pages = [
+    ...(!s.global
+      ? [
+          {
+            id: "compartida",
+            label: t("Conservación compartida", "Conservación compartida"),
+            read: true,
+            component: <SharedRetention />,
+          },
+        ]
+      : []),
     {
       id: "politicas",
       label: t("Políticas", "Políticas"),

@@ -146,12 +146,16 @@ export async function buildApp(options: {
         options.domain,
         options.identity.authentication,
         options.identity.config,
+        options.idempotencyRetentionSeconds ??
+          defaultIdempotencyRetentionSeconds,
       );
       await registerMunicipalIdentity(
         app,
         options.domain,
         options.identity.authentication,
         options.identity.config,
+        options.idempotencyRetentionSeconds ??
+          defaultIdempotencyRetentionSeconds,
       );
     }
   }

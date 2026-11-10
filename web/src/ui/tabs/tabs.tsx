@@ -78,6 +78,7 @@ export function TabsList({ className, scrollLabels = { previous: "Previous", nex
     update();
     return () => { observer.disconnect(); scroll.removeEventListener("scroll", update); };
   }, [update]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Active selection reveals the newly selected DOM element.
   useLayoutEffect(() => { reveal(list.current?.querySelector<HTMLElement>('[role="tab"][data-state="active"]') ?? null); }, [active, reveal]);
   const scrollTabs = (direction: number) => viewport.current?.scrollBy({ left: direction * (viewport.current?.clientWidth ?? 0) * .75, behavior: reduced ? "instant" : "smooth" });
   return <div ref={shell} className={styles.listShell} data-overflow={edges.overflow} data-left={edges.left} data-right={edges.right}>

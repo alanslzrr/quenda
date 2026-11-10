@@ -154,9 +154,12 @@ export function DatePicker({
   };
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: This named interaction group is not a form fieldset.
     <div
       className={[styles.field, className].filter(Boolean).join(" ")}
       ref={rootRef}
+      role="group"
+      aria-labelledby={labelId}
       onBlur={onBlur}
     >
       <label className={styles.label} htmlFor={controlId} id={labelId}>

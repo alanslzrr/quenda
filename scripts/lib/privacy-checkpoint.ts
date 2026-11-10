@@ -32,6 +32,52 @@ const nullableText = (value: unknown, limit: number) =>
 const utc = (column: string) =>
   `to_char(${column} AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
 
+interface SharedAuthorization {
+  controllers: string[];
+  reviews: Array<{
+    reviewerTenantId: string;
+    digest: string;
+    actorId: string;
+    authorizationReference: string;
+    reason: string;
+    reviewedAt: string;
+  }>;
+}
+function validSharedAuthorization(value: unknown): boolean {
+  if (value == null) return true; // Version 1 checkpoints predating shared reviews.
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.controllers) ||
+    !value.controllers.length ||
+    new Set(value.controllers).size !== value.controllers.length ||
+    value.controllers.some((id) => typeof id !== "string" || !uuid.test(id)) ||
+    !Array.isArray(value.reviews) ||
+    value.reviews.length !== value.controllers.length
+  )
+    return false;
+  const reviewers = new Set<string>();
+  let fingerprint: string | undefined;
+  for (const review of value.reviews) {
+    if (
+      !isRecord(review) ||
+      typeof review.reviewerTenantId !== "string" ||
+      !value.controllers.includes(review.reviewerTenantId) ||
+      reviewers.has(review.reviewerTenantId) ||
+      typeof review.digest !== "string" ||
+      !/^[a-f0-9]{64}$/.test(review.digest) ||
+      (fingerprint !== undefined && fingerprint !== review.digest) ||
+      !bounded(review.actorId, 128) ||
+      !bounded(review.authorizationReference, 500) ||
+      !bounded(review.reason, 500) ||
+      !date(review.reviewedAt)
+    )
+      return false;
+    reviewers.add(review.reviewerTenantId);
+    fingerprint = review.digest;
+  }
+  return true;
+}
+
 export interface PrivacyCheckpoint {
   format: "quenda.privacy-checkpoint";
   version: 1;
@@ -55,6 +101,7 @@ export interface PrivacyCheckpoint {
     archiveId: string | null;
     destroyAfter: string | null;
     archiveDestroyed: boolean;
+    sharedAuthorization?: SharedAuthorization | null;
   }[];
   holds: Record<string, unknown>[];
 }
@@ -64,7 +111,7 @@ export interface PrivacyCheckpoint {
 const actionProjection = `e.id::text,e.operation,coalesce(e.policy_id::text,e.details->>'sourcePolicyId') AS "policyId",
  e.authorization_reference AS "authorizationReference",e.actor_id AS "actorId",e.reason,e.tenant_id AS "tenantId",e.category,e.target_key AS "targetKey",e.subject_id AS "subjectId",e.action,
  e.details->>'cutoff' AS cutoff,${utc("e.occurred_at")} AS "occurredAt",a.id AS "archiveId",${utc("a.destroy_after")} AS "destroyAfter",
- EXISTS(SELECT 1 FROM domain.retention_event d WHERE d.operation='ARCHIVE_DESTROYED' AND d.details->>'blockedEvent'=e.id::text) AS "archiveDestroyed"`;
+ EXISTS(SELECT 1 FROM domain.retention_event d WHERE d.operation='ARCHIVE_DESTROYED' AND d.details->>'blockedEvent'=e.id::text) AS "archiveDestroyed",e.details->'sharedAuthorization' AS "sharedAuthorization"`;
 
 function validateCheckpoint(
   value: unknown,
@@ -108,6 +155,7 @@ function validateCheckpoint(
       !date(action.cutoff) ||
       !date(action.occurredAt) ||
       typeof action.archiveDestroyed !== "boolean" ||
+      !validSharedAuthorization(action.sharedAuthorization) ||
       !nullableUuid(action.archiveId) ||
       !(action.destroyAfter === null || date(action.destroyAfter)) ||
       (action.action === "ERASE" &&
@@ -266,9 +314,15 @@ export async function reconcilePrivacyCheckpoint(
       const existing = (
         await client.query(
           `SELECT ${actionProjection},
+        coalesce(e.details->'sharedAuthorization','null'::jsonb)=$4::jsonb AS shared_matches,
         e.occurred_at=$2::timestamptz AS time_matches,(e.details->>'cutoff')::timestamptz=$3::timestamptz AS cutoff_matches
         FROM domain.retention_event e LEFT JOIN domain.retention_archive a ON a.event_id=e.id WHERE e.id=$1`,
-          [action.id, action.occurredAt, action.cutoff],
+          [
+            action.id,
+            action.occurredAt,
+            action.cutoff,
+            JSON.stringify(action.sharedAuthorization ?? null),
+          ],
         )
       ).rows[0];
       if (
@@ -284,6 +338,7 @@ export async function reconcilePrivacyCheckpoint(
           existing.actorId !== action.actorId ||
           existing.reason !== action.reason ||
           existing.time_matches !== true ||
+          existing.shared_matches !== true ||
           existing.cutoff_matches !== true)
       )
         throw new Error(
@@ -304,8 +359,15 @@ export async function reconcilePrivacyCheckpoint(
         throw new Error("Privacy archive metadata collision");
       const result = (
         await client.query<{ result: Record<string, unknown> }>(
-          "SELECT domain.retention_apply($1,$2,$3,$4) AS result",
-          [action.tenantId, action.category, action.targetKey, action.cutoff],
+          "SELECT domain.retention_apply($1,$2,$3,$4,$5,NULL,$6) AS result",
+          [
+            action.tenantId,
+            action.category,
+            action.targetKey,
+            action.cutoff,
+            action.action,
+            !!action.sharedAuthorization,
+          ],
         )
       ).rows[0]?.result;
       if (
@@ -316,6 +378,13 @@ export async function reconcilePrivacyCheckpoint(
         throw new Error(
           "Restored data conflicts with suppression evidence; keep closed",
         );
+      if (
+        action.sharedAuthorization &&
+        result.status === "APPLIED" &&
+        isRecord(result.payload)
+      )
+        result.payload.sharedControllers =
+          action.sharedAuthorization.controllers;
       if (!existing) {
         await client.query(
           `INSERT INTO domain.retention_event(id,operation,tenant_id,category,target_key,subject_id,action,authorization_reference,occurred_at,details,actor_id,reason)
@@ -332,6 +401,7 @@ export async function reconcilePrivacyCheckpoint(
             action.occurredAt,
             JSON.stringify({
               cutoff: action.cutoff,
+              sharedAuthorization: action.sharedAuthorization ?? null,
               sourcePolicyId: action.policyId,
               restoredFromCheckpoint: checksum,
               recoveryReference,

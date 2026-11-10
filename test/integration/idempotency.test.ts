@@ -60,7 +60,7 @@ test("idempotent commands commit results with effects and reauthorize replay", {
             ...options,
             input: { ...options.input, unit: "b" },
           }),
-          { code: "CONFLICT" },
+          { code: "IDEMPOTENCY_KEY_REUSED" },
         );
         allowed = false;
         await assert.rejects(idempotentCommand(domain, context, options), {
@@ -265,7 +265,7 @@ test("idempotent commands commit results with effects and reauthorize replay", {
         try {
           await assert.rejects(
             idempotentCommand(domain, context, { ...options, key: "slow" }),
-            { code: "CONFLICT" },
+            { code: "COMMAND_IN_PROGRESS" },
           );
         } finally {
           release();

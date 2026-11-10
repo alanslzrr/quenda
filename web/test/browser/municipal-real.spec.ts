@@ -544,3 +544,59 @@ test("audit regression: real editors retain versions across MFA recovery and dis
     page.getByLabel(/Texto de las normas|Texto das normas/),
   ).toHaveCount(0);
 });
+
+test("catalog creation recovers a committed response after reload without duplicating the resource", async ({
+  page,
+}, info) => {
+  const f = await enter(page, info.project.name === "desktop" ? 26 : 27);
+  const requests: { key: string | undefined; body: string | null }[] = [];
+  let createdId = "";
+  await page.route(
+    `**/api/municipalities/${f.tenant}/facilities`,
+    async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      requests.push({
+        key: route.request().headers()["idempotency-key"],
+        body: route.request().postData(),
+      });
+      const response = await route.fetch();
+      expect(response.status()).toBe(201);
+      const result = await response.json();
+      if (requests.length === 1) {
+        createdId = result.facilityId;
+        await route.abort("failed");
+      } else {
+        expect(result.facilityId).toBe(createdId);
+        await route.fulfill({ response });
+      }
+    },
+  );
+  const form = page.locator("form").filter({
+    has: page.getByRole("button", { name: "Crear instalación", exact: true }),
+  });
+  await form.getByLabel(/Nombre|Nome/).fill("Centro recuperado");
+  await form
+    .getByRole("button", { name: "Crear instalación", exact: true })
+    .click();
+  await page
+    .getByRole("link", { name: /Hay una operación|Hai unha operación/ })
+    .click();
+  await page.reload();
+  expect(requests).toHaveLength(1);
+  await page
+    .getByRole("button", {
+      name: /Comprobar con la misma solicitud|Comprobar coa mesma solicitude/,
+    })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/instalaciones/${createdId}$`));
+  await expect(
+    page.getByRole("heading", { name: "Centro recuperado", exact: true }),
+  ).toBeVisible();
+  expect(requests).toHaveLength(2);
+  expect(requests[1]).toEqual(requests[0]);
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem("quenda.reservation-command"),
+    ),
+  ).toBeNull();
+});

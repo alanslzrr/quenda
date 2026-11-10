@@ -66,7 +66,7 @@ export function useReservation(tenant: string, id: string) {
       id,
       locale,
     ],
-    enabled: !!id,
+    enabled: !!account && !!id,
     queryFn: ({ signal }) =>
       api<Reservation>(reservationPath(tenant, id), { signal }, locale),
   });
@@ -244,6 +244,7 @@ export function CommandRecovery() {
                 await client.invalidateQueries();
                 navigate(commandResultPath(pending, result), {
                   replace: true,
+                  state: { commandResult: result },
                 });
               }}
             />

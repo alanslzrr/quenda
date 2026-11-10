@@ -378,6 +378,28 @@ test("municipal continuity protects lasting responsibility and separates securit
           }),
           { code: "CONFLICT" },
         );
+        await assert.rejects(
+          recoverMunicipalAdministrator(domain, actor("operator"), tenant, {
+            accountId: "operator",
+            expiresAt: expiry(),
+            reason: "Recovery",
+            verificationReference: "Authority-123",
+          }),
+          { code: "INVALID_INPUT" },
+        );
+        await assert.rejects(
+          transaction(domain, async (client) => {
+            await client.query(
+              "SELECT set_config('quenda.account_id','operator',true),set_config('quenda.tenant_id',$1,true)",
+              [tenant],
+            );
+            await client.query(
+              "SELECT domain.recover_municipal_administrator('operator',$1,'Recovery','Authority-123',$2)",
+              [expiry(), randomUUID()],
+            );
+          }),
+          { code: "22023" },
+        );
         const recovery = await recoverMunicipalAdministrator(
           domain,
           actor("operator"),

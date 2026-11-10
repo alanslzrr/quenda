@@ -15,7 +15,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-`db:local:config` genera contraseñas aleatorias en archivos locales excluidos de Git y no sobrescribe configuraciones existentes. `db:bootstrap` se ejecuta una sola vez sobre una base dedicada nueva: crea roles y esquemas; falla si ya existen. No utilizarlo sobre bases compartidas con otros productos.
+`db:local:config` genera contraseñas aleatorias en archivos locales excluidos de Git y no sobrescribe configuraciones existentes. `db:bootstrap` se ejecuta una sola vez sobre una base dedicada nueva: crea roles y esquemas; falla si ya existen. No utilizarlo sobre bases compartidas con otros productos. Las contraseñas de roles deben tener al menos 24 caracteres ASCII imprimibles; los generadores locales usan valores hexadecimales. Bootstrap y provisión del worker derivan verificadores SCRAM-SHA-256 con sal aleatoria antes de ejecutar SQL: las sentencias de creación o cambio de rol no contienen la contraseña en claro.
 
 La API escucha en `127.0.0.1:3000`. `GET /health/live` comprueba el proceso; `GET /health/ready`, las conexiones y los privilegios de ejecución. No devuelven credenciales ni datos del dominio.
 
@@ -132,7 +132,7 @@ Cada permiso se limita a una operación y unidad real del municipio; `unitId: nu
 
 ## Catálogo en borrador
 
-`POST /api/municipalities/{tenantId}/facilities` crea una instalación; `POST /api/municipalities/{tenantId}/facilities/{facilityId}/units` crea una unidad. Ambos reciben `{ "name": "..." }`, requieren el permiso municipal `CATALOG_CREATE` y MFA reciente y registran auditoría. Las altas persisten como borradores: no publican recursos ni permiten reservarlos.
+`POST /api/municipalities/{tenantId}/facilities` crea una instalación; `POST /api/municipalities/{tenantId}/facilities/{facilityId}/units` crea una unidad. Ambos reciben `{ "name": "..." }`, requieren el permiso municipal `CATALOG_CREATE` y MFA reciente y registran auditoría. Las altas persisten como borradores: no publican recursos ni permiten reservarlos. Estas rutas y `POST /api/municipalities` aceptan `Idempotency-Key`: misma clave y contenido normalizado recuperan el recurso original tras comprobar los permisos actuales; distinto contenido devuelve `IDEMPOTENCY_KEY_REUSED`. Omitir el encabezado representa una solicitud nueva. La interfaz siempre envía una clave y permite recuperar expresamente una respuesta incierta.
 
 `GET /api/municipalities/{tenantId}/facilities/{id}` y `GET /api/municipalities/{tenantId}/units/{id}` consultan un recurso para mantenimiento. `PATCH` sobre esas mismas rutas recibe `{ "name": "..." }` y registra el nombre anterior y el nuevo en la misma transacción. Requieren `CATALOG_MANAGE` y MFA reciente: ámbito municipal para instalaciones, municipal o de la unidad concreta para unidades. No permiten cambiar identificadores ni trasladar unidades entre instalaciones o municipios. Si falla la auditoría, el cambio se revierte.
 
@@ -218,7 +218,7 @@ La respuesta `201` contiene la reserva y sus condiciones aceptadas. Repetir la m
 
 `GET /api/public/reservation-command-policy` devuelve `retentionSeconds` y `serverTime`, sin caché. El cliente obtiene la ventana de recuperación antes de enviar un comando y vuelve a comprobarla antes de repetir un resultado incierto. Fuera de esa ventana, consulta el estado actual en vez de reenviar la clave caducada.
 
-La creación valida las reglas vigentes y confirma reserva, ocupación, evento, avisos y resultado idempotente en una sola transacción. Un conflicto no deja cambios parciales. El correo queda pendiente para su entrega por el worker. La disponibilidad pública descuenta las ocupaciones confirmadas, pero no garantiza que una franja siga libre al reservar.
+La creación valida las reglas vigentes y confirma reserva, ocupación, evento, avisos y resultado idempotente en una sola transacción. Los rechazos distinguen `SLOT_UNAVAILABLE`, `BOOKING_RULES_CHANGED`, `QUOTA_EXCEEDED`, `CREDENTIAL_REQUIRED` y `AGREEMENT_UNAVAILABLE`; solo el primero significa franja ocupada. Una revisión obsoleta devuelve `RESERVATION_CHANGED` ; modificar, aceptar normas o consultar disponibilidad de una reserva cancelada devuelve `RESERVATION_CANCELLED`. La cancelación repetida conserva su comportamiento idempotente. Los códigos de aceptación conservan sus condiciones específicas. Un conflicto no deja cambios parciales. El correo queda pendiente para su entrega por el worker. La disponibilidad pública descuenta las ocupaciones confirmadas, pero no garantiza que una franja siga libre al reservar.
 
 ## Modificación de reservas
 
@@ -381,7 +381,7 @@ Ambos endpoints exigen administrador municipal y MFA reciente. El comando exige 
 
 ### Avisos internos
 
-`GET /api/me/notices` devuelve los avisos del usuario autenticado entre municipios, con `Cache-Control: no-store`. Pagina de 20 en 20 por identificador de evento y municipio; `after` acepta el `nextCursor` anterior. Cada aviso contiene tipo, revisión, fecha del evento e intervalo histórico, junto con `reservationPath` para consultar el estado actual. La reubicación administrativa indica si exige aceptar normas antes del uso. No expone actores, motivos administrativos ni correlaciones, y no representa el estado de entrega del correo.
+`GET /api/me/notices` devuelve los avisos del usuario autenticado entre municipios, con `Cache-Control: no-store`. Pagina de 20 en 20 por identificador de evento y municipio; `after` acepta el `nextCursor` anterior. Cada aviso contiene tipo, revisión, fecha del evento e intervalo histórico, junto con `reservationPath` para consultar el estado actual. La reubicación administrativa indica si exige aceptar normas antes del uso. En intervenciones administrativas incluye el nombre capturado del autor y el motivo, además de la fecha del evento; los registros antiguos sin nombre capturado no se completan con el nombre actual. No expone identificadores del actor ni correlaciones, y no representa el estado de entrega del correo.
 
 ### Procesamiento de correo
 
@@ -409,7 +409,9 @@ Cada correo guarda la preferencia del titular al generarse el evento, también c
 
 Autenticación y worker utilizan la misma implementación de `MailTransport`. `MAIL_TRANSPORT=local` es el valor predeterminado de desarrollo; `MAIL_TRANSPORT=smtp` permite configurar un servidor sin depender de un proveedor concreto. En producción se exige SMTP y `AUTH_ORIGIN` HTTPS.
 
-SMTP requiere `SMTP_HOST` y `SMTP_FROM` (una dirección). `SMTP_TLS=starttls` exige actualizar la conexión a TLS y usa el puerto 587 por defecto; `SMTP_TLS=tls` inicia con TLS y usa 465. `SMTP_PORT` permite otro puerto. `SMTP_USER` y `SMTP_PASSWORD` se proporcionan juntos cuando el servidor requiere autenticación. `SMTP_SERVERNAME` identifica el certificado y debe indicarse al conectar por IP; `SMTP_CA_FILE` permite una CA privada. Nunca se desactiva la validación del certificado ni se admite degradación a texto plano.
+SMTP requiere `SMTP_HOST` y `SMTP_FROM` (una dirección). `SMTP_TLS=starttls` exige actualizar la conexión a TLS y usa el puerto 587 por defecto; `SMTP_TLS=tls` inicia con TLS y usa 465. `SMTP_PORT` permite otro puerto. `SMTP_USER` y `SMTP_PASSWORD` se proporcionan juntos cuando el servidor requiere autenticación. `SMTP_SERVERNAME` identifica el certificado y debe indicarse al conectar por IP; vacío utiliza `SMTP_HOST`. `SMTP_CA_FILE` permite una CA privada mediante una ruta dentro del proceso. Nunca se desactiva la validación del certificado ni se admite degradación a texto plano.
+
+La composición transmite ambas variables a API y worker. Para montar una CA privada, definir `SMTP_CA_HOST_FILE` como ruta absoluta del certificado y añadir `-f compose.smtp-ca.example.yaml` después de `-f compose.production.example.yaml` en las operaciones Compose. El override monta el certificado de solo lectura en `/run/quenda/smtp-ca.pem` y configura `SMTP_CA_FILE` en ambos servicios.
 
 Nodemailer 10.1.7 está fijado en el lockfile e incluye tipos TypeScript y licencia MIT-0. Se utiliza sin pool SMTP, sin logs de protocolo y sin acceso a archivos/URLs desde el contenido del mensaje. Los errores del proveedor se sustituyen por un error genérico. Las pruebas usan servidores SMTP temporales locales con TLS, STARTTLS, autenticación y rechazos; no envían mensajes externos. Configuración basada en la [documentación oficial de Nodemailer](https://nodemailer.com/smtp).
 
@@ -494,7 +496,7 @@ Las pruebas OCI requieren Docker local y las imágenes oficiales referenciadas p
 
 `pnpm image:build:web` construye `quenda-web:local` desde la revisión actual. La imagen compila `web/` con el lockfile y sirve únicamente `dist` con nginx sin privilegios (usuario 101, puerto 8080); no incluye mapas de código, herramientas de compilación ni credenciales, y las licencias de las dependencias empaquetadas permanecen en `/licenses`. Nginx devuelve la aplicación para cualquier ruta que no sea un archivo, pero responde 404 a un activo con hash ausente para que la recarga por actualización de versión no reciba HTML. Los activos con hash se sirven con `Cache-Control: public, max-age=31536000, immutable` y `index.html` con `no-cache`.
 
-Las respuestas estáticas llevan `Content-Security-Policy` (`default-src 'self'`, sin `unsafe-eval` ni scripts en línea, `connect-src 'self'`, `frame-ancestors 'none'`), `X-Content-Type-Options`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` y `Cross-Origin-Resource-Policy`. `Strict-Transport-Security` se emite cuando `X-Forwarded-Proto` indica HTTPS, de modo que la terminación TLS corresponde a la entrada del ayuntamiento o a un proxy delante del contenedor. `/api/`, `/health/` y `/legal/source` se dirigen a `QUENDA_API_UPSTREAM` (por defecto `api:3000`), añaden `X-Forwarded-For` y `X-Forwarded-Proto` y sustituyen las cabeceras de seguridad de la API por una política `default-src 'none'`. El cuerpo máximo es 1 MB. `/healthz` responde sin consultar la API.
+Las respuestas estáticas llevan `Content-Security-Policy` (`default-src 'self'`, sin `unsafe-eval` ni scripts en línea, `connect-src 'self'`, `frame-ancestors 'none'`), `X-Content-Type-Options`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` y `Cross-Origin-Resource-Policy`. `Strict-Transport-Security` se emite cuando un proxy de confianza envía `X-Forwarded-Proto: https`, de modo que la terminación TLS corresponde a la entrada del ayuntamiento o a un proxy delante del contenedor. `/api/`, `/health/` y `/legal/source` se dirigen a `QUENDA_API_UPSTREAM` (por defecto `api:3000`), reconstruyen `X-Forwarded-For` con una sola dirección resuelta y `X-Forwarded-Proto` con el protocolo validado y sustituyen las cabeceras de seguridad de la API por una política `default-src 'none'`. Los activos admiten gzip también para HTTP/1.0. El cuerpo máximo es 1 MB. `/healthz` responde sin consultar la API.
 
 [compose.production.example.yaml](compose.production.example.yaml) y [.env.production.example](.env.production.example) describen una instancia en un único servidor: PostgreSQL 17.11, tarea `bootstrap` (perfil `setup`, una vez), tarea `migrate` previa a la API, API, worker de correo y web. La base y las tareas están en una red interna sin salida; la API y el worker se conectan también a la red de entrada para SMTP. Todos los contenedores de aplicación son de solo lectura, sin capacidades y sin elevación de privilegios. Copiar el archivo de entorno a `.env.production`, restringir su acceso y sustituir cada valor; no guardarlo en Git. Es una referencia para adaptar, no una oferta gestionada: dimensionamiento, almacenamiento de secretos, TLS, copias y monitorización los decide la entidad que opera la instancia ([PD-OPERACION](docs/06_decisiones_y_validacion.md#decisiones-pendientes)).
 
@@ -505,7 +507,7 @@ docker compose --env-file .env.production -f compose.production.example.yaml --p
 docker compose --env-file .env.production -f compose.production.example.yaml up -d
 ```
 
-`TRUSTED_PROXY_CIDRS` debe incluir la red del contenedor web y, si hay otro proxy delante, su dirección; sin ello la API no confía en las cabeceras reenviadas. `AUTH_ORIGIN` es el origen HTTPS público. Una actualización construye o descarga las imágenes nuevas y repite `up -d`: `migrate` se ejecuta antes de reemplazar la API y, si falla, la API no arranca; aplicar [la recuperación de una actualización fallida](#recuperación-de-una-actualización-fallida). Las copias y restauraciones siguen los procedimientos de [copia lógica](#copia-lógica-de-postgresql) y [restauración cerrada](#restauración-cerrada-a-la-aplicación), ejecutados con el cliente PostgreSQL 17 desde fuera de estos contenedores. `pnpm test:oci` verifica ambas imágenes locales (`QUENDA_IMAGE`, `QUENDA_WEB_IMAGE`) y la integración continua valida además la sintaxis de la composición.
+`TRUSTED_PROXY_CIDRS=172.28.10.10/32` limita la confianza de la API a la dirección fija del contenedor nginx. En nginx, `QUENDA_TRUSTED_PROXY_CIDR` identifica un único CIDR del proxy TLS inmediato; su valor inicial es loopback y debe ajustarse a la dirección real que llega al contenedor, que Docker puede traducir al publicar el puerto. El proxy de entrada debe sanear las cabeceras de cliente. Nginx ignora cabeceras reenviadas de otros pares y resuelve recursivamente la dirección del cliente solo en la cadena confiable; no configurar redes completas de clientes como proxies. `AUTH_ORIGIN` es el origen HTTPS público. Una actualización construye o descarga las imágenes nuevas y repite `up -d`: `migrate` se ejecuta antes de reemplazar la API y, si falla, la API no arranca; aplicar [la recuperación de una actualización fallida](#recuperación-de-una-actualización-fallida). Las copias y restauraciones siguen los procedimientos de [copia lógica](#copia-lógica-de-postgresql) y [restauración cerrada](#restauración-cerrada-a-la-aplicación), ejecutados con el cliente PostgreSQL 17 desde fuera de estos contenedores. `pnpm test:oci` verifica ambas imágenes locales (`QUENDA_IMAGE`, `QUENDA_WEB_IMAGE`) y la integración continua valida además la sintaxis de la composición.
 
 ### Métricas HTTP
 
@@ -569,6 +571,8 @@ Los roles de API, autenticación y worker no pueden leer, alterar ni borrar dire
 
 `PG_BIN=/ruta/postgresql17/bin pnpm test:performance` crea una base temporal con 3 municipios, 30 unidades y 3.000 reservas históricas sintéticas, autentica 10 sesiones y ejercita HTTP en loopback. Tras 60 segundos de calentamiento separado, programa 3.000 solicitudes en 10 minutos: 70 % consulta de reservas propias, 10 % disponibilidad y 20 % altas de reservas. No omite solicitudes lentas ni cuenta ensayos abreviados como aceptación. `--smoke` reduce únicamente calentamiento y medición para comprobar el montaje; conserva el conjunto de datos completo y nunca aprueba el escenario.
 
+`pnpm test:performance:history` prepara por separado 50.000 reservas históricas y 50.000 eventos, comprueba la paginación inicial, siguiente y por día y selecciona 100 candidatos de conservación. Registra cinco muestras calientes por operación y revisión/estado del árbol en un JSON temporal; no sustituye la carga sostenida.
+
 El informe JSON privado en el directorio temporal incluye revisión, cambios pendientes, entorno, muestras, percentiles, errores, abortos, conexiones y retraso de avisos. El correo usa transporte sintético sin latencia externa. Para aprobar exige una revisión limpia, todas las solicitudes válidas, los límites p95 definidos y ausencia de avisos sin aceptar al terminar la espera acotada. Los resultados describen este equipo y esta mezcla de operaciones, no un SLA ni capacidad del proveedor de correo o de otros endpoints.
 
 ## Privacidad y conservación
@@ -585,6 +589,8 @@ Las dos vías administrativas reciben `reason` y `authorizationReference`. Admit
 
 ### Cambio de correo
 
+Una dirección ocupada sigue el mismo recorrido inicial de autorización y verificación; la unicidad solo se comunica tras comprobar el control de ambos correos.
+
 1. `POST /api/me/email-change/request`, con `newEmail` y contraseña actual, envía la autorización al correo actual.
 2. `POST /api/me/email-change/approve`, con el token recibido, consume esa autorización y envía la verificación al nuevo correo.
 3. `POST /api/me/email-change/confirm`, con el segundo token, cambia el correo y revoca todas las sesiones. Hay que iniciar sesión con la nueva dirección.
@@ -592,6 +598,12 @@ Las dos vías administrativas reciben `reason` y `authorizationReference`. Admit
 El autoservicio mantiene la sesión original y exige MFA reciente cuando esté habilitado. Los tokens caducan a los diez minutos y no sobreviven a cambios incompatibles de credenciales o estado. Los enlaces transportan el token en el fragmento; ningún GET confirma el cambio. La ruta nativa `/api/auth/change-email` no se expone.
 
 Si el usuario perdió el buzón anterior, `pnpm email:recover <cuenta> <nuevo-correo> <responsable-operativo> <referencia-verificación> <motivo>` inicia el procedimiento asistido con credenciales de mantenimiento. Además de `.env.migration.local`, el entorno debe definir `AUTH_ORIGIN` y la configuración de correo (`MAIL_TRANSPORT` y sus variables). No cambia la identidad inmediatamente: el titular confirma el nuevo buzón, contraseña y MFA desde una sesión propia. No reactiva cuentas ni recupera permisos.
+
+### Revisión de conservación compartida
+
+`POST /api/municipalities/{tenantId}/shared-retention/context` recibe `ownerTenantId`, `category` (`RESERVATIONS` o `ACCREDITATIONS`), `targetKey`, `action` y `blockDays` solo para `BLOCK`. Requiere `PRIVACY_READ` municipal y MFA reciente; devuelve la huella y los responsables históricos con su estado de aprobación, sin contenido personal. `POST /shared-retention/review` en la misma base añade `digest`, `approved`, `authorizationReference` y `reason`; exige además `PRIVACY_EXECUTE`. Solo registra la decisión del municipio autenticado.
+
+Las aprobaciones vinculan registro, evidencias, política vigente, actuación y plazo; cualquier cambio requiere revisarlas. La ejecución individual o por política comprueba unanimidad, dependencias y excepciones de todos los responsables. Los archivos bloqueados conservan ese ámbito para respetar excepciones posteriores. El checkpoint incluye la prueba de revisión para reproducir la actuación durante una restauración cerrada. Véase el [modelo de conservación](docs/02_modelo_dominio.md#ejecución-y-excepciones).
 
 ### Políticas y actuaciones
 
@@ -612,7 +624,7 @@ La política recibe `category`, `retentionDays`, `action`, `purpose`, `controlle
 | Familia | Selección y anclaje |
 |---|---|
 | `COMMUNICATIONS` | Aviso, cola e intentos de un evento; última actividad del conjunto. Un envío con concesión vigente impide la actuación. |
-| `RESERVATIONS` | Reserva, ocupaciones e historial; fin de la reserva o último evento, el posterior. Se preservan comunicaciones aún retenidas, idempotencia vigente y referencias compartidas. |
+| `RESERVATIONS` | Reserva, ocupaciones e historial; fin de la reserva o último evento de reserva/consumo, el posterior. Se preservan comunicaciones aún retenidas e idempotencia vigente; los consumos compartidos exigen aprobación conjunta. |
 | `MUNICIPAL_PROFILE` | Perfil sin dependencias protegidas; última actividad municipal conservada. Suprimirlo no cierra la cuenta global. |
 | `AUTHORITY` | Permisos e invitaciones retirados o vencidos, y evidencias asociadas; último hecho del conjunto. Los accesos de privacidad y rechazos globales se tratan por evento independiente. |
 | `ACCREDITATIONS` | Acreditación vencida o revocada; revocación, si existe, o fin de vigencia en otro caso. Las evidencias compartidas requieren revisión de los responsables. |

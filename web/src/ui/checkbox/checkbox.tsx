@@ -81,6 +81,7 @@ export const Checkbox = forwardRef<
             }
           />
           <svg
+            aria-hidden="true"
             className={styles.mark}
             viewBox="0 0 18 18"
             fill="none"

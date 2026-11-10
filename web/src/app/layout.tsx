@@ -1,5 +1,5 @@
 import { Building2, CalendarPlus } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useMatch, useParams } from "react-router";
 import { MfaBoundary, MfaNotice } from "../features/account/mfa-dialog";
 import { useBookingEntry } from "../features/catalog/journey";
@@ -21,6 +21,11 @@ export function Layout() {
   const { account } = useSession();
   const location = useLocation();
   const main = useRef<HTMLElement>(null);
+  const [titleRoot, setTitleRoot] = useState<HTMLElement | null>(null);
+  const bindMain = useCallback((node: HTMLElement | null) => {
+    main.current = node;
+    setTitleRoot(node);
+  }, []);
   const previous = useRef(location.pathname);
   const params = useParams();
   const place = useMatch("/municipios/:tenantId/*");
@@ -36,6 +41,26 @@ export function Layout() {
       window.scrollTo(0, 0);
     }
   }, [location.pathname]);
+  useEffect(() => {
+    const target = titleRoot;
+    if (!target) return;
+    const update = () => {
+      const headings = Array.from(target.querySelectorAll("h1, h2"))
+        .filter((node) => !node.closest("[hidden], [aria-hidden=true]"))
+        .slice(0, 2)
+        .map((node) => node.textContent?.trim())
+        .filter(Boolean);
+      document.title = [...new Set(headings), "Quenda"].join(" · ");
+    };
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(target, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    return () => observer.disconnect();
+  }, [titleRoot]);
   const resource = /^\/administracion\/[^/]+(?:\/|$)/.test(location.pathname);
   const name = tenantId ? municipality.data?.name : undefined;
   const entry = useBookingEntry();
@@ -121,7 +146,7 @@ export function Layout() {
         )}
         <main
           id="content"
-          ref={main}
+          ref={bindMain}
           tabIndex={-1}
           className={
             resource

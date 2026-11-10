@@ -182,7 +182,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
         assert.equal(replay.replayed, true);
         assert.deepEqual(replay.result, saved.result);
         await assert.rejects(create("draft", { ...input, weeklyLimit: 4 }), {
-          code: "CONFLICT",
+          code: "IDEMPOTENCY_KEY_REUSED",
         });
         const state = (
           await migration.query(
@@ -1123,7 +1123,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
           [id],
         );
         await migration.query(
-          "INSERT INTO domain.unit_agreement_gate SELECT tenant_id,unit_id,agreement_id,version FROM domain.agreement_unit WHERE agreement_id=$1 ON CONFLICT(tenant_id,unit_id) DO UPDATE SET agreement_id=EXCLUDED.agreement_id,version=EXCLUDED.version",
+          "INSERT INTO domain.unit_agreement_gate(tenant_id,unit_id,agreement_id,version) SELECT tenant_id,unit_id,agreement_id,version FROM domain.agreement_unit WHERE agreement_id=$1 ON CONFLICT(tenant_id,unit_id) DO UPDATE SET agreement_id=EXCLUDED.agreement_id,version=EXCLUDED.version",
           [id],
         );
         assert.equal(

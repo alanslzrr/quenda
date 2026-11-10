@@ -58,8 +58,7 @@ async function event(
 }
 function failure(error: unknown): never {
   if (error instanceof DatabaseError) {
-    if (["23P01", "40001", "40P01"].includes(error.code ?? ""))
-      throw new HttpError("CONFLICT");
+    if (error.code === "23P01") throw new HttpError("SLOT_UNAVAILABLE");
     if (error.code === "23503") throw new HttpError("NOT_FOUND");
   }
   throw error;

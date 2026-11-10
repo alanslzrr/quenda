@@ -141,3 +141,34 @@ test("rendered reservation messages use the existing private local transport", a
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("administrative mail includes captured author, motive and event time in both locales", () => {
+  for (const locale of ["es", "gl"] as const) {
+    const message = reservationMail(
+      "citizen@example.test",
+      "https://quenda.test",
+      locale,
+      {
+        ...event,
+        administrative: true,
+        actorName: "Municipal operator",
+        reason: "Court maintenance",
+      },
+    );
+    assert.match(message.text, /Municipal operator/);
+    assert.match(message.text, /Court maintenance/);
+    assert.match(message.text, /26\/10\/2030/);
+    const ordinary = reservationMail(
+      "citizen@example.test",
+      "https://quenda.test",
+      locale,
+      {
+        ...event,
+        administrative: false,
+        actorName: "Hidden author",
+        reason: "Hidden motive",
+      },
+    );
+    assert.doesNotMatch(ordinary.text, /Hidden/);
+  }
+});

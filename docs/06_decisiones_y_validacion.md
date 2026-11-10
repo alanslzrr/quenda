@@ -51,6 +51,29 @@ La medición registra cliente, región, capacidad asignada, p50/p95/p99, errores
 
 **Justificación:** un conjunto de datos y una carga estables permiten comparar versiones y detectar regresiones. Los compromisos de servicio y el dimensionamiento de producción se establecen para cada despliegue.
 
+## Cierre de los hallazgos pendientes — 10 de noviembre de 2026
+
+La implementación incorpora las migraciones `0099`–`0108`. La validación completa local (`PG_BIN=/opt/homebrew/opt/postgresql@17/bin pnpm validate`) terminó sin fallos: tipos y lint de backend y web, 104 pruebas unitarias/HTTP, 92 pruebas web, compilación web, 332 pruebas de integración PostgreSQL, 270 escenarios Playwright de escritorio y móvil, construcción de ambas imágenes y 5 pruebas OCI. No se omitieron pruebas. Permanecen advertencias de lint no bloqueantes. La composición de producción y el override de CA privada SMTP también pasaron `docker compose config --quiet`.
+
+### Historial grande
+
+`pnpm test:performance:history` pasó sobre `3532274`, con árbol limpio, PostgreSQL 17.11, 50.000 reservas históricas y 50.000 eventos. Se tomó una ejecución de calentamiento y cinco muestras por operación. Las páginas ejercitan el servicio de agenda con autorización y auditoría; no son latencias HTTP. La selección de conservación usa la función de candidatos empleada por el procesamiento.
+
+| Operación | Mediana de cinco muestras calientes |
+|---|---:|
+| Primera página de agenda, 20 reservas | 3,47 ms |
+| Página siguiente, 20 reservas | 3,37 ms |
+| Agenda filtrada por el último día del conjunto | 8,61 ms |
+| Selección de 100 candidatos de conservación | 269,20 ms |
+
+La medición exploratoria anterior a los índices cronológicos, con los otros cambios en el árbol de trabajo, observó medianas de 2.059,25 ms y 2.019,93 ms en las dos primeras operaciones. Esa comparación previa tenía el árbol sucio; la medición final anterior identifica una revisión limpia. Los índices resuelven el recorrido cronológico sin introducir una proyección adicional. La selección de conservación incluye el último evento de consumo compartido, igual que la ejecución.
+
+### Carga sostenida
+
+`PG_BIN=/opt/homebrew/opt/postgresql@17/bin pnpm test:performance` aprobó el escenario completo sobre `3532274`, con árbol limpio: 60 segundos de calentamiento separado y 600 segundos de medición, 10 sesiones y 5 solicitudes/s. Las 2.400 consultas y 600 comandos resultaron válidos, sin errores de transporte, tiempos agotados ni sesiones ocupadas. El p95 HTTP fue 15,49 ms en consultas y 23,14 ms en comandos (límites de aceptación: 1.000 y 1.500 ms). Los 600 avisos del periodo quedaron aceptados, con p95 de 12,03 ms y ninguno pendiente; el transporte de correo es sintético en memoria.
+
+Los informes completos se conservan fuera de Git en `.local/validation/audit-followups/`. Los tiempos corresponden a este equipo y a datos sintéticos; el ensayo no acredita capacidad de producción ni latencia de un proveedor SMTP externo.
+
 ## Requisitos de implantación
 
 La implantación requiere artefactos reproducibles, migraciones versionadas, configuración de entorno, contratos API, pruebas de aceptación, manual operativo, alertas y restauración verificada. El despliegue identifica responsables, capacidad, contratos y validación municipal.

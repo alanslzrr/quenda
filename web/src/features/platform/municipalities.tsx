@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router";
 import { textField } from "../../app/action";
 import { ApiError } from "../../app/api";
 import { usePreferences } from "../../app/preferences-provider";
@@ -17,7 +18,14 @@ import { PlatformForm } from "./shared";
 type Result = { tenantId: string; invitationId: string };
 export function NewMunicipality() {
   const { t, locale } = usePreferences();
-  const [result, setResult] = useState<Result>();
+  const location = useLocation();
+  const [result, setResult] = useState<Result | undefined>(() => {
+    const receipt = location.state?.commandResult;
+    return typeof receipt?.tenantId === "string" &&
+      typeof receipt?.invitationId === "string"
+      ? receipt
+      : undefined;
+  });
   if (result)
     return (
       <Receipt

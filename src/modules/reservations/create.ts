@@ -138,11 +138,8 @@ export async function createReservation(
       result: completeAcceptanceEvidence(response.result),
     }));
   } catch (error) {
-    if (
-      error instanceof DatabaseError &&
-      ["23P01", "40001", "40P01"].includes(error.code ?? "")
-    )
-      throw new HttpError("CONFLICT");
+    if (error instanceof DatabaseError && error.code === "23P01")
+      throw new HttpError("SLOT_UNAVAILABLE");
     throw error;
   }
 }

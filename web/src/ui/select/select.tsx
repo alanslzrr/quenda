@@ -70,7 +70,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
     {
       label,
       description,
-      placeholder = "Select an option",
+      placeholder = label,
       options,
       id,
       className,

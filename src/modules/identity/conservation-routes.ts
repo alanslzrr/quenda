@@ -15,6 +15,7 @@ import {
   setRetentionHold,
 } from "./conservation.ts";
 import { createRequestActor } from "./request-actor.ts";
+import { registerSharedRetentionRoutes } from "./shared-retention-routes.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
 const reason = { type: "string", minLength: 1, maxLength: 500 } as const;
@@ -47,6 +48,7 @@ export async function registerConservationRoutes(
   auth: Authentication,
   config: AuthConfiguration,
 ) {
+  await registerSharedRetentionRoutes(app, pool, auth, config);
   const actor = createRequestActor(pool, auth, config);
   for (const municipal of [true, false]) {
     const path = municipal

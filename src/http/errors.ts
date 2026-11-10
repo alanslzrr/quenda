@@ -2,6 +2,43 @@ import type { FastifyError, FastifyInstance, FastifyRequest } from "fastify";
 import { DatabaseError } from "pg";
 
 const messages = {
+  SLOT_UNAVAILABLE: {
+    es: "Este horario ya no está libre. Elige otro horario.",
+    gl: "Este horario xa non está libre. Escolle outro horario.",
+  },
+  BOOKING_RULES_CHANGED: {
+    es: "El horario solicitado no cumple las reglas vigentes. Consulta de nuevo la disponibilidad.",
+    gl: "O horario solicitado non cumpre as regras vixentes. Consulta de novo a dispoñibilidade.",
+  },
+  QUOTA_EXCEEDED: {
+    es: "Has alcanzado el límite semanal de reservas del convenio.",
+    gl: "Acadaches o límite semanal de reservas do convenio.",
+  },
+  CREDENTIAL_REQUIRED: {
+    es: "Necesitas una acreditación vigente que cubra toda la reserva. Contacta con tu ayuntamiento.",
+    gl: "Precisas unha acreditación vixente que cubra toda a reserva. Contacta co teu concello.",
+  },
+  AGREEMENT_UNAVAILABLE: {
+    es: "El convenio no permite reservar o modificar este horario en este momento.",
+    gl: "O convenio non permite reservar ou modificar este horario neste momento.",
+  },
+  RESERVATION_CHANGED: {
+    es: "La reserva ha cambiado. Consulta su estado actual antes de continuar.",
+    gl: "A reserva cambiou. Consulta o seu estado actual antes de continuar.",
+  },
+  RESERVATION_CANCELLED: {
+    es: "La reserva está cancelada y no se puede modificar.",
+    gl: "A reserva está cancelada e non se pode modificar.",
+  },
+  COMMAND_IN_PROGRESS: {
+    es: "La operación todavía se está procesando. Espera y recupera el resultado con la misma solicitud.",
+    gl: "A operación aínda se está procesando. Agarda e recupera o resultado coa mesma solicitude.",
+  },
+  IDEMPOTENCY_KEY_REUSED: {
+    es: "Esta referencia ya se utilizó para otra solicitud. Revisa la operación antes de iniciar una nueva.",
+    gl: "Esta referencia xa se utilizou para outra solicitude. Revisa a operación antes de iniciar unha nova.",
+  },
+
   PERSONAL_DATA_TOO_LARGE: {
     es: "El volumen de datos requiere una entrega por la vía administrativa. No se ha generado una descarga parcial por tamaño.",
     gl: "O volume de datos require unha entrega pola vía administrativa. Non se xerou unha descarga parcial por tamaño.",
@@ -87,6 +124,16 @@ const messages = {
 } as const;
 
 const statuses = {
+  SLOT_UNAVAILABLE: 409,
+  BOOKING_RULES_CHANGED: 409,
+  QUOTA_EXCEEDED: 409,
+  CREDENTIAL_REQUIRED: 409,
+  AGREEMENT_UNAVAILABLE: 409,
+  RESERVATION_CHANGED: 409,
+  RESERVATION_CANCELLED: 409,
+  COMMAND_IN_PROGRESS: 409,
+  IDEMPOTENCY_KEY_REUSED: 409,
+
   PERSONAL_DATA_TOO_LARGE: 409,
   ACCOUNT_PASSWORD_REQUIRED: 403,
   ACCOUNT_HANDOVER_REQUIRED: 409,

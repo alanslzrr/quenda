@@ -238,7 +238,7 @@ test("administrative relocation commits occupancy and quota immediately, then ac
         3600,
         clock,
       ),
-      { code: "CONFLICT" },
+      { code: "QUOTA_EXCEEDED" },
     );
     const noop = await modifyReservation(
       domain,
@@ -319,7 +319,7 @@ test("administrative relocation commits occupancy and quota immediately, then ac
     );
     await assert.rejects(
       accept("wrong-revision", { ...pending, expectedRevision: 1 }),
-      { code: "CONFLICT" },
+      { code: "RESERVATION_CHANGED" },
     );
     assert.deepEqual(await physicalState(migration, created.id), physical);
     const accepted = await accept("accept-pending");
@@ -809,7 +809,8 @@ test("concurrent consent and relocation cannot accept norms for a different dest
     assert.ok(
       outcomes.some(
         (outcome) =>
-          outcome.status === "rejected" && outcome.reason.code === "CONFLICT",
+          outcome.status === "rejected" &&
+          outcome.reason.code === "RESERVATION_CHANGED",
       ),
     );
     const current = await readReservation(

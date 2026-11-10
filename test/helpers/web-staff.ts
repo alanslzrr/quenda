@@ -12,7 +12,7 @@ export async function seedStaffRecipient(
 ) {
   const client = browser(
     app,
-    `192.0.2.${210 + index}`,
+    `2001:db8:510:${index + 1}::1`,
     "http://127.0.0.1:5173",
   );
   const email = `staff-${index}@example.test`,

@@ -17,7 +17,7 @@ Cada instalación y unidad reservable tiene un único municipio gestor, aunque p
 | Bloqueo | Cierre de una unidad reservable, con responsable y motivo. |
 | Ocupación | Municipio, unidad reservable, intervalo y origen: reserva o bloqueo. |
 | Evento / Auditoría | Cambios de negocio y operaciones sensibles, con autor, fecha y correlación. |
-| Comando idempotente | Actor, municipio, operación, clave, huella de entrada y resultado. |
+| Comando idempotente | Actor, municipio (nulo solo para alta de municipio), operación, clave, huella de entrada y resultado. |
 | Evento pendiente / Entrega | Aviso persistido y sus intentos de envío. |
 
 Los perfiles municipales no duplican credenciales ni sesiones. Las entidades de colaboración se definen en el [modelo de convenios](07_identidad_y_colaboracion.md#modelo-de-colaboración).
@@ -170,7 +170,7 @@ El usuario puede reactivar una cuenta conservada mediante contraseña, enlace de
 
 Cada municipio inicializado mantiene un administrador habilitado con permiso indefinido; la plataforma mantiene un operador habilitado. Habilitado significa cuenta activa, correo verificado, MFA configurado y permiso vigente no revocado, sin exigir una sesión abierta. No se permite retirar la última responsabilidad por baja o revocación ordinaria. Un permiso temporal ya aceptado puede convertirse explícitamente en indefinido, con motivo, sin otra invitación ni extensiones automáticas.
 
-La retirada municipal por seguridad afecta solo a los permisos e invitaciones de ese municipio. La suspensión global corresponde a un operador y revoca sesiones y autoridad administrativa en toda la instancia, sin cancelar reservas. La contención puede dejar temporalmente al ámbito sin responsable. La recuperación exige verificar identidad o autoridad, resolver el compromiso y registrar la intervención; nunca restaura permisos antiguos automáticamente.
+La retirada municipal por seguridad afecta solo a los permisos e invitaciones de ese municipio. La suspensión global corresponde a un operador y revoca sesiones y autoridad administrativa en toda la instancia, sin cancelar reservas. La contención puede dejar temporalmente al ámbito sin responsable. La recuperación municipal no permite que el operador emita a su propia cuenta la invitación de administrador. Exige verificar identidad o autoridad, resolver el compromiso y registrar la intervención; nunca restaura permisos antiguos automáticamente.
 
 ## Conservación y derechos
 
@@ -185,7 +185,7 @@ Existe una política vigente por ámbito y familia. Una nueva aprobación sustit
 | Familia | Ámbito | Inicio del cómputo |
 |---|---|---|
 | `COMMUNICATIONS` | Municipio | Último instante entre creación del evento, aviso, correo e intentos de entrega. |
-| `RESERVATIONS` | Municipio | El posterior entre fin de la reserva y último evento de su historial. |
+| `RESERVATIONS` | Municipio | El posterior entre fin de la reserva y último evento de reserva o consumo compartido. |
 | `MUNICIPAL_PROFILE` | Municipio | Última actividad conservada de perfil, reservas, comunicaciones, permisos o acreditaciones del servicio. |
 | `AUTHENTICATION` | Global | Fecha del evento de seguridad; para sesiones y comprobaciones temporales, vencimiento. |
 | `IDENTITY` | Global | Baja voluntaria de la cuenta. |
@@ -203,6 +203,10 @@ El procesamiento existente ejecuta lotes sin confirmaciones manuales repetitivas
 Una excepción de conservación —`hold`— identifica una familia y, exclusivamente, un registro o un interesado existente en su ámbito, incluido contenido ya bloqueado. Requiere autorización y motivo; su levantamiento también. Impide actuaciones destructivas de conservación sobre los datos afectados, pero no suspende por sí sola su consulta o tratamiento ordinario ni evita la revocación de credenciales por seguridad. No equivale a una suspensión de cuenta, un bloqueo de instalación ni una limitación del tratamiento. [AEPD: limitación](https://www.aepd.es/derechos-y-deberes/conoce-tus-derechos/derecho-la-limitacion-del-tratamiento).
 
 Se conservan los datos necesarios para reservas futuras o en curso, concesiones activas, entregas en proceso y referencias todavía protegidas. Las evidencias de convenio que afecten a otros participantes no se eliminan unilateralmente; se identifican para revisión conjunta. Los demás registros elegibles pueden continuar su procesamiento.
+
+Para reservas con consumos compartidos y acreditaciones, la revisión conjunta exige aprobación explícita de todos los municipios responsables identificados por las participaciones históricas. Cada aprobación vincula una huella del registro y sus evidencias, política vigente, actuación y plazo de bloqueo; un cambio invalida la aprobación anterior. El contexto revela referencias, responsables y estado de aprobación, no el contenido personal. Consultarlo requiere `PRIVACY_READ`; aprobar o retirar la aprobación requiere además `PRIVACY_EXECUTE` y MFA reciente. Cada municipio modifica únicamente su revisión, con autorización y motivo.
+
+La ejecución permanece en el ámbito del titular del registro y vuelve a comprobar unanimidad, dependencias y excepciones de todos los responsables bajo el bloqueo de conservación. Al bloquear, el archivo conserva la lista de responsables; cualquiera puede mantener una excepción que impida su destrucción posterior. La actuación y el checkpoint conservan la prueba de las aprobaciones. La reconciliación de una restauración cerrada reproduce esa actuación verificada aunque la copia anterior carezca de las revisiones, sin permitir que el runtime omita aprobaciones ni reabrir el servicio automáticamente.
 
 El personal autorizado también puede ejecutar una actuación individual con referencia de autorización y motivo. Obtiene `APPLIED`, `CONFLICT` o `ABSENT`; un conflicto o una ausencia quedan auditados y no se presentan como supresión realizada. Esta vía respeta las mismas excepciones e integridad que la ejecución automática.
 
@@ -230,3 +234,11 @@ La configuración pública comienza con la combinación neutra en ambos modos y 
 Fuera de la vista previa temporal, el modo elegido por el usuario prevalece sobre el predeterminado municipal y la administración conserva la identidad visual de Quenda. La vista previa del editor aplica temporalmente el borrador a toda la aplicación sin publicar ni modificar preferencias. Cambiar de municipio no copia su apariencia al siguiente.
 
 Idioma y modo se gestionan desde el menú superior de ajustes o el perfil, con una única preferencia por cuenta. Sin sesión, la elección se conserva en el navegador. Sin idioma explícito, la interfaz selecciona el primer idioma admitido del navegador —gallego o castellano— y utiliza gallego como alternativa. La preferencia explícita de idioma también se aplica a nuevos avisos; no reescribe mensajes ya generados.
+
+## Recuperación de altas y errores de reserva
+
+Las altas de municipios, instalaciones y unidades aceptan `Idempotency-Key`. Una misma cuenta, operación, ámbito y clave con el mismo contenido normalizado devuelve el recurso original; otro contenido devuelve `IDEMPOTENCY_KEY_REUSED`. Las altas municipales usan ámbito nulo exclusivamente para `municipality.create`, limitado al operador titular del recibo. La autorización vigente se comprueba antes de recuperar resultados. El encabezado es opcional por compatibilidad: omitirlo representa una nueva solicitud; la interfaz siempre lo envía.
+
+Los conflictos de reserva distinguen ocupación (`SLOT_UNAVAILABLE`), condiciones (`BOOKING_RULES_CHANGED`), cuota (`QUOTA_EXCEEDED`), acreditación (`CREDENTIAL_REQUIRED`), convenio (`AGREEMENT_UNAVAILABLE`), revisión (`RESERVATION_CHANGED`) y cancelación (`RESERVATION_CANCELLED`). Un comando todavía en curso devuelve `COMMAND_IN_PROGRESS`. Solo el conflicto de ocupación se presenta como franja ocupada; los fallos transitorios de transacción mantienen su respuesta recuperable.
+
+Los avisos de intervención administrativa incluyen fecha, motivo y nombre capturado del actor al producirse el evento. Un cambio posterior de nombre no reescribe ese aviso. Los eventos antiguos sin nombre capturado muestran su ausencia, sin atribuirles un nombre actual. La consulta sigue limitada al titular de la reserva.

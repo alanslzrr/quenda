@@ -96,6 +96,7 @@ export function Badge({
   // Width stays auto at rest. Only a new label or icon springs it from the old size to the new one; passive reflows (a font swap, a hidden parent) follow instantly.
   const width = useMotionValue<number | "auto">("auto");
   const changedAt = useRef(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Content identity starts the animation window after the DOM changes.
   useLayoutEffect(() => {
     changedAt.current = performance.now();
   }, [text, glyphKey]);

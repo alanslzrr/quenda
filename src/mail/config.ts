@@ -50,7 +50,7 @@ export function readMailConfiguration(
   )
     fail("SMTP_PORT");
   if (Boolean(env.SMTP_USER) !== Boolean(env.SMTP_PASSWORD)) fail("SMTP_AUTH");
-  const servername = env.SMTP_SERVERNAME ?? host;
+  const servername = env.SMTP_SERVERNAME || host;
   if (!servername || /[\s/?#@]/.test(servername)) fail("SMTP_SERVERNAME");
   return {
     kind,

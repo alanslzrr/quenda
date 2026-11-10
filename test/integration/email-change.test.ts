@@ -432,7 +432,21 @@ test("email change requires current credentials and both mailboxes without prema
               ).statusCode,
               202,
             );
-            assert.equal(messages.length, before);
+            assert.equal(messages.length, before + 1);
+            assert.equal(messages.at(-1)?.to, entry.email);
+            const occupiedProof = await approve(
+              entry,
+              occupied.email,
+              lastToken(entry.email, "approve"),
+            );
+            assert.equal(messages.length, before + 2);
+            const collision = await entry.client.request(
+              "/api/me/email-change/confirm",
+              { token: occupiedProof },
+            );
+            assert.equal(collision.statusCode, 409);
+            assert.equal(await emailOf(entry.id), entry.email);
+            assert.equal(await emailOf(occupied.id), occupied.email);
             failDelivery = true;
             const failed = await entry.client.request(
               "/api/me/email-change/request",

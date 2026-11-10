@@ -248,7 +248,7 @@ test("municipal booking policy is versioned, scoped and audited atomically", {
         3600,
         clock,
       ),
-      { code: "CONFLICT" },
+      { code: "BOOKING_RULES_CHANGED" },
     );
   });
 });

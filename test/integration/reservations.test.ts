@@ -120,7 +120,7 @@ test("reservation confirmation validates real calendars and commits every effect
         assert.ok(
           attempts
             .filter((r) => r.status === "rejected")
-            .every((r) => r.reason.code === "CONFLICT"),
+            .every((r) => r.reason.code === "SLOT_UNAVAILABLE"),
         );
         for (const table of [
           "reservation",
@@ -199,7 +199,7 @@ test("reservation confirmation validates real calendars and commits every effect
         for (const [i, range] of cases.entries())
           await assert.rejects(
             create(`invalid-${i}`, { ...input, ...range }, newcomer),
-            { code: "CONFLICT" },
+            { code: "BOOKING_RULES_CHANGED" },
           );
         await assert.rejects(
           create(
@@ -301,7 +301,7 @@ test("reservation confirmation validates real calendars and commits every effect
             3600,
             { now: () => new Date(now) },
           );
-        await assert.rejects(modify("occupied"), { code: "CONFLICT" });
+        await assert.rejects(modify("occupied"), { code: "SLOT_UNAVAILABLE" });
         const row = (
           await migration.query(
             "SELECT starts_at,revision FROM domain.reservation WHERE id=$1",
@@ -311,14 +311,14 @@ test("reservation confirmation validates real calendars and commits every effect
         assert.equal(row.starts_at.toISOString(), booking.result.startsAt);
         assert.equal(row.revision, 1);
         await assert.rejects(create("still-occupied", original), {
-          code: "CONFLICT",
+          code: "SLOT_UNAVAILABLE",
         });
         await assert.rejects(
           modify("late", destination, 1, "2030-01-09T09:00:00.001Z"),
           { code: "RESERVATION_DEADLINE_PASSED" },
         );
         await assert.rejects(modify("stale", original, 2), {
-          code: "CONFLICT",
+          code: "RESERVATION_CHANGED",
         });
         await assert.rejects(
           modify("draft-target", { ...destination, unitId: draft }),
@@ -397,7 +397,9 @@ test("reservation confirmation validates real calendars and commits every effect
         );
         assert.ok(
           concurrent.some(
-            (r) => r.status === "rejected" && r.reason.code === "CONFLICT",
+            (r) =>
+              r.status === "rejected" &&
+              r.reason.code === "RESERVATION_CHANGED",
           ),
         );
         await migration.query(
@@ -416,7 +418,7 @@ test("reservation confirmation validates real calendars and commits every effect
           clock,
         );
         await assert.rejects(modify("modify-cancelled", moved, 5), {
-          code: "CONFLICT",
+          code: "RESERVATION_CANCELLED",
         });
       },
     );
@@ -451,7 +453,9 @@ test("reservation confirmation validates real calendars and commits every effect
             3600,
             { now: () => new Date(now) },
           );
-        await assert.rejects(cancel("stale", 2), { code: "CONFLICT" });
+        await assert.rejects(cancel("stale", 2), {
+          code: "RESERVATION_CHANGED",
+        });
         await assert.rejects(
           cancel("deadline", 1, "2030-01-06T09:00:00.001Z"),
           { code: "RESERVATION_DEADLINE_PASSED" },
@@ -591,7 +595,7 @@ test("reservation confirmation validates real calendars and commits every effect
         await assert.rejects(block("no-mfa", actor), { code: "FORBIDDEN" });
         const booking = await create("block-conflict", data);
         await assert.rejects(block("over-booking"), {
-          code: "CONFLICT",
+          code: "SLOT_UNAVAILABLE",
         });
         assert.equal(
           (
@@ -616,10 +620,10 @@ test("reservation confirmation validates real calendars and commits every effect
         assert.equal(saved.result.releasedAt, null);
         assert.deepEqual((await block("block")).result, saved.result);
         await assert.rejects(block("over-block"), {
-          code: "CONFLICT",
+          code: "SLOT_UNAVAILABLE",
         });
         await assert.rejects(create("booking-over-block", data), {
-          code: "CONFLICT",
+          code: "SLOT_UNAVAILABLE",
         });
         const slots = await publicAvailability(
           domain,
@@ -974,7 +978,7 @@ test("reservation confirmation validates real calendars and commits every effect
           0,
         );
         await assert.rejects(create("closed-calendar", data), {
-          code: "CONFLICT",
+          code: "BOOKING_RULES_CHANGED",
         });
       },
     );
@@ -1009,7 +1013,9 @@ test("reservation confirmation validates real calendars and commits every effect
         assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
         assert.ok(
           results.some(
-            (r) => r.status === "rejected" && r.reason.code === "CONFLICT",
+            (r) =>
+              r.status === "rejected" &&
+              ["CONFLICT", "BOOKING_RULES_CHANGED"].includes(r.reason.code),
           ),
         );
         const version = (
@@ -1180,9 +1186,7 @@ test("reservation confirmation validates real calendars and commits every effect
         assert.ok(notices.some((n) => n.reservationId === cross.result.id));
         assert.ok(notices.some((n) => n.kind === "CANCELADA"));
         assert.ok(
-          notices.every(
-            (n) => !("actorId" in n) && !("reason" in n) && !("accountId" in n),
-          ),
+          notices.every((n) => !("actorId" in n) && !("accountId" in n)),
         );
         assert.equal(
           (
@@ -1592,7 +1596,7 @@ test("reservation confirmation validates real calendars and commits every effect
         };
         await create("managed-move-occupied", occupied);
         await assert.rejects(move("admin-conflict", occupied, 2), {
-          code: "CONFLICT",
+          code: "SLOT_UNAVAILABLE",
         });
         assert.equal(
           (
@@ -1642,7 +1646,8 @@ test("reservation confirmation validates real calendars and commits every effect
           );
           assert.ok(
             outcomes.some(
-              (r) => r.status === "rejected" && r.reason.code === "CONFLICT",
+              (r) =>
+                r.status === "rejected" && r.reason.code === "SLOT_UNAVAILABLE",
             ),
           );
           const rows = (

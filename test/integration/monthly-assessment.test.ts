@@ -634,6 +634,31 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
           /^[0-9a-f]{64}$/.test(r.authorization_history_digest),
       ),
     );
+    // Natural expiry does not prevent the final period's already reviewed report.
+    const period = (
+      await migration.query(
+        "SELECT effective_period::text AS value FROM domain.agreement_activation WHERE agreement_id=$1",
+        [agreement],
+      )
+    ).rows[0].value;
+    await migration.query(
+      "UPDATE domain.agreement_activation SET effective_period=tstzrange(lower(effective_period),'2024-04-01T00:00:00Z','[)') WHERE agreement_id=$1",
+      [agreement],
+    );
+    assert.deepEqual(await deliver(), published);
+    await migration.query(
+      "UPDATE domain.agreement_version SET status='SUSPENDIDO' WHERE agreement_id=$1",
+      [agreement],
+    );
+    assert.deepEqual(await deliver(), { status: "NOT_PUBLISHABLE" });
+    await migration.query(
+      "UPDATE domain.agreement_version SET status='ACTIVADO' WHERE agreement_id=$1",
+      [agreement],
+    );
+    await migration.query(
+      "UPDATE domain.agreement_activation SET effective_period=$2::tstzrange WHERE agreement_id=$1",
+      [agreement, period],
+    );
     await migration.query(
       "UPDATE domain.agreement_version SET aggregate_reports=false WHERE agreement_id=$1",
       [agreement],
