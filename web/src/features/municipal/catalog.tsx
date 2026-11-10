@@ -1,12 +1,14 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Archive, Clock3, FileText, Globe, Settings2 } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useParams } from "react-router";
 import { ActionForm, textField } from "../../app/action";
-import { api } from "../../app/api";
+import { ApiError, api } from "../../app/api";
 import { saveFile } from "../../app/download";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
+import { useSession } from "../../app/session";
 import { Badge } from "../../ui/badge/badge";
 import { PageHeader } from "../../ui/blocks/page-header/page-header";
 import { Button } from "../../ui/button/button";
@@ -79,6 +81,102 @@ function CatalogDownload() {
     </section>
   );
 }
+interface ImportResult {
+  facilities: number;
+  units: number;
+  calendars: number;
+  usageRules: number;
+  skippedWithdrawn: number;
+}
+/** Loads a quenda.catalog file into a municipality that has no facilities yet. */
+function CatalogImport() {
+  const m = useMunicipality();
+  const { account } = useSession();
+  const { locale, t } = usePreferences();
+  const client = useQueryClient();
+  // Same paged query (and cache entry) as the facility list on this page.
+  const facilities = useMunicipalPages<Resource>(
+    `${endpoint(m.id)}/facilities`,
+  );
+  const [result, setResult] = useState<ImportResult>();
+  // One key per chosen file: retrying after a lost response replays, never duplicates.
+  const [key, setKey] = useState(() => crypto.randomUUID());
+  if (
+    !result &&
+    (facilities.isPending || facilities.data?.pages[0]?.items.length !== 0)
+  )
+    return null;
+  return (
+    <section className={styles.section}>
+      <h2>{t("Importar un catálogo", "Importar un catálogo")}</h2>
+      {result ? (
+        <p role="status">
+          {t(
+            `Importadas ${result.facilities} instalaciones y ${result.units} unidades, con ${result.calendars} horarios y ${result.usageRules} normas. Están en borrador: revísalas y publícalas. ${result.skippedWithdrawn ? `Se omitieron ${result.skippedWithdrawn} recursos retirados.` : ""}`,
+            `Importadas ${result.facilities} instalacións e ${result.units} unidades, con ${result.calendars} horarios e ${result.usageRules} normas. Están en borrador: revísaas e publícaas. ${result.skippedWithdrawn ? `Omitíronse ${result.skippedWithdrawn} recursos retirados.` : ""}`,
+          )}
+        </p>
+      ) : (
+        <>
+          <p>
+            {t(
+              "El municipio todavía no tiene instalaciones. Puedes cargar el archivo JSON que descarga «Copia del catálogo» en este u otro municipio o instalación de Quenda. Se crean instalaciones y unidades en borrador con su ficha, horario y normas; no se importan reservas, recursos retirados ni los ajustes del municipio.",
+              "O municipio aínda non ten instalacións. Podes cargar o arquivo JSON que descarga «Copia do catálogo» neste ou noutro municipio ou instalación de Quenda. Créanse instalacións e unidades en borrador coa súa ficha, horario e normas; non se importan reservas, recursos retirados nin os axustes do municipio.",
+            )}
+          </p>
+          <ActionForm
+            label={t("Importar catálogo", "Importar catálogo")}
+            resetOnSuccess={false}
+            submit={async (data) => {
+              const file = data.get("file");
+              let document: unknown;
+              try {
+                if (!(file instanceof File) || file.size === 0)
+                  throw new Error("missing");
+                document = JSON.parse(await file.text());
+              } catch {
+                throw new ApiError(
+                  400,
+                  "INVALID_INPUT",
+                  t(
+                    "Elige un archivo JSON de catálogo de Quenda.",
+                    "Escolle un arquivo JSON de catálogo de Quenda.",
+                  ),
+                );
+              }
+              setResult(
+                await api<ImportResult>(
+                  `${endpoint(m.id)}/imports/catalog`,
+                  {
+                    method: "POST",
+                    body: JSON.stringify(document),
+                    headers: { "idempotency-key": key },
+                  },
+                  locale,
+                ),
+              );
+              await client.invalidateQueries({
+                queryKey: ["private", account?.accountId, "municipal"],
+              });
+            }}
+          >
+            <Input
+              type="file"
+              name="file"
+              accept="application/json,.json"
+              required
+              label={t(
+                "Archivo de catálogo (JSON)",
+                "Arquivo de catálogo (JSON)",
+              )}
+              onChange={() => setKey(crypto.randomUUID())}
+            />
+          </ActionForm>
+        </>
+      )}
+    </section>
+  );
+}
 export function Catalog() {
   const m = useMunicipality();
   const { t } = usePreferences();
@@ -109,6 +207,7 @@ export function Catalog() {
       <h1>{t("Instalaciones y unidades", "Instalacións e unidades")}</h1>
       <ResourceList kind="facilities" />
       <ResourceList kind="units" />
+      {m.administrator && <CatalogImport />}
       {m.administrator && <CatalogDownload />}
       {permitted(m, "CATALOG_CREATE") && (
         <section className={styles.section}>
