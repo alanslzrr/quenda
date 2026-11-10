@@ -10,6 +10,7 @@ import { registerCalendarRoutes } from "./calendar-routes.ts";
 import { createFacility, createReservableUnit } from "./drafts.ts";
 import { exportCatalog } from "./export.ts";
 import { catalogExportExample, catalogExportSchema } from "./export-schema.ts";
+import { type CatalogDocument, importCatalog } from "./import.ts";
 import {
   inspectCatalogResource,
   renameCatalogResource,
@@ -163,6 +164,66 @@ export async function registerCatalog(
           ),
         ),
   );
+  app.post<{
+    Params: { tenantId: string };
+    Headers: { "idempotency-key"?: string };
+    Body: CatalogDocument;
+  }>(
+    "/api/municipalities/:tenantId/imports/catalog",
+    {
+      schema: {
+        operationId: "importCatalog",
+        tags: ["Catalog"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Carga un documento quenda.catalog v1 (el de la exportación, de este u otro municipio o instancia) en un municipio sin instalaciones. Crea instalaciones y unidades en borrador con identificadores nuevos, sus fichas, calendario y normas, con auditoría. No importa recursos retirados, estado de publicación, ajustes del municipio, reservas ni datos personales. Exige administración del municipio, MFA reciente y Origin autorizado. Con instalaciones ya creadas responde 409. Idempotency-Key permite recuperar el resultado sin duplicar la importación.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId"],
+          properties: { tenantId: uuid },
+        },
+        headers: creationHeaders,
+        body: catalogExportSchema,
+        response: {
+          ...errors,
+          200: {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "tenantId",
+              "facilities",
+              "units",
+              "calendars",
+              "usageRules",
+              "skippedWithdrawn",
+            ],
+            properties: {
+              tenantId: uuid,
+              facilities: { type: "integer", minimum: 0 },
+              units: { type: "integer", minimum: 0 },
+              calendars: { type: "integer", minimum: 0 },
+              usageRules: { type: "integer", minimum: 0 },
+              skippedWithdrawn: { type: "integer", minimum: 0 },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) =>
+      reply
+        .header("cache-control", "no-store")
+        .send(
+          await importCatalog(
+            pool,
+            await actor(request, reply),
+            request.params.tenantId,
+            request.body,
+            request.headers["idempotency-key"],
+            retentionSeconds,
+          ),
+        ),
+  );
   app.get<{ Params: { tenantId: string } }>(
     "/api/municipalities/:tenantId/exports/catalog",
     {
@@ -171,7 +232,7 @@ export async function registerCatalog(
         tags: ["Catalog"],
         security: [{ quendaSession: [] }],
         description:
-          "JSON quenda.catalog v1: ajustes del municipio, instalaciones y unidades con su ficha, calendario vigente, normas vigentes y estado de publicación. No incluye reservas ni datos personales. Exige administración del municipio y MFA reciente. Es una copia de lectura para archivo, auditoría o traslado manual; no hay operación de importación.",
+          "JSON quenda.catalog v1: ajustes del municipio, instalaciones y unidades con su ficha, calendario vigente, normas vigentes y estado de publicación. No incluye reservas ni datos personales. Exige administración del municipio y MFA reciente. Sirve para archivo, auditoría o traslado: importCatalog lo carga en un municipio sin instalaciones.",
         params: {
           type: "object",
           additionalProperties: false,
