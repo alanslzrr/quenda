@@ -287,7 +287,9 @@ test("calendar changes preserve confirmed reservations and withdrawal preserves 
     ),
   ).toBeVisible();
   await page.goto(`/administracion/${f.tenant}/reservas/${f.reservationId}`);
-  await expect(page.getByText("CONFIRMADA", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(/^(Unidad|Unidade): .+ · Confirmada$/),
+  ).toBeVisible();
 });
 
 test("daily agenda relocates without accepting rules and cancels explicitly", async ({
@@ -339,7 +341,9 @@ test("daily agenda relocates without accepting rules and cancels explicitly", as
   await cancel
     .getByRole("button", { name: "Cancelar administrativamente" })
     .click();
-  await expect(page.getByText("CANCELADA", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(/^(Unidad|Unidade): .+ · Cancelada$/),
+  ).toBeVisible();
 });
 
 test("blocks survive reload and release through the daily agenda", async ({
