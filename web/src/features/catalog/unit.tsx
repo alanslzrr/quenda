@@ -346,6 +346,14 @@ export function UnitAvailability({
                 "Proba outro día ou outra duración.",
               )}
             </span>
+            {!reservationId && duration && (
+              <NextSlots
+                tenantId={tenantId}
+                unit={unit}
+                from={date}
+                duration={duration}
+              />
+            )}
           </div>
         ) : (
           <SlotList
@@ -367,6 +375,57 @@ export function UnitAvailability({
           </p>
         )}
       </section>
+    </div>
+  );
+}
+
+/** When the chosen day is full, the first free slots of the same duration on later days. */
+function NextSlots({
+  tenantId,
+  unit,
+  from,
+  duration,
+}: {
+  tenantId: string;
+  unit: Unit;
+  from: string;
+  duration: number;
+}) {
+  const { locale, t } = usePreferences();
+  const suggestions = useQuery({
+    queryKey: ["public", tenantId, unit.id, "next", from, duration, locale],
+    queryFn: ({ signal }) =>
+      api<{ slots: Slot[] }>(
+        `/api/public/municipalities/${tenantId}/units/${unit.id}/next-availability?from=${from}&durationMinutes=${duration}`,
+        { signal },
+        locale,
+      ),
+    retry: false,
+  });
+  if (suggestions.isPending || suggestions.isError) return null;
+  return (
+    <div className={styles.suggestions}>
+      <h3>{t("Próximos horarios libres", "Próximos horarios libres")}</h3>
+      {suggestions.data.slots.length ? (
+        <ul>
+          {suggestions.data.slots.map((slot) => (
+            <li key={slot.start.utc}>
+              <Link
+                to={`/municipios/${tenantId}/unidades/${unit.id}/reservar?inicio=${encodeURIComponent(slot.start.utc)}&fin=${encodeURIComponent(slot.end.utc)}`}
+              >
+                {`${calendarLabel(calendarDate(slot.start.local.slice(0, 10)), locale, "short")} · ${slot.start.local.slice(11, 16)}`}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>
+          {t(
+            "No hay huecos de esta duración en las próximas semanas.",
+            "Non hai ocos desta duración nas próximas semanas.",
+          )}
+        </p>
+      )}
     </div>
   );
 }

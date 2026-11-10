@@ -359,6 +359,26 @@
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
+.suggestions {
+  margin-top: 20px;
+}
+.suggestions h3 {
+  margin: 0 0 8px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.suggestions ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.suggestions a {
+  display: inline-block;
+  min-height: 24px;
+  padding: 4px 0;
+}
 
 /* Unit page */
 .slotsSection {
