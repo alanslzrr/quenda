@@ -17,4 +17,3 @@ runs:
         test "$(pnpm --version)" = "${package_manager#pnpm@}"
         pnpm install --frozen-lockfile --ignore-scripts
         mkdir -p "$RUNNER_TEMP/quenda-ci"
-        git rev-parse HEAD > "$RUNNER_TEMP/quenda-ci/revision.txt"
