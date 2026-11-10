@@ -1,4 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useContext, useEffect, useId, useState } from "react";
+import { useLocation } from "react-router";
 import { Alert } from "../ui/alert/alert";
 import { Button } from "../ui/button/button";
 import { Skeleton } from "../ui/skeleton/skeleton";
@@ -41,6 +43,9 @@ export function Failure({
   retryBusy?: boolean;
 }) {
   const { t } = usePreferences();
+  const client = useQueryClient();
+  const location = useLocation();
+  const expired = error instanceof ApiError && error.status === 401;
   const reauthenticate = useContext(ReauthenticationContext);
   const notice = useContext(ReauthenticationNoticeContext);
   const registration = useId();
@@ -119,7 +124,14 @@ export function Failure({
             {t("Ya puedes reintentar.", "Xa podes tentar de novo.")}
           </p>
         ))}
-      {needsFactor ? (
+      {expired ? (
+        <ActionLink
+          to={`/acceso?returnTo=${encodeURIComponent(location.pathname + location.search)}`}
+          onClick={() => client.setQueryData(["session"], null)}
+        >
+          {t("Volver a iniciar sesión", "Volver iniciar sesión")}
+        </ActionLink>
+      ) : needsFactor ? (
         <Button type="button" variant="secondary" onClick={reauthenticate}>
           {t("Verificar acceso", "Verificar acceso")}
         </Button>

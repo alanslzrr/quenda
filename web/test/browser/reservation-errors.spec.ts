@@ -386,7 +386,7 @@ test("a deadline rejection leaves the reservation confirmed and never invents a 
   ).toHaveCount(0);
 });
 
-test("an expired session removes the pending private command before returning to sign-in", async ({
+test("an expired session retains the pending command for explicit recovery after sign-in", async ({
   page,
 }) => {
   await page.addInitScript(() =>
@@ -414,7 +414,7 @@ test("an expired session removes the pending private command before returning to
     .poll(() =>
       page.evaluate(() => sessionStorage.getItem("quenda.reservation-command")),
     )
-    .toBeNull();
+    .toContain('"key":"pending"');
 });
 
 for (const skew of [-600000, 600000])
@@ -632,4 +632,53 @@ test("homonymous municipalities in the filter are told apart", async ({
       name: new RegExp(`Oleiros · ${other.slice(-6)}`),
     }),
   ).toBeVisible();
+});
+
+test("expired sessions offer sign-in with the exact return path and keep uncertain commands", async ({
+  page,
+}) => {
+  let reads = 0;
+  await page.route(`**${path}/${id}`, async (route) => {
+    reads++;
+    await route.fulfill({
+      status: 401,
+      json: {
+        error: { code: "UNAUTHENTICATED", message: "La sesión ha terminado." },
+      },
+    });
+  });
+  await page.goto(`${detail}?origen=avisos`);
+  const back = page.getByRole("link", { name: "Volver a iniciar sesión" });
+  await expect(back).toHaveAttribute(
+    "href",
+    `/acceso?returnTo=${encodeURIComponent(`${detail}?origen=avisos`)}`,
+  );
+  await page.evaluate(() =>
+    sessionStorage.setItem("quenda.privacy-uncertain:ana:scope", "pending"),
+  );
+  const readsBeforeSignIn = reads;
+  await back.click();
+  await expect(page).toHaveURL(/\/acceso\?returnTo=/);
+  await expect(
+    page.getByRole("heading", {
+      name: /Accede a tu cuenta|Accede á túa conta/,
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem("quenda.privacy-uncertain:ana:scope"),
+    ),
+  ).toBe("pending");
+  expect(reads).toBe(readsBeforeSignIn);
+});
+
+test("document titles follow route headings after navigation", async ({
+  page,
+}) => {
+  await page.goto("/reservas");
+  await expect(page).toHaveTitle(/Mis reservas.*Quenda/);
+  await page.getByRole("link", { name: /Pista 1/ }).click();
+  await expect(page).toHaveURL(new RegExp(detail));
+  await expect(page).toHaveTitle(/Reserva.*Quenda/);
 });
