@@ -58,6 +58,27 @@
   margin-top: 2rem;
   padding-top: 1.5rem;
 }
+/* A group of related fields: the legend is its heading, without the native frame. */
+.fieldGroup {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  max-width: 44rem;
+  margin: 2rem 0 0;
+  padding: 1.5rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.fieldGroup > legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  font-weight: 600;
+}
+.fieldGroup > p {
+  margin: 0;
+  color: var(--text-secondary);
+}
 .row {
   display: flex;
   gap: 1rem;
