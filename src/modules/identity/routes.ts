@@ -260,6 +260,10 @@ const errorMessages: Record<string, [string, string]> = {
     "Verifica tu correo antes de iniciar sesión.",
     "Verifica o teu correo antes de iniciar sesión.",
   ],
+  INVALID_PASSWORD: [
+    "La contraseña actual no es correcta.",
+    "O contrasinal actual non é correcto.",
+  ],
   INVALID_TOKEN: [
     "El enlace no es válido o ha caducado.",
     "A ligazón non é válida ou caducou.",
