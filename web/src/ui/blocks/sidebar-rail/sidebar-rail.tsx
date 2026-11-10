@@ -245,10 +245,11 @@ function NavSections({
       {sections.map((section) => {
         const headingId = `${baseId}-${variant}-${section.id}`;
         return (
+    // biome-ignore lint/a11y/useSemanticElements: This named interaction group is not a form fieldset.
           <div
             key={section.id}
             className={styles.section}
-            role={section.heading ? "group" : undefined}
+            role="group"
             aria-labelledby={section.heading ? headingId : undefined}
           >
             {section.heading && (
@@ -276,6 +277,7 @@ function NavSections({
                 />
               </motion.div>
             )}
+            {/* biome-ignore lint/a11y/noRedundantRoles: Safari needs an explicit list role when list-style is none. */}
             <ul className={styles.list} role="list">
               {section.items.map((entry) => {
                 if (!entry.children)
@@ -440,10 +442,12 @@ function RailBody() {
         return;
       // A single-character shortcut is active only while focus is inside the navigation (WCAG 2.1.4).
       if (!target || !document.getElementById(sidebarId)?.contains(target)) return;
-      const rect = shell.current!.getBoundingClientRect();
+      const shellNode = shell.current;
+      if (!shellNode) return;
+      const rect = shellNode.getBoundingClientRect();
       if (!rect.width || rect.bottom < 0 || rect.top > window.innerHeight) return;
       event.preventDefault();
-      if (shell.current!.clientWidth < 480) {
+      if (shellNode.clientWidth < 480) {
         setSheetOpen((current) => !current);
         return;
       }
@@ -454,7 +458,7 @@ function RailBody() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [labels.expand, labels.collapse]);
+  }, [sidebarId, labels.expand, labels.collapse]);
 
   useLayoutEffect(() => {
     const node = shell.current;

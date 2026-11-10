@@ -22,6 +22,7 @@ function HeightFrame({ className, busy, reduce, children }: { className?: string
   const content = useRef<HTMLDivElement>(null);
   const height = useMotionValue<number | "auto">("auto");
   const changedAt = useRef(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Loading state starts the height animation window.
   useLayoutEffect(() => { changedAt.current = performance.now(); }, [busy]);
   useEffect(() => {
     const node = content.current;
@@ -55,7 +56,7 @@ export function Skeleton({ label = "Loading content", lines = 3, avatar = false,
   // Each block pulses a beat after the one above it, so the wait reads as one calm wave.
   const placeholder = (extra?: string) => <div data-lumen="" className={[styles.root, extra].filter(Boolean).join(" ")} role="status" aria-label={label} aria-busy="true">
     {avatar && <span className={styles.avatar} aria-hidden="true" />}
-    <span className={styles.lines} aria-hidden="true">{Array.from({ length: count }, (_, index) => <span className={styles.line} style={{ "--index": index + (avatar ? 1 : 0) } as CSSProperties} key={index} />)}</span>
+    <span className={styles.lines} aria-hidden="true">{[0, 1, 2, 3, 4, 5].slice(0, count).map((index) => <span className={styles.line} style={{ "--index": index + (avatar ? 1 : 0) } as CSSProperties} key={index} />)}</span>
   </div>;
   if (children === undefined) return placeholder(className);
   return <HeightFrame className={className} busy={loading} reduce={reduce}>
