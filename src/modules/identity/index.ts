@@ -53,7 +53,7 @@ export {
 } from "./preferences.ts";
 export { listMunicipalProfiles } from "./profiles.ts";
 export { consumeAdministrativeAttempt } from "./rate-limit.ts";
-export { requireRecentMfa } from "./reauthentication.ts";
+export { requireMfaSession, requireRecentMfa } from "./reauthentication.ts";
 export { createRequestActor } from "./request-actor.ts";
 export { processRetentionBatch } from "./retention-worker.ts";
 export { authenticationSchema, registerAuthentication } from "./routes.ts";

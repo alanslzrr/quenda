@@ -1,11 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { command } from "../../database/command.ts";
-import { HttpError } from "../../http/errors.ts";
 import {
   type AuthConfiguration,
   type Authentication,
   createRequestActor,
+  requireMfaSession,
   requireRecentMfa,
 } from "../identity/index.ts";
 
@@ -90,7 +90,7 @@ export async function registerAgendaRoutes(
       },
       async (request, reply) => {
         const account = await actor(request, reply);
-        if (!account.mfaVerifiedAt) throw new HttpError("FORBIDDEN");
+        requireMfaSession(account);
         if (!units) requireRecentMfa(account);
         reply.header("cache-control", "no-store");
         return command(

@@ -4,7 +4,10 @@ import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import { civilDate } from "../../shared/civil-date.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
-import type { AuthenticatedAccount } from "../identity/index.ts";
+import {
+  type AuthenticatedAccount,
+  requireMfaSession,
+} from "../identity/index.ts";
 import { present, type Reservation } from "./state.ts";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -122,7 +125,7 @@ export async function listMunicipalReservations(
     (unitId !== null && !uuid.test(unitId))
   )
     throw new HttpError("INVALID_INPUT");
-  if (!actor.mfaVerifiedAt) throw new HttpError("FORBIDDEN");
+  requireMfaSession(actor);
   return command(
     pool,
     { accountId: actor.accountId, tenantId },
@@ -174,8 +177,7 @@ export async function readReservation(
       if (!row) throw new HttpError("NOT_FOUND");
       // RLS has already checked current per-unit READ/MANAGE authority for anyone
       // other than the owner. Staff access also requires a verified MFA session.
-      if (row.account_id !== actor.accountId && !actor.mfaVerifiedAt)
-        throw new HttpError("FORBIDDEN");
+      if (row.account_id !== actor.accountId) requireMfaSession(actor);
       if (row.account_id !== actor.accountId)
         await client.query(
           "SELECT domain.record_reservation_reads($1::uuid[],'DETAIL',$2)",

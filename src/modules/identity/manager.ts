@@ -4,7 +4,7 @@ import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import { requireAdministrator } from "./administrator.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
-import { requireRecentMfa } from "./reauthentication.ts";
+import { requireMfaSession, requireRecentMfa } from "./reauthentication.ts";
 
 export const operations = [
   "CATALOG_CREATE",
@@ -32,7 +32,7 @@ export async function requirePermission(
   operation: Operation,
   unitId: string | null = null,
 ) {
-  if (!actor.mfaVerifiedAt) throw new HttpError("FORBIDDEN");
+  requireMfaSession(actor);
   if (!["RESERVATION_READ", "REPORT_READ"].includes(operation))
     requireRecentMfa(actor);
   const result = await client.query<{ allowed: boolean; actor: string }>(
