@@ -177,6 +177,46 @@ test("municipal continuity protects lasting responsibility and separates securit
       },
     );
     await t.test(
+      "a temporary administrator cannot extend its own authority",
+      async () => {
+        const tenant = await municipality();
+        const limit = new Date(Date.now() + 3600000).toISOString();
+        await addAdministrator(tenant, "b", limit);
+        for (const subject of ["b", "a"])
+          await assert.rejects(
+            makeAdministratorIndefinite(
+              domain,
+              actor("b"),
+              tenant,
+              subject,
+              "Self extension",
+            ),
+            { code: "FORBIDDEN" },
+          );
+        const invite = (roleExpiresAt: string | null) =>
+          inviteAdministrator(domain, actor("b"), tenant, {
+            accountId: "c",
+            expiresAt: expiry(),
+            roleExpiresAt,
+          });
+        await assert.rejects(invite(null), { code: "FORBIDDEN" });
+        await assert.rejects(
+          invite(new Date(Date.parse(limit) + 1000).toISOString()),
+          { code: "FORBIDDEN" },
+        );
+        await invite(limit);
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT expires_at IS NOT NULL AS temporary FROM domain.municipal_administrator WHERE tenant_id=$1 AND account_id='b'",
+              [tenant],
+            )
+          ).rows[0].temporary,
+          true,
+        );
+      },
+    );
+    await t.test(
       "concurrent ordinary resignations leave one indefinite responsible account",
       async () => {
         const tenant = await municipality();

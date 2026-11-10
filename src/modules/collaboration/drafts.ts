@@ -147,6 +147,10 @@ export async function createAgreementDraft(
   } catch (error) {
     if (error instanceof DatabaseError && error.code === "23503")
       throw new HttpError("NOT_FOUND");
+    // The database is stricter than the local parser, for example about the
+    // exact spelling of a time zone name.
+    if (error instanceof DatabaseError && error.code === "23514")
+      throw new HttpError("INVALID_INPUT");
     throw error;
   }
 }

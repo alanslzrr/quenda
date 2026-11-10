@@ -4,7 +4,10 @@ import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import { civilDate } from "../../shared/civil-date.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
-import type { AuthenticatedAccount } from "../identity/index.ts";
+import {
+  type AuthenticatedAccount,
+  requireMfaSession,
+} from "../identity/index.ts";
 import { present, type Reservation } from "./state.ts";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -122,17 +125,18 @@ export async function listMunicipalReservations(
     (unitId !== null && !uuid.test(unitId))
   )
     throw new HttpError("INVALID_INPUT");
-  if (!actor.mfaVerifiedAt) throw new HttpError("FORBIDDEN");
+  requireMfaSession(actor);
   return command(
     pool,
     { accountId: actor.accountId, tenantId },
     async (client) => {
       const result = await client.query<Reservation>(
         `SELECT r.* FROM domain.reservation r WHERE r.tenant_id=$1
-   AND ($2::uuid IS NULL OR r.id>$2) AND ($3::uuid IS NULL OR r.unit_id=$3)
+   AND ($2::uuid IS NULL OR (r.starts_at,r.id)>(SELECT c.starts_at,c.id FROM domain.reservation c WHERE c.tenant_id=$1 AND c.id=$2))
+   AND ($3::uuid IS NULL OR r.unit_id=$3)
    AND ($4::date IS NULL OR (r.starts_at < (($4::date+1)::timestamp AT TIME ZONE (SELECT timezone FROM domain.municipality WHERE id=$1)) AND r.ends_at > ($4::date::timestamp AT TIME ZONE (SELECT timezone FROM domain.municipality WHERE id=$1))))
    AND (domain.lock_permission('RESERVATION_READ',r.unit_id) OR domain.lock_permission('RESERVATION_MANAGE',r.unit_id))
-   ORDER BY r.id LIMIT 21`,
+   ORDER BY r.starts_at,r.id LIMIT 21`,
         [tenantId, after, unitId, options.date ?? null],
       );
       const page = result.rows.slice(0, 20),
@@ -174,8 +178,7 @@ export async function readReservation(
       if (!row) throw new HttpError("NOT_FOUND");
       // RLS has already checked current per-unit READ/MANAGE authority for anyone
       // other than the owner. Staff access also requires a verified MFA session.
-      if (row.account_id !== actor.accountId && !actor.mfaVerifiedAt)
-        throw new HttpError("FORBIDDEN");
+      if (row.account_id !== actor.accountId) requireMfaSession(actor);
       if (row.account_id !== actor.accountId)
         await client.query(
           "SELECT domain.record_reservation_reads($1::uuid[],'DETAIL',$2)",

@@ -29,7 +29,7 @@ export type Agreement = AgreementSummary &
   Configuration & {
     legalReviewReference: string | null;
     reportReviewReference: string | null;
-    createdBy: string;
+    createdBy: string | null;
     createdAt: string;
     correlationId: string;
     approvals: {

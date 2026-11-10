@@ -1,5 +1,5 @@
 import type { Pool, PoolClient } from "pg";
-import { transaction } from "../../database/transaction.ts";
+import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
 import type { UnitCalendarInput } from "./calendar.ts";
@@ -97,7 +97,7 @@ export async function publicAvailability(
   durationMinutes: number,
   clock: Clock = systemClock,
 ) {
-  return transaction(pool, async (client) => {
+  return command(pool, undefined, async (client) => {
     const candidate = await candidateAvailability(
       client,
       tenantId,
@@ -171,7 +171,7 @@ export async function publicAvailabilitySearch(
   clock: Clock = systemClock,
   facilityId: string | null = null,
 ) {
-  return transaction(pool, async (client) => {
+  return command(pool, undefined, async (client) => {
     const rows = (
       await client.query<{ id: string; name: string; facility_name: string }>(
         "SELECT * FROM domain.public_search_units($1,$2)",

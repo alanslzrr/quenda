@@ -167,6 +167,18 @@ export function authOptions(
             });
           ctx.body.name = name;
         }
+        if (ctx.path === "/sign-up/email") {
+          // Registration stores the same bounded name as profile editing and
+          // never an arbitrary avatar reference.
+          const name = normalizedAccountName({ name: ctx.body?.name });
+          if (name === null)
+            throw new APIError("BAD_REQUEST", {
+              code: "INVALID_INPUT",
+              message: "Invalid profile fields",
+            });
+          ctx.body.name = name;
+          delete ctx.body.image;
+        }
         if (ctx.body?.trustDevice === true) {
           throw new APIError("BAD_REQUEST", {
             message: "Trusted devices are not enabled",
@@ -236,6 +248,15 @@ export function createAuthentication(
         )
       ).rows[0];
       if (!credential) throw new HttpError("ACCOUNT_PASSWORD_REQUIRED");
+      // Password checks made on the server bypass the HTTP limiter of Better
+      // Auth, so a held session must not become an unbounded password oracle.
+      const limit = await pool.query<{ allowed: boolean }>(
+        "SELECT auth.consume_reactivation_attempt($1,20) AS allowed",
+        [
+          `deactivation:${createHash("sha256").update(session.user.id).digest("hex")}`,
+        ],
+      );
+      if (!limit.rows[0]?.allowed) throw new HttpError("RATE_LIMITED");
       try {
         await auth.api.verifyPassword({ headers, body: { password } });
       } catch (error) {
@@ -266,7 +287,7 @@ export function createAuthentication(
       },
     ),
     schema: () => auth.api.generateOpenAPISchema(),
-    async authenticate(headers: Headers) {
+    async authenticate(headers: Headers): Promise<AuthenticatedAccount | null> {
       const result = await auth.api.getSession({ headers });
       if (!result?.user.emailVerified) return null;
       const proof = await pool.query<{
@@ -282,12 +303,18 @@ export function createAuthentication(
         email: result.user.email,
         sessionId: result.session.id,
         mfaVerifiedAt: proof.rows[0].enabled ? proof.rows[0].verified : null,
+        mfaEnabled: proof.rows[0].enabled,
       };
     },
   };
 }
 
 export type Authentication = ReturnType<typeof createAuthentication>;
-export type AuthenticatedAccount = NonNullable<
-  Awaited<ReturnType<Authentication["authenticate"]>>
->;
+export interface AuthenticatedAccount {
+  accountId: string;
+  email: string;
+  sessionId: string;
+  mfaVerifiedAt: Date | null;
+  /** MFA is configured on the account, whether or not this session proved it. */
+  mfaEnabled?: boolean;
+}

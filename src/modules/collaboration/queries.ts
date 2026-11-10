@@ -124,6 +124,11 @@ export async function readAgreementVersion(
         "SELECT tenant_id,approved_by,approved_at,correlation_id FROM domain.agreement_approval WHERE agreement_id=$1 AND version=$2 ORDER BY tenant_id",
         [agreementId, version],
       );
+      // As with approvals, the author is disclosed only to its own municipality.
+      const own = await client.query(
+        "SELECT 1 FROM domain.municipal_administrator WHERE tenant_id=$1 AND account_id=$2",
+        [tenantId, row.created_by],
+      );
       return {
         ...present(row),
         purpose: row.purpose,
@@ -135,7 +140,7 @@ export async function readAgreementVersion(
         aggregateReports: row.aggregate_reports,
         legalReviewReference: row.legal_review_reference,
         reportReviewReference: row.report_review_reference,
-        createdBy: row.created_by,
+        createdBy: own.rowCount ? row.created_by : null,
         createdAt: row.created_at.toISOString(),
         correlationId: row.correlation_id,
         participants: participants.rows.map((p) => ({

@@ -17,7 +17,7 @@ export interface CalendarEvent {
 function escapeText(value: string) {
   return value
     .replaceAll("\\", "\\\\")
-    .replaceAll(";", ";")
+    .replaceAll(";", "\\;")
     .replaceAll(",", "\\,")
     .replace(/\r\n|\r|\n/g, "\\n");
 }

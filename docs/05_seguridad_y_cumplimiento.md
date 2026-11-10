@@ -64,7 +64,7 @@ La aplicación y la API se sirven bajo el mismo origen, por lo que la política 
 | Cabecera | Valor mínimo | Motivo |
 |---|---|---|
 | `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'` | Limita el origen de código y datos; impide el embebido. |
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | Acceso solo por HTTPS. |
+| `Strict-Transport-Security` | `max-age=31536000` | Acceso solo por HTTPS. La imagen web no añade `includeSubDomains`: extenderlo a los subdominios corresponde a quien administra el dominio. |
 | `X-Content-Type-Options` | `nosniff` | También para los activos estáticos. |
 | `Referrer-Policy` | `no-referrer` | Los enlaces de acción llevan el secreto en el fragmento y no deben filtrarse. |
 | `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | La aplicación no usa esas capacidades. |

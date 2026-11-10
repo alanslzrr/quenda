@@ -1,11 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { command } from "../../database/command.ts";
-import { HttpError } from "../../http/errors.ts";
 import {
   type AuthConfiguration,
   type Authentication,
   createRequestActor,
+  requireMfaSession,
   requireRecentMfa,
 } from "../identity/index.ts";
 
@@ -42,7 +42,7 @@ export async function registerAgendaRoutes(
           security: [{ quendaSession: [] }],
           description: units
             ? "Unidades autorizadas para RESERVATION_READ, RESERVATION_MANAGE o UNIT_BLOCK, incluidas retiradas. Solo identifica unidades; no concede acceso al catálogo."
-            : "Bloqueos visibles con UNIT_BLOCK y MFA reciente, incluidos liberados. date filtra solapes con el día municipal antes de paginar. No expone bloqueos de otras unidades.",
+            : "Bloqueos visibles con UNIT_BLOCK y MFA reciente, incluidos liberados. Páginas de 20 ordenadas por inicio y, a igualdad, por ID. date filtra solapes con el día municipal antes de paginar. No expone bloqueos de otras unidades.",
           params: {
             type: "object",
             additionalProperties: false,
@@ -90,7 +90,7 @@ export async function registerAgendaRoutes(
       },
       async (request, reply) => {
         const account = await actor(request, reply);
-        if (!account.mfaVerifiedAt) throw new HttpError("FORBIDDEN");
+        requireMfaSession(account);
         if (!units) requireRecentMfa(account);
         reply.header("cache-control", "no-store");
         return command(
@@ -103,9 +103,10 @@ export async function registerAgendaRoutes(
               units
                 ? "SELECT * FROM domain.agenda_units($1)"
                 : `SELECT id,unit_id AS "unitId",starts_at AS "startsAt",ends_at AS "endsAt",reason,released_at AS "releasedAt" FROM domain.schedule_block
-          WHERE tenant_id=$1 AND ($2::uuid IS NULL OR id>$2) AND ($3::uuid IS NULL OR unit_id=$3)
+          WHERE tenant_id=$1 AND ($2::uuid IS NULL OR (starts_at,id)>(SELECT c.starts_at,c.id FROM domain.schedule_block c WHERE c.tenant_id=$1 AND c.id=$2))
+          AND ($3::uuid IS NULL OR unit_id=$3)
           AND ($4::date IS NULL OR (starts_at < (($4::date+1)::timestamp AT TIME ZONE (SELECT timezone FROM domain.municipality WHERE id=$1)) AND ends_at > ($4::date::timestamp AT TIME ZONE (SELECT timezone FROM domain.municipality WHERE id=$1))))
-          ORDER BY id LIMIT 21`,
+          ORDER BY starts_at,id LIMIT 21`,
               units
                 ? [after ?? null]
                 : [tenantId, after ?? null, unitId ?? null, date ?? null],

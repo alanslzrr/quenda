@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { requireRecentMfa } from "../../src/modules/identity/index.ts";
+import {
+  requireMfaSession,
+  requireRecentMfa,
+} from "../../src/modules/identity/index.ts";
 
 const now = new Date("2026-10-19T12:00:00Z");
 const clock = { now: () => now };
@@ -30,4 +33,16 @@ test("sensitive operations require a finite, recent and non-future session MFA p
     () => requireRecentMfa({ ...account, mfaVerifiedAt: null }, clock),
     { code: "FORBIDDEN" },
   );
+});
+
+test("an MFA account whose session has not proved the factor is asked to verify it, not denied", () => {
+  for (const check of [requireRecentMfa, requireMfaSession])
+    assert.throws(
+      () => check({ ...account, mfaVerifiedAt: null, mfaEnabled: true }),
+      { code: "REAUTHENTICATION_REQUIRED" },
+    );
+  assert.throws(() => requireMfaSession({ ...account, mfaVerifiedAt: null }), {
+    code: "FORBIDDEN",
+  });
+  requireMfaSession({ ...account, mfaEnabled: true });
 });

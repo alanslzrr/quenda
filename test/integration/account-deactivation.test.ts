@@ -213,6 +213,31 @@ test("account deactivation revokes every session, preserves history and rejects 
             ).statusCode,
             403,
           );
+          const wrong = await first.request("/api/me/deactivation", {
+            confirm: true,
+            password: `${password}-wrong`,
+          });
+          assert.equal(wrong.statusCode, 403, wrong.body);
+          assert.equal(wrong.json().error.code, "ACCOUNT_PASSWORD_REQUIRED");
+          const bucket = `deactivation:${createHash("sha256").update(id).digest("hex")}`;
+          await migration.query(
+            "UPDATE auth.account_reactivation_rate_limit SET attempts=20 WHERE bucket=$1",
+            [bucket],
+          );
+          const limited = await first.request("/api/me/deactivation", {
+            confirm: true,
+            password,
+          });
+          assert.equal(limited.statusCode, 429, limited.body);
+          assert.equal(
+            (
+              await migration.query(
+                "DELETE FROM auth.account_reactivation_rate_limit WHERE bucket=$1",
+                [bucket],
+              )
+            ).rowCount,
+            1,
+          );
         },
       );
 

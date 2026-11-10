@@ -347,7 +347,8 @@ export function MunicipalForm({
   const marker = `quenda.municipal-uncertain:${account?.accountId ?? ""}:${method}:${path}`;
   const [uncertain, setUncertainState] = useState(() => {
     try {
-      return browserStorage("session")?.getItem(marker) !== null;
+      // Blocked site storage holds no marker: it must not lock the form.
+      return (browserStorage("session")?.getItem(marker) ?? null) !== null;
     } catch {
       return false;
     }

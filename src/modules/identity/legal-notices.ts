@@ -30,6 +30,9 @@ export const noticeFields: Record<NoticeKind, readonly string[]> = {
 export const conformanceStatuses = ["full", "partial", "none"] as const;
 const languages = ["gl", "es"] as const;
 const maxText = 4000;
+// Below the 65,536-byte storage bound, so an oversized text is a validation
+// error and never a rejected insert.
+const maxBodyBytes = 60000;
 
 export interface NoticeBody {
   gl?: Record<string, string>;
@@ -85,7 +88,11 @@ export function normalizeNotice(
     input.reviewedOn !== undefined
   )
     throw new HttpError("INVALID_INPUT");
-  if (!Object.keys(body).length) throw new HttpError("INVALID_INPUT");
+  if (
+    !Object.keys(body).length ||
+    Buffer.byteLength(JSON.stringify(body)) > maxBodyBytes
+  )
+    throw new HttpError("INVALID_INPUT");
   return body;
 }
 

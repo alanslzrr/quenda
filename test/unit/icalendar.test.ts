@@ -41,6 +41,10 @@ test("the file is a strict RFC 5545 calendar that an independent parser reads ba
     "2030-01-05T11:30:00.000Z",
   );
   assert.equal(parsed.summary, event.summary);
+  assert.ok(
+    text.includes("SUMMARY:Reserva: Pista 1\\, Polideportivo\\; Oleiros"),
+    "commas and semicolons are escaped in text values",
+  );
   assert.equal(parsed.description, event.description);
   assert.equal(parsed.location, event.location);
   assert.equal(vevent.getFirstPropertyValue("sequence"), 2);

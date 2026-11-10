@@ -169,6 +169,7 @@ export function Layout() {
                   {kindShort[kind][locale === "gl" ? 1 : 0]}
                 </Link>
               ))}
+              <a href="/legal/source">{t("Código fuente", "Código fonte")}</a>
             </nav>
           </footer>
         )}

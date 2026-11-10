@@ -124,7 +124,7 @@ export async function registerReservationQueries(
           security: [{ quendaSession: [] }],
           description: own
             ? "Reservas del usuario autenticado entre municipios de esta instancia, incluidas unidades retiradas. tenantId filtra un municipio sin ampliar el acceso. Páginas de 20, de la más reciente a la más antigua por inicio, con desempate estable por ID y municipio. nextCursor codifica esa clave completa (inicio|ID|municipio) y es opaco para el cliente: mantener el filtro al continuar con él y, al cambiarlo, iniciar sin cursor. Un cursor con otro formato se rechaza con 400. El cursor no identifica otro usuario."
-            : "Reservas del municipio incluidas en los permisos RESERVATION_READ o RESERVATION_MANAGE. Requiere MFA. Páginas de 20 por ID; unitId filtra una unidad sin ampliar permisos. date selecciona intervalos que se solapan con ese día en la zona municipal antes de paginar; incluye reservas canceladas.",
+            : "Reservas del municipio incluidas en los permisos RESERVATION_READ o RESERVATION_MANAGE. Requiere MFA. Páginas de 20 por inicio, de la más temprana a la más tardía, con desempate por ID; nextCursor es el ID del último elemento. unitId filtra una unidad sin ampliar permisos. date selecciona intervalos que se solapan con ese día en la zona municipal antes de paginar; incluye reservas canceladas.",
           ...(!own
             ? {
                 params: {

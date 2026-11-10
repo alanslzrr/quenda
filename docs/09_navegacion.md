@@ -78,28 +78,9 @@ expone metadatos de revisiones, nunca cifras ni causas de supresión. No equival
 publicar ni a conceder REPORT_READ. Para cuentas de otro municipio se solicita una
 referencia facilitada por ese destinatario: no se crea un directorio intermunicipal.
 
-### Verificación de la mejora UX — 25 de octubre de 2026
-
-- `pnpm check`: tipos, lint y 83 pruebas correctas.
-- `pnpm --dir web check`: tipos, lint y 50 pruebas correctas.
-- `PG_BIN=… pnpm test:integration`: 295 pruebas correctas con PostgreSQL 17.11.
-- `PG_BIN=… pnpm --dir web test:browser`: 196 pruebas correctas, escritorio y móvil oscuro.
-- Los cuatro escenarios nuevos de navegación, MFA, identidad del personal y centrado se repitieron cinco veces en ambos proyectos: 40 ejecuciones correctas.
-- Contrato HTTP de las nuevas consultas comprobado además por separado: `no-store`, cursores inválidos, retirada de permisos y cierre de sesión.
-- Build de producción correcto. Mantiene avisos de importaciones dinámicas que también tienen consumidores estáticos; no son errores de compilación.
-- Revisión visual de la demo real: reserva, cuenta, instalaciones, personal, acreditaciones y revisión de privacidad. Verificada la caducidad real del MFA y su recuperación con un borrador intacto, sin enviarlo.
-
 Los selectores no amplían la autoridad: los usuarios delegados conservan su ámbito,
 los destinatarios externos no se convierten en un directorio consultable y los
 identificadores siguen disponibles cuando son referencias técnicas necesarias.
-La suite intensiva de informes respeta el plazo `Retry-After`; no desactiva el
-límite real de solicitudes para hacer pasar la prueba.
-
-### Corrección visual posterior — 25 de octubre de 2026
-
-La revisión del usuario detectó defectos que las pruebas anteriores no cubrían:
-enlaces de tabla convertidos en cápsulas, subrayados persistentes en el menú,
-marcadores nativos de despliegue y una vista previa de apariencia aislada.
 
 - `ActionLink` conserva la interacción de enlace sin heredar la caja de Button.
 - Los enlaces de Ajustes tienen `text-decoration: none` en su estado permanente,
@@ -112,32 +93,10 @@ marcadores nativos de despliegue y una vista previa de apariencia aislada.
   apariencia. Salir devuelve el foco al selector; descartar, salir de la página o
   recargar elimina la vista previa. Guardar sigue siendo la única publicación.
 - Restaurar valores predeterminados modifica solo el borrador, sin enviar el formulario.
-- No se cambian permisos, contratos del backend, ventana MFA ni reintentos de comandos.
-
-La autoauditoría visual detectó además el envío implícito de botones auxiliares sin
-tipo. Se interrumpió una ejecución de navegador para corregirlo antes de repetir la
-validación. Las pruebas nuevas comprueban estilos calculados, foco, teclado, portales,
-ausencia de escrituras incluso con el formulario de revocación válido y restauración
-de ambos temas personales. Las capturas se revisan además de los resultados funcionales.
 
 La entrada manual de acreditaciones no remonta el formulario con cada carácter ni
 queda ligada a las opciones de la página actual del selector. Cambiar la referencia
 desmarca la confirmación de revocación; no elimina la recuperación de comandos pendientes.
-
-Validación final de esta corrección:
-
-- `pnpm check`: 83 pruebas correctas, tipos y lint.
-- `pnpm --dir web check`: 50 pruebas correctas, tipos y lint.
-- `pnpm --dir web build`: correcto; mantiene avisos de empaquetado no bloqueantes.
-- Suite completa Playwright: 204 pruebas correctas en escritorio y móvil oscuro.
-- Los cuatro escenarios de corrección, repetidos cinco veces por proyecto: 40/40.
-- `git diff --check`: sin errores.
-- Demo real: tablas y menú sin las regresiones visuales; referencia sin triángulo;
-  vista previa clara global sobre tema personal oscuro y salida con foco restaurado.
-  No se publicaron cambios de apariencia ni se reinició la demo durante esta corrección.
-
-La suite de integración backend no se repitió para esta corrección de frontend; sus
-295 resultados anteriores pertenecen a la validación previa, no a esta ejecución.
 
 ## Historial de reservas
 

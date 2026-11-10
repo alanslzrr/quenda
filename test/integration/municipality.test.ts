@@ -724,6 +724,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           {
             accountId: "admin-b",
             expiresAt: new Date(Date.now() + 7200000).toISOString(),
+            roleExpiresAt,
           },
         );
         await migration.query(
