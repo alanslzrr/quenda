@@ -1204,6 +1204,26 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             { origin: "https://evil.test" },
           );
           assert.equal(external.statusCode, 403, external.body);
+          const registrant = browser(app, "192.0.2.41");
+          for (const name of ["x".repeat(201), "a\u0000b"])
+            assert.equal(
+              (
+                await registrant.request("/api/auth/sign-up/email", {
+                  name,
+                  email: "invalid-name@example.test",
+                  password,
+                })
+              ).statusCode,
+              400,
+            );
+          assert.equal(
+            (
+              await auth.query('SELECT 1 FROM auth."user" WHERE email=$1', [
+                "invalid-name@example.test",
+              ])
+            ).rowCount,
+            0,
+          );
           const redirect = await client.request("/api/auth/sign-in/email", {
             email: "citizen@example.test",
             password,

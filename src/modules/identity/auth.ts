@@ -167,6 +167,18 @@ export function authOptions(
             });
           ctx.body.name = name;
         }
+        if (ctx.path === "/sign-up/email") {
+          // Registration stores the same bounded name as profile editing and
+          // never an arbitrary avatar reference.
+          const name = normalizedAccountName({ name: ctx.body?.name });
+          if (name === null)
+            throw new APIError("BAD_REQUEST", {
+              code: "INVALID_INPUT",
+              message: "Invalid profile fields",
+            });
+          ctx.body.name = name;
+          delete ctx.body.image;
+        }
         if (ctx.body?.trustDevice === true) {
           throw new APIError("BAD_REQUEST", {
             message: "Trusted devices are not enabled",
