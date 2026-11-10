@@ -75,7 +75,7 @@ export async function acceptReservationUsageRules(
             row.status !== "CONFIRMADA" ||
             row.revision !== input.expectedRevision
           )
-            throw new HttpError("CONFLICT");
+            throw new HttpError("RESERVATION_CHANGED");
           const assertBeforeStart = () => {
             const now = clock.now().getTime();
             if (!Number.isFinite(now) || now >= row.starts_at.getTime())
@@ -120,7 +120,7 @@ export async function acceptReservationUsageRules(
       error instanceof DatabaseError &&
       ["40001", "40P01"].includes(error.code ?? "")
     )
-      throw new HttpError("CONFLICT");
+      throw new HttpError("UNAVAILABLE");
     throw error;
   }
 }

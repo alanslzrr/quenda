@@ -31,7 +31,7 @@ export async function validateReservableInterval(
       (slot) => slot.start.utc === startsAt && slot.end.utc === endsAt,
     )
   )
-    throw new HttpError("CONFLICT");
+    throw new HttpError("BOOKING_RULES_CHANGED");
   return {
     calendarVersion: unit.calendarVersion,
     cancellationMinutes: unit.cancellationMinutes,

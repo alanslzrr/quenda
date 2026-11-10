@@ -1,4 +1,4 @@
-import { DatabaseError, type Pool } from "pg";
+import type { Pool } from "pg";
 import { idempotentCommand } from "../../database/idempotency.ts";
 import { HttpError } from "../../http/errors.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
@@ -40,98 +40,85 @@ export async function cancelReservation(
   )
     throw new HttpError("INVALID_INPUT");
   let reservation: Reservation;
-  try {
-    return await idempotentCommand(
-      pool,
-      { accountId: actor.accountId, tenantId },
-      {
-        operation: "reservation.cancel",
-        key,
-        input: {
-          reservationId,
-          expectedRevision: input.expectedRevision,
-          administrative,
-          reason,
-        },
-        retentionSeconds,
-        authorize: async (client) => {
-          const found = await client.query<Reservation>(
-            "SELECT * FROM domain.reservation WHERE tenant_id=$1 AND id=$2",
-            [tenantId, reservationId],
-          );
-          const row = found.rows[0];
-          if (!row) throw new HttpError("NOT_FOUND");
-          if (administrative)
-            await requirePermission(
-              client,
-              actor,
-              "RESERVATION_MANAGE",
-              row.unit_id,
-            );
-          else if (row.account_id !== actor.accountId)
-            throw new HttpError("FORBIDDEN");
-          reservation = row;
-        },
-        execute: async (client) => {
-          await lockBookingAgreements(client, reservationId);
-          const locked = await client.query<Reservation>(
-            "SELECT * FROM domain.reservation WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
-            [tenantId, reservationId],
-          );
-          if (!locked.rows[0]) throw new HttpError("NOT_FOUND");
-          reservation = locked.rows[0];
-          if (reservation.status === "CANCELADA") return present(reservation);
-          if (reservation.revision !== input.expectedRevision)
-            throw new HttpError("CONFLICT");
-          const now = clock.now().getTime();
-          const deadline =
-            reservation.starts_at.getTime() -
-            (administrative ? 0 : reservation.cancellation_minutes * 60000);
-          if (
-            !Number.isFinite(now) ||
-            now >= reservation.starts_at.getTime() ||
-            now > deadline
-          )
-            throw new HttpError("RESERVATION_DEADLINE_PASSED");
-          const updated = await client.query<Reservation>(
-            "UPDATE domain.reservation SET status='CANCELADA',revision=revision+1 WHERE tenant_id=$1 AND id=$2 RETURNING *",
-            [tenantId, reservationId],
-          );
-          await client.query(
-            "UPDATE domain.occupancy SET released_at=clock_timestamp() WHERE tenant_id=$1 AND reservation_id=$2 AND released_at IS NULL",
-            [tenantId, reservationId],
-          );
-          await syncReservationConsumption(
-            client,
-            reservationId,
-            correlationId,
-          );
-          await appendReservationEvent(
-            client,
-            reservationId,
-            correlationId,
-            reason,
-            administrative,
-          );
-          const confirmedAt = clock.now().getTime();
-          if (
-            confirmedAt >= reservation.starts_at.getTime() ||
-            confirmedAt > deadline
-          )
-            throw new HttpError("RESERVATION_DEADLINE_PASSED");
-          return present(updated.rows[0] as Reservation);
-        },
+  return idempotentCommand(
+    pool,
+    { accountId: actor.accountId, tenantId },
+    {
+      operation: "reservation.cancel",
+      key,
+      input: {
+        reservationId,
+        expectedRevision: input.expectedRevision,
+        administrative,
+        reason,
       },
-    ).then((response) => ({
-      ...response,
-      result: completeAcceptanceEvidence(response.result),
-    }));
-  } catch (error) {
-    if (
-      error instanceof DatabaseError &&
-      ["40001", "40P01"].includes(error.code ?? "")
-    )
-      throw new HttpError("CONFLICT");
-    throw error;
-  }
+      retentionSeconds,
+      authorize: async (client) => {
+        const found = await client.query<Reservation>(
+          "SELECT * FROM domain.reservation WHERE tenant_id=$1 AND id=$2",
+          [tenantId, reservationId],
+        );
+        const row = found.rows[0];
+        if (!row) throw new HttpError("NOT_FOUND");
+        if (administrative)
+          await requirePermission(
+            client,
+            actor,
+            "RESERVATION_MANAGE",
+            row.unit_id,
+          );
+        else if (row.account_id !== actor.accountId)
+          throw new HttpError("FORBIDDEN");
+        reservation = row;
+      },
+      execute: async (client) => {
+        await lockBookingAgreements(client, reservationId);
+        const locked = await client.query<Reservation>(
+          "SELECT * FROM domain.reservation WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
+          [tenantId, reservationId],
+        );
+        if (!locked.rows[0]) throw new HttpError("NOT_FOUND");
+        reservation = locked.rows[0];
+        if (reservation.status === "CANCELADA") return present(reservation);
+        if (reservation.revision !== input.expectedRevision)
+          throw new HttpError("RESERVATION_CHANGED");
+        const now = clock.now().getTime();
+        const deadline =
+          reservation.starts_at.getTime() -
+          (administrative ? 0 : reservation.cancellation_minutes * 60000);
+        if (
+          !Number.isFinite(now) ||
+          now >= reservation.starts_at.getTime() ||
+          now > deadline
+        )
+          throw new HttpError("RESERVATION_DEADLINE_PASSED");
+        const updated = await client.query<Reservation>(
+          "UPDATE domain.reservation SET status='CANCELADA',revision=revision+1 WHERE tenant_id=$1 AND id=$2 RETURNING *",
+          [tenantId, reservationId],
+        );
+        await client.query(
+          "UPDATE domain.occupancy SET released_at=clock_timestamp() WHERE tenant_id=$1 AND reservation_id=$2 AND released_at IS NULL",
+          [tenantId, reservationId],
+        );
+        await syncReservationConsumption(client, reservationId, correlationId);
+        await appendReservationEvent(
+          client,
+          reservationId,
+          correlationId,
+          reason,
+          administrative,
+        );
+        const confirmedAt = clock.now().getTime();
+        if (
+          confirmedAt >= reservation.starts_at.getTime() ||
+          confirmedAt > deadline
+        )
+          throw new HttpError("RESERVATION_DEADLINE_PASSED");
+        return present(updated.rows[0] as Reservation);
+      },
+    },
+  ).then((response) => ({
+    ...response,
+    result: completeAcceptanceEvidence(response.result),
+  }));
 }
