@@ -38,6 +38,7 @@
     "image:build": "node scripts/build-image.ts",
     "image:build:web": "docker build --file web/Dockerfile --tag quenda-web:local --build-arg SOURCE_REVISION=$(git rev-parse HEAD) .",
     "test:performance": "node test/performance/run.ts",
+    "test:performance:history": "node test/performance/history.ts",
     "demo:local": "node test/demo/server.ts",
     "demo:code": "node test/demo/access.ts",
     "operator:recover": "node --env-file=.env.migration.local scripts/recover-operator.ts",
