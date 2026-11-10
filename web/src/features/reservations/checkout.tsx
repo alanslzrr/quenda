@@ -248,7 +248,7 @@ export function Checkout() {
         <div className={booking.main}>
           {!reservationId &&
           failure instanceof ApiError &&
-          failure.code === "CONFLICT" ? (
+          failure.code === "SLOT_UNAVAILABLE" ? (
             <Alert
               tone="danger"
               title={t(
@@ -372,7 +372,11 @@ export function Checkout() {
                 onFailure={async (error) => {
                   if (
                     error instanceof ApiError &&
-                    ["CONDITIONS_CHANGED", "CONFLICT"].includes(error.code)
+                    [
+                      "CONDITIONS_CHANGED",
+                      "BOOKING_RULES_CHANGED",
+                      "SLOT_UNAVAILABLE",
+                    ].includes(error.code)
                   ) {
                     setFailure(error);
                     await refresh();

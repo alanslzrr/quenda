@@ -201,6 +201,9 @@ interface Notice {
   revision: number;
   kind: "CONFIRMADA" | "MODIFICADA" | "CANCELADA";
   occurredAt: string;
+  administrative: boolean;
+  actorName: string | null;
+  reason: string | null;
   startsAt: string;
   endsAt: string;
   timeZone: string;
@@ -258,6 +261,33 @@ export function Notices() {
                     <span className={styles.rowMeta}>
                       {intervalLabel(n.startsAt, n.endsAt, n.timeZone, locale)}
                     </span>
+                    <span className={styles.rowMeta}>
+                      {t("Fecha del aviso", "Data do aviso")}:{" "}
+                      {new Intl.DateTimeFormat(locale, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                        timeZone: n.timeZone,
+                      }).format(new Date(n.occurredAt))}
+                    </span>
+                    {n.administrative && (
+                      <>
+                        <span className={styles.rowMeta}>
+                          {t(
+                            "Intervención administrativa de",
+                            "Intervención administrativa de",
+                          )}
+                          :{" "}
+                          {n.actorName ??
+                            t(
+                              "Administración municipal (nombre no registrado)",
+                              "Administración municipal (nome non rexistrado)",
+                            )}
+                        </span>
+                        <span className={styles.rowMeta}>
+                          {t("Motivo", "Motivo")}: {n.reason}
+                        </span>
+                      </>
+                    )}
                   </span>
                   {n.pendingUsageRulesVersion !== null ? (
                     <Badge size="sm" tone="warning">
