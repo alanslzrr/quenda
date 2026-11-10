@@ -43,7 +43,7 @@ const detail = {
   aggregateReports: { type: "boolean" },
   legalReviewReference: { ...text, nullable: true },
   reportReviewReference: { ...text, nullable: true },
-  createdBy: text,
+  createdBy: { ...text, nullable: true },
   createdAt: instant,
   correlationId: uuid,
   participants: {

@@ -717,6 +717,19 @@ test("agreement drafts preserve participant ownership and do not activate capabi
             .filter((a) => a.tenantId !== tenant)
             .every((a) => a.approvedBy === null),
         );
+        assert.equal(current.createdBy, actor(0).accountId);
+        assert.equal(
+          (
+            await readAgreementVersion(
+              domain,
+              actor(2),
+              tenants[2] as string,
+              agreement,
+              2,
+            )
+          ).createdBy,
+          null,
+        );
         assert.deepEqual(
           current.participants.map((p) => p.tenantId).sort(),
           [tenants[0], tenants[2]].sort(),
