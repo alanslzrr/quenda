@@ -7,6 +7,9 @@ export interface ReservationMailEvent {
   revision: number;
   kind: "CONFIRMADA" | "MODIFICADA" | "CANCELADA";
   occurredAt: string;
+  administrative?: boolean;
+  actorName?: string | null;
+  reason?: string | null;
   startsAt: string;
   endsAt: string;
   timeZone: string;
@@ -21,6 +24,9 @@ const copy = {
     reservation: "Reserva",
     revision: "Revisión",
     event: "Fecha del evento",
+    author: "Intervención administrativa de",
+    unknownAuthor: "Administración municipal (nombre no registrado)",
+    reason: "Motivo",
     start: "Inicio",
     end: "Fin",
     zone: "Zona horaria",
@@ -40,6 +46,9 @@ const copy = {
     reservation: "Reserva",
     revision: "Revisión",
     event: "Data do evento",
+    author: "Intervención administrativa de",
+    unknownAuthor: "Administración municipal (nome non rexistrado)",
+    reason: "Motivo",
     start: "Inicio",
     end: "Fin",
     zone: "Fuso horario",
@@ -130,6 +139,12 @@ export function reservationMail(
       `${label.reservation}: ${event.reservationId}`,
       `${label.revision}: ${event.revision}`,
       `${label.event}: ${format.format(new Date(event.occurredAt))}`,
+      ...(event.administrative
+        ? [
+            `${label.author}: ${event.actorName ?? label.unknownAuthor}`,
+            `${label.reason}: ${event.reason ?? "—"}`,
+          ]
+        : []),
       `${label.start}: ${format.format(new Date(event.startsAt))}`,
       `${label.end}: ${format.format(new Date(event.endsAt))}`,
       `${label.zone}: ${event.timeZone}`,
