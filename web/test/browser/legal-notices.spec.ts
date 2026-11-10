@@ -44,7 +44,7 @@ async function mockPublic(page: Page, notices: Record<string, unknown> = {}) {
 const scan = async (page: Page) =>
   (
     await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze()
   ).violations;
 

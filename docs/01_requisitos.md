@@ -60,7 +60,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RNF-02 | Aislamiento | Los accesos respetan titularidad y permisos municipales; los convenios habilitan exclusivamente sus capacidades. |
 | RNF-03 | Privacidad | Cada tratamiento tiene finalidad, base jurídica, datos, conservación y accesos definidos. No se asignan plazos legales por defecto; los datos bloqueados quedan fuera de consultas, exportaciones y procesamiento ordinarios. Los procedimientos de derechos distinguen su alcance técnico de la resolución administrativa. |
 | RNF-04 | Accesibilidad | Los flujos de usuario y administración cumplen WCAG 2.1 AA mediante comprobaciones automáticas y manuales. |
-| RNF-05 | Adaptabilidad | Las funciones están disponibles en móvil y escritorio, sin acciones exclusivas de un tamaño de pantalla. |
+| RNF-05 | Adaptabilidad | Las funciones están disponibles en móvil, tableta y escritorio, sin acciones exclusivas de un tamaño de pantalla. |
 | RNF-06 | Modularidad | Los módulos respetan las responsabilidades e interfaces definidas en la arquitectura. |
 | RNF-07 | Interoperabilidad | Las interfaces y formatos abiertos disponen de esquemas y ejemplos validables con herramientas independientes. |
 | RNF-08 | Replicabilidad | Una instancia independiente utiliza los mismos artefactos y migraciones mediante configuración propia. |
@@ -72,6 +72,6 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RNF-14 | Operabilidad | Los procedimientos permiten instalar, migrar, verificar, restaurar y revertir despliegues. |
 | RNF-15 | Localización | Los flujos, errores y avisos están disponibles en gallego y castellano, con formatos de fecha coherentes. La interfaz utiliza la preferencia explícita del usuario; sin ella, detecta un idioma admitido del navegador y utiliza gallego como alternativa. |
 
-Las obligaciones de la convocatoria se recogen en las [bases oficiales, §1.1, §1.2 y §8](https://www.agasol.gal/wp-content/uploads/2026/10/Bases_I_Certame_GOBTEC_2026.pdf) y en la [descripción del reto](https://www.agasol.gal/i-certame-gobtec/#reto). Las ampliaciones valorables del §1.3 no son requisitos mínimos del certamen.
+Las obligaciones de la convocatoria se recogen en las [bases oficiales, §1.1, §1.2 y §8](https://www.agasol.gal/wp-content/uploads/2026/10/Bases_I_Certame_GOBTEC_2026_GL_v3.pdf) y en la [descripción del reto](https://www.agasol.gal/i-certame-gobtec/#reto). Las ampliaciones valorables del §1.3 no son requisitos mínimos del certamen.
 
 Las familias, condiciones y límites de conservación se definen en el [modelo de dominio](02_modelo_dominio.md#conservación-y-derechos); los permisos y las descargas, en [identidad y colaboración](07_identidad_y_colaboracion.md#permisos-de-privacidad). Cada responsable aprueba las condiciones aplicables a sus datos, aunque varios municipios compartan una instancia.
