@@ -16,7 +16,6 @@ import {
   EditorRecovery,
   useReadBlocked,
 } from "../../app/read-recovery";
-
 import { useSession } from "../../app/session";
 import { browserStorage } from "../../app/storage.ts";
 import { useMunicipalTheme } from "../../app/theme-provider";
@@ -24,6 +23,7 @@ import { Button } from "../../ui/button/button";
 import { Input } from "../../ui/input/input";
 import booking from "../catalog/booking.module.css";
 import { Choice, Choices } from "../catalog/journey";
+import { IdempotentAction } from "../reservations/idempotent-action";
 import { municipalityLabel } from "./municipality-label.ts";
 import { ResourceShell } from "./resource-shell";
 
@@ -364,6 +364,25 @@ export function MunicipalForm({
     }
   };
   const readBlocked = useReadBlocked();
+  if (
+    method === "POST" &&
+    /^\/api\/municipalities\/[\da-f-]+\/facilities(?:\/[\da-f-]+\/units)?$/.test(
+      path,
+    )
+  )
+    return (
+      <IdempotentAction
+        path={path}
+        body={body}
+        label={label}
+        onResult={onSaved}
+        danger={danger}
+        disabled={readBlocked}
+        resetOnSuccess={resetOnSuccess}
+      >
+        {children}
+      </IdempotentAction>
+    );
   return (
     <>
       <ActionForm

@@ -12,6 +12,7 @@ import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Denied } from "../municipal/shared";
+import { IdempotentAction } from "../reservations/idempotent-action";
 export const platformApi = "/api/platform";
 export const platformView = "/plataforma/gestion";
 export function OperatorGuard({ children }: { children: ReactNode }) {
@@ -61,6 +62,8 @@ export function PlatformForm<T>({
 }: Omit<ComponentProps<typeof ConfirmedAction<T>>, "storageKey">) {
   const { account } = useSession();
   const client = useQueryClient();
+  if (props.path === "/api/municipalities")
+    return <IdempotentAction<T> {...props} onResult={onResult} />;
   return (
     <ConfirmedAction<T>
       {...props}
