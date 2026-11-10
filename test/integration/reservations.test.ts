@@ -1252,6 +1252,17 @@ test("reservation confirmation validates real calendars and commits every effect
         assert.equal(page.items.length, 20);
         assert.ok(page.nextCursor);
         assert.ok(page.items.every((r) => r.tenantId === tenant));
+        const expectedOrder = (
+          await migration.query(
+            "SELECT id FROM domain.reservation WHERE tenant_id=$1 ORDER BY starts_at,id",
+            [tenant],
+          )
+        ).rows.map((row) => row.id);
+        assert.ok(expectedOrder.length > 20);
+        assert.deepEqual(
+          page.items.map((r) => r.id),
+          expectedOrder.slice(0, 20),
+        );
         const auditedPage = (
           await migration.query(
             "SELECT reservation_id,actor_id,operation,correlation_id FROM domain.reservation_read_event WHERE tenant_id=$1",
@@ -1272,6 +1283,15 @@ test("reservation confirmation validates real calendars and commits every effect
         assert.equal(
           new Set(auditedPage.map((row) => row.correlation_id)).size,
           1,
+        );
+        // The agenda is chronological and its cursor continues without gaps.
+        assert.deepEqual(
+          (
+            await listMunicipalReservations(domain, admin, tenant, {
+              after: page.nextCursor,
+            })
+          ).items.map((r) => r.id),
+          expectedOrder.slice(20, 40),
         );
         for (const runtime of [domain, auth, worker])
           await assert.rejects(
