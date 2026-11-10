@@ -30,7 +30,7 @@ test("personal details, password recovery and accessible settings use the real A
   expect(
     (
       await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
         .analyze()
     ).violations,
   ).toEqual([]);

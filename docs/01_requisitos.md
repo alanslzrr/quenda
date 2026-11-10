@@ -51,6 +51,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-33 | Exportar el catálogo | El administrador descarga un documento JSON versionado (`quenda.catalog`) con los ajustes del municipio, sus instalaciones y espacios con ficha, el calendario y las normas vigentes y el estado de publicación, con esquema y ejemplo validables. No contiene reservas ni datos personales. Es una copia de lectura; no hay importación de archivos. |
 | RF-34 | Llevar una reserva al calendario personal | El titular descarga un archivo iCalendar (RFC 5545) de una reserva suya o de sus próximas reservas confirmadas, con horas en UTC, identidad estable y revisión como `SEQUENCE`. Una reserva cancelada se descarga como cancelada. Además, el titular puede crear una suscripción personal: una URL secreta, de solo lectura, que las aplicaciones de calendario consultan sin sesión. Se regenera o retira desde la cuenta y se retira al darla de baja, suspenderla o suprimirla. |
 | RF-35 | Exportar reservas como tabla | La exportación de reservas admite además un CSV (RFC 4180, UTF-8 con marca de orden de bytes) con una fila por reserva y los mismos permisos que el JSON. Los valores que una hoja de cálculo ejecutaría como fórmula se neutralizan. |
+| RF-36 | Instalar la aplicación | La aplicación web declara nombre, iconos y apertura en ventana propia, de modo que los navegadores que lo admiten la instalan en móvil, tableta u ordenador. Usa la misma interfaz y API; no hay aplicaciones nativas ni funcionamiento sin conexión. |
 | RF-37 | Acceder con código QR | La reserva confirmada muestra al titular un código QR que abre la página de la reserva para el personal. El personal con permiso de consulta o gestión sobre la unidad y MFA comprueba su validez y registra la llegada desde 30 minutos antes del inicio hasta el final. La llegada se registra una vez, no altera la reserva ni genera avisos y el titular la ve en su reserva. |
 
 ## Requisitos no funcionales
@@ -61,7 +62,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RNF-02 | Aislamiento | Los accesos respetan titularidad y permisos municipales; los convenios habilitan exclusivamente sus capacidades. |
 | RNF-03 | Privacidad | Cada tratamiento tiene finalidad, base jurídica, datos, conservación y accesos definidos. No se asignan plazos legales por defecto; los datos bloqueados quedan fuera de consultas, exportaciones y procesamiento ordinarios. Los procedimientos de derechos distinguen su alcance técnico de la resolución administrativa. |
 | RNF-04 | Accesibilidad | Los flujos de usuario y administración cumplen WCAG 2.1 AA mediante comprobaciones automáticas y manuales. |
-| RNF-05 | Adaptabilidad | Las funciones están disponibles en móvil y escritorio, sin acciones exclusivas de un tamaño de pantalla. |
+| RNF-05 | Adaptabilidad | Las funciones están disponibles en móvil, tableta y escritorio, sin acciones exclusivas de un tamaño de pantalla. |
 | RNF-06 | Modularidad | Los módulos respetan las responsabilidades e interfaces definidas en la arquitectura. |
 | RNF-07 | Interoperabilidad | Las interfaces y formatos abiertos disponen de esquemas y ejemplos validables con herramientas independientes. |
 | RNF-08 | Replicabilidad | Una instancia independiente utiliza los mismos artefactos y migraciones mediante configuración propia. |
@@ -73,6 +74,6 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RNF-14 | Operabilidad | Los procedimientos permiten instalar, migrar, verificar, restaurar y revertir despliegues. |
 | RNF-15 | Localización | Los flujos, errores y avisos están disponibles en gallego y castellano, con formatos de fecha coherentes. La interfaz utiliza la preferencia explícita del usuario; sin ella, detecta un idioma admitido del navegador y utiliza gallego como alternativa. |
 
-Las obligaciones de la convocatoria se recogen en las [bases oficiales, §1.1, §1.2 y §8](https://www.agasol.gal/wp-content/uploads/2026/10/Bases_I_Certame_GOBTEC_2026.pdf) y en la [descripción del reto](https://www.agasol.gal/i-certame-gobtec/#reto). Las ampliaciones valorables del §1.3 no son requisitos mínimos del certamen.
+Las obligaciones de la convocatoria se recogen en las [bases oficiales, §1.1, §1.2 y §8](https://www.agasol.gal/wp-content/uploads/2026/10/Bases_I_Certame_GOBTEC_2026_GL_v3.pdf) y en la [descripción del reto](https://www.agasol.gal/i-certame-gobtec/#reto). Las ampliaciones valorables del §1.3 no son requisitos mínimos del certamen.
 
 Las familias, condiciones y límites de conservación se definen en el [modelo de dominio](02_modelo_dominio.md#conservación-y-derechos); los permisos y las descargas, en [identidad y colaboración](07_identidad_y_colaboracion.md#permisos-de-privacidad). Cada responsable aprueba las condiciones aplicables a sus datos, aunque varios municipios compartan una instancia.

@@ -39,6 +39,8 @@ Better Auth gestiona cuentas y sesiones. El módulo de identidad expone la cuent
 
 La cuenta es global por instancia. Una sesión válida no concede permisos municipales ni acceso a convenios. Cl@ve queda fuera del alcance inicial; la interpretación del requisito de autenticación pública se registra en [PD-AUTH-PUBLICA](06_decisiones_y_validacion.md#decisiones-pendientes).
 
+**Interoperabilidad con autenticación pública.** Solo el módulo de identidad importa Better Auth; una prueba de arquitectura lo exige. Los demás módulos reciben el identificador de la cuenta y no conocen el método de acceso. La versión instalada incluye un cliente genérico OAuth 2.0/OpenID Connect, y SAML 2.0 se incorpora con el paquete `@better-auth/sso`; ninguno está activado. [Cl@ve](https://administracionelectronica.gob.es/ctt/clave) se ofrece a las Administraciones Públicas y utiliza mensajería SAML de eIDAS, por lo que su alta corresponde a la entidad que opere la instancia. Añadir un proveedor externo exige además dar una alternativa a las comprobaciones que hoy piden la contraseña local (baja, cambio de correo y reactivación) y no concede permisos municipales.
+
 ## ADR-04 PostgreSQL y acceso SQL
 
 PostgreSQL almacena el dominio y las tablas de Better Auth con credenciales separadas. El dominio utiliza `pg`, consultas parametrizadas y migraciones SQL versionadas. Cada transacción mantiene un único cliente del pool.

@@ -80,6 +80,14 @@ server {
     include /etc/nginx/snippets/security-headers.conf;
   }
 
+  # The stock MIME table has no entry for the web app manifest.
+  location = /manifest.webmanifest {
+    default_type application/manifest+json;
+    types { }
+    add_header Cache-Control "no-cache" always;
+    include /etc/nginx/snippets/security-headers.conf;
+  }
+
   location ~ \.map$ {
     return 404;
   }

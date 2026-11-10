@@ -164,7 +164,7 @@ test("two municipalities approve exact units, activate, accredit, revoke, suspen
     expect(
       (
         await new AxeBuilder({ page })
-          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
           .analyze()
       ).violations,
     ).toEqual([]);

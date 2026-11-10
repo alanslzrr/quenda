@@ -60,6 +60,13 @@ test("module dependencies are acyclic and source imports respect public boundari
         );
         specifier = arg.text;
       }
+      // The authentication provider stays replaceable: only identity may know it.
+      if (specifier && /^@?better-auth(\/|$)/.test(specifier))
+        assert.equal(
+          owner,
+          "identity",
+          `Authentication library outside identity: ${file}`,
+        );
       if (specifier?.startsWith(".")) {
         const destination = path.relative(
           root,

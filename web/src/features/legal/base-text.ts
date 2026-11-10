@@ -35,11 +35,13 @@ export const baseText: Record<NoticeKind, Record<Locale, readonly string[]>> = {
   },
   accessibility: {
     es: [
-      "La aplicación se diseña para cumplir las pautas WCAG 2.1 nivel AA. Se comprueba con pruebas automáticas en escritorio y móvil y con revisión manual de teclado, lector de pantalla, zoom y contraste.",
+      "La aplicación se diseña para cumplir las pautas WCAG 2.1 nivel AA. Cada versión pasa pruebas automáticas de navegador en tamaños de escritorio, tableta y móvil, en modo claro y oscuro, que aplican las reglas WCAG 2.0 y 2.1 de nivel A y AA y usan la aplicación a través de los nombres accesibles de sus controles.",
+      "Las pruebas automáticas no cubren todos los criterios. La revisión manual con lector de pantalla, solo teclado y ampliación forma parte de la evaluación de la entidad responsable.",
       "El estado de conformidad que se declara abajo es el que ha publicado la entidad responsable tras su evaluación. Si no aparece, la evaluación aún no se ha completado.",
     ],
     gl: [
-      "A aplicación deséñase para cumprir as pautas WCAG 2.1 nivel AA. Compróbase con probas automáticas en escritorio e móbil e con revisión manual de teclado, lector de pantalla, zoom e contraste.",
+      "A aplicación deséñase para cumprir as pautas WCAG 2.1 nivel AA. Cada versión pasa probas automáticas de navegador en tamaños de escritorio, tableta e móbil, en modo claro e escuro, que aplican as regras WCAG 2.0 e 2.1 de nivel A e AA e usan a aplicación a través dos nomes accesibles dos seus controis.",
+      "As probas automáticas non cubren todos os criterios. A revisión manual con lector de pantalla, só teclado e ampliación forma parte da avaliación da entidade responsable.",
       "O estado de conformidade que se declara abaixo é o que publicou a entidade responsable tras a súa avaliación. Se non aparece, a avaliación aínda non se completou.",
     ],
   },

@@ -330,7 +330,7 @@ test("municipal security withdrawal bypasses handover without closing the global
   expect(
     (
       await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
         .analyze()
     ).violations,
   ).toEqual([]);

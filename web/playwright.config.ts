@@ -4,6 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 const apiPort = Number(process.env.QUENDA_TEST_API_PORT ?? 3000);
 export default defineConfig({
   testDir: "./test/browser",
+  globalSetup: "./test/browser/fixture-guard.ts",
   fullyParallel: true,
   workers: 4,
   forbidOnly: !!process.env.CI,

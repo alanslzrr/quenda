@@ -189,7 +189,7 @@ test("public catalog uses municipal scope and restores Quenda theme on exit", as
   expect(
     (
       await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
         .analyze()
     ).violations,
   ).toEqual([]);
@@ -267,7 +267,7 @@ test("settings preserve explicit language and theme across reloads", async ({
   expect(
     (
       await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
         .analyze()
     ).violations,
   ).toEqual([]);
@@ -318,7 +318,7 @@ test("sign-in has localized controls and accessible keyboard navigation", async 
   expect(
     (
       await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
         .analyze()
     ).violations,
   ).toEqual([]);
