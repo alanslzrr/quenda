@@ -83,9 +83,10 @@ function AlertBox({ tone = "info", title, children, className, reduce, onDismiss
     {/* The copy column follows its content height, so longer or shorter messages never snap the alert. */}
     <HeightFrame className={styles.copy} reduce={reduce} morphKey={`${title}\n${hasDetails}\n${text ?? ""}`}>
       <strong className={styles.title}><AnimatePresence mode="popLayout" initial={false}><Swap key={title} className={styles.line} {...swap}>{title}</Swap></AnimatePresence></strong>
-      <AnimatePresence mode="popLayout" initial={false}>{hasDetails && <motion.p key="details" className={styles.description} {...swap}>
-        {text === null ? children : <AnimatePresence mode="popLayout" initial={false}><Swap key={text} className={styles.line} {...swap}>{text}</Swap></AnimatePresence>}
-      </motion.p>}</AnimatePresence>
+      {/* Plain text sits in a paragraph; structured children (paragraphs, fields) need a block container. */}
+      <AnimatePresence mode="popLayout" initial={false}>{hasDetails && (text === null
+        ? <motion.div key="details" className={styles.description} {...swap}>{children}</motion.div>
+        : <motion.p key="details" className={styles.description} {...swap}><AnimatePresence mode="popLayout" initial={false}><Swap key={text} className={styles.line} {...swap}>{text}</Swap></AnimatePresence></motion.p>)}</AnimatePresence>
     </HeightFrame>
     {onDismiss && <button type="button" className={styles.dismiss} aria-label={`${dismissLabel}: ${title}`} onClick={onDismiss}><X width={16} height={16} strokeWidth={1.75} aria-hidden="true"/></button>}
   </div>;
