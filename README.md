@@ -256,6 +256,12 @@ El titular cancela con `ahora ≤ inicio − plazo aceptado` y siempre `ahora < 
 
 Una reserva de última hora exige aceptar que no puede cancelarse por cuenta propia. Ante una excepción, el usuario contacta directamente con el municipio; no se crea un ticket. El titular conserva su responsabilidad y puede reorganizar participantes según las normas, sin transferir la reserva. La ausencia conserva tiempo reservado e historial, sin inferir asistencia ni generar automáticamente incidencias o penalizaciones.
 
+## Acceso con código QR
+
+El detalle de una reserva confirmada muestra al titular un código QR. El código contiene la dirección de la reserva en la gestión municipal (`/administracion/{tenantId}/reservas/{reservationId}`), así que el personal lo escanea con la cámara de su teléfono, donde ya ha iniciado sesión, y ve si la reserva es válida en ese momento. No hace falta ningún lector ni acceso a la cámara desde la aplicación. El código no es un secreto: la página solo muestra la reserva a quien tiene permiso sobre su unidad.
+
+`POST /api/municipalities/{tenantId}/reservations/{reservationId}/arrival` registra la llegada. Exige `RESERVATION_READ` o `RESERVATION_MANAGE` sobre la unidad, sesión con MFA y `Origin` autorizado, y solo se admite en reservas confirmadas desde 30 minutos antes del inicio hasta el final (`409` fuera de esa ventana). La llegada queda en la propia reserva con instante y autor; repetir la petición devuelve el primer registro con `alreadyRecorded: true`. No cambia la revisión ni genera avisos. El rol de la aplicación no puede escribir esas columnas directamente. El titular ve la hora de llegada en su reserva y en la descarga de datos personales. La conservación la archiva o suprime junto con la reserva. Quenda no abre puertas ni tornos: el registro sirve para el control del personal y para los indicadores.
+
 ## Bloqueos de unidades
 
 `GET /api/municipalities/{tenantId}/agenda/units` devuelve identificador y nombre de las unidades con `RESERVATION_READ`, `RESERVATION_MANAGE` o `UNIT_BLOCK`, incluidas las retiradas. Exige MFA y no concede permisos de catálogo. Devuelve páginas de 20 y `nextCursor`; `after` continúa la consulta.
