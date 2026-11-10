@@ -1,3 +1,4 @@
+import { Temporal } from "@js-temporal/polyfill";
 import type { Pool, PoolClient } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
@@ -120,6 +121,64 @@ export async function publicAvailability(
     return {
       ...candidate,
       slots: candidates.filter((_, index) => positions.has(index + 1)),
+    };
+  });
+}
+
+/** Days ahead that a suggestion looks at; the unit's advance limit usually ends it earlier. */
+const suggestionHorizonDays = 62;
+
+/**
+ * The first free slots of a duration from a date onwards: what to offer when the
+ * chosen day is full. All candidate days are checked against occupancy in one
+ * query, inside the same transaction as the calendar.
+ */
+export async function nextPublicAvailability(
+  pool: Pool,
+  tenantId: string,
+  unitId: string,
+  from: string,
+  durationMinutes: number,
+  limit = 3,
+  clock: Clock = systemClock,
+) {
+  return command(pool, undefined, async (client) => {
+    const unit = await publicUnitCalendar(client, tenantId, unitId);
+    const first = availabilityFromCalendar(unit, from, durationMinutes, clock);
+    const candidates = [...first.slots];
+    let date = Temporal.PlainDate.from(from);
+    for (let day = 1; day < suggestionHorizonDays; day++) {
+      date = date.add({ days: 1 });
+      candidates.push(
+        ...availabilityFromCalendar(
+          unit,
+          date.toString(),
+          durationMinutes,
+          clock,
+        ).slots,
+      );
+    }
+    const available = candidates.length
+      ? await client.query<{ slot_index: number }>(
+          "SELECT slot_index FROM domain.public_available_slots($1,$2,$3::timestamptz[],$4::timestamptz[])",
+          [
+            tenantId,
+            unitId,
+            candidates.map((slot) => slot.start.utc),
+            candidates.map((slot) => slot.end.utc),
+          ],
+        )
+      : { rows: [] };
+    const positions = new Set(available.rows.map((row) => row.slot_index));
+    return {
+      unitId: first.unitId,
+      from,
+      timeZone: first.timeZone,
+      calendarVersion: first.calendarVersion,
+      calculatedAt: first.calculatedAt,
+      slots: candidates
+        .filter((_, index) => positions.has(index + 1))
+        .slice(0, limit),
     };
   });
 }

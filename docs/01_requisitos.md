@@ -54,6 +54,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-36 | Instalar la aplicación | La aplicación web declara nombre, iconos y apertura en ventana propia, de modo que los navegadores que lo admiten la instalan en móvil, tableta u ordenador. Usa la misma interfaz y API; no hay aplicaciones nativas ni funcionamiento sin conexión. |
 | RF-37 | Acceder con código QR | La reserva confirmada muestra al titular un código QR que abre la página de la reserva para el personal. El personal con permiso de consulta o gestión sobre la unidad y MFA comprueba su validez y registra la llegada desde 30 minutos antes del inicio hasta el final. La llegada se registra una vez, no altera la reserva ni genera avisos y el titular la ve en su reserva. |
 | RF-38 | Analizar el uso | Con el permiso de los indicadores, el sistema muestra la ocupación por día de la semana y hora local y por unidad, las cancelaciones del titular y del ayuntamiento, la antelación de las reservas y las llegadas registradas, para el mismo periodo y ámbito. Solo ofrece agregados; los minutos coinciden con los indicadores básicos. |
+| RF-39 | Sugerir horarios | Cuando el día elegido no tiene huecos de la duración buscada, el sistema propone las primeras franjas libres de días posteriores dentro de la antelación permitida, calculadas como la disponibilidad pública y sin garantizar la reserva. |
 
 ## Requisitos no funcionales
 

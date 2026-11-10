@@ -39,6 +39,7 @@ Cada prueba registra versión del sistema, datos, entorno, resultado y evidencia
 | T-31 | RF-36; RNF-05 | El analizador de manifiestos del navegador no informa errores, los iconos se decodifican con el tamaño declarado y la imagen web sirve manifiesto e iconos con su tipo y la política de seguridad. |
 | T-32 | RF-37; RNF-02, RNF-03 | Un lector independiente decodifica el código con la página de la reserva. La llegada se registra solo con permiso sobre la unidad, MFA y origen autorizado, dentro de la ventana de acceso; repetirla conserva el primer registro, no crea eventos y el rol de la aplicación no puede escribirla directamente. Aparece en la descarga de datos personales. |
 | T-33 | RF-38; RNF-02, RNF-04 | Un conjunto conocido reparte los minutos por día y hora local y por unidad con los mismos totales que los indicadores básicos; atribuye las cancelaciones, clasifica la antelación y cuenta las llegadas. El permiso de una unidad no abre el análisis municipal, no aparecen titulares y cada tono del mapa mantiene el contraste en modo claro y oscuro. |
+| T-34 | RF-39; RNF-04 | Con un día completo se proponen las primeras franjas del día siguiente; las ocupadas se saltan entre días, nada se sugiere más allá de la antelación y las duraciones no admitidas se rechazan. La sugerencia enlaza a la reserva de la franja y supera las comprobaciones de accesibilidad. |
 
 ## Escenario de rendimiento
 
