@@ -1,4 +1,5 @@
 import type { FastifyError, FastifyInstance, FastifyRequest } from "fastify";
+import { DatabaseError } from "pg";
 
 const messages = {
   PERSONAL_DATA_TOO_LARGE: {
@@ -170,6 +171,15 @@ export const errorSchema = {
   },
 } as const;
 
+// Contention that outlasted the bounded retries and the privacy restore
+// barrier are temporary: the caller may repeat the request unchanged.
+function transient(error: unknown): boolean {
+  return (
+    error instanceof DatabaseError &&
+    ["40001", "40P01", "55000"].includes(error.code ?? "")
+  );
+}
+
 export function registerErrors(
   app: FastifyInstance,
   audit?: (request: FastifyRequest, code: ErrorCode) => Promise<void>,
@@ -206,7 +216,9 @@ export function registerErrors(
             ? "PAYLOAD_TOO_LARGE"
             : failure?.statusCode === 415
               ? "UNSUPPORTED_MEDIA_TYPE"
-              : "INTERNAL_ERROR";
+              : transient(error)
+                ? "UNAVAILABLE"
+                : "INTERNAL_ERROR";
     if (audit) {
       try {
         await audit(request, code);
