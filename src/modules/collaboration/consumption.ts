@@ -14,7 +14,15 @@ export async function syncReservationConsumption(
     ]);
   } catch (error) {
     if (error instanceof DatabaseError) {
-      if (error.code === "23514") throw new HttpError("CONFLICT");
+      if (error.code === "23514") {
+        const reasons = {
+          booking_agreement_unavailable: "AGREEMENT_UNAVAILABLE",
+          booking_credential_required: "CREDENTIAL_REQUIRED",
+          booking_quota_exceeded: "QUOTA_EXCEEDED",
+        } as const;
+        const reason = reasons[error.constraint as keyof typeof reasons];
+        if (reason) throw new HttpError(reason);
+      }
       if (error.code === "P0002") throw new HttpError("NOT_FOUND");
       if (error.code === "42501") throw new HttpError("FORBIDDEN");
     }
