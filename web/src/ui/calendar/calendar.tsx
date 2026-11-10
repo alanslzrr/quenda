@@ -42,7 +42,7 @@ const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() 
 /** Every month shows six weeks, so the grid keeps one height and never jumps while months change. */
 const makeWeeks = (month: Date) => {
   const start = addDays(month, -month.getDay());
-  return Array.from({ length: 6 }, (_, week) => Array.from({ length: 7 }, (_, day) => addDays(start, week * 7 + day)));
+  return [0, 1, 2, 3, 4, 5].map((week) => [0, 1, 2, 3, 4, 5, 6].map((day) => addDays(start, week * 7 + day)));
 };
 
 const subscribeNothing = () => () => {};
@@ -85,7 +85,7 @@ function SelectionDisc({ cell, reduced }: { cell: number; reduced: boolean }) {
       hidden.current = true;
       const fade = reduced ? { duration: 0 } : { duration: 0.14, ease: ease.standard };
       const controls = [animate(opacity, 0, fade), animate(scale, 0.6, fade)];
-      return () => controls.forEach((control) => control.stop());
+      return () => controls.forEach((control) => { control.stop(); });
     }
     const nextCol = cell % 7, nextRow = Math.floor(cell / 7);
     const controls: AnimationPlaybackControls[] = [];
@@ -93,7 +93,7 @@ function SelectionDisc({ cell, reduced }: { cell: number; reduced: boolean }) {
     else controls.push(animate(col, nextCol, spring.morph), animate(row, nextRow, spring.morph));
     hidden.current = false;
     controls.push(animate(opacity, 1, reduced ? { duration: 0 } : { duration: duration.fast, ease: ease.enter }), animate(scale, 1, reduced ? { duration: 0 } : spring.snappy));
-    return () => controls.forEach((control) => control.stop());
+    return () => controls.forEach((control) => { control.stop(); });
   }, [cell, visible, reduced, col, row, opacity, scale]);
   return <motion.span className={styles.highlight} style={{ transform, opacity }} aria-hidden="true"><span className={styles.highlightFill} /></motion.span>;
 }
@@ -263,12 +263,16 @@ export function Calendar({
 
   const renderMonth = (paneMonth: Date, present: boolean) => <>
     <SelectionDisc cell={cellOf(paneMonth)} reduced={reducedMotion} />
+    {/* biome-ignore lint/a11y/useSemanticElements: This interactive calendar uses roving gridcell focus rather than native table navigation. */}
     <div className={styles.grid} role="grid" aria-label={formatter.format(paneMonth)}>
-    {makeWeeks(paneMonth).map((week) => <div key={dateKey(week[0]!)} className={styles.week} role="row">
+    {makeWeeks(paneMonth).map((week) => (
+      // biome-ignore lint/a11y/useSemanticElements lint/a11y/useFocusableInteractive: Only the active day cell participates in the calendar tab order.
+      <div key={dateKey(week[0]!)} className={styles.week} role="row">
       {week.map((date) => {
         const key = dateKey(date);
         const selected = sameDay(date, value);
         const isToday = sameDay(date, today);
+        // biome-ignore lint/a11y/useSemanticElements: A day is an operable gridcell with native button activation and disabled behavior.
         return <button
           key={key}
           type="button"
@@ -286,7 +290,7 @@ export function Calendar({
           onClick={() => onChange?.(date)}
         ><span className={styles.dayNumber}>{date.getDate()}</span></button>;
       })}
-    </div>)}
+    </div>))}
     </div>
   </>;
 
@@ -307,10 +311,10 @@ export function Calendar({
           <button type="button" className={styles.navButton} aria-label={locale.startsWith("gl") ? "Mes seguinte" : locale.startsWith("es") ? "Mes siguiente" : "Next month"} aria-disabled={nextDisabled || undefined} onClick={() => { if (!nextDisabled && nextMonth) changeMonth(nextMonth); }}><ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" /></button>
         </div>
       </div>
-      <div className={styles.weekdays} aria-hidden="true">{weekdays.map((day, index) => <span key={`${day}-${index}`}>{day.slice(0, 2)}</span>)}</div>
+      <div className={styles.weekdays} aria-hidden="true">{weekdays.map((day) => <span key={day}>{day.slice(0, 2)}</span>)}</div>
       <div className={styles.monthViewport} ref={viewportRef}>
         {month ? paneIndexes.map((index) => <MonthPane key={index} index={index} position={position} present={index === target}>{renderMonth(fromIndex(index), index === target)}</MonthPane>)
-          : <div className={styles.monthBody} aria-hidden="true"><div className={styles.grid}>{Array.from({ length: 6 }, (_, week) => <div key={week} className={styles.week}>{Array.from({ length: 7 }, (_, day) => <span key={day} className={styles.placeholderDay} />)}</div>)}</div></div>}
+          : <div className={styles.monthBody} aria-hidden="true"><div className={styles.grid}>{[0, 1, 2, 3, 4, 5].map((week) => <div key={week} className={styles.week}>{[0, 1, 2, 3, 4, 5, 6].map((day) => <span key={day} className={styles.placeholderDay} />)}</div>)}</div></div>}
       </div>
     </section>;
 }
