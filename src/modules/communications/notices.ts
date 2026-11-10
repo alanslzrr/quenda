@@ -31,6 +31,9 @@ export async function listOwnNotices(
         revision: number;
         kind: "CONFIRMADA" | "MODIFICADA" | "CANCELADA";
         occurred_at: Date;
+        administrative: boolean;
+        actor_name: string | null;
+        reason: string | null;
         unit_id: string;
         starts_at: Date;
         ends_at: Date;
@@ -45,6 +48,9 @@ export async function listOwnNotices(
           reservationId: row.reservation_id,
           revision: row.revision,
           kind: row.kind,
+          administrative: row.administrative,
+          actorName: row.actor_name,
+          reason: row.reason,
           occurredAt: row.occurred_at.toISOString(),
           unitId: row.unit_id,
           startsAt: row.starts_at.toISOString(),
