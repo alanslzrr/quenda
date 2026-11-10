@@ -22,6 +22,8 @@ import { BackLink, BookingSummary, RulesText } from "../catalog/booking";
 import booking from "../catalog/booking.module.css";
 import { useBookingEntry } from "../catalog/journey";
 import { useMunicipality } from "../catalog/municipality";
+import { AccessCode } from "./access-code";
+import { accessCodeTarget } from "./access-code-model";
 import styles from "./reservations.module.css";
 import {
   dateTime,
@@ -133,6 +135,38 @@ export function ReservationDetail() {
           <Reference id={r.id} />
         </BookingSummary>
         <div className={booking.main}>
+          {r.accountId === account?.accountId &&
+            (r.status === "CONFIRMADA" || r.arrivedAt) && (
+              <section className={booking.block}>
+                <h2>{t("Acceso a la instalación", "Acceso á instalación")}</h2>
+                {r.arrivedAt ? (
+                  <p>
+                    {t("Llegada registrada:", "Chegada rexistrada:")}{" "}
+                    {dateTime(r.arrivedAt, r.timeZone, locale)}
+                  </p>
+                ) : (
+                  <>
+                    <p>
+                      {t(
+                        "Muestra este código al llegar. El personal lo escanea con su teléfono para comprobar la reserva y registrar tu llegada.",
+                        "Amosa este código ao chegar. O persoal escanéao co seu teléfono para comprobar a reserva e rexistrar a túa chegada.",
+                      )}
+                    </p>
+                    <AccessCode
+                      value={accessCodeTarget(
+                        window.location.origin,
+                        tenantId,
+                        reservationId,
+                      )}
+                      label={t(
+                        "Código QR de acceso de esta reserva",
+                        "Código QR de acceso desta reserva",
+                      )}
+                    />
+                  </>
+                )}
+              </section>
+            )}
           {r.pendingUsageRulesVersion !== null && (
             <section className={booking.stack}>
               <Alert
