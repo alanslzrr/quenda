@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises";
-import { Pool } from "pg";
+import { DatabaseError, Pool } from "pg";
 import {
   assertPrivacyOperational,
   assertRuntimeRole,
@@ -75,11 +75,19 @@ async function run() {
     let lastExhausted: string | null = null;
     do {
       if (Date.now() - lastRetentionCheck >= 60000) {
-        const retention = await processRetentionBatch(pool);
-        if (retention.examined || retention.processed)
-          process.stdout.write(
-            `${JSON.stringify({ event: "RETENTION_BATCH", ...retention })}\n`,
-          );
+        try {
+          const retention = await processRetentionBatch(pool);
+          if (retention.examined || retention.processed)
+            process.stdout.write(
+              `${JSON.stringify({ event: "RETENTION_BATCH", ...retention })}\n`,
+            );
+        } catch (error) {
+          // Retention is housekeeping: its failure must not stop reservation
+          // mail. Only the restore barrier keeps stopping the whole worker.
+          if (error instanceof DatabaseError && error.code === "55000")
+            throw error;
+          process.stderr.write('{"event":"RETENTION_BATCH_FAILED"}\n');
+        }
         lastRetentionCheck = Date.now();
       }
       const outcome = await processReservationEmail(pool, transport, options);
