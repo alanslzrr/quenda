@@ -180,7 +180,7 @@ function Editors({ tenantId }: { tenantId?: string }) {
           ))}
         </TabsList>
         {kinds.map((kind) => (
-          <TabsContent key={kind} value={kind}>
+          <TabsContent key={kind} value={kind} forceMount>
             <NoticeForm kind={kind} tenantId={tenantId} />
           </TabsContent>
         ))}
