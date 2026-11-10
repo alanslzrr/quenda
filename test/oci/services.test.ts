@@ -147,8 +147,17 @@ test("one OCI artifact migrates and runs isolated shared and dedicated installat
           await c.query("INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Synthetic','Europe/Madrid')",[id]);
           await c.query("INSERT INTO domain.facility(tenant_id,id,name,published_at) VALUES($1,$2,'Synthetic facility',now())",[id,crypto.randomUUID()]);
         }
+        await c.query(\`INSERT INTO auth."user"(id,name,email,"emailVerified","twoFactorEnabled") VALUES('operator','Operator','operator@example.test',true,true)\`);
         await c.end();
       `,
+      );
+      // A new installation gets its first operator from the same artifact and maintenance credentials.
+      assert.match(
+        (await run(setup, "scripts/initialize-operator.ts", "operator")).stdout,
+        /First operator initialized/,
+      );
+      await assert.rejects(
+        run(setup, "scripts/initialize-operator.ts", "operator"),
       );
       const mail = {
         AUTH_ORIGIN: "https://quenda.test",
