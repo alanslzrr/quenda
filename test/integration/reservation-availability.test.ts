@@ -170,7 +170,7 @@ test("rescheduling availability excludes only the holder's reservation without r
         date,
         60,
       ),
-      { code: "CONFLICT" },
+      { code: "RESERVATION_CANCELLED" },
     );
   });
 });
