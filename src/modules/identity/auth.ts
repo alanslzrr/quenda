@@ -248,6 +248,15 @@ export function createAuthentication(
         )
       ).rows[0];
       if (!credential) throw new HttpError("ACCOUNT_PASSWORD_REQUIRED");
+      // Password checks made on the server bypass the HTTP limiter of Better
+      // Auth, so a held session must not become an unbounded password oracle.
+      const limit = await pool.query<{ allowed: boolean }>(
+        "SELECT auth.consume_reactivation_attempt($1,20) AS allowed",
+        [
+          `deactivation:${createHash("sha256").update(session.user.id).digest("hex")}`,
+        ],
+      );
+      if (!limit.rows[0]?.allowed) throw new HttpError("RATE_LIMITED");
       try {
         await auth.api.verifyPassword({ headers, body: { password } });
       } catch (error) {
