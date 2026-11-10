@@ -137,7 +137,7 @@ test("0066 upgrades a populated 0065 database without rewriting historical evide
         const evidence = async () => ({
           events: (
             await owner.query(
-              "SELECT to_jsonb(e)::text AS value FROM domain.reservation_event e ORDER BY id",
+              "SELECT (to_jsonb(e)-'actor_name')::text AS value FROM domain.reservation_event e ORDER BY id",
             )
           ).rows,
           occupancy: (
@@ -170,6 +170,14 @@ test("0066 upgrades a populated 0065 database without rewriting historical evide
         );
         assert.deepEqual(await previousColumns(true), beforeRows);
         assert.deepEqual(await evidence(), beforeEvidence);
+        assert.equal(
+          (
+            await owner.query(
+              "SELECT count(*)::int n FROM domain.reservation_event WHERE actor_name IS NOT NULL",
+            )
+          ).rows[0].n,
+          0,
+        );
         assert.deepEqual(
           (
             await owner.query(
@@ -209,6 +217,14 @@ test("0066 upgrades a populated 0065 database without rewriting historical evide
           [],
         );
         assert.deepEqual(await evidence(), beforeEvidence);
+        assert.equal(
+          (
+            await owner.query(
+              "SELECT count(*)::int n FROM domain.reservation_event WHERE actor_name IS NOT NULL",
+            )
+          ).rows[0].n,
+          0,
+        );
       } finally {
         await owner.end();
         await admin.end();

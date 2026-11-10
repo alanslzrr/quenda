@@ -41,6 +41,8 @@ test("relocation communications separate accepted rules from pending rules and p
     };
     const outsider = {
       accountId: "relocation-outsider",
+      sessionId: "outsider-session",
+      mfaVerifiedAt: null,
       email: "outsider@example.test",
     };
     for (const actor of [holder, administrator, outsider])
@@ -158,7 +160,18 @@ test("relocation communications separate accepted rules from pending rules and p
     assert.equal(notice.unitId, destinationUnit);
     assert.equal(notice.pendingUsageRulesVersion, 1);
     assert.equal(Object.hasOwn(notice, "rulesAcceptedAt"), false);
-    assert.equal(Object.hasOwn(notice, "reason"), false);
+    assert.equal(notice.administrative, true);
+    assert.equal(notice.actorName, administrator.accountId);
+    assert.equal(notice.reason, "Original court unavailable");
+    await auth.query('UPDATE auth."user" SET name=$2 WHERE id=$1', [
+      administrator.accountId,
+      "Renamed administrator",
+    ]);
+    const historicalNotice = (await listOwnNotices(domain, holder)).items.find(
+      (item) => item.eventId === notice.eventId,
+    );
+    assert.equal(historicalNotice?.actorName, administrator.accountId);
+    assert.deepEqual((await listOwnNotices(domain, outsider)).items, []);
     for (const [functionName, expectedText] of [
       ["accepted_usage_rules", "Original unit accepted rules"],
       ["pending_usage_rules", "Destination unit pending rules"],
@@ -283,6 +296,9 @@ test("relocation communications separate accepted rules from pending rules and p
     );
     assert.ok(messages.every((message) => message.to === holder.email));
     const modified = messages[1];
+    assert.match(modified?.text ?? "", /relocation-admin/);
+    assert.match(modified?.text ?? "", /Original court unavailable/);
+    assert.doesNotMatch(modified?.text ?? "", /Renamed administrator/);
     assert.ok(modified);
     assert.match(modified.text, /Normas pendientes de aceptación/);
     assert.ok(
