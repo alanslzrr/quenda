@@ -181,8 +181,8 @@ function AgendaDay({
       )}
       <p className={styles.version}>
         {t(
-          "Las páginas se ordenan por identificador. Carga las restantes para consultar todas las entradas del día.",
-          "As páxinas ordénanse por identificador. Carga as restantes para consultar todas as entradas do día.",
+          "Las entradas se ordenan por hora de inicio, en páginas de 20. Carga las restantes para consultar todo el día.",
+          "As entradas ordénanse por hora de inicio, en páxinas de 20. Carga as restantes para consultar todo o día.",
         )}
       </p>
     </>
