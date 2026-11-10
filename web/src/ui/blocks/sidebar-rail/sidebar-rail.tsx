@@ -359,7 +359,7 @@ function NavSections({
 
 function Brand({ collapsed, reduce }: { collapsed: boolean; reduce: boolean }) {
   const { municipality, labels } = useRail();
-  return <Link to="/administracion" className={styles.brand} aria-label={`${municipality} · ${labels.municipalities}`}>
+  return <Link to="/administracion" className={styles.brand}>
     <span className={styles.mark} aria-hidden="true">q</span>
     <motion.span className={styles.stack} initial={false} animate={{opacity: collapsed ? 0 : 1, x: collapsed ? -6 : 0}} transition={labelOut(collapsed, reduce)}>
       <strong>{municipality}</strong><span>{labels.municipalities}</span>
@@ -368,8 +368,8 @@ function Brand({ collapsed, reduce }: { collapsed: boolean; reduce: boolean }) {
 }
 function Profile({ collapsed, reduce }: { collapsed: boolean; reduce: boolean }) {
   const { email, labels } = useRail();
-  return <Link to="/perfil" className={styles.profile} aria-label={labels.account}>
-    <Avatar name={email} size="sm" />
+  return <Link to="/perfil" className={styles.profile}>
+    <Avatar name={email} size="sm" aria-hidden="true" />
     <motion.span className={styles.stack} initial={false} animate={{opacity: collapsed ? 0 : 1, x: collapsed ? -6 : 0}} transition={labelOut(collapsed, reduce)}>
       <strong>{labels.account}</strong><span>{email}</span>
     </motion.span>
