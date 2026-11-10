@@ -1875,6 +1875,19 @@ test("reservation confirmation validates real calendars and commits every effect
           "UPDATE domain.reservation_email SET accepted_at=NULL,next_attempt_at=now()-interval '1 second' WHERE tenant_id=$1 AND event_id=$2",
           [queued.tenant_id, queued.event_id],
         );
+        await migration.query(
+          `INSERT INTO domain.idempotent_command(tenant_id,actor_id,operation,key,fingerprint,result,created_at,expires_at)
+          SELECT tenant_id,actor_id,operation,'expired-purge',fingerprint,result,now()-interval '2 days',now()-interval '1 day'
+          FROM domain.idempotent_command WHERE result IS NOT NULL LIMIT 1`,
+        );
+        const commands = async () =>
+          (
+            await migration.query(
+              "SELECT count(*) FILTER(WHERE expires_at<=now())::int AS expired,count(*) FILTER(WHERE expires_at>now())::int AS current FROM domain.idempotent_command",
+            )
+          ).rows[0];
+        const beforePurge = await commands();
+        assert.ok(beforePurge.expired >= 1 && beforePurge.current >= 1);
         const { execFile } = await import("node:child_process");
         const { promisify } = await import("node:util");
         const { readdir, readFile } = await import("node:fs/promises");
@@ -1898,6 +1911,11 @@ test("reservation confirmation validates real calendars and commits every effect
         assert.match(execution.stdout, /EMAIL_WORKER_READY/);
         assert.match(execution.stdout, /ACCEPTED/);
         assert.match(execution.stdout, /EMAIL_QUEUE_HEALTH/);
+        assert.match(execution.stdout, /IDEMPOTENCY_PURGE/);
+        assert.deepEqual(await commands(), {
+          expired: 0,
+          current: beforePurge.current,
+        });
         assert.deepEqual(JSON.parse(execution.stderr), {
           event: "EMAIL_QUEUE_ATTENTION",
           exhausted: "2",

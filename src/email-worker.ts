@@ -88,6 +88,19 @@ async function run() {
             throw error;
           process.stderr.write('{"event":"RETENTION_BATCH_FAILED"}\n');
         }
+        try {
+          const removed = (
+            await pool.query<{ removed: number }>(
+              "SELECT domain.purge_expired_idempotent_commands(1000) AS removed",
+            )
+          ).rows[0]?.removed;
+          if (removed)
+            process.stdout.write(
+              `${JSON.stringify({ event: "IDEMPOTENCY_PURGE", removed })}\n`,
+            );
+        } catch {
+          process.stderr.write('{"event":"IDEMPOTENCY_PURGE_FAILED"}\n');
+        }
         lastRetentionCheck = Date.now();
       }
       const outcome = await processReservationEmail(pool, transport, options);
