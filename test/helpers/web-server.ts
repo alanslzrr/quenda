@@ -162,6 +162,16 @@ await withDatabase(async ({ auth, domain, migration, worker }) => {
     "web/test-results/arrival-fixtures.json",
     JSON.stringify(arrivalFixtures),
   );
+  // Usage analytics owns municipal indexes 55 and 56, one per project.
+  const analyticsFixtures = [];
+  for (const index of [55, 56])
+    analyticsFixtures.push(
+      await seedMunicipalBrowser(app, auth, domain, migration, index),
+    );
+  await writeFile(
+    "web/test-results/analytics-fixtures.json",
+    JSON.stringify(analyticsFixtures),
+  );
   await app.listen({
     host: "127.0.0.1",
     port: Number(process.env.QUENDA_TEST_API_PORT ?? 3000),

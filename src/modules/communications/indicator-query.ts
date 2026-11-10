@@ -16,6 +16,10 @@ import {
   type MetricReservation,
   municipalIndicators,
 } from "./indicators.ts";
+import {
+  type AnalyticsReservation,
+  usageAnalytics,
+} from "./usage-analytics.ts";
 
 type Source = IndicatorHistory & {
   timeZone: string;
@@ -42,6 +46,16 @@ export function readMunicipalIndicators(
 ) {
   return readIndicators(pool, actor, tenantId, null, from, to);
 }
+export function readUsageAnalytics(
+  pool: Pool,
+  actor: AuthenticatedAccount,
+  tenantId: string,
+  unitId: string | null,
+  from: string,
+  to: string,
+) {
+  return readIndicators(pool, actor, tenantId, unitId, from, to, true);
+}
 async function readIndicators(
   pool: Pool,
   actor: AuthenticatedAccount,
@@ -49,6 +63,7 @@ async function readIndicators(
   unitId: string | null,
   from: string,
   to: string,
+  analytics = false,
 ) {
   try {
     if (
@@ -103,6 +118,39 @@ async function readIndicators(
         const { timeZone, asOf } = projection;
         const start = first.toZonedDateTime(timeZone).toInstant().toString();
         const end = last.toZonedDateTime(timeZone).toInstant().toString();
+        const units = projection.units.map(({ unitId, source }) => ({
+          id: unitId,
+          calendars: publishedCalendarSlices(source, start, end),
+          closures: source.closures,
+        }));
+        if (analytics) {
+          const facts = (
+            await client.query<{
+              source: {
+                reservations: AnalyticsReservation[];
+                unitNames: Record<string, string>;
+              };
+            }>("SELECT domain.usage_analytics_source($1,$2,$3) AS source", [
+              unitId,
+              from,
+              to,
+            ])
+          ).rows[0]?.source;
+          if (!facts) throw new Error("Missing analytics projection");
+          return {
+            tenantId,
+            unitId,
+            ...usageAnalytics({
+              from,
+              to,
+              timeZone,
+              asOf,
+              units,
+              reservations: facts.reservations,
+              unitNames: facts.unitNames,
+            }),
+          };
+        }
 
         return {
           tenantId,
@@ -112,11 +160,7 @@ async function readIndicators(
             to,
             timeZone,
             asOf,
-            units: projection.units.map(({ unitId, source }) => ({
-              id: unitId,
-              calendars: publishedCalendarSlices(source, start, end),
-              closures: source.closures,
-            })),
+            units,
             reservations: projection.units.flatMap(
               ({ source }) => source.reservations,
             ),
