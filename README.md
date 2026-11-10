@@ -507,6 +507,14 @@ docker compose --env-file .env.production -f compose.production.example.yaml --p
 docker compose --env-file .env.production -f compose.production.example.yaml up -d
 ```
 
+En una instancia nueva todavía no hay operador de plataforma, y sin él no se puede dar de alta ningún municipio. Crear una cuenta desde la aplicación, verificar su correo, activar la verificación en dos pasos y copiar su identificador desde los datos de la cuenta. Después, una sola vez, con las credenciales de mantenimiento de la tarea `migrate`:
+
+```sh
+docker compose --env-file .env.production -f compose.production.example.yaml run --rm migrate scripts/initialize-operator.ts IDENTIFICADOR_DE_CUENTA
+```
+
+Se aplican las reglas de [Primer operador](#primer-operador).
+
 `TRUSTED_PROXY_CIDRS=172.28.10.10/32` limita la confianza de la API a la dirección fija del contenedor nginx. En nginx, `QUENDA_TRUSTED_PROXY_CIDR` identifica un único CIDR del proxy TLS inmediato; su valor inicial es loopback y debe ajustarse a la dirección real que llega al contenedor, que Docker puede traducir al publicar el puerto. El proxy de entrada debe sanear las cabeceras de cliente. Nginx ignora cabeceras reenviadas de otros pares y resuelve recursivamente la dirección del cliente solo en la cadena confiable; no configurar redes completas de clientes como proxies. `AUTH_ORIGIN` es el origen HTTPS público. Una actualización construye o descarga las imágenes nuevas y repite `up -d`: `migrate` se ejecuta antes de reemplazar la API y, si falla, la API no arranca; aplicar [la recuperación de una actualización fallida](#recuperación-de-una-actualización-fallida). Las copias y restauraciones siguen los procedimientos de [copia lógica](#copia-lógica-de-postgresql) y [restauración cerrada](#restauración-cerrada-a-la-aplicación), ejecutados con el cliente PostgreSQL 17 desde fuera de estos contenedores. `pnpm test:oci` verifica ambas imágenes locales (`QUENDA_IMAGE`, `QUENDA_WEB_IMAGE`) y la integración continua valida además la sintaxis de la composición.
 
 ### Métricas HTTP
