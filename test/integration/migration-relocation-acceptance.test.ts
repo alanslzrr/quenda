@@ -131,7 +131,9 @@ test("0066 upgrades a populated 0065 database without rewriting historical evide
         const previousColumns = async (upgraded: boolean) =>
           (
             await owner.query(
-              `SELECT (${upgraded ? "to_jsonb(r)-ARRAY['usage_rules_unit_id','pending_usage_rules_version']" : "to_jsonb(r)"})::text AS value FROM domain.reservation r ORDER BY id`,
+              // Later migrations add columns that start empty: 0066 the relocation
+              // reference and 0110 the arrival record.
+              `SELECT (${upgraded ? "to_jsonb(r)-ARRAY['usage_rules_unit_id','pending_usage_rules_version','arrived_at','arrival_recorded_by']" : "to_jsonb(r)"})::text AS value FROM domain.reservation r ORDER BY id`,
             )
           ).rows;
         const evidence = async () => ({
