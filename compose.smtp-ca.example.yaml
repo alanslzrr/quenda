@@ -1,0 +1,13 @@
+# Add with -f after compose.production.example.yaml when using a private SMTP CA.
+# SMTP_CA_HOST_FILE is the PEM file on the host, readable by the runtime user.
+services:
+  api:
+    environment:
+      SMTP_CA_FILE: /run/quenda/smtp-ca.pem
+    volumes:
+      - ${SMTP_CA_HOST_FILE:?Set the absolute path to the SMTP CA PEM}:/run/quenda/smtp-ca.pem:ro
+  worker:
+    environment:
+      SMTP_CA_FILE: /run/quenda/smtp-ca.pem
+    volumes:
+      - ${SMTP_CA_HOST_FILE:?Set the absolute path to the SMTP CA PEM}:/run/quenda/smtp-ca.pem:ro
