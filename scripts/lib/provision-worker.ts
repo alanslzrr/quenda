@@ -1,9 +1,11 @@
 import type { Client } from "pg";
+import { scramVerifier } from "./scram-verifier.ts";
 
 // Upgrade a dedicated Quenda database; never replace an existing cluster role.
 export async function provisionWorker(client: Client, password: string) {
   if (password.length < 24 || password.includes("\0"))
     throw new Error("Invalid worker password");
+  const verifier = scramVerifier(password);
   await client.query("BEGIN");
   try {
     const schemas = await client.query<{ name: string }>(
@@ -15,7 +17,7 @@ export async function provisionWorker(client: Client, password: string) {
       connect: string;
     }>(
       "SELECT format('CREATE ROLE quenda_worker LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD %L', $1::text) AS create_role, format('GRANT CONNECT ON DATABASE %I TO quenda_worker', current_database()) AS connect",
-      [password],
+      [verifier],
     );
     const row = statements.rows[0];
     if (!row) throw new Error("Missing database");
