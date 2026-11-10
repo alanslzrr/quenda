@@ -187,6 +187,7 @@ export async function readReservation(
       return {
         ...current(row, clock.now().getTime()),
         accountId: row.account_id,
+        arrivedAt: row.arrived_at?.toISOString() ?? null,
         pendingUsageRulesText:
           (
             await client.query<{ text: string | null }>(

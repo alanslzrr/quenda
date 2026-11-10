@@ -17,6 +17,8 @@ export interface Reservation {
   booking_policy_version: number | null;
   conditions_accepted_at: Date | null;
   non_cancellable_accepted: boolean | null;
+  /** Only read by the reservation detail; list functions do not return it. */
+  arrived_at?: Date | null;
 }
 export const present = (row: Omit<Reservation, "account_id">) => ({
   id: row.id,
