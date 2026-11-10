@@ -20,19 +20,26 @@ export async function makeAdministratorIndefinite(
   rationale: string,
 ) {
   const explanation = reason(rationale);
-  return command(
-    pool,
-    { accountId: actor.accountId, tenantId },
-    async (client) => {
-      await requireAdministrator(client, actor);
-      const result = await client.query<{ allowed: boolean }>(
-        "SELECT domain.make_administrator_indefinite($1,$2) AS allowed",
-        [accountId, explanation],
-      );
-      if (!result.rows[0]?.allowed) throw new HttpError("NOT_FOUND");
-      return { tenantId, accountId };
-    },
-  );
+  try {
+    return await command(
+      pool,
+      { accountId: actor.accountId, tenantId },
+      async (client) => {
+        await requireAdministrator(client, actor);
+        const result = await client.query<{ allowed: boolean }>(
+          "SELECT domain.make_administrator_indefinite($1,$2) AS allowed",
+          [accountId, explanation],
+        );
+        if (!result.rows[0]?.allowed) throw new HttpError("NOT_FOUND");
+        return { tenantId, accountId };
+      },
+    );
+  } catch (error) {
+    // Only an indefinite administrator converts another one's grant.
+    if (error instanceof DatabaseError && error.code === "42501")
+      throw new HttpError("FORBIDDEN");
+    throw error;
+  }
 }
 
 export async function revokeMunicipalAccessForSecurity(

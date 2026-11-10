@@ -34,6 +34,12 @@ export async function inviteAdministrator(
           [input.expiresAt, input.roleExpiresAt ?? null],
         );
         if (!future.rows[0]?.valid) throw new HttpError("INVALID_INPUT");
+        // A temporary administrator cannot grant a role that outlives its own.
+        const bounded = await client.query<{ allowed: boolean }>(
+          "SELECT domain.administrator_role_within_issuer($1) AS allowed",
+          [input.roleExpiresAt ?? null],
+        );
+        if (!bounded.rows[0]?.allowed) throw new HttpError("FORBIDDEN");
         await client.query(
           "INSERT INTO domain.administrator_invitation (tenant_id,id,account_id,invited_by,expires_at,grant_source,role_expires_at,issuer_invitation_id) VALUES ($1,$2,$3,$4,$5,'MUNICIPAL',$6,(SELECT invitation_id FROM domain.municipal_administrator WHERE tenant_id=$1 AND account_id=$4))",
           [
