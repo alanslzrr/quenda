@@ -7,6 +7,7 @@ import { buildApp } from "../../src/app.ts";
 import { localMail } from "../../src/mail/local.ts";
 import { createAuthentication } from "../../src/modules/identity/index.ts";
 import { withDatabase } from "./postgres.ts";
+import { seedArrivalBrowser } from "./web-arrival.ts";
 import { browserCatalog, seedWebCatalog } from "./web-catalog.ts";
 import { seedMunicipalBrowser } from "./web-municipal.ts";
 import { seedPlatformBrowser } from "./web-platform.ts";
@@ -150,6 +151,16 @@ await withDatabase(async ({ auth, domain, migration, worker }) => {
   await writeFile(
     "web/test-results/reporting-fixtures.json",
     JSON.stringify(reportingFixtures),
+  );
+  // Arrival owns municipal indexes 53 and 54, one per project.
+  const arrivalFixtures = [];
+  for (const index of [53, 54])
+    arrivalFixtures.push(
+      await seedArrivalBrowser(app, auth, domain, migration, index),
+    );
+  await writeFile(
+    "web/test-results/arrival-fixtures.json",
+    JSON.stringify(arrivalFixtures),
   );
   await app.listen({
     host: "127.0.0.1",
