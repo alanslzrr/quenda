@@ -30,7 +30,7 @@ pnpm --dir web install --frozen-lockfile --ignore-scripts
 pnpm --dir web dev
 ```
 
-Vite escucha en `http://127.0.0.1:5173` y dirige `/api` al backend local en el puerto 3000. Para utilizar la interfaz local, `AUTH_ORIGIN` debe ser `http://127.0.0.1:5173`; no se reescribe el encabezado `Origin`. La aplicación utiliza rutas API relativas y cookies del mismo origen. Los secretos permanecen en el backend.
+Vite escucha en `http://127.0.0.1:5173` y dirige `/api` al backend local en el puerto 3000. Para utilizar la interfaz local, `AUTH_ORIGIN` debe ser `http://127.0.0.1:5173` en `.env.local` y `.env.worker.local` (la configuración generada usa `http://localhost:3000`); no se reescribe el encabezado `Origin`. La aplicación utiliza rutas API relativas y cookies del mismo origen. Los secretos permanecen en el backend.
 
 ```sh
 pnpm --dir web build
@@ -91,7 +91,7 @@ El rol se revoca con `POST /api/municipalities/{tenantId}/administrators/{accoun
 
 El operador puede sustituir una invitación inicial caducada o incorrecta con `POST /api/municipalities/{tenantId}/initial-administrator-invitation/replace` (`accountId`, `expiresAt`, `reason`). La sustitución invalida las invitaciones iniciales pendientes y conserva su auditoría. Esta vía se cierra después de la primera aceptación y no se reabre al revocar administradores.
 
-Al invitar a un administrador, `roleExpiresAt` permite fijar la caducidad del rol; es independiente de `expiresAt`, que limita la aceptación. Omitirlo o enviar `null` concede el rol sin vencimiento temporal, sujeto a revocación. Un permiso vencido no autoriza operaciones ni nuevas aceptaciones de sus delegaciones; renovarlo requiere otra invitación y no reactiva las anteriores.
+Al invitar a un administrador, `roleExpiresAt` permite fijar la caducidad del rol; es independiente de `expiresAt`, que limita la aceptación. Omitirlo o enviar `null` concede el rol sin vencimiento temporal, sujeto a revocación. Un permiso vencido no autoriza operaciones ni nuevas aceptaciones de sus delegaciones; renovarlo requiere otra invitación y no reactiva las anteriores. Un administrador con permiso temporal solo puede conceder roles de administrador que venzan, como máximo, cuando vence el suyo (`403 FORBIDDEN` en otro caso).
 
 `GET /api/municipalities/{tenantId}/profiles` permite al administrador con MFA reciente consultar los perfiles vinculados a ese municipio. Devuelve `accountId`, `createdAt` y `accountLabel` (nombre y correo de presentación), hasta 20 elementos y `nextCursor`; la página siguiente utiliza `?after=...`. No incluye cuentas sin vínculo municipal ni credenciales; la proyección de nombre y correo está limitada al ámbito autorizado. Los gestores y operadores sin rol administrativo en ese municipio no pueden utilizar esta consulta.
 
@@ -111,7 +111,7 @@ La baja revoca sesiones, permisos propios e invitaciones pendientes recibidas y 
 
 ## Continuidad y seguridad administrativa
 
-- `POST /api/municipalities/{tenantId}/administrators/{accountId}/make-indefinite`, con `reason`, convierte un permiso temporal vigente ya aceptado en indefinido. La revocación ordinaria exige otro responsable habilitado indefinido.
+- `POST /api/municipalities/{tenantId}/administrators/{accountId}/make-indefinite`, con `reason`, convierte un permiso temporal vigente ya aceptado en indefinido. Solo puede hacerlo un administrador con permiso indefinido, y nunca sobre su propio permiso. La revocación ordinaria exige otro responsable habilitado indefinido.
 - `POST /api/municipalities/{tenantId}/accounts/{accountId}/revoke-access-for-security`, con `reason`, retira permisos e invitaciones pendientes solo en ese municipio, incluso los del último administrador. Requiere administrador municipal con MFA reciente.
 - `POST /api/municipalities/{tenantId}/administrator-recovery-invitations` recibe `accountId`, `expiresAt`, `reason` y `verificationReference`. Un operador con MFA reciente invita a un sustituto únicamente si el municipio inicializado no tiene administradores habilitados. La referencia identifica la verificación externa de autoridad; no la realiza automáticamente. El destinatario acepta con MFA.
 - `POST /api/platform/accounts/{accountId}/suspend`, con `reason`, exige operador y MFA reciente. Suspende la cuenta global, revoca sesiones y autoridad propia, incluso la del último operador, sin cancelar reservas. Un administrador municipal no puede utilizar esta operación por su rol municipal.
@@ -200,7 +200,7 @@ Estas consultas no crean cuentas ni perfiles. Los recursos no publicados o retir
 - `GET /api/me/reservations`: historial del usuario autenticado entre municipios de la instancia, incluidas reservas de unidades retiradas. Devuelve nombre municipal y de unidad, sin aceptar un identificador de otro usuario.
 - `GET /api/municipalities/{tenantId}/reservations`: requiere MFA y devuelve únicamente reservas cubiertas por `RESERVATION_READ` o `RESERVATION_MANAGE`. `?unitId=UUID` filtra sin ampliar permisos. `?date=AAAA-MM-DD` selecciona las reservas que se solapan con ese día municipal antes de paginar, incluidas las canceladas. Ser titular de una reserva no concede acceso al listado de gestión.
 
-Los listados devuelven `{ items, nextCursor }`, con hasta 20 elementos y `Cache-Control: no-store`. `?after=nextCursor` continúa el listado. El orden por identificadores es estable, no cronológico; el cursor propio combina reserva y municipio, y el municipal contiene el identificador de reserva. Los permisos se vuelven a comprobar en cada página.
+Los listados devuelven `{ items, nextCursor }`, con hasta 20 elementos y `Cache-Control: no-store`. `?after=nextCursor` continúa el listado. El historial propio se ordena del inicio más reciente al más antiguo y su cursor combina inicio, reserva y municipio. El listado municipal y el de bloqueos se ordenan por inicio, del más temprano al más tardío; su cursor es el identificador del último elemento. Los permisos se vuelven a comprobar en cada página.
 
 El detalle no devuelve el resultado histórico de un comando: tras cancelar, muestra `CANCELADA` y la nueva revisión, aunque repetir la clave de creación siga recuperando la confirmación original.
 
@@ -344,6 +344,8 @@ Los ejecutores utilizan Ubuntu 24.04, Node de `.nvmrc` y pnpm de `package.json`.
 Quenda utiliza **AGPL-3.0-only**, no «or later». El [texto íntegro](LICENSE) se distribuye con el proyecto. Los despliegues sujetos a sus obligaciones deben facilitar el código fuente correspondiente; las versiones modificadas accesibles por red deben ofrecerlo a sus usuarios conforme a la sección 13. [Identificador SPDX y términos](https://spdx.org/licenses/AGPL-3.0-only.html).
 
 
+## Colaboración, comunicaciones y operación
+
 ### Convenios: creación, versiones y aprobación
 
 Los comandos requieren administrador del municipio participante, sesión verificada, MFA reciente, `Origin` autorizado e `Idempotency-Key`. Comprueban los permisos actuales antes de recuperar un resultado idempotente.
@@ -362,11 +364,11 @@ Las respuestas incluyen las cabeceras de idempotencia y `Cache-Control: no-store
 - `POST /api/municipalities/{tenantId}/credentials`: recibe `agreementId`, `version`, `accountId`, `startsAt`, `endsAt` y `verificationReference`. Exige administrador con MFA reciente, municipio emisor habilitado, cuenta vinculada a ese municipio y versión activa dentro de su vigencia efectiva en modo `acreditacion_vigente`. Devuelve `201` con el identificador y `revoked: false`; no afirma elegibilidad para una reserva.
 - `POST /api/municipalities/{tenantId}/credentials/{credentialId}/revoke`: recibe `reason`; exige administrador del municipio emisor con MFA reciente y devuelve `200` con `revoked: true`. Permite revocar aunque el convenio esté suspendido y conserva el primer motivo y la evidencia de emisión.
 
-Ambos comandos requieren `Origin` autorizado e `Idempotency-Key`, devuelven cabeceras de idempotencia y `Cache-Control: no-store`, y revalidan permisos antes del replay. No existe un listado general ni una consulta libre de elegibilidad.
+Ambos comandos requieren `Origin` autorizado e `Idempotency-Key`, devuelven cabeceras de idempotencia y `Cache-Control: no-store`, y revalidan permisos antes del replay. El listado solo muestra acreditaciones emitidas por el propio municipio; no existe un listado general ni una consulta libre de elegibilidad.
 
 Las reservas de unidades adscritas comprueban, en su misma transacción, la vigencia efectiva del convenio, la acreditación que cubre todo el intervalo cuando se exige y la cuota semanal conjunta por cuenta. Crear atribuye el consumo; reprogramar recalcula semana y destino; cancelar lo libera. Una modificación sin cambios conserva la atribución. El rechazo revierte reserva, ocupación, consumo, auditoría y resultado idempotente; no devuelve consumos ni acreditaciones ajenas. La suspensión permite cancelar, pero impide nuevas reservas y reprogramaciones; cerrar la adscripción no activa el acceso público automáticamente.
 
-`POST /api/municipalities/{tenantId}/agreements/{agreementId}/suspend` recibe `version` y `reason`. Un administrador participante con MFA reciente suspende el convenio completo y cierra sus vigencias efectivas, incluidas las programadas. Conserva reservas, consumos y vinculaciones de unidades; registra actor, municipio, motivo y correlación. Devuelve `200` con `SUSPENDIDO`; repetir no duplica eventos. Exige `Origin` autorizado e `Idempotency-Key`. Un borrador o una versión únicamente aprobada no puede suspenderse mediante este comando.
+`POST /api/municipalities/{tenantId}/agreements/{agreementId}/suspend` recibe `version` y `reason`. Un administrador participante con MFA reciente suspende el convenio completo y cierra sus vigencias efectivas, incluidas las programadas. El municipio debe participar en una versión en vigor o programada: quien solo participó en una versión ya sustituida o vencida recibe `409`. Conserva reservas, consumos y vinculaciones de unidades; registra actor, municipio, motivo y correlación. Devuelve `200` con `SUSPENDIDO`; repetir no duplica eventos. Exige `Origin` autorizado e `Idempotency-Key`. Un borrador o una versión únicamente aprobada no puede suspenderse mediante este comando.
 
 `POST /api/municipalities/{tenantId}/agreements/{agreementId}/activate` activa una nueva versión aprobada, incluida la sustitución o reactivación. Recibe `version`, `legalReviewReference` y `reportReviewReference` (puede ser nula si no se habilitan informes). Exige la versión aprobada más reciente, aprobación de todos los participantes, unidades adscritas y emisor habilitado si se requieren acreditaciones. Concilia las reservas confirmadas de las unidades y vigencia aprobadas, conservándolas aunque superen la cuota o no cumplan la nueva elegibilidad. Devuelve `200` con `ACTIVADO`. La operación completa es idempotente y atómica; exige administrador participante, MFA reciente y `Origin` autorizado. Otra activación de la misma versión con una clave nueva devuelve `409`. Sustituir o reactivar exige una nueva versión y todas sus aprobaciones; cierra las vigencias anteriores sin solapes, conserva sus evidencias y no reinicia los consumos de cuota, tampoco al retirar unidades.
 
@@ -394,6 +396,8 @@ Para ejecutar el worker local: `pnpm worker:local`; añadir `--once` procesa com
 Los parámetros opcionales son `EMAIL_LEASE_SECONDS` (60), `EMAIL_MAX_ATTEMPTS` (5), `EMAIL_RETRY_SECONDS` (60) y `EMAIL_POLL_MS` (1000). Reducir el máximo agota los pendientes que ya lo alcanzan. SIGINT/SIGTERM detienen nuevas iteraciones y cierran el pool tras el intento en curso. Los logs contienen códigos de estado, no destinatarios ni respuestas del proveedor. El transporte local no permite ejecutar el worker con `NODE_ENV=production`.
 
 El worker publica `EMAIL_QUEUE_HEALTH` con cantidades de pendientes, concesiones y agotados al iniciar el procesamiento y, como máximo, una vez por minuto, salvo que un intento agote su límite. Emite `EMAIL_QUEUE_ATTENTION` cuando detecta un total no nulo de agotados distinto del último observado. La alerta también cubre agotamientos por concesión vencida o reducción del límite. Solo el rol worker puede consultar estos contadores; no incluyen identificadores ni destinatarios.
+
+El mismo proceso ejecuta, como máximo una vez por minuto, un lote de conservación y la eliminación acotada de claves de idempotencia vencidas (`IDEMPOTENCY_PURGE`). Un fallo de estas tareas se registra como `RETENTION_BATCH_FAILED` o `IDEMPOTENCY_PURGE_FAILED` y no detiene el envío de correo; la barrera de restauración de privacidad sí detiene el worker.
 
 ### Idioma de avisos
 
@@ -553,7 +557,7 @@ Conservar el archivo junto al artefacto construido desde esa misma revisión. No
 
 La API ofrece `GET /legal/source` sin autenticación. Configurar conjuntamente `SOURCE_ARCHIVE_PATH`, `SOURCE_ARCHIVE_SHA256` y `SOURCE_REVISION` con el archivo y recibo anteriores; el archivo debe estar disponible en el entorno de ejecución. El arranque verifica tamaño máximo de 16 MiB, formato gzip y checksum, y conserva los bytes verificados para que un reemplazo posterior del archivo no cambie la descarga. Un error de configuración impide el arranque sin exponer rutas ni contenido en el mensaje.
 
-La respuesta incluye revisión, SHA-256, ETag y nombre del archivo. Las respuestas de la API anuncian la descarga mediante una cabecera `Link`; no depende de la base de datos ni crea sesiones. Sin configuración responde 503 y no anuncia una oferta inexistente. Antes de distribuir o desplegar, verificar que el archivo corresponde al artefacto y que el usuario puede descargarlo; estas variables no demuestran por sí solas esa correspondencia ni resuelven las atribuciones pendientes. El frontend deberá mostrar el acceso de forma visible cuando se implemente.
+La respuesta incluye revisión, SHA-256, ETag y nombre del archivo. Las respuestas de la API anuncian la descarga mediante una cabecera `Link`; no depende de la base de datos ni crea sesiones. Sin configuración responde 503 y no anuncia una oferta inexistente. Antes de distribuir o desplegar, verificar que el archivo corresponde al artefacto y que el usuario puede descargarlo; estas variables no demuestran por sí solas esa correspondencia ni resuelven las atribuciones pendientes. La aplicación web enlaza la descarga desde el pie de página («Código fuente»).
 
 ### Auditoría de consultas municipales de reservas
 
@@ -587,7 +591,7 @@ Las dos vías administrativas reciben `reason` y `authorizationReference`. Admit
 
 El autoservicio mantiene la sesión original y exige MFA reciente cuando esté habilitado. Los tokens caducan a los diez minutos y no sobreviven a cambios incompatibles de credenciales o estado. Los enlaces transportan el token en el fragmento; ningún GET confirma el cambio. La ruta nativa `/api/auth/change-email` no se expone.
 
-Si el usuario perdió el buzón anterior, `pnpm email:recover <cuenta> <nuevo-correo> <responsable-operativo> <referencia-verificación> <motivo>` inicia el procedimiento asistido con credenciales de mantenimiento y configuración de correo. No cambia la identidad inmediatamente: el titular confirma el nuevo buzón, contraseña y MFA desde una sesión propia. No reactiva cuentas ni recupera permisos.
+Si el usuario perdió el buzón anterior, `pnpm email:recover <cuenta> <nuevo-correo> <responsable-operativo> <referencia-verificación> <motivo>` inicia el procedimiento asistido con credenciales de mantenimiento. Además de `.env.migration.local`, el entorno debe definir `AUTH_ORIGIN` y la configuración de correo (`MAIL_TRANSPORT` y sus variables). No cambia la identidad inmediatamente: el titular confirma el nuevo buzón, contraseña y MFA desde una sesión propia. No reactiva cuentas ni recupera permisos.
 
 ### Políticas y actuaciones
 
