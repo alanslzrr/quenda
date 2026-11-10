@@ -19,15 +19,15 @@ export interface MetricReservation extends MetricInterval {
   unitId: string;
   status: "CONFIRMADA" | "CANCELADA";
 }
-type Range = { start: bigint; end: bigint };
+export type Range = { start: bigint; end: bigint };
 const minute = 60_000_000_000n;
-function interval(value: MetricInterval): Range {
+export function interval(value: MetricInterval): Range {
   const start = Temporal.Instant.from(value.start).epochNanoseconds;
   const end = Temporal.Instant.from(value.end).epochNanoseconds;
   if (start >= end) throw new HttpError("INVALID_INPUT");
   return { start, end };
 }
-function intersect(a: Range, b: Range): Range | null {
+export function intersect(a: Range, b: Range): Range | null {
   const start = a.start > b.start ? a.start : b.start,
     end = a.end < b.end ? a.end : b.end;
   return start < end ? { start, end } : null;
@@ -41,6 +41,61 @@ function union(values: Range[]): Range[] {
     if (previous && previous.end >= current.start)
       previous.end = previous.end > current.end ? previous.end : current.end;
     else result.push({ ...current });
+  }
+  return result;
+}
+/**
+ * The bookable time of a unit inside the period: its published opening hours
+ * minus closures, as sorted, disjoint ranges.
+ */
+export function unitAvailability(
+  unit: MetricUnit,
+  period: Range,
+  to: Temporal.PlainDate,
+  timeZone: string,
+): Range[] {
+  const windows: Range[] = [];
+  const slices = unit.calendars
+    .map((value) => ({ value, range: interval(value) }))
+    .sort((a, b) => (a.range.start < b.range.start ? -1 : 1));
+  for (let n = 0; n < slices.length; n++) {
+    const slice = slices[n];
+    if (!slice) continue;
+    const previous = slices[n - 1];
+    if (previous && previous.range.end > slice.range.start)
+      throw new HttpError("INVALID_INPUT");
+    const effective = intersect(slice.range, period);
+    if (!effective) continue;
+    let date = Temporal.Instant.fromEpochNanoseconds(effective.start)
+      .toZonedDateTimeISO(timeZone)
+      .toPlainDate();
+    while (Temporal.PlainDate.compare(date, to) < 0) {
+      const dayStart = date.toZonedDateTime(timeZone).epochNanoseconds;
+      if (dayStart >= effective.end) break;
+      for (const opening of utcOpeningIntervals(
+        slice.value.calendar,
+        date.toString(),
+        timeZone,
+      )) {
+        const clipped = intersect(interval(opening), effective);
+        if (clipped) windows.push(clipped);
+      }
+      date = date.add({ days: 1 });
+    }
+  }
+  const closures = union(unit.closures.map(interval));
+  const result: Range[] = [];
+  for (const opening of union(windows)) {
+    let pieces = [opening];
+    for (const closure of closures)
+      pieces = pieces.flatMap((piece) => {
+        if (!intersect(piece, closure)) return [piece];
+        return [
+          { start: piece.start, end: closure.start },
+          { start: closure.end, end: piece.end },
+        ].filter((rest) => rest.start < rest.end);
+      });
+    result.push(...pieces);
   }
   return result;
 }
@@ -74,47 +129,9 @@ export function municipalIndicators(input: {
     let offered = 0n,
       reserved = 0n;
     const counts = { CONFIRMADA: 0, CANCELADA: 0, FINALIZADA: 0 };
-    for (const unit of input.units) {
-      const windows: Range[] = [];
-      const slices = unit.calendars
-        .map((value) => ({ value, range: interval(value) }))
-        .sort((a, b) => (a.range.start < b.range.start ? -1 : 1));
-      for (let n = 0; n < slices.length; n++) {
-        const slice = slices[n];
-        if (!slice) continue;
-        const previous = slices[n - 1];
-        if (previous && previous.range.end > slice.range.start)
-          throw new HttpError("INVALID_INPUT");
-        const effective = intersect(slice.range, period);
-        if (!effective) continue;
-        let date = Temporal.Instant.fromEpochNanoseconds(effective.start)
-          .toZonedDateTimeISO(input.timeZone)
-          .toPlainDate();
-        while (Temporal.PlainDate.compare(date, to) < 0) {
-          const dayStart = date.toZonedDateTime(
-            input.timeZone,
-          ).epochNanoseconds;
-          if (dayStart >= effective.end) break;
-          for (const opening of utcOpeningIntervals(
-            slice.value.calendar,
-            date.toString(),
-            input.timeZone,
-          )) {
-            const clipped = intersect(interval(opening), effective);
-            if (clipped) windows.push(clipped);
-          }
-          date = date.add({ days: 1 });
-        }
-      }
-      const closures = union(unit.closures.map(interval));
-      for (const opening of union(windows)) {
-        offered += opening.end - opening.start;
-        for (const closure of closures) {
-          const clipped = intersect(opening, closure);
-          if (clipped) offered -= clipped.end - clipped.start;
-        }
-      }
-    }
+    for (const unit of input.units)
+      for (const range of unitAvailability(unit, period, to, input.timeZone))
+        offered += range.end - range.start;
     for (const booking of input.reservations) {
       if (
         !ids.has(booking.unitId) ||
