@@ -431,6 +431,18 @@ Nodemailer 10.1.7 está fijado en el lockfile e incluye tipos TypeScript y licen
 
 La oferta utiliza versiones de calendario y eventos históricos de publicación/retirada de instalación y unidad. Los cierres se recortan a su vigencia efectiva. Dos transiciones contradictorias de publicación con el mismo instante devuelven `409` en vez de inventar un orden. No se devuelven titulares, motivos ni eventos de auditoría. Las respuestas usan `Cache-Control: no-store`.
 
+### Análisis de uso
+
+`GET /api/municipalities/{tenantId}/analytics?from=…&to=…` (opcionalmente `unitId`) completa los indicadores con el mismo permiso (`REPORT_READ` municipal o de la unidad, con MFA), periodo y límite de 366 días. Devuelve:
+
+- `weekdayHours`: minutos ofertados y reservados, y su porcentaje, por día ISO (1 = lunes) y hora local.
+- `units`: los mismos minutos por unidad, con su nombre. Suman lo mismo que los indicadores básicos.
+- `cancellations`: canceladas por el titular y por el ayuntamiento, según el autor del evento de cancelación.
+- `leadTime`: reservas por tramos de antelación (de la creación al inicio).
+- `attendance`: llegadas registradas con el código QR sobre las reservas confirmadas ya finalizadas. Mide lo que registra el personal, no la asistencia real.
+
+Cancelaciones, antelación y llegadas cuentan las reservas que empiezan en el periodo, como los indicadores. Solo devuelve agregados, sin titulares. Rechaza más de 20.000 reservas. En la web se pide con «Analizar el uso» después de consultar los indicadores. El mapa por día y hora es una tabla con el porcentaje escrito en cada celda; el tono solo lo refuerza.
+
 ### Exportación de reservas
 
 `GET /api/municipalities/{tenantId}/exports/reservations?from=2030-01-01&to=2030-02-01` descarga JSON `quenda.reservations`, versión 3. El parámetro opcional `unitId` limita el conjunto a una unidad. Exige `DATA_EXPORT` y `RESERVATION_READ` o `RESERVATION_MANAGE` para el mismo ámbito, con MFA de los últimos cinco minutos. Sin `unitId`, ambos permisos deben ser municipales.
