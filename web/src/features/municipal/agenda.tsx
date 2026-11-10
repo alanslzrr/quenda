@@ -539,6 +539,7 @@ export function AdministrativeReservation() {
       <h1>{t("Reserva", "Reserva")}</h1>
       <ReservationSummary reservation={r} />
       <p>{r.status}</p>
+      <Arrival key={`${r.id}:${r.arrivedAt ?? ""}`} reservation={r} />
       <p>
         {t("Unidad:", "Unidade:")} {r.unitId}
       </p>
@@ -606,6 +607,65 @@ export function AdministrativeReservation() {
           />
         )}
     </>
+  );
+}
+/** Checking the holder's access code ends here: the page the QR code opens. */
+function Arrival({ reservation: r }: { reservation: Reservation }) {
+  const m = useMunicipality();
+  const { locale, t } = usePreferences();
+  const client = useQueryClient();
+  const { account } = useSession();
+  const now = Date.now();
+  const opens = Date.parse(r.startsAt) - 30 * 60000;
+  const closes = Date.parse(r.endsAt);
+  const valid = r.status === "CONFIRMADA" && now >= opens && now < closes;
+  return (
+    <section className={styles.section}>
+      <h2>{t("Acceso", "Acceso")}</h2>
+      {r.arrivedAt ? (
+        <p>
+          {t("Llegada registrada:", "Chegada rexistrada:")}{" "}
+          {dateTime(r.arrivedAt, r.timeZone, locale)}
+        </p>
+      ) : valid ? (
+        <>
+          <p>
+            {t(
+              "Reserva válida para este momento. Comprueba la identidad del titular si lo exigen las normas del espacio.",
+              "Reserva válida para este momento. Comproba a identidade do titular se o esixen as normas do espazo.",
+            )}
+          </p>
+          <ActionForm
+            label={t("Registrar llegada", "Rexistrar chegada")}
+            resetOnSuccess={false}
+            submit={async () => {
+              await api(
+                `${endpoint(m.id)}/reservations/${r.id}/arrival`,
+                { method: "POST" },
+                locale,
+              );
+              await client.invalidateQueries({
+                queryKey: ["private", account?.accountId, "municipal"],
+              });
+            }}
+          />
+        </>
+      ) : (
+        <p className={styles.notice}>
+          {r.status !== "CONFIRMADA"
+            ? t(
+                "Esta reserva no da acceso: no está confirmada.",
+                "Esta reserva non dá acceso: non está confirmada.",
+              )
+            : now < opens
+              ? t(
+                  `Todavía no da acceso: la llegada se puede registrar desde las ${new Date(opens).toLocaleTimeString(locale === "gl" ? "gl-ES" : "es-ES", { hour: "2-digit", minute: "2-digit", timeZone: r.timeZone })}.`,
+                  `Aínda non dá acceso: a chegada pódese rexistrar desde as ${new Date(opens).toLocaleTimeString(locale === "gl" ? "gl-ES" : "es-ES", { hour: "2-digit", minute: "2-digit", timeZone: r.timeZone })}.`,
+                )
+              : t("Esta reserva ya ha terminado.", "Esta reserva xa rematou.")}
+        </p>
+      )}
+    </section>
   );
 }
 function ReservationOperations({
