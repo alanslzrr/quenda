@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { defaultIdempotencyRetentionSeconds } from "../../config.ts";
 import {
   type AuthConfiguration,
   type Authentication,
@@ -37,6 +38,12 @@ const body = {
   required: ["name"],
   properties: { name: { type: "string", minLength: 1, maxLength: 200 } },
 } as const;
+const creationHeaders = {
+  type: "object",
+  properties: {
+    "idempotency-key": { type: "string", pattern: "^[A-Za-z0-9._:-]{1,200}$" },
+  },
+};
 const errors = Object.fromEntries(
   [400, 401, 403, 404, 409, 429, 500, 503].map((status) => [
     status,
@@ -48,20 +55,26 @@ export async function registerCatalog(
   pool: Pool,
   auth: Authentication,
   config: AuthConfiguration,
+  retentionSeconds = defaultIdempotencyRetentionSeconds,
 ) {
   const actor = createRequestActor(pool, auth, config);
   await registerCalendarRoutes(app, pool, auth, config);
   await registerUsageRulesRoutes(app, pool, auth, config);
   await registerPublicCatalog(app, pool, config.secret);
-  app.post<{ Params: { tenantId: string }; Body: { name: string } }>(
+  app.post<{
+    Headers: { "idempotency-key"?: string };
+    Params: { tenantId: string };
+    Body: { name: string };
+  }>(
     "/api/municipalities/:tenantId/facilities",
     {
       schema: {
         operationId: "createFacility",
+        headers: creationHeaders,
         tags: ["Catalog"],
         security: [{ quendaSession: [] }],
         description:
-          "Alta administrativa de una instalación en borrador. No la publica.",
+          "Alta administrativa de una instalación en borrador. No la publica. Idempotency-Key permite recuperar el resultado sin duplicar el alta dentro del plazo publicado; sin cabecera se crea una solicitud nueva.",
         params: {
           type: "object",
           additionalProperties: false,
@@ -93,10 +106,13 @@ export async function registerCatalog(
             await actor(request, reply),
             request.params.tenantId,
             request.body,
+            request.headers["idempotency-key"],
+            retentionSeconds,
           ),
         ),
   );
   app.post<{
+    Headers: { "idempotency-key"?: string };
     Params: { tenantId: string; facilityId: string };
     Body: { name: string };
   }>(
@@ -104,10 +120,11 @@ export async function registerCatalog(
     {
       schema: {
         operationId: "createReservableUnit",
+        headers: creationHeaders,
         tags: ["Catalog"],
         security: [{ quendaSession: [] }],
         description:
-          "Alta administrativa de una unidad en borrador. No habilita reservas ni publicación.",
+          "Alta administrativa de una unidad en borrador. No habilita reservas ni publicación. Idempotency-Key evita altas duplicadas dentro del plazo publicado; cada repetición comprueba el permiso actual.",
         params: {
           type: "object",
           additionalProperties: false,
@@ -141,6 +158,8 @@ export async function registerCatalog(
             request.params.tenantId,
             request.params.facilityId,
             request.body,
+            request.headers["idempotency-key"],
+            retentionSeconds,
           ),
         ),
   );
