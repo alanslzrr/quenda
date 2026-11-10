@@ -16,6 +16,7 @@ import { endsNextDay, intervalLabel } from "../catalog/dates";
 import { useBookingEntry } from "../catalog/journey";
 import styles from "./reservations.module.css";
 import { detailPath, PendingLink, type Reservation } from "./shared";
+import { CalendarSubscription } from "./subscription";
 
 type HistoryItem = Reservation & { municipality: string; unitName: string };
 
@@ -117,6 +118,7 @@ export function ReservationHistory() {
           </a>
         </p>
       )}
+      <CalendarSubscription />
       {municipalities.length > 1 && (
         <div className={styles.toolbar}>
           <Select
