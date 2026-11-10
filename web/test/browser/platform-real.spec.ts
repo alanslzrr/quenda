@@ -339,7 +339,7 @@ test("municipal onboarding replacement security suspension and recovery preserve
       .fill(tenantId);
     await page
       .getByLabel(/Identificador de (cuenta|conta)/)
-      .fill(f.operator.accountId);
+      .fill(f.replacement.accountId);
     await deadline(page);
     await page
       .getByLabel("Motivo", { exact: true })
@@ -355,23 +355,29 @@ test("municipal onboarding replacement security suspension and recovery preserve
     ).toBe(403);
     // Acceptance uses the citizen's existing account flow; the operator does not
     // acquire municipal authority merely by issuing the recovery invitation.
-    await page.goto("/perfil/invitaciones");
-    const button = page.getByRole("button", {
+    await signin(recipient, f.replacement);
+    await recipient.goto("/perfil/invitaciones");
+    const button = recipient.getByRole("button", {
       name: "Aceptar invitación",
       exact: true,
     });
     await expect(button).toHaveCount(1);
     await button.click();
     await expect(button).toHaveCount(0);
-    const administrators = await page.request.get(
+    const administrators = await recipient.request.get(
       `/api/municipalities/${tenantId}/administrators`,
     );
     expect(administrators.status()).toBe(200);
     expect(
       (await administrators.json()).items.find(
-        (a: { accountId: string }) => a.accountId === f.operator.accountId,
+        (a: { accountId: string }) => a.accountId === f.replacement.accountId,
       ).active,
     ).toBe(true);
+    expect(
+      (
+        await page.request.get(`/api/municipalities/${tenantId}/administrators`)
+      ).status(),
+    ).toBe(403);
   } finally {
     await other.close();
   }
