@@ -571,11 +571,9 @@ test("catalog creation recovers a committed response after reload without duplic
       }
     },
   );
-  const form = page
-    .locator("form")
-    .filter({
-      has: page.getByRole("button", { name: "Crear instalación", exact: true }),
-    });
+  const form = page.locator("form").filter({
+    has: page.getByRole("button", { name: "Crear instalación", exact: true }),
+  });
   await form.getByLabel(/Nombre|Nome/).fill("Centro recuperado");
   await form
     .getByRole("button", { name: "Crear instalación", exact: true })
