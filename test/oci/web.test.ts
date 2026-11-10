@@ -240,6 +240,13 @@ test("the web image serves the bundle with strict headers and proxies the API", 
       ((await api.json()) as { url: string }).url,
       "/api/public/municipalities?limit=1",
     );
+    // Subscription URLs carry their secret in the path and stay out of the access log.
+    const secret = "S".repeat(43);
+    await fetch(`${base}/api/calendars/${secret}.ics`);
+    await delay(200);
+    const logged = (await docker("logs", site)).stdout;
+    assert.ok(!logged.includes(secret), "subscription secret was logged");
+    assert.ok(logged.includes("/api/public/municipalities"));
     const source = await fetch(`${base}/legal/source`);
     assert.equal(
       ((await source.json()) as { url: string }).url,
