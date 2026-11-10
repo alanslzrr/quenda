@@ -97,9 +97,9 @@ export async function modifyReservation(
           if (!locked.rows[0]) throw new HttpError("NOT_FOUND");
           reservation = locked.rows[0];
           if (reservation.status !== "CONFIRMADA")
-            throw new HttpError("CONFLICT");
+            throw new HttpError("RESERVATION_CANCELLED");
           if (reservation.revision !== input.expectedRevision)
-            throw new HttpError("CONFLICT");
+            throw new HttpError("RESERVATION_CHANGED");
           const now = clock.now().getTime();
           const deadline =
             reservation.starts_at.getTime() -
@@ -208,11 +208,8 @@ export async function modifyReservation(
       result: completeAcceptanceEvidence(response.result),
     }));
   } catch (error) {
-    if (
-      error instanceof DatabaseError &&
-      ["23P01", "40001", "40P01"].includes(error.code ?? "")
-    )
-      throw new HttpError("CONFLICT");
+    if (error instanceof DatabaseError && error.code === "23P01")
+      throw new HttpError("SLOT_UNAVAILABLE");
     throw error;
   }
 }
