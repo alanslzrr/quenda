@@ -216,11 +216,37 @@ async function municipality(
     "INSERT INTO domain.municipality(id,name,timezone,cancellation_minutes) VALUES($1,$2,$3,1440)",
     [seed.id, seed.name, timeZone],
   );
+  // The catalog has been open for 60 days, recorded as the application would:
+  // indicators derive offered time from calendar versions and publication events.
+  const since = "now()-interval '60 days'";
+  const event = (
+    facility: string,
+    unit: string | null,
+    operation: string,
+    calendar: number | null = null,
+  ) =>
+    migration.query(
+      `INSERT INTO domain.catalog_event(tenant_id,id,actor_id,facility_id,unit_id,operation,reason,calendar_version,independence_confirmed,occurred_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,${since})`,
+      [
+        seed.id,
+        randomUUID(),
+        actorId,
+        facility,
+        unit,
+        operation,
+        operation.startsWith("PUBLISH") ? "Apertura del catálogo" : null,
+        calendar,
+        operation === "PUBLISH_UNIT" ? true : null,
+      ],
+    );
   for (const facility of seed.facilities) {
     await migration.query(
-      "INSERT INTO domain.facility(tenant_id,id,name,published_at) VALUES($1,$2,$3,now())",
+      `INSERT INTO domain.facility(tenant_id,id,name,published_at) VALUES($1,$2,$3,${since})`,
       [seed.id, facility.id, facility.name],
     );
+    await event(facility.id, null, "CREATE_FACILITY");
+    await event(facility.id, null, "PUBLISH_FACILITY");
     for (const unit of facility.units) {
       await migration.query(
         "INSERT INTO domain.reservable_unit(tenant_id,id,facility_id,name) VALUES($1,$2,$3,$4)",
@@ -230,7 +256,7 @@ async function municipality(
         days.map((day) => ({ day, startMinute, endMinute })),
       );
       await migration.query(
-        "INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason) VALUES($1,$2,1,$3,$4,$5,$6,'[]',$7,'Horario inicial')",
+        `INSERT INTO domain.unit_calendar_version(tenant_id,unit_id,version,minimum_minutes,maximum_minutes,step_minutes,weekly,exceptions,actor_id,reason,created_at) VALUES($1,$2,1,$3,$4,$5,$6,'[]',$7,'Horario inicial',${since})`,
         [
           seed.id,
           unit.id,
@@ -247,9 +273,11 @@ async function municipality(
         [seed.id, unit.id, seed.rules, actorId, randomUUID()],
       );
       await migration.query(
-        "UPDATE domain.reservable_unit SET calendar_version=1, usage_rules_version=1, published_at=now() WHERE tenant_id=$1 AND id=$2",
+        `UPDATE domain.reservable_unit SET calendar_version=1, usage_rules_version=1, published_at=${since} WHERE tenant_id=$1 AND id=$2`,
         [seed.id, unit.id],
       );
+      await event(facility.id, unit.id, "CREATE_UNIT");
+      await event(facility.id, unit.id, "PUBLISH_UNIT", 1);
     }
   }
 }
