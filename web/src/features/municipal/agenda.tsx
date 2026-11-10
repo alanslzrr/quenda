@@ -179,12 +179,6 @@ function AgendaDay({
           />
         </section>
       )}
-      <p className={styles.version}>
-        {t(
-          "Las entradas se ordenan por hora de inicio, en páginas de 20. Carga las restantes para consultar todo el día.",
-          "As entradas ordénanse por hora de inicio, en páxinas de 20. Carga as restantes para consultar todo o día.",
-        )}
-      </p>
     </>
   );
 }
@@ -254,6 +248,13 @@ function ReservationList({
           <More query={q} />
         </>
       )}
+      {/* The paging note belongs to the list it describes, not to the page end. */}
+      <p className={styles.version}>
+        {t(
+          "Las entradas se ordenan por hora de inicio, en páginas de 20. Carga las restantes para consultar todo el día.",
+          "As entradas ordénanse por hora de inicio, en páxinas de 20. Carga as restantes para consultar todo o día.",
+        )}
+      </p>
     </section>
   );
 }
