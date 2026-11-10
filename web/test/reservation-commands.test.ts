@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  commandPath,
   commandResultPath,
   commandReviewPath,
   forgetCommand,
@@ -357,4 +358,42 @@ test("a command whose path is not a known command endpoint is never sent", async
   } finally {
     globalThis.fetch = original;
   }
+});
+
+test("creation command recovery accepts only exact endpoints and routes to the created resource", () => {
+  const tenant = "00000000-0000-4000-8000-000000000101";
+  const facility = "00000000-0000-4000-8000-000000000102";
+  const unit = "00000000-0000-4000-8000-000000000103";
+  for (const path of [
+    "/api/municipalities",
+    `/api/municipalities/${tenant}/facilities`,
+    `/api/municipalities/${tenant}/facilities/${facility}/units`,
+  ]) {
+    assert.equal(commandPath.test(path), true);
+    assert.equal(commandPath.test(`${path}/delete`), false);
+  }
+  assert.equal(
+    commandResultPath(
+      { ...command(), path: "/api/municipalities" },
+      { tenantId: tenant },
+    ),
+    "/plataforma/gestion/nuevo-municipio",
+  );
+  assert.equal(
+    commandResultPath(
+      { ...command(), path: `/api/municipalities/${tenant}/facilities` },
+      { tenantId: tenant, facilityId: facility },
+    ),
+    `/administracion/${tenant}/instalaciones/${facility}`,
+  );
+  assert.equal(
+    commandResultPath(
+      {
+        ...command(),
+        path: `/api/municipalities/${tenant}/facilities/${facility}/units`,
+      },
+      { tenantId: tenant, facilityId: facility, unitId: unit },
+    ),
+    `/administracion/${tenant}/unidades/${unit}`,
+  );
 });
