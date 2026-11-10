@@ -178,7 +178,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             winner = i;
             booking = r.value.result.id;
           } else if (r?.status === "rejected")
-            assert.equal(r.reason.code, "CONFLICT");
+            assert.equal(r.reason.code, "QUOTA_EXCEEDED");
         }
         for (const table of [
           "reservation",
@@ -199,7 +199,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           );
         }
         await assert.rejects(create(1 - winner, "quota-full", 4), {
-          code: "CONFLICT",
+          code: "QUOTA_EXCEEDED",
         });
         await cancel(winner, booking, 1, "cancel-quota");
         assert.equal(
@@ -254,7 +254,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             3600,
             clock,
           ),
-          { code: "CONFLICT" },
+          { code: "QUOTA_EXCEEDED" },
         );
         assert.equal(
           (
@@ -394,7 +394,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             3600,
             clock,
           ),
-          { code: "CONFLICT" },
+          { code: "AGREEMENT_UNAVAILABLE" },
         );
         const noop = await modifyReservation(
           domain,
@@ -421,7 +421,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           count,
         );
         await assert.rejects(create(winner, "suspended", 11), {
-          code: "CONFLICT",
+          code: "AGREEMENT_UNAVAILABLE",
         });
         await cancel(winner, booking, 2, "cancel-suspended");
         // Restore an active lifecycle fixture for the independent eligibility scenario.
@@ -439,7 +439,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
       "eligibility covers the whole interval and revoked evidence never grants another booking",
       async () => {
         await assert.rejects(create(winner, "no-credential", 12), {
-          code: "CONFLICT",
+          code: "CREDENTIAL_REQUIRED",
         });
         const subject = (
           await migration.query(
@@ -453,7 +453,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           [credential, agreement, tenants[1 - winner], subject, randomUUID()],
         );
         await assert.rejects(create(winner, "short-credential", 12), {
-          code: "CONFLICT",
+          code: "CREDENTIAL_REQUIRED",
         });
         await migration.query(
           "UPDATE domain.agreement_credential SET ends_at='2030-04-15T00:00:00Z' WHERE id=$1",
@@ -472,7 +472,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           [credential, randomUUID()],
         );
         await assert.rejects(create(winner, "revoked", 13), {
-          code: "CONFLICT",
+          code: "CREDENTIAL_REQUIRED",
         });
         await cancel(winner, accepted.result.id, 1, "cancel-after-revoke");
         await migration.query(
@@ -480,7 +480,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           [agreement],
         );
         await assert.rejects(create(winner, "no-public-fallback", 14), {
-          code: "CONFLICT",
+          code: "AGREEMENT_UNAVAILABLE",
         });
       },
     );
@@ -545,7 +545,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           );
           await assert.rejects(
             create(winner, "new-after-serialized-suspend", 18),
-            { code: "CONFLICT" },
+            { code: "AGREEMENT_UNAVAILABLE" },
           );
           await cancel(
             winner,
@@ -587,7 +587,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           void pending.catch(() => {});
           await blockedBy(pid);
           await holder.query("COMMIT");
-          await assert.rejects(pending, { code: "CONFLICT" });
+          await assert.rejects(pending, { code: "AGREEMENT_UNAVAILABLE" });
           assert.equal(
             (
               await migration.query(
@@ -688,7 +688,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           );
           await assert.rejects(
             create(winner, "credential-after-revocation", 21),
-            { code: "CONFLICT" },
+            { code: "CREDENTIAL_REQUIRED" },
           );
           await cancel(winner, booked.result.id, 1, "cancel-credential-race");
         } finally {
@@ -725,7 +725,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           void pending.catch(() => {});
           await blockedBy(pid);
           await holder.query("COMMIT");
-          await assert.rejects(pending, { code: "CONFLICT" });
+          await assert.rejects(pending, { code: "CREDENTIAL_REQUIRED" });
           assert.equal(
             (
               await migration.query(
@@ -871,7 +871,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           { status: "ACTIVADO", effective: false, empty: false },
         );
         await assert.rejects(create(winner, "after-expiry", 16), {
-          code: "CONFLICT",
+          code: "AGREEMENT_UNAVAILABLE",
         });
         await assert.rejects(
           modifyReservation(
@@ -889,7 +889,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             3600,
             clock,
           ),
-          { code: "CONFLICT" },
+          { code: "AGREEMENT_UNAVAILABLE" },
         );
         assert.deepEqual(
           await readReservation(
@@ -942,7 +942,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
           true,
         );
         await assert.rejects(create(winner, "still-not-public", 15), {
-          code: "CONFLICT",
+          code: "AGREEMENT_UNAVAILABLE",
         });
       },
     );
@@ -1224,7 +1224,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             3600,
             clock,
           ),
-          { code: "CONFLICT" },
+          { code: "QUOTA_EXCEEDED" },
         );
         assert.equal(
           (
@@ -1369,7 +1369,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             3600,
             clock,
           ),
-          { code: "CONFLICT" },
+          { code: "QUOTA_EXCEEDED" },
         );
         await suspendAgreement(
           domain,
@@ -1531,7 +1531,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             3600,
             clock,
           ),
-          { code: "CONFLICT" },
+          { code: "AGREEMENT_UNAVAILABLE" },
         );
         await assert.rejects(
           createReservation(
@@ -1548,7 +1548,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             3600,
             clock,
           ),
-          { code: "CONFLICT" },
+          { code: "QUOTA_EXCEEDED" },
         );
         const previous = prior[0];
         assert.ok(previous);
@@ -1696,7 +1696,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             3600,
             clock,
           ),
-          { code: "CONFLICT" },
+          { code: "QUOTA_EXCEEDED" },
         );
         assert.deepEqual(await counts(), before);
         const unchanged = (
@@ -1897,7 +1897,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             3600,
             clock,
           ),
-          { code: "CONFLICT" },
+          { code: "SLOT_UNAVAILABLE" },
         );
 
         await scenario.test(
@@ -2231,7 +2231,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
                 3600,
                 clock,
               ),
-              { code: "CONFLICT" },
+              { code: "QUOTA_EXCEEDED" },
             );
             const correlation = randomUUID();
             await cancelReservation(
@@ -2358,7 +2358,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
                 3600,
                 clock,
               ),
-              { code: "CONFLICT" },
+              { code: "QUOTA_EXCEEDED" },
             );
             await cancelReservation(
               domain,
@@ -2386,7 +2386,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
                 3600,
                 clock,
               ),
-              { code: "CONFLICT" },
+              { code: "QUOTA_EXCEEDED" },
             );
             assert.equal(
               (await activeConsumption()).length,
@@ -2835,7 +2835,7 @@ test("late cancellation and modification keep shared quota and every reservation
         3600,
         late,
       ),
-      { code: "CONFLICT" },
+      { code: "QUOTA_EXCEEDED" },
     );
     assert.deepEqual(await snapshot(), before);
   });
