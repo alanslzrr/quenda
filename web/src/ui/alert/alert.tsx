@@ -41,6 +41,7 @@ function HeightFrame({ className, reduce, morphKey, children }: { className?: st
   const content = useRef<HTMLDivElement>(null);
   const height = useMotionValue<number | "auto">("auto");
   const changedAt = useRef(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Content identity starts the animation window after the DOM changes.
   useLayoutEffect(() => { changedAt.current = performance.now(); }, [morphKey]);
   useEffect(() => {
     const node = content.current;
