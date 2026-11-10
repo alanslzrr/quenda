@@ -7,6 +7,7 @@ import { registerErrors } from "../../src/http/errors.ts";
 import type { Authentication } from "../../src/modules/identity/auth.ts";
 import { registerLegalNoticeRoutes } from "../../src/modules/identity/legal-notice-routes.ts";
 import {
+  noticeFields,
   publicNotice,
   saveNotice,
 } from "../../src/modules/identity/legal-notices.ts";
@@ -294,6 +295,17 @@ test("legal texts are versioned, append-only, scoped to their owner and publishe
           },
         ],
         ["privacy", { es: { controller: "x".repeat(4001) } }],
+        [
+          "privacy",
+          Object.fromEntries(
+            ["gl", "es"].map((language) => [
+              language,
+              Object.fromEntries(
+                noticeFields.privacy.map((field) => [field, "ñ".repeat(4000)]),
+              ),
+            ]),
+          ),
+        ],
         ["privacy", { es: {} }],
         ["privacy", {}],
       ] as const)
