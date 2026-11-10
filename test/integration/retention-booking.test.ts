@@ -470,8 +470,18 @@ test("approved retention executes scoped booking and communication policies with
           "UPDATE domain.idempotent_command SET expires_at=now()-interval '1 day' WHERE tenant_id=$1 AND key=$2",
           [b.tenant, key],
         );
+        // A conflict that has stood for days is not examined again every hour.
         await migration.query(
-          "UPDATE domain.retention_conflict SET last_seen_at=now()-interval '2 hours' WHERE policy_id=$1 AND target_key=$2",
+          "UPDATE domain.retention_conflict SET first_seen_at=now()-interval '3 days',last_seen_at=now()-interval '2 hours' WHERE policy_id=$1 AND target_key=$2",
+          [approval.policyId, item.reservation],
+        );
+        await batch();
+        assert.equal(
+          await count("reservation", b.tenant, item.reservation, "id"),
+          1,
+        );
+        await migration.query(
+          "UPDATE domain.retention_conflict SET first_seen_at=now()-interval '150 minutes' WHERE policy_id=$1 AND target_key=$2",
           [approval.policyId, item.reservation],
         );
         await batch();
