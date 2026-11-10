@@ -78,7 +78,10 @@ export async function recoverMunicipalAdministrator(
 ) {
   const rationale = reason(input.reason);
   const verification = reason(input.verificationReference);
-  if (!Number.isFinite(Date.parse(input.expiresAt)))
+  if (
+    input.accountId === actor.accountId ||
+    !Number.isFinite(Date.parse(input.expiresAt))
+  )
     throw new HttpError("INVALID_INPUT");
   const invitationId = randomUUID();
   try {
