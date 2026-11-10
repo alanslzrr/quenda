@@ -369,6 +369,8 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
       <Failure error={resource.error} retry={() => void resource.refetch()} />
     );
   if (!resource.data) return null;
+  // Publishing is offered only while it would change something: a draft or a withdrawn resource.
+  const publishable = !resource.data.publishedAt || !!resource.data.withdrawnAt;
   const state = resource.data.withdrawnAt
     ? t("Retirada del catálogo público", "Retirada do catálogo público")
     : resource.data.publishedAt
@@ -425,11 +427,13 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
           profile={resource.data.profile ?? {}}
           version={resource.data.profileVersion ?? 1}
         />
-        <Publication path={path} unit={false} />
-        <section className={styles.section}>
-          <h2>{t("Retirar del catálogo", "Retirar do catálogo")}</h2>
-          {withdrawal}
-        </section>
+        {publishable && <Publication path={path} unit={false} />}
+        {!resource.data.withdrawnAt && (
+          <section className={styles.section}>
+            <h2>{t("Retirar del catálogo", "Retirar do catálogo")}</h2>
+            {withdrawal}
+          </section>
+        )}
       </EditorRecovery>
     );
   return (
@@ -460,22 +464,27 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
           }
           actions={
             <>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Globe size={16} aria-hidden="true" />
-                    {resource.data.withdrawnAt
-                      ? t("Volver a publicar unidad", "Volver publicar unidade")
-                      : t("Publicar unidad", "Publicar unidade")}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent
-                  title={t("Publicar unidad", "Publicar unidade")}
-                  closeLabel={t("Cerrar", "Pechar")}
-                >
-                  <UnitPublication path={path} />
-                </DialogContent>
-              </Dialog>
+              {publishable && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Globe size={16} aria-hidden="true" />
+                      {resource.data.withdrawnAt
+                        ? t(
+                            "Volver a publicar unidad",
+                            "Volver publicar unidade",
+                          )
+                        : t("Publicar unidad", "Publicar unidade")}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent
+                    title={t("Publicar unidad", "Publicar unidade")}
+                    closeLabel={t("Cerrar", "Pechar")}
+                  >
+                    <UnitPublication path={path} />
+                  </DialogContent>
+                </Dialog>
+              )}
               {!resource.data.withdrawnAt && (
                 <Dialog>
                   <DialogTrigger asChild>
