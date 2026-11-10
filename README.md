@@ -132,7 +132,7 @@ Cada permiso se limita a una operación y unidad real del municipio; `unitId: nu
 
 ## Catálogo en borrador
 
-`POST /api/municipalities/{tenantId}/facilities` crea una instalación; `POST /api/municipalities/{tenantId}/facilities/{facilityId}/units` crea una unidad. Ambos reciben `{ "name": "..." }`, requieren el permiso municipal `CATALOG_CREATE` y MFA reciente y registran auditoría. Las altas persisten como borradores: no publican recursos ni permiten reservarlos.
+`POST /api/municipalities/{tenantId}/facilities` crea una instalación; `POST /api/municipalities/{tenantId}/facilities/{facilityId}/units` crea una unidad. Ambos reciben `{ "name": "..." }`, requieren el permiso municipal `CATALOG_CREATE` y MFA reciente y registran auditoría. Las altas persisten como borradores: no publican recursos ni permiten reservarlos. Estas rutas y `POST /api/municipalities` aceptan `Idempotency-Key`: misma clave y contenido normalizado recuperan el recurso original tras comprobar los permisos actuales; distinto contenido devuelve `IDEMPOTENCY_KEY_REUSED`. Omitir el encabezado representa una solicitud nueva. La interfaz siempre envía una clave y permite recuperar expresamente una respuesta incierta.
 
 `GET /api/municipalities/{tenantId}/facilities/{id}` y `GET /api/municipalities/{tenantId}/units/{id}` consultan un recurso para mantenimiento. `PATCH` sobre esas mismas rutas recibe `{ "name": "..." }` y registra el nombre anterior y el nuevo en la misma transacción. Requieren `CATALOG_MANAGE` y MFA reciente: ámbito municipal para instalaciones, municipal o de la unidad concreta para unidades. No permiten cambiar identificadores ni trasladar unidades entre instalaciones o municipios. Si falla la auditoría, el cambio se revierte.
 
@@ -218,7 +218,7 @@ La respuesta `201` contiene la reserva y sus condiciones aceptadas. Repetir la m
 
 `GET /api/public/reservation-command-policy` devuelve `retentionSeconds` y `serverTime`, sin caché. El cliente obtiene la ventana de recuperación antes de enviar un comando y vuelve a comprobarla antes de repetir un resultado incierto. Fuera de esa ventana, consulta el estado actual en vez de reenviar la clave caducada.
 
-La creación valida las reglas vigentes y confirma reserva, ocupación, evento, avisos y resultado idempotente en una sola transacción. Un conflicto no deja cambios parciales. El correo queda pendiente para su entrega por el worker. La disponibilidad pública descuenta las ocupaciones confirmadas, pero no garantiza que una franja siga libre al reservar.
+La creación valida las reglas vigentes y confirma reserva, ocupación, evento, avisos y resultado idempotente en una sola transacción. Los rechazos distinguen `SLOT_UNAVAILABLE`, `BOOKING_RULES_CHANGED`, `QUOTA_EXCEEDED`, `CREDENTIAL_REQUIRED` y `AGREEMENT_UNAVAILABLE`; solo el primero significa franja ocupada. Una revisión obsoleta devuelve `RESERVATION_CHANGED` y operar sobre una cancelada, `RESERVATION_CANCELLED`. Los códigos de aceptación conservan sus condiciones específicas. Un conflicto no deja cambios parciales. El correo queda pendiente para su entrega por el worker. La disponibilidad pública descuenta las ocupaciones confirmadas, pero no garantiza que una franja siga libre al reservar.
 
 ## Modificación de reservas
 
@@ -381,7 +381,7 @@ Ambos endpoints exigen administrador municipal y MFA reciente. El comando exige 
 
 ### Avisos internos
 
-`GET /api/me/notices` devuelve los avisos del usuario autenticado entre municipios, con `Cache-Control: no-store`. Pagina de 20 en 20 por identificador de evento y municipio; `after` acepta el `nextCursor` anterior. Cada aviso contiene tipo, revisión, fecha del evento e intervalo histórico, junto con `reservationPath` para consultar el estado actual. La reubicación administrativa indica si exige aceptar normas antes del uso. No expone actores, motivos administrativos ni correlaciones, y no representa el estado de entrega del correo.
+`GET /api/me/notices` devuelve los avisos del usuario autenticado entre municipios, con `Cache-Control: no-store`. Pagina de 20 en 20 por identificador de evento y municipio; `after` acepta el `nextCursor` anterior. Cada aviso contiene tipo, revisión, fecha del evento e intervalo histórico, junto con `reservationPath` para consultar el estado actual. La reubicación administrativa indica si exige aceptar normas antes del uso. En intervenciones administrativas incluye el nombre capturado del autor y el motivo, además de la fecha del evento; los registros antiguos sin nombre capturado no se completan con el nombre actual. No expone identificadores del actor ni correlaciones, y no representa el estado de entrega del correo.
 
 ### Procesamiento de correo
 
@@ -571,6 +571,8 @@ Los roles de API, autenticación y worker no pueden leer, alterar ni borrar dire
 
 `PG_BIN=/ruta/postgresql17/bin pnpm test:performance` crea una base temporal con 3 municipios, 30 unidades y 3.000 reservas históricas sintéticas, autentica 10 sesiones y ejercita HTTP en loopback. Tras 60 segundos de calentamiento separado, programa 3.000 solicitudes en 10 minutos: 70 % consulta de reservas propias, 10 % disponibilidad y 20 % altas de reservas. No omite solicitudes lentas ni cuenta ensayos abreviados como aceptación. `--smoke` reduce únicamente calentamiento y medición para comprobar el montaje; conserva el conjunto de datos completo y nunca aprueba el escenario.
 
+`pnpm test:performance:history` prepara por separado 50.000 reservas históricas y 50.000 eventos, comprueba la paginación inicial, siguiente y por día y selecciona 100 candidatos de conservación. Registra cinco muestras calientes por operación y revisión/estado del árbol en un JSON temporal; no sustituye la carga sostenida.
+
 El informe JSON privado en el directorio temporal incluye revisión, cambios pendientes, entorno, muestras, percentiles, errores, abortos, conexiones y retraso de avisos. El correo usa transporte sintético sin latencia externa. Para aprobar exige una revisión limpia, todas las solicitudes válidas, los límites p95 definidos y ausencia de avisos sin aceptar al terminar la espera acotada. Los resultados describen este equipo y esta mezcla de operaciones, no un SLA ni capacidad del proveedor de correo o de otros endpoints.
 
 ## Privacidad y conservación
@@ -587,6 +589,8 @@ Las dos vías administrativas reciben `reason` y `authorizationReference`. Admit
 
 ### Cambio de correo
 
+Una dirección ocupada sigue el mismo recorrido inicial de autorización y verificación; la unicidad solo se comunica tras comprobar el control de ambos correos.
+
 1. `POST /api/me/email-change/request`, con `newEmail` y contraseña actual, envía la autorización al correo actual.
 2. `POST /api/me/email-change/approve`, con el token recibido, consume esa autorización y envía la verificación al nuevo correo.
 3. `POST /api/me/email-change/confirm`, con el segundo token, cambia el correo y revoca todas las sesiones. Hay que iniciar sesión con la nueva dirección.
@@ -594,6 +598,12 @@ Las dos vías administrativas reciben `reason` y `authorizationReference`. Admit
 El autoservicio mantiene la sesión original y exige MFA reciente cuando esté habilitado. Los tokens caducan a los diez minutos y no sobreviven a cambios incompatibles de credenciales o estado. Los enlaces transportan el token en el fragmento; ningún GET confirma el cambio. La ruta nativa `/api/auth/change-email` no se expone.
 
 Si el usuario perdió el buzón anterior, `pnpm email:recover <cuenta> <nuevo-correo> <responsable-operativo> <referencia-verificación> <motivo>` inicia el procedimiento asistido con credenciales de mantenimiento. Además de `.env.migration.local`, el entorno debe definir `AUTH_ORIGIN` y la configuración de correo (`MAIL_TRANSPORT` y sus variables). No cambia la identidad inmediatamente: el titular confirma el nuevo buzón, contraseña y MFA desde una sesión propia. No reactiva cuentas ni recupera permisos.
+
+### Revisión de conservación compartida
+
+`POST /api/municipalities/{tenantId}/shared-retention/context` recibe `ownerTenantId`, `category` (`RESERVATIONS` o `ACCREDITATIONS`), `targetKey`, `action` y `blockDays` solo para `BLOCK`. Requiere `PRIVACY_READ` municipal y MFA reciente; devuelve la huella y los responsables históricos con su estado de aprobación, sin contenido personal. `POST /shared-retention/review` en la misma base añade `digest`, `approved`, `authorizationReference` y `reason`; exige además `PRIVACY_EXECUTE`. Solo registra la decisión del municipio autenticado.
+
+Las aprobaciones vinculan registro, evidencias, política vigente, actuación y plazo; cualquier cambio requiere revisarlas. La ejecución individual o por política comprueba unanimidad, dependencias y excepciones de todos los responsables. Los archivos bloqueados conservan ese ámbito para respetar excepciones posteriores. El checkpoint incluye la prueba de revisión para reproducir la actuación durante una restauración cerrada. Véase el [modelo de conservación](docs/02_modelo_dominio.md#ejecución-y-excepciones).
 
 ### Políticas y actuaciones
 
@@ -614,7 +624,7 @@ La política recibe `category`, `retentionDays`, `action`, `purpose`, `controlle
 | Familia | Selección y anclaje |
 |---|---|
 | `COMMUNICATIONS` | Aviso, cola e intentos de un evento; última actividad del conjunto. Un envío con concesión vigente impide la actuación. |
-| `RESERVATIONS` | Reserva, ocupaciones e historial; fin de la reserva o último evento, el posterior. Se preservan comunicaciones aún retenidas, idempotencia vigente y referencias compartidas. |
+| `RESERVATIONS` | Reserva, ocupaciones e historial; fin de la reserva o último evento de reserva/consumo, el posterior. Se preservan comunicaciones aún retenidas e idempotencia vigente; los consumos compartidos exigen aprobación conjunta. |
 | `MUNICIPAL_PROFILE` | Perfil sin dependencias protegidas; última actividad municipal conservada. Suprimirlo no cierra la cuenta global. |
 | `AUTHORITY` | Permisos e invitaciones retirados o vencidos, y evidencias asociadas; último hecho del conjunto. Los accesos de privacidad y rechazos globales se tratan por evento independiente. |
 | `ACCREDITATIONS` | Acreditación vencida o revocada; revocación, si existe, o fin de vigencia en otro caso. Las evidencias compartidas requieren revisión de los responsables. |
