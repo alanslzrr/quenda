@@ -293,23 +293,25 @@ test("an uncertain catalog creation cannot be resubmitted without reviewing its 
   await form
     .getByRole("button", { name: "Crear instalación", exact: true })
     .click();
+  const pending = page.getByRole("link", {
+    name: /Hay una operación|Hai unha operación/,
+  });
+  await expect(pending).toBeVisible();
   await expect(
-    page.getByText(/No se recibió confirmación|Non se recibiu confirmación/),
-  ).toBeVisible();
-  await expect(
-    form.getByRole("button", { name: "Crear instalación", exact: true }),
-  ).toBeDisabled();
-  await expect(
-    form.getByRole("textbox", { name: /^(Nombre|Nome)$/ }),
-  ).toHaveValue("Centro deportivo");
+    page.getByRole("button", { name: "Crear instalación", exact: true }),
+  ).toHaveCount(0);
   expect(writes).toBe(1);
-  await page
-    .getByRole("button", {
-      name: /He comprobado el resultado; permitir|Comprobei o resultado; permitir/,
-    })
-    .click();
+  await pending.click();
+  await page.reload();
   await expect(
-    form.getByRole("button", { name: "Crear instalación", exact: true }),
+    page.getByRole("button", {
+      name: /Comprobar con la misma solicitud|Comprobar coa mesma solicitude/,
+    }),
   ).toBeEnabled();
   expect(writes).toBe(1);
+  const stored = await page.evaluate(() =>
+    JSON.parse(sessionStorage.getItem("quenda.reservation-command") ?? "null"),
+  );
+  expect(JSON.parse(stored.body)).toEqual({ name: "Centro deportivo" });
+  expect(stored.path).toBe(`/api/municipalities/${tenant}/facilities`);
 });
