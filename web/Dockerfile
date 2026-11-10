@@ -10,7 +10,7 @@ RUN pnpm exec vite build
 
 FROM nginxinc/nginx-unprivileged:1.28-alpine@sha256:7377697a821c131a924a7105fafbe7414db4e9fcc77a6f08f776f33f141ec3f8 AS runtime
 ARG SOURCE_REVISION=unknown
-ENV QUENDA_API_UPSTREAM=api:3000 NGINX_ENVSUBST_FILTER=^QUENDA_
+ENV QUENDA_API_UPSTREAM=api:3000 QUENDA_TRUSTED_PROXY_CIDR=127.0.0.1/32 NGINX_ENVSUBST_FILTER=^QUENDA_
 LABEL org.opencontainers.image.revision=$SOURCE_REVISION
 LABEL org.opencontainers.image.title="Quenda web" org.opencontainers.image.licenses="AGPL-3.0-only"
 COPY web/nginx/templates /etc/nginx/templates
