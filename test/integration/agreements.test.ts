@@ -1208,6 +1208,81 @@ test("agreement drafts preserve participant ownership and do not activate capabi
       },
     );
     await t.test(
+      "a participant of a replaced version cannot suspend the version in force",
+      async () => {
+        const started = {
+          ...input,
+          startsAt: new Date(Date.now() - 86_400_000).toISOString(),
+        };
+        const id = (await create("replaced-suspension", started)).result
+          .agreementId;
+        const { name: _name, timeZone: _zone, ...configuration } = started;
+        await createAgreementVersion(
+          domain,
+          actor(0),
+          tenant,
+          id,
+          "replacement-version",
+          {
+            ...configuration,
+            expectedVersion: 1,
+            participants: [0, 2].map((i) => ({
+              tenantId: tenants[i] as string,
+              accreditationIssuer: true,
+              unitIds: [units[i] as string],
+            })),
+          },
+          randomUUID(),
+          3600,
+        );
+        await migration.query(
+          "UPDATE domain.agreement_version SET status='ACTIVADO' WHERE agreement_id=$1",
+          [id],
+        );
+        await migration.query(
+          `INSERT INTO domain.agreement_activation(agreement_id,version,effective_period,activated_by,correlation_id)
+          VALUES($1,1,tstzrange(now()-interval '2 hours',now()-interval '1 hour','[)'),'admin-0',$2),
+           ($1,2,tstzrange(now()-interval '1 hour',now()+interval '1 day','[)'),'admin-0',$2)`,
+          [id, randomUUID()],
+        );
+        const suspend = (i: number, version: number, key: string) =>
+          suspendAgreement(
+            domain,
+            actor(i),
+            tenants[i] as string,
+            id,
+            key,
+            { version, reason: "Review" },
+            randomUUID(),
+            3600,
+          );
+        const state = async () =>
+          (
+            await migration.query(
+              `SELECT v.version,v.status,upper(a.effective_period)>now() AS open
+              FROM domain.agreement_version v JOIN domain.agreement_activation a USING(agreement_id,version)
+              WHERE v.agreement_id=$1 ORDER BY v.version`,
+              [id],
+            )
+          ).rows;
+        await assert.rejects(suspend(1, 1, "former-participant"), {
+          code: "CONFLICT",
+        });
+        await assert.rejects(suspend(1, 2, "former-participant-current"), {
+          code: "NOT_FOUND",
+        });
+        assert.deepEqual(await state(), [
+          { version: 1, status: "ACTIVADO", open: false },
+          { version: 2, status: "ACTIVADO", open: true },
+        ]);
+        await suspend(2, 2, "current-participant");
+        assert.deepEqual(await state(), [
+          { version: 1, status: "SUSPENDIDO", open: false },
+          { version: 2, status: "SUSPENDIDO", open: false },
+        ]);
+      },
+    );
+    await t.test(
       "revoking the creator administrator prevents replay",
       async () => {
         await migration.query(
