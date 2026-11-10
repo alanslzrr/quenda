@@ -51,6 +51,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-33 | Exportar el catálogo | El administrador descarga un documento JSON versionado (`quenda.catalog`) con los ajustes del municipio, sus instalaciones y espacios con ficha, el calendario y las normas vigentes y el estado de publicación, con esquema y ejemplo validables. No contiene reservas ni datos personales. Es una copia de lectura; no hay importación de archivos. |
 | RF-34 | Llevar una reserva al calendario personal | El titular descarga un archivo iCalendar (RFC 5545) de una reserva suya o de sus próximas reservas confirmadas, con horas en UTC, identidad estable y revisión como `SEQUENCE`. Una reserva cancelada se descarga como cancelada. Es una descarga autenticada y puntual: no hay enlaces de suscripción ni secretos. |
 | RF-35 | Exportar reservas como tabla | La exportación de reservas admite además un CSV (RFC 4180, UTF-8 con marca de orden de bytes) con una fila por reserva y los mismos permisos que el JSON. Los valores que una hoja de cálculo ejecutaría como fórmula se neutralizan. |
+| RF-36 | Instalar la aplicación | La aplicación web declara nombre, iconos y apertura en ventana propia, de modo que los navegadores que lo admiten la instalan en móvil, tableta u ordenador. Usa la misma interfaz y API; no hay aplicaciones nativas ni funcionamiento sin conexión. |
 
 ## Requisitos no funcionales
 
