@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noArrayIndexKey: Animated text slots intentionally retain positional identity while their characters or words change.
 "use client";
 import { forwardRef, useEffect, useId, useRef, useState } from "react";
 import type { InputHTMLAttributes } from "react";

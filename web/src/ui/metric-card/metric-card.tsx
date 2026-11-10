@@ -19,6 +19,7 @@ function Swap({ text, morph = false, block = false }: { text: string; morph?: bo
   const width = useMotionValue<number | "auto">("auto");
   const [shown, setShown] = useState({ text, direction: 1 });
   if (shown.text !== text) setShown({ text, direction: amountIn(text) < amountIn(shown.text) ? -1 : 1 });
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Changing morph replaces the measured element.
   useEffect(() => {
     const node = sizer.current;
     if (!node || typeof ResizeObserver === "undefined") return;

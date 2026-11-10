@@ -71,6 +71,7 @@ function SwapText({ text, className, reduced }: { text?: string; className?: str
   const inner = useRef<HTMLSpanElement>(null);
   const armedUntil = useRef(0);
   const height = useMotionValue<number | "auto">("auto");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Changed text starts the height animation window.
   useLayoutEffect(() => { armedUntil.current = performance.now() + 700; }, [text]);
   useEffect(() => {
     const node = inner.current, slot = node?.parentElement;
