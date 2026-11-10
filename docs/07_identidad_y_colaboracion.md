@@ -52,7 +52,7 @@ El usuario actualiza sus campos permitidos sin modificar identificadores ni evid
 3. Verifica el nuevo correo.
 4. El sistema aplica el cambio atómicamente, revoca las sesiones y registra la operación.
 
-Los enlaces son de un solo uso, caducan y quedan vinculados a la cuenta, solicitud y credenciales. Cambiar contraseña, factores, correo o estado de cuenta invalida las comprobaciones anteriores. El correo no se sustituye mientras falte una confirmación.
+Los enlaces son de un solo uso, caducan y quedan vinculados a la cuenta, solicitud y credenciales. Cambiar contraseña, factores, correo o estado de cuenta invalida las comprobaciones anteriores. El correo no se sustituye mientras falte una confirmación. Solicitar un cambio a una dirección ya ocupada sigue la misma secuencia y respuesta: la comprobación de unicidad solo se comunica después de acreditar control de ambos correos.
 
 Si el usuario perdió acceso al correo anterior, una intervención operativa controlada comprueba su identidad y registra responsable, evidencia y motivo. El usuario debe verificar el nuevo correo y sus credenciales; la intervención no acepta esos controles en su nombre. Ningún permiso municipal permite cambiar unilateralmente el correo global.
 
@@ -71,9 +71,9 @@ El convenio define identificador estable, versiones, municipios participantes, u
 | Sustituir o reactivar | Nueva versión, aprobaciones y acto de activación. |
 | Finalizar | Vencimiento o terminación acordada, con conservación de evidencias según su política. |
 
-Los estados almacenados son `BORRADOR`, `APROBADO`, `ACTIVADO` y `SUSPENDIDO`. Solo una versión `ACTIVADO` dentro de su vigencia habilita operaciones. La aprobación no sustituye al acto de activación. La consulta de una versión muestra a cada participante la existencia y la fecha de las aprobaciones de todos, pero la cuenta que aprobó solo se revela al municipio aprobador.
+Los estados almacenados son `BORRADOR`, `APROBADO`, `ACTIVADO` y `SUSPENDIDO`. Las nuevas operaciones de uso requieren una versión `ACTIVADO` dentro de su vigencia; la entrega de un informe histórico tiene las condiciones específicas descritas en C-03. La aprobación no sustituye al acto de activación. La consulta de una versión muestra a cada participante la existencia y la fecha de las aprobaciones de todos, pero la cuenta que aprobó solo se revela al municipio aprobador.
 
-Existe como máximo una versión efectiva por convenio e instante. Sustituirla cierra atómicamente la vigencia anterior y conserva sus evidencias. Cada operación comprueba el vencimiento sin depender de un trabajo programado. Para reservar, el convenio debe estar activo al confirmar y cubrir todo el intervalo solicitado.
+Existe como máximo una versión efectiva por convenio e instante. Sustituirla cierra atómicamente la vigencia anterior y conserva sus evidencias. Cada operación comprueba el vencimiento sin depender de un trabajo programado. Para reservar bajo el convenio, debe estar activo al confirmar y cubrir todo el intervalo solicitado. Una primera activación programada conserva el acceso público a intervalos que terminan antes o exactamente en el inicio de la restricción. Los intervalos que lo cruzan o empiezan después quedan sujetos al convenio. Suspender, vencer o sustituir una versión no reabre el acceso público ni desplaza hacia el futuro una restricción ya registrada; reabrir exige retirar expresamente la vinculación.
 
 **Justificación:** la aprobación por versión impide ampliar unilateralmente los datos y operaciones compartidos. La activación exige una base jurídica y responsabilidades de tratamiento definidas; la corresponsabilidad del artículo 26 se aplica cuando se determinan conjuntamente fines y medios. [RGPD](https://www.boe.es/doue/2016/119/L00001-00088.pdf).
 
@@ -116,6 +116,8 @@ Una reprogramación aplica las condiciones vigentes del destino: si cambia del c
 ### C-03 Informes agregados
 
 Cada publicación corresponde a un convenio y un mes cerrado. Contiene el número de reservas confirmadas que empiezan en el mes y los minutos reservados que intersectan ese periodo. Solo incluye el ámbito y vigencia del convenio; los minutos se recortan al mes.
+
+Una versión `ACTIVADO` con capacidad de informes puede entregar un mes cerrado que se solape con su vigencia efectiva aunque esa vigencia ya haya vencido. Se mantienen el permiso actual del destinatario participante, el corte vigente y las revisiones unánimes de riesgo; una suspensión impide la entrega. El vencimiento no habilita nuevos usos ni meses ajenos a su vigencia.
 
 El informe no contiene nombres, identificadores de cuentas o reservas, unidades individuales ni desglose municipal. El número de reservas no mide asistencia.
 
@@ -197,7 +199,7 @@ Una unidad adscrita no pasa a acceso abierto al vencer o suspenderse el convenio
 
 Reabrir la unidad fuera del convenio exige configuración municipal explícita y respeta las ocupaciones existentes. La finalización termina el acceso compartido y conserva únicamente las evidencias exigidas por la política aplicable, sin redistribuir historiales.
 
-Una política municipal no autoriza a destruir consumos, acreditaciones o referencias compartidas de otros participantes. La API municipal devuelve un conflicto y conserva esas evidencias para revisión conjunta; no ejecuta su supresión unilateral. El vencimiento del convenio tampoco constituye un permiso de borrado.
+Una política municipal no autoriza a destruir consumos, acreditaciones o referencias compartidas de otros participantes. La API municipal devuelve un conflicto hasta contar con las aprobaciones conjuntas vinculadas al registro, política y actuación del [procedimiento de conservación](02_modelo_dominio.md#ejecución-y-excepciones); no ejecuta su supresión unilateral. El vencimiento del convenio tampoco constituye un permiso de borrado.
 
 ### Etiquetas de presentación municipal
 
