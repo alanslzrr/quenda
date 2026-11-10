@@ -7,6 +7,7 @@ export const baseText: Record<NoticeKind, Record<Locale, readonly string[]>> = {
     es: [
       "Datos de la cuenta: nombre, correo electrónico y contraseña. La contraseña se guarda protegida y nunca en claro.",
       "Reservas: espacio, horario, estado, condiciones y normas aceptadas, y los avisos asociados.",
+      "Llegada a la instalación: si el personal escanea el código QR de tu reserva, se guarda la hora de llegada y quién la registró. La ves en tu reserva y en la descarga de tus datos.",
       "Suscripción de calendario, solo si la activas: una dirección secreta permite a tu aplicación de calendario leer tus próximas reservas confirmadas. Se guarda la fecha de alta y un resumen de la dirección, nunca la dirección. La retiras desde «Mis reservas» y se retira sola al dar de baja la cuenta.",
       "Seguridad: registro de inicios y cierres de sesión, cambios del segundo factor y accesos rechazados, sin contraseñas ni códigos.",
       "Una cuenta sirve para todos los municipios de esta instancia; los datos y permisos de cada municipio permanecen separados.",
@@ -16,6 +17,7 @@ export const baseText: Record<NoticeKind, Record<Locale, readonly string[]>> = {
     gl: [
       "Datos da conta: nome, correo electrónico e contrasinal. O contrasinal gárdase protexido e nunca en claro.",
       "Reservas: espazo, horario, estado, condicións e normas aceptadas, e os avisos asociados.",
+      "Chegada á instalación: se o persoal escanea o código QR da túa reserva, gárdase a hora de chegada e quen a rexistrou. Vela na túa reserva e na descarga dos teus datos.",
       "Subscrición de calendario, só se a activas: un enderezo secreto permite á túa aplicación de calendario ler as túas próximas reservas confirmadas. Gárdase a data de alta e un resumo do enderezo, nunca o enderezo. Retírala desde «As miñas reservas» e retírase soa ao dar de baixa a conta.",
       "Seguridade: rexistro de inicios e peches de sesión, cambios do segundo factor e accesos rexeitados, sen contrasinais nin códigos.",
       "Unha conta serve para todos os municipios desta instancia; os datos e permisos de cada municipio permanecen separados.",

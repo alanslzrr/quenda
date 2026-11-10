@@ -8,7 +8,7 @@ Cada usuario dispone de una cuenta global dentro de su instancia. Los datos y pe
 
 Las reservas son puntuales y ocupan una unidad reservable completa. La antelación máxima es de 30 días naturales por defecto, configurable por municipio. Una unidad reservable puede reducir ese límite, pero no ampliarlo. El plazo ordinario de modificación y cancelación es de 24 horas antes del inicio por defecto, configurable por municipio. Los datos se introducen y mantienen mediante la aplicación.
 
-Quedan fuera del alcance inicial los pagos, las reservas recurrentes, las subdivisiones de espacios, la importación de archivos, las aplicaciones nativas, los códigos QR, las listas de espera, la IA y la integración con Cl@ve. Tampoco se gestionan jugadores, transferencias de titularidad, tickets ni penalizaciones automáticas. Los abonos representan derechos de uso sin cobros ni facturación. Las instancias independientes no comparten identidad ni convenios entre sí.
+Quedan fuera del alcance inicial los pagos, las reservas recurrentes, las subdivisiones de espacios, la importación de archivos, las aplicaciones nativas, el control automático de accesos (tornos o cerraduras), las listas de espera, la IA y la integración con Cl@ve. Tampoco se gestionan jugadores, transferencias de titularidad, tickets ni penalizaciones automáticas. Los abonos representan derechos de uso sin cobros ni facturación. Las instancias independientes no comparten identidad ni convenios entre sí.
 
 Los actores y conceptos se definen en el [glosario](README.md#terminología). Las reglas temporales están en el [modelo de dominio](02_modelo_dominio.md#tiempo-y-configuración-municipal).
 
@@ -52,6 +52,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-34 | Llevar una reserva al calendario personal | El titular descarga un archivo iCalendar (RFC 5545) de una reserva suya o de sus próximas reservas confirmadas, con horas en UTC, identidad estable y revisión como `SEQUENCE`. Una reserva cancelada se descarga como cancelada. Además, el titular puede crear una suscripción personal: una URL secreta, de solo lectura, que las aplicaciones de calendario consultan sin sesión. Se regenera o retira desde la cuenta y se retira al darla de baja, suspenderla o suprimirla. |
 | RF-35 | Exportar reservas como tabla | La exportación de reservas admite además un CSV (RFC 4180, UTF-8 con marca de orden de bytes) con una fila por reserva y los mismos permisos que el JSON. Los valores que una hoja de cálculo ejecutaría como fórmula se neutralizan. |
 | RF-36 | Instalar la aplicación | La aplicación web declara nombre, iconos y apertura en ventana propia, de modo que los navegadores que lo admiten la instalan en móvil, tableta u ordenador. Usa la misma interfaz y API; no hay aplicaciones nativas ni funcionamiento sin conexión. |
+| RF-37 | Acceder con código QR | La reserva confirmada muestra al titular un código QR que abre la página de la reserva para el personal. El personal con permiso de consulta o gestión sobre la unidad y MFA comprueba su validez y registra la llegada desde 30 minutos antes del inicio hasta el final. La llegada se registra una vez, no altera la reserva ni genera avisos y el titular la ve en su reserva. |
 
 ## Requisitos no funcionales
 

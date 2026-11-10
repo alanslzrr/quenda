@@ -49,6 +49,8 @@ export interface Reservation {
   pendingUsageRulesVersion: number | null;
   pendingUsageRulesText: string | null;
   bookingPolicyVersion: number | null;
+  /** Only in the reservation detail. */
+  arrivedAt?: string | null;
 }
 export const reservationPath = (tenant: string, id: string) =>
   `/api/municipalities/${tenant}/reservations/${id}`;
