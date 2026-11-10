@@ -23,10 +23,10 @@ export const baseText: Record<NoticeKind, Record<Locale, readonly string[]>> = {
   },
   legal: {
     es: [
-      "Este servicio es una instalación de Quenda, software libre con licencia AGPL-3.0. Su código fuente está disponible para quien lo use a través de la red.",
+      "Este servicio es una instalación de Quenda, software libre con licencia AGPL-3.0-only. Su código fuente está disponible para quien lo use a través de la red, en el enlace «Código fuente» del pie de página.",
     ],
     gl: [
-      "Este servizo é unha instalación de Quenda, software libre con licenza AGPL-3.0. O seu código fonte está dispoñible para quen o use a través da rede.",
+      "Este servizo é unha instalación de Quenda, software libre con licenza AGPL-3.0-only. O seu código fonte está dispoñible para quen o use a través da rede, na ligazón «Código fonte» do pé de páxina.",
     ],
   },
   accessibility: {
