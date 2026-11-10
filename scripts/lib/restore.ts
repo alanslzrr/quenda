@@ -73,10 +73,10 @@ export async function restoreBackup(
         maxBuffer: 1024 * 1024,
       },
     );
-    if (result.stderr.trim())
-      throw new Error("Restore diagnostics require review");
     // Keep an application-level privacy gate even if a DBA subsequently changes
-    // CONNECT or the database connection limit during recovery checks.
+    // CONNECT or the database connection limit during recovery checks. It is
+    // set before the diagnostics are judged: data restored with warnings still
+    // needs the privacy replay.
     const destination = new Client({
       connectionString: (() => {
         const value = new URL(connection);
@@ -92,6 +92,8 @@ export async function restoreBackup(
     } finally {
       await destination.end();
     }
+    if (result.stderr.trim())
+      throw new Error("Restore diagnostics require review");
     return {
       database,
       sha256,
