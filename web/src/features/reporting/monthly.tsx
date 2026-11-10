@@ -66,7 +66,9 @@ function Report() {
               </p>
               <p>
                 {t("Corte", "Corte")}:{" "}
-                {new Date(result.report.cutoff).toLocaleString(locale)}
+                {new Date(result.report.cutoff).toLocaleString(
+                  locale === "gl" ? ["gl-ES", "es-ES"] : "es-ES",
+                )}
               </p>
               <div className={styles.metrics}>
                 <MetricCard

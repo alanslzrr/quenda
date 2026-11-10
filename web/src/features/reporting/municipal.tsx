@@ -209,7 +209,9 @@ function Query({ exporting }: { exporting: boolean }) {
           </p>
           <p>
             {t("Consulta", "Consulta")}:{" "}
-            {new Date(result.asOf).toLocaleString(locale)}
+            {new Date(result.asOf).toLocaleString(
+              locale === "gl" ? ["gl-ES", "es-ES"] : "es-ES",
+            )}
           </p>
           <div className={styles.metrics}>
             {(
