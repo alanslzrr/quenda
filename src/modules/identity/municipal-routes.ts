@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { defaultIdempotencyRetentionSeconds } from "../../config.ts";
 import { registerAdministratorQueryRoutes } from "./administrator-query-routes.ts";
 import { registerAppearanceRoutes } from "./appearance-routes.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
@@ -33,6 +34,12 @@ import { createRequestActor } from "./request-actor.ts";
 import { registerAccountSecurityRoutes } from "./security-routes.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
+const creationHeaders = {
+  type: "object",
+  properties: {
+    "idempotency-key": { type: "string", pattern: "^[A-Za-z0-9._:-]{1,200}$" },
+  },
+};
 const errors = Object.fromEntries(
   [400, 401, 403, 404, 409, 429, 500, 503].map((status) => [
     status,
@@ -45,6 +52,7 @@ export async function registerMunicipalIdentity(
   pool: Pool,
   auth: Authentication,
   config: AuthConfiguration,
+  retentionSeconds = defaultIdempotencyRetentionSeconds,
 ) {
   const actor = createRequestActor(pool, auth, config);
   await registerNavigationRoutes(app, pool, auth, config);
@@ -64,15 +72,20 @@ export async function registerMunicipalIdentity(
   await registerPreferenceRoutes(app, pool, auth, config);
   await registerProfileRoutes(app, pool, auth, config);
   await registerAdministratorQueryRoutes(app, pool, auth, config);
-  app.post<{ Body: MunicipalityInput }>(
+  app.post<{
+    Headers: { "idempotency-key"?: string };
+    Body: MunicipalityInput;
+  }>(
     "/api/municipalities",
     {
       schema: {
         operationId: "createMunicipality",
+        headers: creationHeaders,
+
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Operador con MFA verificado en los últimos cinco minutos: crea el municipio e invita a una cuenta existente como primer administrador. Origin debe coincidir con AUTH_ORIGIN.",
+          "Alta conjunta del municipio y su invitación inicial. Idempotency-Key conserva el resultado para el operador dentro del plazo publicado; sin cabecera cada solicitud crea un municipio nuevo. Cada repetición exige permiso de operador y MFA reciente.",
         body: {
           type: "object",
           additionalProperties: false,
@@ -104,7 +117,15 @@ export async function registerMunicipalIdentity(
       const account = await actor(request, reply);
       return reply
         .code(201)
-        .send(await createMunicipality(pool, account, request.body));
+        .send(
+          await createMunicipality(
+            pool,
+            account,
+            request.body,
+            request.headers["idempotency-key"],
+            retentionSeconds,
+          ),
+        );
     },
   );
   app.post<{

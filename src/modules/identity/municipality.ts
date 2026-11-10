@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { DatabaseError, type Pool } from "pg";
+import { defaultIdempotencyRetentionSeconds } from "../../config.ts";
 import { command } from "../../database/command.ts";
+import { idempotentCommand } from "../../database/idempotency.ts";
 import { HttpError } from "../../http/errors.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
 import { requireOperator } from "./operator.ts";
@@ -17,6 +19,8 @@ export async function createMunicipality(
   pool: Pool,
   actor: AuthenticatedAccount,
   input: MunicipalityInput,
+  key: string = randomUUID(),
+  retentionSeconds = defaultIdempotencyRetentionSeconds,
 ) {
   const name = input.name.trim();
   if (
@@ -35,49 +39,65 @@ export async function createMunicipality(
   const tenantId = randomUUID();
   const invitationId = randomUUID();
   try {
-    return await command(
+    return await idempotentCommand(
       pool,
-      { accountId: actor.accountId, tenantId },
-      async (client) => {
-        await requireOperator(client, actor);
-        const valid = await client.query<{ valid: boolean }>(
-          "SELECT $1::timestamptz > now() AS valid",
-          [input.invitationExpiresAt],
-        );
-        if (!valid.rows[0]?.valid) throw new HttpError("INVALID_INPUT");
-        await client.query(
-          "INSERT INTO domain.municipality (id, name, timezone) VALUES ($1, $2, $3)",
-          [tenantId, name, input.timezone],
-        );
-        await client.query(
-          "INSERT INTO domain.administrator_invitation (tenant_id, id, account_id, invited_by, expires_at) VALUES ($1, $2, $3, $4, $5)",
-          [
-            tenantId,
-            invitationId,
-            input.administratorId,
-            actor.accountId,
+      { accountId: actor.accountId, tenantId: null },
+      {
+        operation: "municipality.create",
+        key,
+        retentionSeconds,
+        input: {
+          ...input,
+          name,
+          invitationExpiresAt: new Date(
             input.invitationExpiresAt,
-          ],
-        );
-        for (const operation of [
-          "CREATE_MUNICIPALITY",
-          "INVITE_ADMINISTRATOR",
-        ]) {
+          ).toISOString(),
+        },
+        authorize: (client) => requireOperator(client, actor),
+        execute: async (client) => {
+          await client.query("SELECT set_config('quenda.tenant_id',$1,true)", [
+            tenantId,
+          ]);
+          const valid = await client.query<{ valid: boolean }>(
+            "SELECT $1::timestamptz > now() AS valid",
+            [input.invitationExpiresAt],
+          );
+          if (!valid.rows[0]?.valid) throw new HttpError("INVALID_INPUT");
           await client.query(
-            "INSERT INTO domain.identity_event (tenant_id, id, actor_id, operation, subject_id, invitation_id) VALUES ($1, $2, $3, $4, $5, $6)",
+            "INSERT INTO domain.municipality (id, name, timezone) VALUES ($1, $2, $3)",
+            [tenantId, name, input.timezone],
+          );
+          await client.query(
+            "INSERT INTO domain.administrator_invitation (tenant_id, id, account_id, invited_by, expires_at) VALUES ($1, $2, $3, $4, $5)",
             [
               tenantId,
-              randomUUID(),
-              actor.accountId,
-              operation,
-              input.administratorId,
               invitationId,
+              input.administratorId,
+              actor.accountId,
+              input.invitationExpiresAt,
             ],
           );
-        }
-        return { tenantId, invitationId };
+          for (const operation of [
+            "CREATE_MUNICIPALITY",
+            "INVITE_ADMINISTRATOR",
+          ]) {
+            await client.query(
+              "INSERT INTO domain.identity_event (tenant_id, id, actor_id, operation, subject_id, invitation_id) VALUES ($1, $2, $3, $4, $5, $6)",
+              [
+                tenantId,
+                randomUUID(),
+                actor.accountId,
+                operation,
+                input.administratorId,
+                invitationId,
+              ],
+            );
+          }
+          await client.query("SELECT set_config('quenda.tenant_id','',true)");
+          return { tenantId, invitationId };
+        },
       },
-    );
+    ).then(({ result }) => result);
   } catch (error) {
     if (error instanceof DatabaseError && error.code === "23503")
       throw new HttpError("INVALID_INPUT");
