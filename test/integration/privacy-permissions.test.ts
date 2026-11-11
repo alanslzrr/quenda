@@ -277,6 +277,21 @@ test("privacy permissions are explicit, scoped, accepted and permanently withdra
             .items[0]?.status,
           "ACTIVE",
         );
+        const listed = await listGlobalPrivacyInvitations(
+          domain,
+          actor("operator"),
+          false,
+        );
+        const grant = listed.items.find((i) => i.invitationId === globalGrant);
+        assert.equal(grant?.accountName, "global");
+        assert.equal(grant?.invitedByName, "operator");
+        assert.ok(!JSON.stringify(listed).includes("@"));
+        assert.ok(
+          !Object.keys(
+            (await listGlobalPrivacyInvitations(domain, actor("global"), true))
+              .items[0] ?? {},
+          ).some((key) => key.endsWith("Name")),
+        );
         await assert.rejects(
           auth.query(
             'UPDATE auth."user" SET "twoFactorEnabled"=false WHERE id=\'global\'',
