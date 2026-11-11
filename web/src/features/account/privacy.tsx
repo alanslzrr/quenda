@@ -4,6 +4,10 @@ import { api } from "../../app/api";
 import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
+import {
+  useRecommendationSwitch,
+  useRecommendations,
+} from "../reservations/recommendations";
 import { PageTitle, SecretField } from "./shared";
 
 export function AccountPrivacy() {
@@ -42,6 +46,7 @@ export function AccountPrivacy() {
           }}
         />
       </section>
+      <RecommendationPreference />
       <section className={styles.section}>
         <h2>{t("Dar de baja la cuenta", "Dar de baixa a conta")}</h2>
         <p>
@@ -97,5 +102,42 @@ export function AccountPrivacy() {
         </ActionForm>
       </section>
     </>
+  );
+}
+
+/** Turns the schedule recommendations on or off; off, reservations are not read for them. */
+function RecommendationPreference() {
+  const { t } = usePreferences();
+  const query = useRecommendations();
+  const change = useRecommendationSwitch();
+  return (
+    <section className={styles.section}>
+      <h2>{t("Recomendaciones de horario", "Recomendacións de horario")}</h2>
+      <p>
+        {t(
+          "En «Mis reservas» te proponemos el próximo hueco libre de los horarios que repites. Se calculan en el momento con tus reservas confirmadas de los últimos seis meses; solo las ves tú y no se guarda ningún perfil.",
+          "En «As miñas reservas» propoñémosche o próximo oco libre dos horarios que repites. Calcúlanse no momento coas túas reservas confirmadas dos últimos seis meses; só as ves ti e non se garda ningún perfil.",
+        )}
+      </p>
+      {query.data && (
+        <Checkbox
+          label={t(
+            "Mostrar recomendaciones de horario",
+            "Amosar recomendacións de horario",
+          )}
+          checked={change.isPending ? change.variables : query.data.enabled}
+          disabled={change.isPending}
+          onCheckedChange={(value) => change.mutate(value === true)}
+        />
+      )}
+      {change.isError && (
+        <p role="alert">
+          {t(
+            "No se pudo guardar. Inténtalo de nuevo.",
+            "Non se puido gardar. Téntao de novo.",
+          )}
+        </p>
+      )}
+    </section>
   );
 }
