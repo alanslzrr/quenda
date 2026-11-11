@@ -166,6 +166,7 @@ export async function registerCatalog(
   );
   app.post<{
     Params: { tenantId: string };
+    Querystring: { settings?: "include" };
     Headers: { "idempotency-key"?: string };
     Body: CatalogDocument;
   }>(
@@ -176,12 +177,17 @@ export async function registerCatalog(
         tags: ["Catalog"],
         security: [{ quendaSession: [] }],
         description:
-          "Carga un documento quenda.catalog v1 (el de la exportación, de este u otro municipio o instancia) en un municipio sin instalaciones. Crea instalaciones y unidades en borrador con identificadores nuevos, sus fichas, calendario y normas, con auditoría. No importa recursos retirados, estado de publicación, ajustes del municipio, reservas ni datos personales. Exige administración del municipio, MFA reciente y Origin autorizado. Con instalaciones ya creadas responde 409. Idempotency-Key permite recuperar el resultado sin duplicar la importación.",
+          "Carga un documento quenda.catalog v1 (el de la exportación, de este u otro municipio o instancia) en un municipio sin instalaciones. Crea instalaciones y unidades en borrador con identificadores nuevos, sus fichas, calendario y normas, con auditoría. No importa recursos retirados, estado de publicación, reservas ni datos personales. Con settings=include aplica además la política de reserva y la apariencia del documento, como versiones nuevas auditadas, antes de comprobar los calendarios; los valores ya iguales no cambian. Exige administración del municipio, MFA reciente y Origin autorizado. Con instalaciones ya creadas responde 409. Idempotency-Key permite recuperar el resultado sin duplicar la importación.",
         params: {
           type: "object",
           additionalProperties: false,
           required: ["tenantId"],
           properties: { tenantId: uuid },
+        },
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          properties: { settings: { type: "string", enum: ["include"] } },
         },
         headers: creationHeaders,
         body: catalogExportSchema,
@@ -197,6 +203,7 @@ export async function registerCatalog(
               "calendars",
               "usageRules",
               "skippedWithdrawn",
+              "settings",
             ],
             properties: {
               tenantId: uuid,
@@ -205,6 +212,15 @@ export async function registerCatalog(
               calendars: { type: "integer", minimum: 0 },
               usageRules: { type: "integer", minimum: 0 },
               skippedWithdrawn: { type: "integer", minimum: 0 },
+              settings: {
+                type: "object",
+                additionalProperties: false,
+                required: ["bookingPolicy", "appearance"],
+                properties: {
+                  bookingPolicy: { type: "boolean" },
+                  appearance: { type: "boolean" },
+                },
+              },
             },
           },
         },
@@ -221,6 +237,7 @@ export async function registerCatalog(
             request.body,
             request.headers["idempotency-key"],
             retentionSeconds,
+            request.query.settings === "include",
           ),
         ),
   );

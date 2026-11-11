@@ -5,6 +5,7 @@ import { idempotentCommand } from "../../database/idempotency.ts";
 import { HttpError } from "../../http/errors.ts";
 import {
   type AuthenticatedAccount,
+  palettes,
   requireAdministrator,
 } from "../identity/index.ts";
 import { type UnitCalendarInput, validateUnitCalendar } from "./calendar.ts";
@@ -19,6 +20,14 @@ import {
 export interface CatalogDocument {
   format: "quenda.catalog";
   version: 1;
+  municipality: {
+    bookingPolicy: { advanceDays: number; cancellationMinutes: number };
+    appearance: {
+      lightPalette: string;
+      darkPalette: string;
+      defaultTheme: string;
+    };
+  };
   facilities: {
     id: string;
     name: string;
@@ -51,10 +60,28 @@ function rules(text: string) {
   return text;
 }
 
+function settingsOf(document: CatalogDocument) {
+  const { bookingPolicy, appearance } = document.municipality;
+  const bounded = (n: number) =>
+    Number.isInteger(n) && n >= 0 && n <= 2147483647;
+  if (
+    !bounded(bookingPolicy.advanceDays) ||
+    !bounded(bookingPolicy.cancellationMinutes) ||
+    !(palettes as readonly string[]).includes(appearance.lightPalette) ||
+    !(palettes as readonly string[]).includes(appearance.darkPalette) ||
+    !["light", "dark"].includes(appearance.defaultTheme)
+  )
+    throw new HttpError("INVALID_INPUT");
+  return { bookingPolicy, appearance };
+}
+
 /**
  * Loads an exported catalog into a municipality that has no facilities yet, as
- * unpublished drafts with new identifiers. Withdrawn resources, publication
- * state and municipal settings are not imported; reservations never travel.
+ * unpublished drafts with new identifiers. Withdrawn resources and publication
+ * state are not imported; reservations never travel. With `settings`, the
+ * booking policy and appearance of the document replace the municipality's own,
+ * through the same audited functions as a manual edit and before calendars are
+ * checked against the advance limit.
  */
 export async function importCatalog(
   pool: Pool,
@@ -63,7 +90,9 @@ export async function importCatalog(
   document: CatalogDocument,
   key: string = randomUUID(),
   retentionSeconds = defaultIdempotencyRetentionSeconds,
+  settings = false,
 ) {
+  const municipalSettings = settings ? settingsOf(document) : null;
   const facilities = document.facilities
     .filter((facility) => facility.withdrawnAt === null)
     .map((facility) => ({
@@ -107,7 +136,11 @@ export async function importCatalog(
         operation: "catalog.import",
         key,
         retentionSeconds,
-        input: document as unknown as Parameters<
+        // The option is part of the request: the same key with another choice is
+        // a different command. Without it the input stays the bare document.
+        input: (settings
+          ? { document, settings }
+          : document) as unknown as Parameters<
           typeof idempotentCommand
         >[2]["input"],
         authorize: (client) => requireAdministrator(client, actor),
@@ -118,13 +151,67 @@ export async function importCatalog(
           );
           if (existing.rowCount) throw new HttpError("CONFLICT");
           const municipality = (
-            await client.query<{ advance_days: number }>(
-              "SELECT advance_days FROM domain.municipality WHERE id=$1",
+            await client.query<{
+              advance_days: number;
+              cancellation_minutes: number;
+              booking_policy_version: number;
+              appearance_version: number;
+              light_palette: string;
+              dark_palette: string;
+              default_theme: string;
+            }>(
+              "SELECT advance_days,cancellation_minutes,booking_policy_version,appearance_version,light_palette,dark_palette,default_theme FROM domain.municipality WHERE id=$1",
               [tenantId],
             )
           ).rows[0];
           if (!municipality) throw new HttpError("NOT_FOUND");
           const correlation = randomUUID();
+          const applied = { bookingPolicy: false, appearance: false };
+          if (municipalSettings) {
+            const { bookingPolicy, appearance } = municipalSettings;
+            // Identical values are left untouched: no new version, no event.
+            if (
+              bookingPolicy.advanceDays !== municipality.advance_days ||
+              bookingPolicy.cancellationMinutes !==
+                municipality.cancellation_minutes
+            ) {
+              const version = (
+                await client.query<{ version: number | null }>(
+                  "SELECT domain.save_municipal_booking_policy($1,$2,$3,$4,$5) AS version",
+                  [
+                    municipality.booking_policy_version,
+                    bookingPolicy.advanceDays,
+                    bookingPolicy.cancellationMinutes,
+                    reason,
+                    correlation,
+                  ],
+                )
+              ).rows[0]?.version;
+              if (version == null) throw new HttpError("CONFLICT");
+              municipality.advance_days = bookingPolicy.advanceDays;
+              applied.bookingPolicy = true;
+            }
+            if (
+              appearance.lightPalette !== municipality.light_palette ||
+              appearance.darkPalette !== municipality.dark_palette ||
+              appearance.defaultTheme !== municipality.default_theme
+            ) {
+              const version = (
+                await client.query<{ version: number | null }>(
+                  "SELECT domain.save_municipal_appearance($1,$2,$3,$4,$5) AS version",
+                  [
+                    municipality.appearance_version,
+                    appearance.lightPalette,
+                    appearance.darkPalette,
+                    appearance.defaultTheme,
+                    correlation,
+                  ],
+                )
+              ).rows[0]?.version;
+              if (version == null) throw new HttpError("CONFLICT");
+              applied.appearance = true;
+            }
+          }
           const ids = new Map<string, string>();
           for (const facility of facilities) {
             const id = randomUUID();
@@ -209,10 +296,15 @@ export async function importCatalog(
             calendars,
             usageRules,
             skippedWithdrawn: skipped,
+            settings: applied,
           };
         },
       },
-    ).then(({ result }) => result);
+    ).then(({ result }) => ({
+      ...result,
+      // Results stored before settings could travel replay as "nothing applied".
+      settings: result.settings ?? { bookingPolicy: false, appearance: false },
+    }));
   } catch (error) {
     if (error instanceof DatabaseError && error.code === "23514")
       throw new HttpError("INVALID_INPUT");
