@@ -2,6 +2,7 @@ import {
   Children,
   type FormEvent,
   type ReactNode,
+  useId,
   useRef,
   useState,
 } from "react";
@@ -20,6 +21,7 @@ export function ActionForm({
   resetOnSuccess = true,
   clearOnSuccess = [],
   disabled = false,
+  unavailable,
   secondary,
 }: {
   children?: ReactNode;
@@ -32,14 +34,18 @@ export function ActionForm({
   /** Fields to empty after success when the rest of the form must stay as edited, such as a one-off reason. */
   clearOnSuccess?: string[];
   disabled?: boolean;
+  /** Why the action cannot run yet; disables submission and is shown next to the button. */
+  unavailable?: string;
 }) {
   const lock = useRef(false);
+  const reasonId = useId();
+  const blocked = disabled || !!unavailable;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const [done, setDone] = useState(false);
   async function run(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (lock.current || disabled) return;
+    if (lock.current || blocked) return;
     lock.current = true;
     const form = event.currentTarget;
     const data = new FormData(form);
@@ -75,6 +81,7 @@ export function ActionForm({
           <Alert tone="success" title={success} />
         </div>
       )}
+      {unavailable && <p id={reasonId}>{unavailable}</p>}
       {secondary ? (
         <div className={styles.formActions}>
           {secondary}
@@ -82,7 +89,8 @@ export function ActionForm({
             type="submit"
             variant={danger ? "danger" : "primary"}
             loading={busy}
-            disabled={busy || disabled}
+            disabled={busy || blocked}
+            aria-describedby={unavailable ? reasonId : undefined}
           >
             {label}
           </Button>
@@ -92,7 +100,8 @@ export function ActionForm({
           type="submit"
           variant={danger ? "danger" : "primary"}
           loading={busy}
-          disabled={busy || disabled}
+          disabled={busy || blocked}
+          aria-describedby={unavailable ? reasonId : undefined}
         >
           {label}
         </Button>
