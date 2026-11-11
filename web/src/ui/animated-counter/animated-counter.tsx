@@ -79,7 +79,8 @@ const reveal = {
 
 /** Split a formatted number into columns keyed by place value, so 999 → 1,000 keeps the ones column the ones column. */
 function partsFor(value: number, decimals: number, locale: string): Part[] {
-  const parts = new Intl.NumberFormat(locale, {
+  // Some browsers ship no Galician data; Spanish uses the same separators.
+  const parts = new Intl.NumberFormat(locale.startsWith("gl") ? [locale, "es"] : locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
     numberingSystem: "latn",

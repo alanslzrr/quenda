@@ -47,7 +47,8 @@ function Scroll({ label, children }: { label: string; children: ReactNode }) {
 
 export function UsageAnalysis({ analytics }: { analytics: UsageAnalytics }) {
   const { locale, t } = usePreferences();
-  const tag = locale === "gl" ? "gl-ES" : "es-ES";
+  // Some browsers ship no Galician data; Spanish uses the same separators.
+  const tag = locale === "gl" ? ["gl-ES", "es-ES"] : "es-ES";
   const number = new Intl.NumberFormat(tag, { maximumFractionDigits: 1 });
   const percent = (value: number | null) =>
     value === null

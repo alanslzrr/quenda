@@ -131,7 +131,7 @@ function NoticeForm({
           </>
         )}
         {noticeFields[kind].map((field) => (
-          <fieldset key={field.key} className={styles.section}>
+          <fieldset key={field.key} className={styles.fieldGroup}>
             <legend>{field.label[lang]}</legend>
             {field.hint && <p>{field.hint[lang]}</p>}
             <Textarea

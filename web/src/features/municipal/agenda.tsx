@@ -179,12 +179,6 @@ function AgendaDay({
           />
         </section>
       )}
-      <p className={styles.version}>
-        {t(
-          "Las entradas se ordenan por hora de inicio, en páginas de 20. Carga las restantes para consultar todo el día.",
-          "As entradas ordénanse por hora de inicio, en páxinas de 20. Carga as restantes para consultar todo o día.",
-        )}
-      </p>
     </>
   );
 }
@@ -254,6 +248,13 @@ function ReservationList({
           <More query={q} />
         </>
       )}
+      {/* The paging note belongs to the list it describes, not to the page end. */}
+      <p className={styles.version}>
+        {t(
+          "Las entradas se ordenan por hora de inicio, en páginas de 20. Carga las restantes para consultar todo el día.",
+          "As entradas ordénanse por hora de inicio, en páxinas de 20. Carga as restantes para consultar todo o día.",
+        )}
+      </p>
     </section>
   );
 }
@@ -520,7 +521,14 @@ export function AdministrativeReservation() {
   const q = useMunicipalQuery<Reservation>(
     `${endpoint(m.id)}/reservations/${reservationId}`,
   );
+  // Names of the units this account may plan, so staff never read raw identifiers.
+  const units = useMunicipalPages<PlanningUnit>(
+    `${endpoint(m.id)}/agenda/units`,
+  );
   const { t } = usePreferences();
+  const unitName = (id: string) =>
+    units.data?.pages.flatMap((p) => p.items).find((u) => u.id === id)?.name ??
+    id;
   if (q.isPending) return <Loading />;
   if (q.isError)
     return <Failure error={q.error} retry={() => void q.refetch()} />;
@@ -538,11 +546,15 @@ export function AdministrativeReservation() {
       </Link>
       <h1>{t("Reserva", "Reserva")}</h1>
       <ReservationSummary reservation={r} />
-      <p>{r.status}</p>
-      <Arrival key={`${r.id}:${r.arrivedAt ?? ""}`} reservation={r} />
       <p>
-        {t("Unidad:", "Unidade:")} {r.unitId}
+        {t("Unidad:", "Unidade:")} {unitName(r.unitId)} ·{" "}
+        {r.status === "CONFIRMADA"
+          ? t("Confirmada", "Confirmada")
+          : r.status === "CANCELADA"
+            ? t("Cancelada", "Cancelada")
+            : t("Finalizada", "Finalizada")}
       </p>
+      <Arrival key={`${r.id}:${r.arrivedAt ?? ""}`} reservation={r} />
       {r.usageRulesUnitId && r.usageRulesVersion !== null ? (
         <Disclosure
           title={
@@ -553,7 +565,7 @@ export function AdministrativeReservation() {
           }
         >
           <p>
-            {t("Unidad:", "Unidade:")} {r.usageRulesUnitId}
+            {t("Unidad:", "Unidade:")} {unitName(r.usageRulesUnitId)}
           </p>
           <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
             {r.usageRulesText}

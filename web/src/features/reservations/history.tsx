@@ -108,17 +108,23 @@ export function ReservationHistory() {
         {!!items.length && newBooking}
       </div>
       <PendingLink />
-      {!!items.length && (
-        <p>
-          <a href={`/api/me/reservations/calendar.ics?lang=${locale}`} download>
-            {t(
-              "Descargar mis próximas reservas (.ics)",
-              "Descargar as miñas próximas reservas (.ics)",
-            )}
-          </a>
-        </p>
-      )}
-      <CalendarSubscription />
+      {/* Both ways of taking reservations to a calendar, in one block as wide as the list. */}
+      <div className={styles.calendar}>
+        {!!items.length && (
+          <p>
+            <a
+              href={`/api/me/reservations/calendar.ics?lang=${locale}`}
+              download
+            >
+              {t(
+                "Descargar mis próximas reservas (.ics)",
+                "Descargar as miñas próximas reservas (.ics)",
+              )}
+            </a>
+          </p>
+        )}
+        <CalendarSubscription />
+      </div>
       {municipalities.length > 1 && (
         <div className={styles.toolbar}>
           <Select
