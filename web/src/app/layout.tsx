@@ -69,6 +69,10 @@ export function Layout() {
     location.pathname === "/reservar" ||
     location.pathname.startsWith("/municipios/");
   const staff = useStaffEntry(account?.accountId, !resource, locale);
+  // Pages outside the management workspace share one centred column, so sign-in,
+  // notices, errors and platform pages line up with booking. Account settings
+  // already draw their own centred card and keep the wider frame.
+  const ownCard = /^\/perfil(?:\/|$)/.test(location.pathname);
   return (
     <MfaBoundary key={account?.accountId ?? "guest"}>
       <div className={`${styles.shell} ${styles.product}`}>
@@ -151,7 +155,7 @@ export function Layout() {
           className={
             resource
               ? styles.workspaceMain
-              : `${styles.main} ${booking || location.pathname.startsWith("/reservas") ? styles.bookingMain : ""}`
+              : `${styles.main} ${ownCard ? "" : styles.columnMain}`
           }
         >
           {staff.error && (

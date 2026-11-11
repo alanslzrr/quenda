@@ -383,7 +383,7 @@
 }
 
 /* Width variants center the composition, not its text. */
-.bookingMain {
+.columnMain {
   width: min(100%, 936px);
 }
 .bookingNav {
