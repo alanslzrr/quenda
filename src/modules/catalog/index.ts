@@ -13,6 +13,7 @@ export {
 export { utcOpeningIntervals } from "./opening.ts";
 export {
   candidateAvailability,
+  nextHabitualSlot,
   publicAvailability,
   publicFacilities,
   publicUnitCalendar,
@@ -23,4 +24,5 @@ export { publishCatalogResource } from "./publication.ts";
 export { listCatalogResources } from "./queries.ts";
 export { validateReservableInterval } from "./reservation-rules.ts";
 export { registerCatalog } from "./routes.ts";
+export type { CalendarSlot } from "./slots.ts";
 export { withdrawCatalogResource } from "./withdrawal.ts";
