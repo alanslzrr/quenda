@@ -3,6 +3,7 @@ import { ActionForm, textField } from "../../app/action";
 import { api } from "../../app/api";
 import { usePreferences } from "../../app/preferences-provider";
 import { MetricCard } from "../../ui/metric-card/metric-card";
+import { useAgreementOptions } from "../collaboration/agreement-select";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
 import { MonthlyFields } from "./fields";
 import { allowed, type Monthly } from "./model";
@@ -19,6 +20,8 @@ function Report() {
     agreement: string;
     month: string;
   }>();
+  // Administrators choose from the municipality's agreements; others type an identifier.
+  const { none } = useAgreementOptions(m.administrator);
   return (
     <div className={styles.surface}>
       <h1>{t("Informe conjunto mensual", "Informe conxunto mensual")}</h1>
@@ -32,6 +35,14 @@ function Report() {
         <ActionForm
           label={t("Consultar informe", "Consultar informe")}
           resetOnSuccess={false}
+          unavailable={
+            m.administrator && none
+              ? t(
+                  "Los informes conjuntos pertenecen a un convenio. Podrás consultarlos cuando el municipio participe en alguno.",
+                  "Os informes conxuntos pertencen a un convenio. Poderás consultalos cando o municipio participe nalgún.",
+                )
+              : undefined
+          }
           submit={async (d) => {
             setResult(undefined);
             const agreement = textField(d, "agreementId").trim().toLowerCase(),

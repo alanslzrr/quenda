@@ -1,4 +1,6 @@
 import {
+  type InfiniteData,
+  type QueryClient,
   useInfiniteQuery,
   useQuery,
   useQueryClient,
@@ -74,7 +76,7 @@ export function useMunicipalQuery<T>(
     retry: false,
   });
 }
-export function useMunicipalPages<T>(path: string) {
+export function useMunicipalPages<T>(path: string, enabled = true) {
   const { account } = useSession();
   const { locale } = usePreferences();
   return useInfiniteQuery({
@@ -90,7 +92,7 @@ export function useMunicipalPages<T>(path: string) {
         locale,
       ),
     getNextPageParam: (last) => last.nextCursor ?? undefined,
-    enabled: !!account,
+    enabled: !!account && enabled,
     retry: false,
   });
 }
@@ -228,10 +230,31 @@ export function Administration() {
     </div>
   );
 }
+/** The last context this account read for the municipality, in any language. */
+function cachedMunicipality(
+  client: QueryClient,
+  accountId: string | undefined,
+  tenantId: string,
+): MunicipalContext | undefined {
+  for (const [, data] of client.getQueriesData<MunicipalContext>({
+    queryKey: ["private", accountId, "municipal-context", tenantId],
+  }))
+    if (data) return data;
+  // The prefix also matches the staff entry query, which caches a path, not pages.
+  for (const [, data] of client.getQueriesData<
+    InfiniteData<Navigation> | string
+  >({ queryKey: ["private", accountId, "navigation"] })) {
+    if (typeof data !== "object" || !Array.isArray(data?.pages)) continue;
+    const items = data.pages.flatMap((p) => p.municipalities.items);
+    const found = items.find((m) => m.id === tenantId);
+    if (found) return { ...found, name: municipalityLabel(found, items) };
+  }
+}
 export function MunicipalLayout() {
   useMunicipalTheme(undefined);
   const { tenantId = "" } = useParams();
   const { account } = useSession();
+  const client = useQueryClient();
   const { locale, t } = usePreferences();
   const query = useQuery({
     queryKey: [
@@ -270,6 +293,23 @@ export function MunicipalLayout() {
     },
   });
   if (query.isPending) return <Loading />;
+  // A transient failure (rate limit, unavailable service, network) keeps the
+  // management shell so navigation survives while the cooldown runs. The menu
+  // uses permissions already read in this session, never assumed ones.
+  if (query.isError && !query.data && !discardEditor(query.error)) {
+    const known = cachedMunicipality(client, account?.accountId, tenantId) ?? {
+      id: tenantId,
+      name: t("Gestión municipal", "Xestión municipal"),
+      administrator: false,
+      permissions: [],
+    };
+    return (
+      <ResourceShell municipality={known}>
+        <h1>{known.name}</h1>
+        <Failure error={query.error} retry={() => void query.refetch()} />
+      </ResourceShell>
+    );
+  }
   if (query.isError && (!query.data || discardEditor(query.error)))
     return (
       <>

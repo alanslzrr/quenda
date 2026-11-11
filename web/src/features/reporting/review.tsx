@@ -9,7 +9,10 @@ import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
 import { CollaborationAction } from "../collaboration/action";
-import { AgreementSelect } from "../collaboration/agreement-select";
+import {
+  AgreementSelect,
+  useAgreementOptions,
+} from "../collaboration/agreement-select";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
 import type { CommandResult } from "../reservations/commands";
 import type { ReviewContext } from "./model";
@@ -31,6 +34,8 @@ function Review() {
   });
   const [saved, setSaved] = useState<CommandResult>();
   const [generation, setGeneration] = useState(0);
+  // Observe the list only while the selector is shown, so saving a review does not reread it.
+  const { none } = useAgreementOptions(!context);
   const base = context
     ? `${endpoint(m.id)}/agreements/${context.agreementId}/reports/${context.month}`
     : "";
@@ -62,6 +67,14 @@ function Review() {
             "Consultar contexto de revisión",
           )}
           resetOnSuccess={false}
+          unavailable={
+            none && !agreementId
+              ? t(
+                  "Solo se revisan informes de convenios. Podrás hacerlo cuando el municipio participe en alguno.",
+                  "Só se revisan informes de convenios. Poderás facelo cando o municipio participe nalgún.",
+                )
+              : undefined
+          }
           submit={async (d) => {
             const agreement = textField(d, "agreementId").trim().toLowerCase(),
               month = textField(d, "month");

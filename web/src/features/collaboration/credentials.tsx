@@ -181,6 +181,9 @@ function Revoke() {
     revokedAt: string | null;
   }>(`${endpoint(m.id)}/credentials`);
   const rows = query.data?.pages.flatMap((p) => p.items) ?? [];
+  // The list holds every credential this municipality issued, revoked or not.
+  const nothingToRevoke =
+    query.isSuccess && !query.hasNextPage && rows.every((row) => row.revokedAt);
   return (
     <>
       <h1>{t("Acreditaciones de uso", "Acreditacións de uso")}</h1>
@@ -209,6 +212,19 @@ function Revoke() {
           path={`${endpoint(m.id)}/credentials/${id}/revoke`}
           danger
           label={t("Revocar acreditación", "Revogar acreditación")}
+          unavailable={
+            nothingToRevoke && !id
+              ? rows.length
+                ? t(
+                    "Todas las acreditaciones emitidas por este municipio ya están revocadas.",
+                    "Todas as acreditacións emitidas por este municipio xa están revogadas.",
+                  )
+                : t(
+                    "Aún no hay acreditaciones que revocar. Se emiten desde un convenio que exija acreditación.",
+                    "Aínda non hai acreditacións que revogar. Emítense desde un convenio que esixa acreditación.",
+                  )
+              : undefined
+          }
           body={(d) => {
             if (!new RegExp(`^${uuidPattern}$`).test(id))
               throw new ApiError(

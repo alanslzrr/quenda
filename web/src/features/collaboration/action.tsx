@@ -19,6 +19,7 @@ export function CollaborationAction({
   label,
   children,
   danger = false,
+  unavailable,
   onResult,
 }: {
   path: string;
@@ -26,6 +27,7 @@ export function CollaborationAction({
   label: string;
   children: ReactNode;
   danger?: boolean;
+  unavailable?: string;
   onResult?: (result: CommandResult) => void;
 }) {
   const { account } = useSession();
@@ -41,6 +43,7 @@ export function CollaborationAction({
       <ActionForm
         label={label}
         disabled={blocked}
+        unavailable={unavailable}
         danger={danger}
         resetOnSuccess={false}
         submit={async (data) => {
