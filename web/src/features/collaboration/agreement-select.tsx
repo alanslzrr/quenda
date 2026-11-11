@@ -9,17 +9,12 @@ import {
 } from "../municipal/shared";
 import type { AgreementSummary } from "./model";
 
-export function AgreementSelect({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
+/** Agreements of the municipality; `none` only once every page has loaded empty. */
+export function useAgreementOptions(enabled = true) {
   const m = useMunicipality();
-  const { t } = usePreferences();
   const query = useMunicipalPages<AgreementSummary>(
     `${endpoint(m.id)}/agreements`,
+    enabled,
   );
   const agreements = [
     ...new Map(
@@ -29,6 +24,21 @@ export function AgreementSelect({
       ]),
     ).values(),
   ];
+  return {
+    query,
+    agreements,
+    none: query.isSuccess && !query.hasNextPage && !agreements.length,
+  };
+}
+export function AgreementSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { t } = usePreferences();
+  const { query, agreements } = useAgreementOptions();
   return (
     <>
       <input

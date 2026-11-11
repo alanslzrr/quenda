@@ -76,7 +76,7 @@ export function useMunicipalQuery<T>(
     retry: false,
   });
 }
-export function useMunicipalPages<T>(path: string) {
+export function useMunicipalPages<T>(path: string, enabled = true) {
   const { account } = useSession();
   const { locale } = usePreferences();
   return useInfiniteQuery({
@@ -92,7 +92,7 @@ export function useMunicipalPages<T>(path: string) {
         locale,
       ),
     getNextPageParam: (last) => last.nextCursor ?? undefined,
-    enabled: !!account,
+    enabled: !!account && enabled,
     retry: false,
   });
 }
