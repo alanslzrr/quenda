@@ -230,6 +230,76 @@ test("operator invitations, handover and controlled recovery preserve global aut
         },
       );
       await t.test(
+        "operator lists show names, never e-mail, of platform accounts only",
+        async () => {
+          await auth.query(
+            `UPDATE auth."user" SET name='Segunda operadora' WHERE id='second'`,
+          );
+          await auth.query(`UPDATE auth."user" SET name='  ' WHERE id='first'`);
+          try {
+            const operators = await listOperators(domain, actor("first"));
+            assert.deepEqual(
+              operators.items.map((o) => [o.accountId, o.accountName]).sort(),
+              [
+                ["first", null],
+                ["second", "Segunda operadora"],
+              ],
+            );
+            const invitations = await listOperatorInvitations(
+              domain,
+              actor("first"),
+            );
+            const accepted = invitations.items.find(
+              (i) => i.accountId === "second",
+            );
+            assert.equal(accepted?.accountName, "Segunda operadora");
+            assert.equal(accepted?.invitedByName, null);
+            assert.ok(!JSON.stringify([operators, invitations]).includes("@"));
+            await transaction(
+              domain,
+              async (client) => {
+                const names = await client.query(
+                  "SELECT * FROM domain.platform_account_names($1)",
+                  [["first", "second", "third", "unverified"]],
+                );
+                assert.deepEqual(names.rows, [
+                  { account_id: "second", name: "Segunda operadora" },
+                ]);
+              },
+              { accountId: "first", tenantId: null },
+            );
+            await assert.rejects(
+              transaction(
+                domain,
+                (client) =>
+                  client.query(
+                    "SELECT * FROM domain.platform_account_names($1)",
+                    [["second"]],
+                  ),
+                { accountId: "third", tenantId: null },
+              ),
+              { code: "42501" },
+            );
+            await assert.rejects(
+              transaction(
+                domain,
+                (client) =>
+                  client.query(
+                    "SELECT * FROM domain.platform_account_names($1)",
+                    [Array.from({ length: 101 }, (_, n) => `account-${n}`)],
+                  ),
+                { accountId: "first", tenantId: null },
+              ),
+              { code: "22023" },
+            );
+          } finally {
+            await auth.query(
+              `UPDATE auth."user" SET name=id WHERE id IN ('first','second')`,
+            );
+          }
+        },
+      );
+      await t.test(
         "withdrawal invalidates pending delegation, never a role already accepted",
         async () => {
           const pending = await inviteOperator(domain, actor("first"), {

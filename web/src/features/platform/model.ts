@@ -39,6 +39,8 @@ export const statuses: Record<string, [string, string]> = {
 };
 export interface Operator {
   accountId: string;
+  /** Name only; operators never see each other's e-mail. */
+  accountName: string | null;
   grantedAt: string;
   revokedAt: string | null;
   active: boolean;
@@ -46,7 +48,9 @@ export interface Operator {
 export interface Invitation {
   invitationId: string;
   accountId: string;
+  accountName: string | null;
   invitedBy: string;
+  invitedByName: string | null;
   status: string;
   expiresAt: string;
   roleExpiresAt?: string | null;

@@ -18,6 +18,7 @@ async function signin(
   await page.getByRole("button", { name: "Verificar", exact: true }).click();
   await expect(page).toHaveURL(/\/perfil$/);
 }
+const literal = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 async function fixture(index: number) {
   return JSON.parse(
     await readFile("test-results/platform-fixtures.json", "utf8"),
@@ -104,6 +105,17 @@ test("platform operators invite revoke and hand over authority without inheritin
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    // Operators see each other by name and identifier, never by e-mail.
+    const own = page.locator("section").filter({
+      has: page.getByRole("heading", {
+        level: 3,
+        name: new RegExp(
+          `^Personal \\d+ \\((?:tu cuenta|a túa conta)\\) ${literal(f.operator.accountId)}$`,
+        ),
+      }),
+    });
+    await expect(own).toBeVisible();
+    await expect(own).not.toContainText("@");
     await page.screenshot({
       path: `test-results/platform-operators-${info.project.name}.png`,
       fullPage: true,
@@ -183,10 +195,10 @@ test("platform operators invite revoke and hand over authority without inheritin
     await page.goto(`${view}/privacidad`);
     const grant = page.locator("section").filter({
       has: page.getByRole("heading", {
-        name: f.recipient.accountId,
-        exact: true,
+        name: new RegExp(`^Personal \\d+ ${literal(f.recipient.accountId)}$`),
       }),
     });
+    await expect(grant).not.toContainText("@");
     await grant.getByRole("link", { name: /^Revocar$|^Revogar$/ }).click();
     await revoke(page);
     await recipient.reload();

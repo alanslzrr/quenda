@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
+import { accountNameSchema } from "./platform-account-names.ts";
 import {
   acceptGlobalPrivacy,
   type GlobalPrivacyInvitationInput,
@@ -180,7 +181,14 @@ export async function registerPrivacyPermissionRoutes(
                       "expiresAt",
                       "roleExpiresAt",
                       "status",
-                      ...(own ? [] : ["accountId", "invitedBy"]),
+                      ...(own
+                        ? []
+                        : [
+                            "accountId",
+                            "accountName",
+                            "invitedBy",
+                            "invitedByName",
+                          ]),
                     ],
                     properties: {
                       invitationId: uuid,
@@ -202,7 +210,14 @@ export async function registerPrivacyPermissionRoutes(
                           "INVALIDATED",
                         ],
                       },
-                      ...(own ? {} : { accountId, invitedBy: accountId }),
+                      ...(own
+                        ? {}
+                        : {
+                            accountId,
+                            accountName: accountNameSchema,
+                            invitedBy: accountId,
+                            invitedByName: accountNameSchema,
+                          }),
                     },
                   },
                 },

@@ -3,6 +3,7 @@ import { DatabaseError, type Pool, type PoolClient } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
+import { platformAccountNames } from "./platform-account-names.ts";
 import { requireRecentMfa } from "./reauthentication.ts";
 
 export const privacyOperations = ["PRIVACY_READ", "PRIVACY_EXECUTE"] as const;
@@ -159,12 +160,23 @@ export async function listGlobalPrivacyInvitations(
           ownOnly,
         ]);
         const page = result.rows.slice(0, 20);
+        const names = ownOnly
+          ? new Map<string, string>()
+          : await platformAccountNames(
+              client,
+              page.flatMap((row) => [row.account_id, row.invited_by]),
+            );
         return {
           items: page.map((row) => ({
             invitationId: row.id,
             ...(ownOnly
               ? {}
-              : { accountId: row.account_id, invitedBy: row.invited_by }),
+              : {
+                  accountId: row.account_id,
+                  accountName: names.get(row.account_id) ?? null,
+                  invitedBy: row.invited_by,
+                  invitedByName: names.get(row.invited_by) ?? null,
+                }),
             permissions: row.permissions,
             reason: row.reason,
             expiresAt: row.expires_at.toISOString(),

@@ -4,6 +4,7 @@ import { usePreferences } from "../../app/preferences-provider";
 import styles from "../municipal/municipal.module.css";
 import { More } from "../municipal/shared";
 import { staffOperations } from "../municipal/staff-model";
+import { PlatformAccount } from "./account";
 import { type Invitation, type Operator, statuses } from "./model";
 import { platformView, usePlatformPages } from "./shared";
 export function Operators() {
@@ -39,7 +40,9 @@ export function Operators() {
             .flatMap((p) => p.items)
             .map((o) => (
               <section className={styles.section} key={o.accountId}>
-                <h3>{o.accountId}</h3>
+                <h3>
+                  <PlatformAccount id={o.accountId} name={o.accountName} />
+                </h3>
                 <p>
                   {o.revokedAt
                     ? t("Revocado", "Revogado")
@@ -59,6 +62,7 @@ export function Operators() {
                 ) : (
                   <Link
                     to={`${platformView}/retirar-operador?id=${encodeURIComponent(o.accountId)}`}
+                    state={{ name: o.accountName }}
                   >
                     {t(
                       "Retirar permiso de operador",
@@ -126,12 +130,15 @@ export function PlatformInvitations({
             .flatMap((p) => p.items)
             .map((i) => (
               <section className={styles.section} key={i.invitationId}>
-                <h3>{i.accountId}</h3>
+                <h3>
+                  <PlatformAccount id={i.accountId} name={i.accountName} />
+                </h3>
                 <p>
                   {t("Invitación", "Invitación")}: {i.invitationId}
                 </p>
                 <p>
-                  {t("Emisor", "Emisor")}: {i.invitedBy}
+                  {t("Emisor", "Emisor")}:{" "}
+                  <PlatformAccount id={i.invitedBy} name={i.invitedByName} />
                 </p>
                 <p>{t(...(statuses[i.status] ?? [i.status, i.status]))}</p>
                 <p>
@@ -161,6 +168,7 @@ export function PlatformInvitations({
                   : ["PENDING", "EXPIRED"].includes(i.status)) && (
                   <Link
                     to={`${platformView}/${privacy ? "retirar-privacidad" : "retirar-invitacion"}?id=${encodeURIComponent(i.invitationId)}`}
+                    state={{ name: i.accountName ?? i.accountId }}
                   >
                     {t("Revocar", "Revogar")}
                   </Link>
