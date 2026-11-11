@@ -22,8 +22,16 @@ test("an administrator loads an exported catalog into an empty municipality as d
     `/api/municipalities/${f.tenant}/exports/catalog`,
   );
   expect(exported.status()).toBe(200);
+  // The file carries its own booking policy and appearance, applied on request.
+  const document = await exported.json();
+  document.municipality.bookingPolicy.advanceDays = 75;
+  document.municipality.appearance = {
+    lightPalette: "green",
+    darkPalette: "blue",
+    defaultTheme: "light",
+  };
   const file = info.outputPath("quenda-catalog-v1.json");
-  await writeFile(file, await exported.text());
+  await writeFile(file, JSON.stringify(document));
 
   await page.goto(`/administracion/${f.target}`);
   const section = page.getByRole("heading", {
@@ -40,13 +48,17 @@ test("an administrator loads an exported catalog into an empty municipality as d
   await page
     .getByLabel(/^(Archivo de catálogo \(JSON\)|Arquivo de catálogo \(JSON\))$/)
     .setInputFiles(file);
-  let posts = 0;
+  const settings = page.getByRole("checkbox", {
+    name: /^Aplicar (también la política de reserva y la apariencia del archivo|tamén a política de reserva e a aparencia do arquivo)/,
+  });
+  await settings.check();
+  const posts: string[] = [];
   page.on("request", (request) => {
     if (
       request.method() === "POST" &&
-      request.url().endsWith("/imports/catalog")
+      new URL(request.url()).pathname.endsWith("/imports/catalog")
     )
-      posts++;
+      posts.push(new URL(request.url()).search);
   });
   await page.getByRole("button", { name: /^Importar catálogo$/ }).click();
   await expect(
@@ -54,7 +66,12 @@ test("an administrator loads an exported catalog into an empty municipality as d
       /Importadas 1 instalaciones y 2 unidades|Importadas 1 instalacións e 2 unidades/,
     ),
   ).toBeVisible();
-  expect(posts).toBe(1);
+  await expect(
+    page.getByText(
+      /También se aplicaron la política de reserva y la apariencia del archivo|Tamén se aplicaron a política de reserva e a aparencia do arquivo/,
+    ),
+  ).toBeVisible();
+  expect(posts).toEqual(["?settings=include"]);
   await expect(
     page.getByRole("link", { name: "Centro de proba" }).first(),
   ).toBeVisible();
