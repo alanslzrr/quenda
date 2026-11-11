@@ -3,6 +3,7 @@ import { DatabaseError, type Pool } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
+import { platformAccountNames } from "./platform-account-names.ts";
 import { requireRecentMfa } from "./reauthentication.ts";
 
 function outcome(value: string | undefined): void {
@@ -145,12 +146,23 @@ async function invitations(
           [after],
         );
         const page = result.rows.slice(0, 20);
+        const names = own
+          ? new Map<string, string>()
+          : await platformAccountNames(
+              client,
+              page.flatMap((row) => [row.account_id, row.invited_by]),
+            );
         return {
           items: page.map((row) => ({
             invitationId: row.id,
             ...(own
               ? {}
-              : { accountId: row.account_id, invitedBy: row.invited_by }),
+              : {
+                  accountId: row.account_id,
+                  accountName: names.get(row.account_id ?? "") ?? null,
+                  invitedBy: row.invited_by,
+                  invitedByName: names.get(row.invited_by ?? "") ?? null,
+                }),
             expiresAt: row.expires_at.toISOString(),
             status: row.status,
           })),
@@ -196,9 +208,14 @@ export async function listOperators(
           active: boolean;
         }>("SELECT * FROM domain.list_platform_operators($1)", [after]);
         const page = result.rows.slice(0, 20);
+        const names = await platformAccountNames(
+          client,
+          page.map((row) => row.account_id),
+        );
         return {
           items: page.map((row) => ({
             accountId: row.account_id,
+            accountName: names.get(row.account_id) ?? null,
             grantedAt: row.granted_at.toISOString(),
             revokedAt: row.revoked_at?.toISOString() ?? null,
             active: row.active,

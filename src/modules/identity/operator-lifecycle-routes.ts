@@ -10,6 +10,7 @@ import {
   revokeOperator,
   revokeOperatorInvitation,
 } from "./operator-lifecycle.ts";
+import { accountNameSchema } from "./platform-account-names.ts";
 import { createRequestActor } from "./request-actor.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
@@ -189,7 +190,14 @@ export async function registerOperatorLifecycleRoutes(
                       "invitationId",
                       "expiresAt",
                       "status",
-                      ...(own ? [] : ["accountId", "invitedBy"]),
+                      ...(own
+                        ? []
+                        : [
+                            "accountId",
+                            "accountName",
+                            "invitedBy",
+                            "invitedByName",
+                          ]),
                     ],
                     properties: {
                       invitationId: uuid,
@@ -198,7 +206,14 @@ export async function registerOperatorLifecycleRoutes(
                         type: "string",
                         enum: ["PENDING", "ACCEPTED", "REVOKED", "EXPIRED"],
                       },
-                      ...(own ? {} : { accountId, invitedBy: accountId }),
+                      ...(own
+                        ? {}
+                        : {
+                            accountId,
+                            accountName: accountNameSchema,
+                            invitedBy: accountId,
+                            invitedByName: accountNameSchema,
+                          }),
                     },
                   },
                 },
@@ -243,9 +258,16 @@ export async function registerOperatorLifecycleRoutes(
                 items: {
                   type: "object",
                   additionalProperties: false,
-                  required: ["accountId", "grantedAt", "revokedAt", "active"],
+                  required: [
+                    "accountId",
+                    "accountName",
+                    "grantedAt",
+                    "revokedAt",
+                    "active",
+                  ],
                   properties: {
                     accountId,
+                    accountName: accountNameSchema,
                     grantedAt: { type: "string", format: "date-time" },
                     revokedAt: {
                       type: "string",
