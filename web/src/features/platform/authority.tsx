@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { textField } from "../../app/action";
 import { ApiError } from "../../app/api";
 import { usePreferences } from "../../app/preferences-provider";
@@ -8,6 +8,7 @@ import { useSession } from "../../app/session";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { Reason } from "../municipal/shared";
+import { PlatformAccount } from "./account";
 import { AccountField, InvitationDeadline, Receipt } from "./fields";
 import { invitationDates } from "./model";
 import { PlatformForm, platformApi } from "./shared";
@@ -113,6 +114,14 @@ export function Revoke({
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const id = search.get("id") ?? "";
+  // The list passes the name in navigation state, never in the address.
+  const state: unknown = useLocation().state;
+  const name =
+    state && typeof state === "object" && "name" in state
+      ? typeof state.name === "string"
+        ? state.name
+        : null
+      : null;
   const [result, setResult] = useState<{
     accountId?: string;
     invitationId?: string;
@@ -136,7 +145,22 @@ export function Revoke({
   return (
     <>
       <h2>{t("Retirar autorización", "Retirar autorización")}</h2>
-      <p>{id}</p>
+      {kind === "operator" ? (
+        <p>
+          <PlatformAccount id={id} name={name} />
+        </p>
+      ) : (
+        <>
+          {name && (
+            <p>
+              {t("Cuenta", "Conta")}: {name}
+            </p>
+          )}
+          <p>
+            {t("Invitación", "Invitación")}: {id}
+          </p>
+        </>
+      )}
       <p>
         {kind === "operator"
           ? t(
