@@ -14,6 +14,7 @@ import { Select } from "../../ui/select/select";
 import { PageTitle } from "../account/shared";
 import { endsNextDay, intervalLabel } from "../catalog/dates";
 import { useBookingEntry } from "../catalog/journey";
+import { HabitualSlots } from "./recommendations";
 import styles from "./reservations.module.css";
 import { detailPath, PendingLink, type Reservation } from "./shared";
 import { CalendarSubscription } from "./subscription";
@@ -108,6 +109,7 @@ export function ReservationHistory() {
         {!!items.length && newBooking}
       </div>
       <PendingLink />
+      <HabitualSlots />
       {/* Both ways of taking reservations to a calendar, in one block as wide as the list. */}
       <div className={styles.calendar}>
         {!!items.length && (
