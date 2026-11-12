@@ -1,0 +1,7 @@
+# Synthetic test values flagged by gitleaks; neither is a credential.
+# RFC 6238 TOTP test vector (base32 of "12345678901234567890").
+b6bd98355f3974a76365f0372aab9ac17e6f881a:test/unit/demo-access.test.ts:generic-api-key:38
+test/unit/demo-access.test.ts:generic-api-key:38
+# Placeholder AUTH_SECRET in the mail configuration unit test.
+5a1c4bf280ed3f56178dc4671b9c7133592da239:test/unit/mail-config.test.ts:generic-api-key:27
+test/unit/mail-config.test.ts:generic-api-key:27
