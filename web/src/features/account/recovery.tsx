@@ -183,8 +183,8 @@ export function ReactivateAccount() {
     <>
       <PageTitle title={t("Confirmar reactivación", "Confirmar reactivación")}>
         {t(
-          "Confirma tu contraseña y, si tenías MFA, tu segundo factor. Después podrás iniciar una sesión nueva.",
-          "Confirma o teu contrasinal e, se tiñas MFA, o teu segundo factor. Despois poderás iniciar unha sesión nova.",
+          "Confirma tu contraseña y, si tenías activada la verificación en dos pasos, tu código. Después podrás iniciar una sesión nueva.",
+          "Confirma o teu contrasinal e, se tiñas activada a verificación en dous pasos, o teu código. Despois poderás iniciar unha sesión nova.",
         )}
       </PageTitle>
       {!token ? (
@@ -310,8 +310,8 @@ export function EmailChangeConfirmation({
             <>
               <p className={styles.description}>
                 {t(
-                  "En una recuperación asistida, confirma también tu contraseña y verifica MFA desde Seguridad si está habilitado.",
-                  "Nunha recuperación asistida, confirma tamén o teu contrasinal e verifica MFA desde Seguridade se está habilitado.",
+                  "En una recuperación asistida, confirma también tu contraseña y completa la verificación en dos pasos desde Seguridad si la tienes activada.",
+                  "Nunha recuperación asistida, confirma tamén o teu contrasinal e completa a verificación en dous pasos desde Seguridade se a tes activada.",
                 )}
               </p>
               <SecretField

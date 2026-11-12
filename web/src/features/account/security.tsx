@@ -166,7 +166,7 @@ export function AccountSecurity() {
             "Protege tu cuenta con una aplicación de autenticación.",
             "Protexe a túa conta cunha aplicación de autenticación.",
           )}
-          action={t("Gestionar MFA", "Xestionar MFA")}
+          action={t("Gestionar verificación", "Xestionar verificación")}
           closeLabel={t("Ocultar opciones", "Ocultar opcións")}
           status={
             <Badge
@@ -183,8 +183,8 @@ export function AccountSecurity() {
           <p>
             {auth.user.twoFactorEnabled
               ? t(
-                  "MFA está activado. Las operaciones sensibles requieren una verificación de los últimos cinco minutos.",
-                  "MFA está activado. As operacións sensibles requiren unha verificación dos últimos cinco minutos.",
+                  "La verificación en dos pasos está activada. Las operaciones sensibles requieren haberla completado en los últimos cinco minutos.",
+                  "A verificación en dous pasos está activada. As operacións sensibles requiren tela completada nos últimos cinco minutos.",
                 )
               : t(
                   "Añade una aplicación de autenticación para proteger tu acceso.",
@@ -193,7 +193,7 @@ export function AccountSecurity() {
           </p>
           {!auth.user.twoFactorEnabled && !enrollment && (
             <ActionForm
-              label={t("Configurar MFA", "Configurar MFA")}
+              label={t("Configurar verificación", "Configurar verificación")}
               submit={async (data) => {
                 const result = await api<{
                   totpURI: string;
@@ -240,8 +240,8 @@ export function AccountSecurity() {
             <ActionForm
               label={
                 enrollment
-                  ? t("Activar MFA", "Activar MFA")
-                  : t("Verificar MFA", "Verificar MFA")
+                  ? t("Activar verificación", "Activar verificación")
+                  : t("Verificar ahora", "Verificar agora")
               }
               success={t(
                 "Verificación completada.",
@@ -321,7 +321,12 @@ export function AccountSecurity() {
                   name="password"
                 />
               </ActionForm>
-              <h3>{t("Desactivar MFA", "Desactivar MFA")}</h3>
+              <h3>
+                {t(
+                  "Desactivar la verificación en dos pasos",
+                  "Desactivar a verificación en dous pasos",
+                )}
+              </h3>
               <p>
                 {t(
                   "No se permite mientras mantengas permisos administrativos vigentes.",
@@ -329,9 +334,15 @@ export function AccountSecurity() {
                 )}
               </p>
               <ActionForm
-                label={t("Desactivar MFA", "Desactivar MFA")}
+                label={t(
+                  "Desactivar la verificación en dos pasos",
+                  "Desactivar a verificación en dous pasos",
+                )}
                 danger
-                success={t("MFA desactivado.", "MFA desactivado.")}
+                success={t(
+                  "Verificación en dos pasos desactivada.",
+                  "Verificación en dous pasos desactivada.",
+                )}
                 submit={async (data) => {
                   await api(
                     "/api/auth/two-factor/disable",
