@@ -72,6 +72,13 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "no-referrer" always;
     add_header Strict-Transport-Security $quenda_hsts always;
+
+    # A catalog photo travels in base64 inside JSON, up to 6 MiB of image; the API
+    # applies the exact limit. Every other request keeps the 1 MiB limit above.
+    location ~ ^/api/municipalities/[^/]+/(?:facilities|units)/[^/]+/photos$ {
+      client_max_body_size 9m;
+      proxy_pass http://quenda_api;
+    }
   }
 
   location /assets/ {
