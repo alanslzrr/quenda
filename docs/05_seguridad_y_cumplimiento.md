@@ -74,6 +74,14 @@ La aplicación y la API se sirven bajo el mismo origen, por lo que la política 
 
 `style-src 'unsafe-inline'` es necesario hoy porque la apariencia municipal inyecta un elemento `<style>` y algunos componentes usan atributos `style`. Sustituirlos por clases y variables CSS permitiría una política de estilos estricta y se trata como mejora posterior. La recarga automática ante un fragmento obsoleto y la ausencia de scripts en línea son compatibles con `script-src 'self'`. Antes de una nueva versión deben conservarse los activos de la anterior durante el plazo de las pestañas abiertas, o la aplicación mostrará la pantalla de recarga.
 
+## Fotografías del catálogo
+
+Las fotografías de instalaciones y espacios son contenido público del municipio, no datos de las cuentas.
+- **Lo que se guarda:** el servidor nunca conserva el archivo recibido. Reconoce el formato por su firma antes de decodificarlo, rechaza los formatos no admitidos, las imágenes animadas y las de más de 36 megapíxeles, y guarda su propia versión WebP, sin metadatos. Así se eliminan la ubicación GPS, la cámara y otros datos ocultos.
+- **Personas:** el editor pide no subir fotos en las que se reconozca a personas ni matrículas.
+- **Acceso:** las imágenes de recursos sin publicar solo las ven quienes pueden gestionarlos, por seguridad de filas. La ruta pública devuelve una foto solo mientras su instalación, y su espacio si lo tiene, están publicados.
+- **Política de seguridad de contenidos:** no cambia. El recorte se previsualiza como imagen `data:` y las fotos se sirven desde el propio origen.
+
 ## Información al interesado y accesibilidad
 
 Cada municipio publica su información sobre privacidad, su aviso legal y su declaración de accesibilidad, y el operador publica los de la instancia. Los campos son fijos: responsable y contacto, delegado de protección de datos, finalidades, base jurídica, destinatarios, plazos de conservación, ejercicio de derechos y autoridad de control; denominación, NIF, domicilio y contacto; y, para la accesibilidad, estado de conformidad, contenido no accesible, método y fecha de evaluación, medio de contacto y procedimiento de reclamación. No admiten formato ni enlaces. Cada publicación es una versión nueva y las anteriores no se modifican ni se borran.

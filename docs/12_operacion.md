@@ -146,6 +146,12 @@ La API emite `HTTP_METRICS` cada 30 segundos con acumulados locales de solicitud
 
 ## Copias, restauración y recuperación
 
+### Fotografías del catálogo
+
+Las fotografías se guardan en PostgreSQL (`domain.catalog_photo`): cada una ocupa unos 150–300 KB entre sus dos tamaños WebP. Seis fotos por instalación y por espacio suman unos pocos megabytes por instalación. Entran en la copia lógica y en la restauración como el resto de datos, sin ningún almacenamiento adicional.
+
+El nginx de la imagen web mantiene el límite de 1 MiB por petición y admite 9 MiB solo en la ruta de subida de fotos. Un proxy de entrada propio debe permitir el mismo tamaño en esa ruta (`/api/municipalities/{id}/{facilities|units}/{id}/photos`). La API procesa como máximo dos imágenes a la vez por proceso.
+
 ### Copia lógica de PostgreSQL
 
 `PG_BIN=/ruta/postgresql17/bin BACKUP_DATABASE_URL=… pnpm db:backup /directorio-privado/copia.dump` crea un archivo custom de `pg_dump` y devuelve ruta, SHA-256 y duración observada. Proporcionar la URL mediante un mecanismo de secretos, no dejarla en historial de shell. Requiere un rol administrativo de copia con lectura íntegra; no utilizar credenciales web. No activa filtrado RLS ni acepta una copia parcial como completa. Las opciones de conexión admitidas son TLS y `connect_timeout`.
