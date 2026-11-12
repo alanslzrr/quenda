@@ -1,6 +1,14 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
+import { HttpError } from "../../http/errors.ts";
 import { calendarSchema } from "./calendar-routes.ts";
+import {
+  photoContentResponse,
+  photoListSchema,
+  photoSizes,
+  sendPhoto,
+} from "./photo-routes.ts";
+import { type PhotoSize, publicPhotoContent } from "./photos.ts";
 import { facilityProfileSchema, unitProfileSchema } from "./profile-schema.ts";
 import {
   nextPublicAvailability,
@@ -8,10 +16,14 @@ import {
   publicAvailabilitySearch,
   publicBookingDurations,
   publicFacilities,
-  publicUnitCalendar,
+  publicUnitDetail,
   publicUnits,
 } from "./public.ts";
-import { publicRateLimit } from "./public-limit.ts";
+import {
+  consumePublicAttempt,
+  publicRateLimit,
+  publicSubjectHash,
+} from "./public-limit.ts";
 
 const uuid = { type: "string", format: "uuid" };
 const text = { type: "string" };
@@ -67,6 +79,53 @@ export async function registerPublicCatalog(
   secret: string,
 ) {
   const limit = publicRateLimit(pool, secret);
+  // Photos have their own allowance, so a gallery does not use up the budget
+  // that availability searches need.
+  const photoLimit = async (request: FastifyRequest, reply: FastifyReply) => {
+    const decision = await consumePublicAttempt(
+      pool,
+      publicSubjectHash(secret, `photo\0${request.ip}`),
+    );
+    if (!decision.allowed) {
+      reply.header("retry-after", decision.retryAfter);
+      throw new HttpError("RATE_LIMITED");
+    }
+  };
+  app.get<{
+    Params: { tenantId: string; photoId: string; size: PhotoSize };
+  }>(
+    "/api/public/municipalities/:tenantId/photos/:photoId/:size",
+    {
+      onRequest: photoLimit,
+      schema: {
+        operationId: "publicPhoto",
+        description:
+          "Imagen de una fotografía de una instalación o unidad publicada. Una fotografía eliminada o de un recurso retirado responde 404. Límite propio de 60 imágenes por minuto y dirección.",
+        tags: ["Public catalog"],
+        security: [],
+        params: params({
+          photoId: uuid,
+          size: { type: "string", enum: photoSizes },
+        }),
+        response: { ...errors, 200: photoContentResponse },
+      },
+    },
+    (request, reply) =>
+      sendPhoto(
+        request,
+        reply,
+        request.params.photoId,
+        request.params.size,
+        "public, max-age=3600",
+        () =>
+          publicPhotoContent(
+            pool,
+            request.params.tenantId,
+            request.params.photoId,
+            request.params.size,
+          ),
+      ),
+  );
 
   app.get<{ Params: { tenantId: string } }>(
     "/api/public/municipalities/:tenantId/booking-durations",
@@ -167,6 +226,7 @@ export async function registerPublicCatalog(
             name: text,
             units: { type: "integer" },
             profile: facilityProfileSchema,
+            photos: photoListSchema,
           }),
         },
       },
@@ -200,6 +260,7 @@ export async function registerPublicCatalog(
             minimumMinutes: { type: "integer" },
             maximumMinutes: { type: "integer" },
             profile: unitProfileSchema,
+            photos: photoListSchema,
           }),
         },
       },
@@ -242,6 +303,8 @@ export async function registerPublicCatalog(
               "calendar",
               "profile",
               "facilityProfile",
+              "photos",
+              "facilityPhotos",
             ],
             properties: {
               id: uuid,
@@ -257,13 +320,15 @@ export async function registerPublicCatalog(
               calendar: calendarSchema,
               profile: unitProfileSchema,
               facilityProfile: facilityProfileSchema,
+              photos: photoListSchema,
+              facilityPhotos: photoListSchema,
             },
           },
         },
       },
     },
     (request) =>
-      publicUnitCalendar(pool, request.params.tenantId, request.params.unitId),
+      publicUnitDetail(pool, request.params.tenantId, request.params.unitId),
   );
 
   app.get<{
