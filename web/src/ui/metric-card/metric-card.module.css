@@ -18,3 +18,11 @@
 .top small[data-trend="down"] { background: color-mix(in oklab, var(--danger) 11%, transparent); color: var(--danger); }
 
 .empty { display: block; font-size: var(--text-xl); font-weight: 600; }
+
+/* A comparison with the previous period: the arrow and the words carry the direction, the tone only reinforces whether it is good. */
+.card .comparison { display: flex; align-items: flex-start; gap: var(--space-2); margin-top: var(--space-3); color: var(--text-secondary); font-weight: 500; }
+.card .comparison[data-tone="positive"] { color: var(--success); }
+.card .comparison[data-tone="negative"] { color: var(--danger); }
+.comparisonIcon { flex: none; margin-top: .1em; }
+.comparison > .swapBlock { min-width: 0; }
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
