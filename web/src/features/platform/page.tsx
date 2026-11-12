@@ -83,8 +83,8 @@ function Workspace() {
       </h1>
       <p>
         {t(
-          "Estas operaciones requieren permiso de operador y MFA verificado en los últimos cinco minutos. No conceden acceso general a la actividad municipal.",
-          "Estas operacións requiren permiso de operador e MFA verificado nos últimos cinco minutos. Non conceden acceso xeral á actividade municipal.",
+          "Estas operaciones requieren permiso de operador y haber completado la verificación en dos pasos en los últimos cinco minutos. No conceden acceso general a la actividad municipal.",
+          "Estas operacións requiren permiso de operador e ter completada a verificación en dous pasos nos últimos cinco minutos. Non conceden acceso xeral á actividade municipal.",
         )}
       </p>
       <nav
