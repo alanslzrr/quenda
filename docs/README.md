@@ -15,6 +15,9 @@ Quenda gestiona la consulta y reserva de instalaciones deportivas municipales. E
 | [07 Identidad y colaboración](07_identidad_y_colaboracion.md) | Cuenta global, convenios, acreditaciones, cuotas e informes. |
 | [08 Casos de uso](08_casos_de_uso.md) | Actores, objetivos, flujos, excepciones y resultados de las interacciones. |
 | [09 Navegación](09_navegacion.md) | Mapa de navegación, recorrido de reserva, contexto entre pasos y municipio favorito. |
+| [10 Referencia de la API](10_api.md) | Rutas HTTP por área, permisos exigidos, respuestas y límites. |
+| [11 Desarrollo y pruebas](11_desarrollo.md) | Entorno local, aplicación web, demostración y comprobaciones. |
+| [12 Despliegue y operación](12_operacion.md) | Imágenes, despliegue de referencia, workers, auditoría, métricas, copias y recuperación. |
 
 ## Terminología
 
