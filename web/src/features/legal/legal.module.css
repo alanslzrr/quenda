@@ -2,7 +2,7 @@
   max-width: 72ch;
   margin: 0 auto;
   display: grid;
-  gap: 20px;
+  gap: 28px;
 }
 .title {
   margin: 0;
@@ -19,8 +19,22 @@
   font-size: var(--text-sm);
 }
 .page h2 {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: var(--text-lg);
+}
+/* Every section has the same rhythm whether it shows published or standard text. */
+.page section {
+  display: grid;
+  gap: 8px;
+}
+.page p {
+  margin: 0;
+}
+.page ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 1.25rem;
 }
 .page p,
 .page li {
@@ -36,5 +50,26 @@
 @media print {
   .page {
     max-width: none;
+  }
+}
+.facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.facts > div {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+  gap: 4px 16px;
+}
+.facts dt {
+  color: var(--text-secondary);
+}
+.facts dd {
+  margin: 0;
+}
+@media (max-width: 560px) {
+  .facts > div {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
