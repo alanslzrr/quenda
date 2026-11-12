@@ -205,17 +205,18 @@ export function SlotList({
                   repeatedTime(slot.end.utc, timeZone) ||
                   undefined
                 }
-                aria-label={
-                  next
-                    ? `${label}, ${t("termina al día siguiente", "remata ao día seguinte")}`
-                    : label
-                }
               >
                 {label}
                 {next && (
-                  <span className={styles.nextDay} aria-hidden="true">
-                    +1
-                  </span>
+                  <>
+                    <span className={styles.nextDay} aria-hidden="true">
+                      +1
+                    </span>
+                    {/* Named from content: an aria-label would leave the visible "+1" out of the name. */}
+                    <span className={styles.visuallyHidden}>
+                      {`, ${t("termina al día siguiente", "remata ao día seguinte")}`}
+                    </span>
+                  </>
                 )}
               </Link>
             </li>
