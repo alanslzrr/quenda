@@ -41,11 +41,20 @@ test("the holder's access code opens the staff check and records the arrival onc
       name: /Acceso a la instalación|Acceso á instalación/,
     }),
   ).toBeVisible();
-  const code = holder.getByRole("img", {
+  // The code is shown on demand, in a dialog with the details staff check.
+  await accessible(holder);
+  await holder.getByRole("button", { name: /^Ver código de acceso/ }).click();
+  const pass = holder.getByRole("dialog", { name: "Código de acceso" });
+  const code = pass.getByRole("img", {
     name: /Código QR de acceso de esta reserva|Código QR de acceso desta reserva/,
   });
   await expect(code).toBeVisible();
+  await expect(pass).toContainText(/Referencia [0-9A-F]{8}/);
+  // Scan once the entrance animation has settled.
+  await expect(pass).toHaveCSS("opacity", "1");
   await accessible(holder);
+  await pass.getByRole("button", { name: /^(Cerrar|Pechar)$/ }).click();
+  await expect(pass).toHaveCount(0);
 
   // The code encodes the staff page; staff open it on their own signed-in phone.
   const staffPage = `/administracion/${f.administrator.tenant}/reservas/${f.reservationId}`;
