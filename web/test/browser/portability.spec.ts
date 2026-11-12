@@ -72,12 +72,12 @@ test("reservations download as a CSV table with one row per reservation", async 
     .fill(end.toISOString().slice(0, 10));
   await page.getByRole("combobox", { name: "Formato", exact: true }).click();
   await page
-    .getByRole("option", { name: /CSV para (hojas|follas) de c[aá]lculo/ })
+    .getByRole("option", { name: /^(Hoja|Folla) de c[aá]lculo$/ })
     .click();
   await page.getByRole("checkbox", { name: /Confirmo/ }).check();
   const download = page.waitForEvent("download");
   await page
-    .getByRole("button", { name: "Descargar CSV", exact: true })
+    .getByRole("button", { name: /^Descargar (hoja|folla) de cálculo$/ })
     .click();
   const file = await download;
   expect(file.suggestedFilename()).toBe("quenda-reservations-v3.csv");

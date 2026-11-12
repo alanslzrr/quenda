@@ -212,13 +212,13 @@ test("exports reject MFA and size failures without files and retain exact v3 acc
   await period(page);
   await page.getByRole("checkbox", { name: /Confirmo/ }).check();
   await page
-    .getByRole("button", { name: "Descargar JSON", exact: true })
+    .getByRole("button", { name: "Descargar datos completos", exact: true })
     .click();
   await expect(page.getByText("Verifica MFA", { exact: true })).toBeVisible();
   expect(downloads).toBe(0);
   status = 400;
   await page
-    .getByRole("button", { name: "Descargar JSON", exact: true })
+    .getByRole("button", { name: "Descargar datos completos", exact: true })
     .click();
   await expect(
     page.getByText("Reduce el periodo o elige una unidad", { exact: true }),
@@ -227,7 +227,7 @@ test("exports reject MFA and size failures without files and retain exact v3 acc
   status = 200;
   const ready = page.waitForEvent("download");
   await page
-    .getByRole("button", { name: "Descargar JSON", exact: true })
+    .getByRole("button", { name: "Descargar datos completos", exact: true })
     .click();
   const file = await ready;
   expect(file.suggestedFilename()).toBe("quenda-reservations-v3.json");
