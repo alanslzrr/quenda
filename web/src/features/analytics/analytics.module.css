@@ -1,0 +1,306 @@
+.page {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.header h1 {
+  margin-bottom: var(--space-2);
+}
+.lead {
+  max-width: 68ch;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.field {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.fieldLabel {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+.controls > .field {
+  flex: 0 1 auto;
+}
+.controls > :nth-child(2) {
+  flex: 1 1 260px;
+  max-width: 420px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+.hint {
+  margin-top: calc(-1 * var(--space-3));
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.hint a {
+  color: var(--foreground);
+  text-underline-offset: 3px;
+}
+.results {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+.results[data-stale] {
+  opacity: 0.6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .results {
+    transition: none;
+  }
+}
+.status {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.block {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+.blockHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.blockHeader h2 {
+  font-size: var(--text-xl);
+}
+.block h3 {
+  margin-top: var(--space-2);
+  font-size: var(--text-lg);
+}
+.description {
+  margin-top: var(--space-1);
+  max-width: 72ch;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.highlights {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  font-size: var(--text-lg);
+  line-height: 1.5;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--space-4);
+}
+.scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.scroll:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+.table,
+.heatmap {
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.table {
+  width: 100%;
+  border-spacing: 0;
+}
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: start;
+  vertical-align: middle;
+}
+/* Headers wrap between words, never inside them; the frame scrolls instead. */
+.table th {
+  overflow-wrap: normal;
+  hyphens: none;
+}
+.table thead th {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.table td {
+  text-align: end;
+  white-space: nowrap;
+}
+.spaces td:nth-child(2),
+.shares td {
+  text-align: start;
+}
+.shares {
+  max-width: 34rem;
+}
+.table .groupHeading {
+  padding-top: var(--space-4);
+  border-bottom: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.unitButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.occupancy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 13rem;
+}
+.bar {
+  position: relative;
+  flex: 0 0 6rem;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+}
+.bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--series-1);
+}
+@media (forced-colors: active) {
+  .bar {
+    border: 1px solid CanvasText;
+  }
+  .bar > span {
+    background: CanvasText;
+  }
+}
+.value {
+  min-width: 3.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.trend {
+  width: 7rem;
+}
+.heatmap tr > th {
+  padding: 0.25rem 0.5rem;
+  font-weight: 500;
+  text-align: start;
+  white-space: nowrap;
+}
+.heatmap td {
+  min-width: 3.25rem;
+  padding: 0.4rem 0.35rem;
+  border-radius: 4px;
+  color: var(--foreground);
+  text-align: center;
+  white-space: nowrap;
+}
+/* One hue in steps; the value is always written in the cell. */
+.heatmap td[data-level="0"],
+.legend [data-level="0"] {
+  background: color-mix(in oklab, var(--accent-strong) 4%, var(--background));
+}
+.heatmap td[data-level="1"],
+.legend [data-level="1"] {
+  background: color-mix(in oklab, var(--accent-strong) 14%, var(--background));
+}
+.heatmap td[data-level="2"],
+.legend [data-level="2"] {
+  background: color-mix(in oklab, var(--accent-strong) 28%, var(--background));
+}
+.heatmap td[data-level="3"],
+.legend [data-level="3"] {
+  background: color-mix(in oklab, var(--accent-strong) 70%, var(--background));
+  color: var(--background);
+}
+.heatmap td[data-level="4"],
+.legend [data-level="4"] {
+  background: var(--accent-strong);
+  color: var(--background);
+}
+@media (forced-colors: active) {
+  .heatmap td[data-level],
+  .legend [data-level] {
+    border: 1px solid CanvasText;
+  }
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  list-style: none;
+}
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.legend [data-level] {
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+}
+.settings {
+  display: grid;
+  gap: var(--space-6);
+}
+.settings section {
+  display: grid;
+  gap: var(--space-3);
+}
+.fieldset {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.fieldset legend {
+  padding: 0;
+  font-weight: 500;
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 40rem) {
+  .block {
+    padding: var(--space-4);
+  }
+}
