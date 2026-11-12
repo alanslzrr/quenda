@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock3 } from "lucide-react";
+import { Building2, Clock3 } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router";
 import {
@@ -27,6 +27,8 @@ import {
   searchPath,
   useJourneyQuery,
 } from "./journey";
+import { PhotoThumb } from "./photo-gallery";
+import { publicPhotos } from "./photos";
 import { addressLine } from "./profile";
 import { AvailabilitySearch, useFacilities } from "./search";
 
@@ -128,6 +130,9 @@ export function MunicipalityPage() {
       a.name.localeCompare(b.name, locale),
   );
   const bookable = items.filter((item) => item.units > 0);
+  // Covers are shown once any facility has a photo, so the list is either all images or none.
+  const withPhotos = items.some((item) => item.photos?.length);
+  const photoSource = publicPhotos(tenantId);
   return (
     <div className={styles.page}>
       <BookingSteps
@@ -193,6 +198,15 @@ export function MunicipalityPage() {
                     : undefined
                 }
                 title={item.name}
+                media={
+                  withPhotos && (
+                    <PhotoThumb
+                      photo={item.photos?.[0]}
+                      source={photoSource}
+                      icon={Building2}
+                    />
+                  )
+                }
                 meta={[
                   addressLine(item.profile),
                   item.units === 0
