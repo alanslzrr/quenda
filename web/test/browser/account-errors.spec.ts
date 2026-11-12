@@ -80,21 +80,33 @@ test("administrative MFA cannot be presented as disabled after a rejection", asy
   );
   await page.goto("/perfil/seguridad");
   await page
-    .getByRole("button", { name: /Gestionar MFA|Xestionar MFA/ })
+    .getByRole("button", {
+      name: /Gestionar verificación|Xestionar verificación/,
+    })
     .click();
   const form = page.locator("form").filter({
-    has: page.getByRole("button", { name: "Desactivar MFA", exact: true }),
+    has: page.getByRole("button", {
+      name: "Desactivar la verificación en dos pasos",
+      exact: true,
+    }),
   });
   await form.getByLabel("Contraseña actual").fill("synthetic-password");
   await form
-    .getByRole("button", { name: "Desactivar MFA", exact: true })
+    .getByRole("button", {
+      name: "Desactivar la verificación en dos pasos",
+      exact: true,
+    })
     .click();
   await expect(
     page.getByText(
       "Debes mantener MFA mientras tengas permisos administrativos.",
     ),
   ).toBeVisible();
-  await expect(page.getByText(/^MFA está activado/)).toBeVisible();
+  await expect(
+    page.getByText(
+      /^(La verificación en dos pasos está activada|A verificación en dous pasos está activada)/,
+    ),
+  ).toBeVisible();
 });
 test("an invitation exposes its scope and is accepted only by an explicit command", async ({
   page,
