@@ -115,15 +115,41 @@
 .heading > :first-child {
   flex: 1 1 280px;
 }
-.heading > a {
+.heading > button {
   margin-bottom: 24px;
 }
-.calendar {
-  max-width: 760px;
-  margin: 0 0 24px;
+/* Calendar dialog: one-off download and automatic sync as two options. */
+.calendarDialog {
+  width: min(calc(100vw - 32px), 520px);
 }
-.calendar > p {
-  margin: 0 0 4px;
+.calendarOptions {
+  display: grid;
+  gap: 16px;
+}
+.calendarOption {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.calendarOption h3 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+.calendarOption p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+.calendarOption form {
+  max-width: none;
+}
+.calendarDownload {
+  justify-self: start;
+  margin-top: 4px;
+  text-decoration: none;
 }
 .toolbar {
   max-width: 320px;

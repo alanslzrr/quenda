@@ -1,13 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy } from "lucide-react";
+import { CalendarSync, Check, Copy, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ActionForm } from "../../app/action";
 import { api } from "../../app/api";
-import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { Alert } from "../../ui/alert/alert";
+import { Button } from "../../ui/button/button";
+import button from "../../ui/button/button.module.css";
+import { Dialog, DialogContent, DialogTrigger } from "../../ui/dialog/dialog";
 import { Input } from "../../ui/input/input";
 import styles from "./reservations.module.css";
 
@@ -21,8 +23,87 @@ interface Created {
   createdAt: string;
 }
 
+/**
+ * Both ways of taking reservations to a calendar application, behind one
+ * button: a one-off .ics download and a personal URL that calendar
+ * applications refresh by themselves. The URL is kept here, outside the
+ * dialog, so closing and reopening it in the same visit still shows it.
+ */
+export function CalendarActions({ download }: { download: boolean }) {
+  const { locale, t } = usePreferences();
+  // The URL exists only in this response; it is never stored in the browser.
+  const [created, setCreated] = useState<Created | null>(null);
+  // The withdraw form disappears with the subscription, so its confirmation lives here.
+  const [withdrawn, setWithdrawn] = useState(false);
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="secondary">
+          <CalendarSync size={16} aria-hidden="true" />
+          {t("Añadir a mi calendario", "Engadir ao meu calendario")}
+        </Button>
+      </DialogTrigger>
+      <DialogContent
+        className={styles.calendarDialog}
+        closeLabel={t("Cerrar", "Pechar")}
+        title={t("Añadir a tu calendario", "Engadir ao teu calendario")}
+        description={t(
+          "Lleva tus próximas reservas confirmadas a Google Calendar, Outlook o Calendario de Apple.",
+          "Leva as túas próximas reservas confirmadas a Google Calendar, Outlook ou Calendario de Apple.",
+        )}
+      >
+        <div className={styles.calendarOptions}>
+          {download && (
+            <section className={styles.calendarOption}>
+              <h3>{t("Descargar una vez", "Descargar unha vez")}</h3>
+              <p>
+                {t(
+                  "Un archivo .ics con tus próximas reservas. No se actualiza solo: vuelve a descargarlo si cambian.",
+                  "Un ficheiro .ics coas túas próximas reservas. Non se actualiza só: volve descargalo se cambian.",
+                )}
+              </p>
+              <a
+                className={`${button.button} ${button.secondary} ${styles.calendarDownload}`}
+                href={`/api/me/reservations/calendar.ics?lang=${locale}`}
+                download
+              >
+                <Download size={16} aria-hidden="true" />
+                {t(
+                  "Descargar mis próximas reservas (.ics)",
+                  "Descargar as miñas próximas reservas (.ics)",
+                )}
+              </a>
+            </section>
+          )}
+          <section className={styles.calendarOption}>
+            <h3>
+              {t("Sincronizar automáticamente", "Sincronizar automaticamente")}
+            </h3>
+            <CalendarSubscription
+              created={created}
+              setCreated={setCreated}
+              withdrawn={withdrawn}
+              setWithdrawn={setWithdrawn}
+            />
+          </section>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /** A personal calendar URL that calendar applications refresh by themselves. */
-export function CalendarSubscription() {
+function CalendarSubscription({
+  created,
+  setCreated,
+  withdrawn,
+  setWithdrawn,
+}: {
+  created: Created | null;
+  setCreated: (value: Created | null) => void;
+  withdrawn: boolean;
+  setWithdrawn: (value: boolean) => void;
+}) {
   const { locale, t } = usePreferences();
   const { account } = useSession();
   const client = useQueryClient();
@@ -32,10 +113,6 @@ export function CalendarSubscription() {
     queryFn: ({ signal }) =>
       api<Status>("/api/me/calendar-subscription", { signal }, locale),
   });
-  // The URL exists only in this response; it is never stored in the browser.
-  const [created, setCreated] = useState<Created | null>(null);
-  // The withdraw form disappears with the subscription, so its confirmation lives here.
-  const [withdrawn, setWithdrawn] = useState(false);
   const active = status.data?.active ?? false;
   const since = status.data?.createdAt
     ? new Date(status.data.createdAt).toLocaleDateString(
@@ -44,12 +121,7 @@ export function CalendarSubscription() {
       )
     : "";
   return (
-    <Disclosure
-      title={t(
-        "Sincronizar con mi aplicación de calendario",
-        "Sincronizar coa miña aplicación de calendario",
-      )}
-    >
+    <>
       <p>
         {t(
           "Una dirección personal que Google Calendar, Outlook o Calendario de Apple consultan cada cierto tiempo. Muestra tus próximas reservas confirmadas y retira las canceladas sin que tengas que descargar nada. La aplicación de calendario decide cada cuánto se actualiza.",
@@ -134,7 +206,7 @@ export function CalendarSubscription() {
           )}
         </>
       )}
-    </Disclosure>
+    </>
   );
 }
 

@@ -17,7 +17,7 @@ import { useBookingEntry } from "../catalog/journey";
 import { HabitualSlots } from "./recommendations";
 import styles from "./reservations.module.css";
 import { detailPath, PendingLink, type Reservation } from "./shared";
-import { CalendarSubscription } from "./subscription";
+import { CalendarActions } from "./subscription";
 
 type HistoryItem = Reservation & { municipality: string; unitName: string };
 
@@ -106,27 +106,11 @@ export function ReservationHistory() {
     <>
       <div className={styles.heading}>
         <PageTitle title={t("Mis reservas", "As miñas reservas")} />
-        {!!items.length && newBooking}
+        {/* Starting a booking lives in the tabs above; this slot takes reservations to a calendar. */}
+        <CalendarActions download={!!items.length} />
       </div>
       <PendingLink />
       <HabitualSlots />
-      {/* Both ways of taking reservations to a calendar, in one block as wide as the list. */}
-      <div className={styles.calendar}>
-        {!!items.length && (
-          <p>
-            <a
-              href={`/api/me/reservations/calendar.ics?lang=${locale}`}
-              download
-            >
-              {t(
-                "Descargar mis próximas reservas (.ics)",
-                "Descargar as miñas próximas reservas (.ics)",
-              )}
-            </a>
-          </p>
-        )}
-        <CalendarSubscription />
-      </div>
       {municipalities.length > 1 && (
         <div className={styles.toolbar}>
           <Select
