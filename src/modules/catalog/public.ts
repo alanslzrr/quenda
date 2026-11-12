@@ -4,7 +4,7 @@ import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
 import type { UnitCalendarInput } from "./calendar.ts";
-import { calendarSlots } from "./slots.ts";
+import { type CalendarSlot, calendarSlots } from "./slots.ts";
 
 export async function publicFacilities(
   pool: Pool,
@@ -181,6 +181,59 @@ export async function nextPublicAvailability(
         .slice(0, limit),
     };
   });
+}
+
+const minuteOfDay = (local: string) =>
+  Number(local.slice(11, 13)) * 60 + Number(local.slice(14, 16));
+
+/**
+ * The first free slot, from today onwards, that repeats a habit: the same ISO
+ * weekday, local start minute and duration. Only matching days within the
+ * suggestion horizon are tried, and their occupancy is checked in one query.
+ * Throws like the public availability when the unit is not public or the
+ * duration is not admitted; returns null when no matching slot is free.
+ */
+export async function nextHabitualSlot(
+  client: PoolClient,
+  tenantId: string,
+  unitId: string,
+  habit: { weekday: number; startMinute: number; durationMinutes: number },
+  clock: Clock = systemClock,
+) {
+  const unit = await publicUnitCalendar(client, tenantId, unitId);
+  let date = Temporal.Instant.from(clock.now().toISOString())
+    .toZonedDateTimeISO(unit.timeZone)
+    .toPlainDate();
+  const candidates: CalendarSlot[] = [];
+  for (let day = 0; day < suggestionHorizonDays; day++) {
+    if (date.dayOfWeek === habit.weekday) {
+      const slot = availabilityFromCalendar(
+        unit,
+        date.toString(),
+        habit.durationMinutes,
+        clock,
+      ).slots.find(
+        (slot) => minuteOfDay(slot.start.local) === habit.startMinute,
+      );
+      if (slot) candidates.push(slot);
+    }
+    date = date.add({ days: 1 });
+  }
+  if (!candidates.length) return null;
+  const available = await client.query<{ slot_index: number }>(
+    "SELECT slot_index FROM domain.public_available_slots($1,$2,$3::timestamptz[],$4::timestamptz[]) ORDER BY slot_index LIMIT 1",
+    [
+      tenantId,
+      unitId,
+      candidates.map((slot) => slot.start.utc),
+      candidates.map((slot) => slot.end.utc),
+    ],
+  );
+  const index = available.rows[0]?.slot_index;
+  const slot = index === undefined ? undefined : candidates[index - 1];
+  return slot
+    ? { unitName: unit.name, facilityName: unit.facilityName, slot }
+    : null;
 }
 
 // Calendar rules are shared by public browsing and authorized rescheduling.

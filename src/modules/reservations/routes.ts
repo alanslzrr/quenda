@@ -16,6 +16,7 @@ import { registerCancellationRoute } from "./cancel-routes.ts";
 import { type CreateReservationInput, createReservation } from "./create.ts";
 import { registerModificationRoute } from "./modify-routes.ts";
 import { registerReservationQueries } from "./query-routes.ts";
+import { registerRecommendationRoutes } from "./recommendation-routes.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
 const instant = { type: "string", format: "date-time" } as const;
@@ -37,6 +38,7 @@ export async function registerReservations(
   const actor = createRequestActor(pool, auth, config);
   await registerReservationQueries(app, pool, auth, config);
   await registerCalendarSubscriptionRoutes(app, pool, auth, config);
+  await registerRecommendationRoutes(app, pool, auth, config);
   await registerArrivalRoute(app, pool, auth, config);
   await registerBlockRoutes(app, pool, auth, config, retentionSeconds);
   await registerModificationRoute(app, pool, auth, config, retentionSeconds);

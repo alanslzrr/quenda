@@ -55,6 +55,10 @@ export {
 export { listMunicipalProfiles } from "./profiles.ts";
 export { consumeAdministrativeAttempt } from "./rate-limit.ts";
 export { requireMfaSession, requireRecentMfa } from "./reauthentication.ts";
+export {
+  recommendationsEnabled,
+  saveRecommendationPreference,
+} from "./recommendation-preference.ts";
 export { createRequestActor } from "./request-actor.ts";
 export { processRetentionBatch } from "./retention-worker.ts";
 export { authenticationSchema, registerAuthentication } from "./routes.ts";
