@@ -49,8 +49,8 @@ function Query({ exporting }: { exporting: boolean }) {
       <p>
         {exporting
           ? t(
-              "JSON quenda.reservations, versión 3, o una tabla CSV con una fila por reserva. Incluye reservas que solapan el periodo, conservando sus intervalos completos. El JSON añade evidencias de normas aceptadas o pendientes con su texto; el CSV solo sus versiones y fechas. No es una copia de seguridad ni acredita asistencia.",
-              "JSON quenda.reservations, versión 3, ou unha táboa CSV cunha fila por reserva. Inclúe reservas que solapan o período, conservando os seus intervalos completos. O JSON engade evidencias de normas aceptadas ou pendentes co seu texto; o CSV só as súas versións e datas. Non é unha copia de seguridade nin acredita asistencia.",
+              "Una hoja de cálculo con una fila por reserva, o los datos completos para otros sistemas. Incluye las reservas que coinciden con el periodo, con su horario completo. Los datos completos añaden el texto de las normas aceptadas o pendientes; la hoja de cálculo, solo sus versiones y fechas. No es una copia de seguridad ni acredita asistencia.",
+              "Unha folla de cálculo cunha fila por reserva, ou os datos completos para outros sistemas. Inclúe as reservas que coinciden co período, co seu horario completo. Os datos completos engaden o texto das normas aceptadas ou pendentes; a folla de cálculo, só as súas versións e datas. Non é unha copia de seguridade nin acredita asistencia.",
             )
           : t(
               "Los indicadores describen reservas, no asistencia. El total municipal incluye unidades retiradas y calcula la ocupación sobre la suma de minutos, no sobre la media de porcentajes.",
@@ -69,8 +69,8 @@ function Query({ exporting }: { exporting: boolean }) {
           label={
             exporting
               ? format === "csv"
-                ? t("Descargar CSV", "Descargar CSV")
-                : t("Descargar JSON", "Descargar JSON")
+                ? t("Descargar hoja de cálculo", "Descargar folla de cálculo")
+                : t("Descargar datos completos", "Descargar datos completos")
               : t("Consultar indicadores", "Consultar indicadores")
           }
           resetOnSuccess={false}
@@ -159,13 +159,16 @@ function Query({ exporting }: { exporting: boolean }) {
                 value={format}
                 onValueChange={(value) => setFormat(value as "json" | "csv")}
                 options={[
-                  { value: "json", label: "JSON (quenda.reservations v3)" },
+                  {
+                    value: "json",
+                    label: t(
+                      "Datos completos para otros sistemas",
+                      "Datos completos para outros sistemas",
+                    ),
+                  },
                   {
                     value: "csv",
-                    label: t(
-                      "CSV para hojas de cálculo",
-                      "CSV para follas de cálculo",
-                    ),
+                    label: t("Hoja de cálculo", "Folla de cálculo"),
                   },
                 ]}
               />
