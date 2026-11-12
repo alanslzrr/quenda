@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { processPhoto } from "../../src/modules/catalog/photo-image.ts";
 import { cancelReservation } from "../../src/modules/reservations/cancel.ts";
 import { createReservation } from "../../src/modules/reservations/create.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
@@ -17,9 +19,16 @@ interface Opening {
   startMinute: number;
   endMinute: number;
 }
+/** A file in test/demo/photos and its description; see the README there for sources. */
+interface PhotoSeed {
+  file: string;
+  es: string;
+  gl: string;
+}
 interface UnitSeed {
   id: string;
   name: string;
+  photos?: PhotoSeed[];
   minimum: number;
   maximum: number;
   step: number;
@@ -28,6 +37,7 @@ interface UnitSeed {
 interface FacilitySeed {
   id: string;
   name: string;
+  photos?: PhotoSeed[];
   units: UnitSeed[];
 }
 interface MunicipalitySeed {
@@ -47,9 +57,21 @@ const padelHours: Opening[] = [
   { days: weekend, startMinute: hour(9), endMinute: hour(21) },
 ];
 
+const tennisPhoto: PhotoSeed = {
+  file: "fontela-tenis.jpg",
+  es: "Pistas de tenis de superficie dura rodeadas de árboles",
+  gl: "Pistas de tenis de superficie dura rodeadas de árbores",
+};
 const padel: UnitSeed = {
   id: "00000000-0000-4000-8000-00000000d111",
   name: "Pista de pádel 1",
+  photos: [
+    {
+      file: "fontela-padel-1.jpg",
+      es: "Pista de pádel cubierta con paredes de cristal y malla metálica",
+      gl: "Pista de pádel cuberta con paredes de vidro e malla metálica",
+    },
+  ],
   minimum: 60,
   maximum: 120,
   step: 30,
@@ -58,6 +80,7 @@ const padel: UnitSeed = {
 const tennis: UnitSeed = {
   id: "00000000-0000-4000-8000-00000000d113",
   name: "Pista de tenis",
+  photos: [tennisPhoto],
   minimum: 60,
   maximum: 120,
   step: 60,
@@ -66,6 +89,13 @@ const tennis: UnitSeed = {
 const football: UnitSeed = {
   id: "00000000-0000-4000-8000-00000000d114",
   name: "Campo de fútbol 7",
+  photos: [
+    {
+      file: "fontela-futbol.jpg",
+      es: "Campo de césped artificial bajo una cubierta translúcida",
+      gl: "Campo de céspede artificial baixo unha cuberta translúcida",
+    },
+  ],
   minimum: 60,
   maximum: 120,
   step: 30,
@@ -87,6 +117,18 @@ const court: UnitSeed = {
 const hall: UnitSeed = {
   id: "00000000-0000-4000-8000-00000000d122",
   name: "Sala polivalente de actividades dirigidas y psicomotricidad",
+  photos: [
+    {
+      file: "remedios-sala-1.jpg",
+      es: "Sala amplia con tatami, espalderas y grandes ventanales",
+      gl: "Sala ampla con tatami, espaldeiras e grandes ventás",
+    },
+    {
+      file: "remedios-sala-2.jpg",
+      es: "Fondo de la sala con espalderas y canasta",
+      gl: "Fondo da sala con espaldeiras e canastra",
+    },
+  ],
   minimum: 30,
   maximum: 180,
   step: 30,
@@ -127,12 +169,27 @@ Si la instalación no está disponible por una causa municipal, el ayuntamiento 
     {
       id: "00000000-0000-4000-8000-00000000d110",
       name: "Complejo Deportivo A Fontela",
+      photos: [
+        {
+          file: "fontela-padel-exterior.jpg",
+          es: "Vista general de las pistas de pádel exteriores",
+          gl: "Vista xeral das pistas de pádel exteriores",
+        },
+        tennisPhoto,
+      ],
       units: [
         padel,
         {
           ...padel,
           id: "00000000-0000-4000-8000-00000000d112",
           name: "Pista de pádel 2",
+          photos: [
+            {
+              file: "fontela-padel-2.jpg",
+              es: "Pista de pádel cubierta vista desde el fondo",
+              gl: "Pista de pádel cuberta vista desde o fondo",
+            },
+          ],
         },
         tennis,
         football,
@@ -141,6 +198,13 @@ Si la instalación no está disponible por una causa municipal, el ayuntamiento 
     {
       id: "00000000-0000-4000-8000-00000000d120",
       name: "Pabellón Municipal Os Remedios",
+      photos: [
+        {
+          file: "remedios-exterior.jpg",
+          es: "Fachada del pabellón con su entrada principal",
+          gl: "Fachada do pavillón coa súa entrada principal",
+        },
+      ],
       units: [court, hall],
     },
   ],
@@ -207,6 +271,37 @@ async function account(
   return { accountId, email, secret };
 }
 
+/** Stores the photos as the application would: re-encoded, in order, with the first as the cover. */
+async function photos(
+  migration: Pool,
+  tenantId: string,
+  facilityId: string,
+  unitId: string | null,
+  seeds: PhotoSeed[] = [],
+) {
+  for (const [index, seed] of seeds.entries()) {
+    const photo = await processPhoto(
+      await readFile(new URL(`photos/${seed.file}`, import.meta.url)),
+    );
+    await migration.query(
+      "INSERT INTO domain.catalog_photo(tenant_id,id,facility_id,unit_id,position,alt_gl,alt_es,width,height,large,small) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+      [
+        tenantId,
+        randomUUID(),
+        facilityId,
+        unitId,
+        index + 1,
+        seed.gl,
+        seed.es,
+        photo.width,
+        photo.height,
+        photo.large,
+        photo.small,
+      ],
+    );
+  }
+}
+
 async function municipality(
   migration: Pool,
   seed: MunicipalitySeed,
@@ -247,6 +342,7 @@ async function municipality(
     );
     await event(facility.id, null, "CREATE_FACILITY");
     await event(facility.id, null, "PUBLISH_FACILITY");
+    await photos(migration, seed.id, facility.id, null, facility.photos);
     for (const unit of facility.units) {
       await migration.query(
         "INSERT INTO domain.reservable_unit(tenant_id,id,facility_id,name) VALUES($1,$2,$3,$4)",
@@ -278,6 +374,7 @@ async function municipality(
       );
       await event(facility.id, unit.id, "CREATE_UNIT");
       await event(facility.id, unit.id, "PUBLISH_UNIT", 1);
+      await photos(migration, seed.id, facility.id, unit.id, unit.photos);
     }
   }
 }
