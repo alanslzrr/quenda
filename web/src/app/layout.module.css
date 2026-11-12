@@ -362,15 +362,19 @@
   .wordmark {
     font-size: 1.35rem;
   }
-  /* A single destination sits beside the settings menu instead of taking a row of its own. */
-  .header:has(.nav > :only-child) {
+  /* A single destination sits beside the settings menu instead of taking a row of its own.
+     Only with a session: without one, "Acceder" joins the tools and the row would overflow. */
+  .header[data-account]:has(.nav > :only-child) {
     grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas: "brand nav tools";
   }
-  .header:has(.nav > :only-child) .nav {
+  .header[data-account]:has(.nav > :only-child) .brand {
+    overflow: hidden;
+  }
+  .header[data-account]:has(.nav > :only-child) .nav {
     display: flex;
   }
-  .header:has(.nav > :only-child) .navItem {
+  .header[data-account]:has(.nav > :only-child) .navItem {
     flex-direction: row;
     gap: 6px;
     height: 36px;
@@ -390,6 +394,24 @@
   .header[data-place] .wordmark,
   .header[data-place] .divider {
     display: none;
+  }
+}
+/* On narrow headers the brand gets whatever width the destinations leave. When the
+   wordmark does not fit there, only the mark is drawn and the wordmark stays as the
+   link's accessible name, so it never runs under the next item. */
+@media (max-width: 760px) {
+  .brand {
+    container-type: inline-size;
+  }
+}
+@container (max-width: 140px) {
+  .wordmark {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 @media (prefers-reduced-motion: reduce) {
