@@ -19,15 +19,36 @@ La cabecera mantiene estos destinos en escritorio y móvil; sin sesión ofrece a
 | Paso | Ruta | Contenido |
 |---|---|---|
 | 1. Municipio | `/` y `/reservar` | Municipio favorito en primer lugar y lista completa; búsqueda a partir de nueve municipios. |
-| 2. Instalación | `/municipios/{tenantId}` | Instalaciones publicadas con el número de espacios reservables. Las que no tienen ninguno se muestran sin enlace y con el motivo. |
-| 3. Espacio | `/municipios/{tenantId}/instalaciones/{facilityId}` | Espacios con su rango de duración. |
-| 4. Día y hora | `/municipios/{tenantId}/unidades/{unitId}` | Día, duración y franjas libres. |
+| 2. Instalación | `/municipios/{tenantId}` | Instalaciones publicadas con su portada y el número de espacios reservables. Las que no tienen ninguno se muestran sin enlace y con el motivo. |
+| 3. Espacio | `/municipios/{tenantId}/instalaciones/{facilityId}` | Fotos de la instalación y espacios con su portada y su rango de duración. |
+| 4. Día y hora | `/municipios/{tenantId}/unidades/{unitId}` | Fotos del espacio, día, duración y franjas libres. |
 | 5. Revisión | `/municipios/{tenantId}/unidades/{unitId}/reservar` | Municipio, instalación, espacio, fecha, horario, duración, normas y condiciones. Requiere sesión. |
 | Resultado | `/reservas/{tenantId}/{reservationId}` | Reserva confirmada, cambios, cancelación y acceso a una nueva reserva. |
 
 Un indicador de pasos muestra el paso actual, los completados y los pendientes, con su estado también en texto para lectores de pantalla. Los pasos completados indican lo elegido y permiten volver a ellos con ratón o teclado. Cada página ofrece además un enlace para cambiar la elección anterior.
 
 La búsqueda por día y hora en todas las instalaciones (`/municipios/{tenantId}/horarios`) se mantiene como alternativa para quien prioriza el horario.
+
+## Fotografías
+
+Todas las fotos se muestran en formato 3:2.
+
+**En el catálogo público:**
+- **Portadas en los listados:** en cuanto alguna instalación o espacio de una lista tiene fotos, cada fila muestra su portada a la izquierda del nombre. Las filas sin foto llevan un recuadro neutro con un icono, para que la lista quede uniforme. Si nadie tiene fotos, la lista no cambia.
+- **Galería:** la ficha de la instalación y la del espacio muestran la portada grande y, en pantallas anchas, las dos fotos siguientes, con un indicador «+N» si hay más. En el móvil se ve solo la portada, con el botón «Ver las N fotos». Un espacio sin fotos propias muestra las de su instalación.
+- **Visor:** al pulsar una foto se abre a pantalla completa sobre fondo oscuro. Pasa de foto con las flechas, el teclado o deslizando el dedo, muestra «Foto N de M» y la descripción como pie, e incluye miniaturas para saltar a cualquier foto. Escape lo cierra.
+- **Accesibilidad:** cada foto tiene como nombre su descripción en el idioma activo; sin ella se usa la del otro idioma.
+
+**En la gestión municipal:**
+- **Dónde:** la página de la instalación y la pestaña «Ficha» del espacio incluyen el apartado «Fotografías».
+- **Requisitos:** se muestran siempre en ese apartado: fotos horizontales de al menos 1500 píxeles de ancho, publicadas en 3:2, que muestren el lugar y sin personas reconocibles.
+- **Añadir una foto:** se hace en un diálogo de tres pasos:
+  - **Elegir el archivo:** se arrastra o se busca. La foto se comprueba en el navegador antes de enviarla: si es demasiado pequeña o no es una foto, se explica el motivo; si es vertical o cuadrada, un aviso dice que solo se publicará la franja encuadrada.
+  - **Encuadrar:** un marco fijo 3:2 sobre la foto, que se mueve arrastrando o con las flechas y se acerca con el control deslizante o con + y −. Debajo se ve cómo quedará la portada en el listado.
+  - **Describir:** en gallego y en castellano.
+  
+  Solo se envía la parte encuadrada, reducida a 2400 píxeles de ancho como máximo. La vista previa se dibuja como imagen `data:`, la única forma, junto a las propias del origen, que admite la política de seguridad de contenidos.
+- **Gestionar las fotos:** cada tarjeta muestra la foto, su descripción y su puesto, y la primera lleva la etiqueta «Portada». El menú «Opciones» permite usarla como portada, moverla antes o después, editar su descripción o eliminarla, esto último tras confirmarlo.
 
 ## Contexto y cambios
 
