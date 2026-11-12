@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
@@ -153,39 +152,10 @@ test("real reporting preserves municipal exports and jointly reviewed monthly pu
     ).status(),
   ).toBe(200);
   const base = `/administracion/${f.a.tenant}`;
-  await page.goto(`${base}/indicadores`);
-  await page.getByLabel(/Desde \(incluido\)|Desde \(incluído\)/).fill(f.a.date);
   const end = new Date(`${f.a.date}T00:00:00Z`);
   end.setUTCDate(end.getUTCDate() + 1);
-  await page
-    .getByLabel(/Hasta \(excluido\)|Ata \(excluído\)/)
-    .fill(end.toISOString().slice(0, 10));
-  await page
-    .getByRole("button", { name: "Consultar indicadores", exact: true })
-    .click();
-  await expect(
-    page.getByRole("region", { name: /Resultado de indicadores/ }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Europe/Madrid", { exact: false }).last(),
-  ).toBeVisible();
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-  await visibleNumbers(page);
-  await page.screenshot({
-    path: `test-results/reporting-indicators-${info.project.name}.png`,
-    fullPage: true,
-  });
+  // The usage screen has its own specs with real data; this account keeps its
+  // request budget for exports and the monthly publication.
   await page.goto(`${base}/exportaciones`);
   await page.getByLabel(/Desde \(incluido\)|Desde \(incluído\)/).fill(f.a.date);
   await page
