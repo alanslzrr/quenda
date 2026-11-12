@@ -96,8 +96,8 @@ export function ConfirmedAction<T>({
         <section>
           <p role="alert">
             {t(
-              "Hay una operación sin confirmar en este ámbito. No se reenviará al recargar ni al verificar MFA.",
-              "Hai unha operación sen confirmar neste ámbito. Non se reenviará ao recargar nin ao verificar MFA.",
+              "Hay una operación sin confirmar en este ámbito. No se reenviará al recargar ni al repetir la verificación en dos pasos.",
+              "Hai unha operación sen confirmar neste ámbito. Non se reenviará ao recargar nin ao repetir a verificación en dous pasos.",
             )}
           </p>
           <Checkbox

@@ -106,8 +106,8 @@ function Workspace() {
       </p>
       <p>
         {t(
-          "Consulta y ejecución requieren permisos independientes y MFA reciente. Las solicitudes de derechos se tramitan por los canales administrativos existentes.",
-          "Consulta e execución requiren permisos independentes e MFA recente. As solicitudes de dereitos tramítanse polas canles administrativas existentes.",
+          "Consulta y ejecución requieren permisos independientes y una verificación en dos pasos reciente. Las solicitudes de derechos se tramitan por los canales administrativos existentes.",
+          "Consulta e execución requiren permisos independentes e unha verificación en dous pasos recente. As solicitudes de dereitos tramítanse polas canles administrativas existentes.",
         )}
       </p>
       <nav
