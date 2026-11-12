@@ -17,10 +17,12 @@ import { Dialog, DialogContent, DialogTrigger } from "../../ui/dialog/dialog";
 import { Input } from "../../ui/input/input";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs/tabs";
+import type { CatalogPhoto } from "../catalog/photos";
 import type { FacilityProfile, UnitProfile } from "../catalog/profile";
 import { CalendarEditor, RulesEditor } from "./configuration";
 import { landingSection } from "./landing.ts";
 import styles from "./municipal.module.css";
+import { PhotoManager } from "./photo-manager";
 import { FacilityProfileEditor, UnitProfileEditor } from "./profile-editor";
 import resourceStyles from "./resource.module.css";
 import {
@@ -46,6 +48,7 @@ export type Resource = {
   withdrawnAt: string | null;
   profile?: FacilityProfile & UnitProfile;
   profileVersion?: number;
+  photos?: CatalogPhoto[];
 };
 function CatalogDownload() {
   const m = useMunicipality();
@@ -463,6 +466,12 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
           profile={resource.data.profile ?? {}}
           version={resource.data.profileVersion ?? 1}
         />
+        <PhotoManager
+          path={path}
+          kind="facility"
+          name={resource.data.name}
+          photos={resource.data.photos ?? []}
+        />
         {publishable && <Publication path={path} unit={false} />}
         {!resource.data.withdrawnAt && (
           <section className={styles.section}>
@@ -595,6 +604,12 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
               path={path}
               profile={resource.data.profile ?? {}}
               version={resource.data.profileVersion ?? 1}
+            />
+            <PhotoManager
+              path={path}
+              kind="unit"
+              name={resource.data.name}
+              photos={resource.data.photos ?? []}
             />
           </TabsContent>
           <TabsContent value="calendar" forceMount>

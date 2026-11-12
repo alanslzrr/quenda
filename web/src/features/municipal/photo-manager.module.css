@@ -1,0 +1,380 @@
+.manager {
+  display: grid;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-subtle);
+}
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+.head h2 {
+  margin: 0 0 4px;
+}
+.head p {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--text-secondary);
+}
+.requirements {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  list-style: none;
+}
+.requirements li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.requirements li:first-child {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.requirements li:not(:first-child) {
+  padding-left: 24px;
+}
+.requirements svg {
+  flex: none;
+  margin-top: 2px;
+}
+.status:empty {
+  display: none;
+}
+.status {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* The list of photos: cards in reading order, the first is the cover. */
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.card {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.cardImage {
+  position: relative;
+  display: block;
+  background: var(--surface-muted);
+  aspect-ratio: 3 / 2;
+}
+.cardImage img,
+.removePreview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Always legible over any photo. */
+.cover {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 0.95);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  color: #111;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.cardText {
+  display: -webkit-box;
+  min-height: calc(2 * 1.45em);
+  margin: 10px 12px 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.cardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px 8px 12px;
+}
+.position {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+/* Empty state and file picker share the dashed drop area. */
+.empty,
+.dropzone {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 32px 20px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+.empty:hover,
+.dropzone:hover,
+.dropzone[data-dragging] {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+.empty:focus-visible,
+.pick:focus-within .dropzone {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+.empty > svg,
+.dropzone > svg {
+  color: var(--accent-strong);
+}
+.dropTitle {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.dropText {
+  max-width: 44ch;
+  font-size: var(--text-sm);
+}
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.pick {
+  display: grid;
+  gap: 16px;
+}
+
+/* The add dialog is wider than the default, so the frame is large enough to judge. */
+.dialog {
+  width: min(680px, calc(100vw - 24px));
+  max-width: none;
+}
+.compose {
+  display: grid;
+  gap: 16px;
+}
+.composeActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.altSet {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.altSet legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-weight: 600;
+}
+.altFields {
+  display: grid;
+  gap: 12px;
+}
+
+/* Cropper: a fixed 3:2 frame; the photo moves behind it. */
+.cropper {
+  display: grid;
+  gap: 8px;
+}
+.frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #111;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  aspect-ratio: 3 / 2;
+}
+.frame:active {
+  cursor: grabbing;
+}
+.frame:focus-visible {
+  outline: 3px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+.framed {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+.grid {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to right,
+      transparent calc(33.33% - 0.5px),
+      rgb(255 255 255 / 0.35) calc(33.33% - 0.5px),
+      rgb(255 255 255 / 0.35) calc(33.33% + 0.5px),
+      transparent calc(33.33% + 0.5px),
+      transparent calc(66.66% - 0.5px),
+      rgb(255 255 255 / 0.35) calc(66.66% - 0.5px),
+      rgb(255 255 255 / 0.35) calc(66.66% + 0.5px),
+      transparent calc(66.66% + 0.5px)
+    ),
+    linear-gradient(
+      to bottom,
+      transparent calc(33.33% - 0.5px),
+      rgb(255 255 255 / 0.35) calc(33.33% - 0.5px),
+      rgb(255 255 255 / 0.35) calc(33.33% + 0.5px),
+      transparent calc(33.33% + 0.5px),
+      transparent calc(66.66% - 0.5px),
+      rgb(255 255 255 / 0.35) calc(66.66% - 0.5px),
+      rgb(255 255 255 / 0.35) calc(66.66% + 0.5px),
+      transparent calc(66.66% + 0.5px)
+    );
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.5);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.dragHint {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 0.62);
+  color: #fff;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+  translate: -50% 0;
+}
+.hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.zoom {
+  display: grid;
+  grid-template-columns: auto 36px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+}
+.zoom input {
+  width: 100%;
+  accent-color: var(--accent-strong);
+}
+.zoom button {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--foreground);
+  cursor: pointer;
+}
+.zoom button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Preview: the cover as it appears beside the name in the public list. */
+.preview h3 {
+  margin: 0 0 8px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.previewRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 420px;
+  padding: 10px 16px 10px 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.previewThumb {
+  position: relative;
+  flex: none;
+  width: 96px;
+  overflow: hidden;
+  border-radius: 10px;
+  aspect-ratio: 3 / 2;
+}
+.previewName {
+  min-width: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.removePreview {
+  display: block;
+  max-width: 320px;
+  overflow: hidden;
+  border-radius: 10px;
+  aspect-ratio: 3 / 2;
+}
+
+@media (max-width: 480px) {
+  .list {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .cardFoot {
+    flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .empty,
+  .dropzone {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .frame,
+  .card,
+  .previewRow {
+    border: 1px solid CanvasText;
+  }
+}
