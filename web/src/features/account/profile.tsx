@@ -5,8 +5,8 @@ import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
+import SegmentedControl from "../../ui/segmented-control/segmented-control";
 import { Select } from "../../ui/select/select";
-import { ThemeSwitch } from "../../ui/theme-switch/theme-switch";
 export function Profile() {
   useMunicipalTheme(undefined);
   const { account, loading, error, refresh } = useSession();
@@ -48,10 +48,17 @@ export function Profile() {
         />
         <fieldset disabled={pending} className={styles.choiceGroup}>
           <legend>{t("Apariencia", "Aparencia")}</legend>
-          <ThemeSwitch
-            theme={theme ?? "light"}
-            label={t("Modo oscuro", "Modo escuro")}
-            onThemeChange={(value) => update({ theme: value })}
+          {/* Both themes are named and the active one is marked, so the control reads as a state, not an action.
+              The fieldset names the group and disables it while saving. */}
+          <SegmentedControl
+            value={theme ?? "light"}
+            options={[
+              { value: "light", label: t("Claro", "Claro") },
+              { value: "dark", label: t("Oscuro", "Escuro") },
+            ]}
+            onValueChange={(value) => {
+              if (value !== theme) update({ theme: value as "light" | "dark" });
+            }}
           />
         </fieldset>
         {failure !== undefined && <Failure error={failure} />}
