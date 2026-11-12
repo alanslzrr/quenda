@@ -5,6 +5,7 @@ import {
   type Authentication,
   createRequestActor,
 } from "../identity/index.ts";
+import { registerAnalyticsSettingsRoutes } from "./analytics-settings-routes.ts";
 import { registerExportRoutes } from "./export-routes.ts";
 import { registerIndicatorRoutes } from "./indicator-routes.ts";
 import { listOwnNotices } from "./notices.ts";
@@ -16,6 +17,7 @@ export async function registerCommunications(
   config: AuthConfiguration,
 ) {
   await registerIndicatorRoutes(app, pool, auth, config);
+  await registerAnalyticsSettingsRoutes(app, pool, auth, config);
   await registerExportRoutes(app, pool, auth, config);
   const actor = createRequestActor(pool, auth, config);
   const uuid = { type: "string", format: "uuid" },
