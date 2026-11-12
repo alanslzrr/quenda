@@ -1,4 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { LayoutGrid } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router";
 import { ApiError, api, type Page } from "../../app/api";
@@ -22,6 +23,8 @@ import {
   useMunicipality,
   usePublicAppearance,
 } from "./municipality";
+import { PhotoGallery, PhotoThumb } from "./photo-gallery";
+import { type CatalogPhoto, publicPhotos } from "./photos";
 import { type UnitProfile, unitFacts } from "./profile";
 import { useFacilities } from "./search";
 
@@ -32,6 +35,7 @@ interface UnitChoice {
   minimumMinutes: number;
   maximumMinutes: number;
   profile?: UnitProfile;
+  photos?: CatalogPhoto[];
 }
 
 function useUnits(tenantId: string, facilityId: string) {
@@ -131,6 +135,8 @@ export function FacilityPage() {
           `Reservas de ${durationLabel(unit.minimumMinutes)} a ${durationLabel(unit.maximumMinutes)}`,
           `Reservas de ${durationLabel(unit.minimumMinutes)} a ${durationLabel(unit.maximumMinutes)}`,
         );
+  const photoSource = publicPhotos(tenantId);
+  const withPhotos = items.some((unit) => unit.photos?.length);
   const search = new URLSearchParams(query.slice(1));
   search.set("instalacion", facilityId);
   return (
@@ -155,6 +161,11 @@ export function FacilityPage() {
             "Cada espazo resérvase enteiro e por separado. Despois escollerás o día e a hora.",
           )}
         </p>
+        <PhotoGallery
+          photos={facility.photos ?? []}
+          source={photoSource}
+          label={facility.name}
+        />
         <FacilityDetails profile={facility.profile} />
         <div className={styles.introActions}>
           <Link className={styles.textLink} to={back}>
@@ -194,6 +205,15 @@ export function FacilityPage() {
                 key={unit.id}
                 to={unitPath(tenantId, unit.id, query)}
                 title={unit.name}
+                media={
+                  withPhotos && (
+                    <PhotoThumb
+                      photo={unit.photos?.[0]}
+                      source={photoSource}
+                      icon={LayoutGrid}
+                    />
+                  )
+                }
                 meta={[...unitFacts(unit.profile, locale), lengths(unit)].join(
                   " · ",
                 )}
