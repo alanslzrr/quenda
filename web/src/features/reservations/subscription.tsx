@@ -58,19 +58,23 @@ export function CalendarActions({ download }: { download: boolean }) {
               <h3>{t("Descargar una vez", "Descargar unha vez")}</h3>
               <p>
                 {t(
-                  "Un archivo .ics con tus próximas reservas. No se actualiza solo: vuelve a descargarlo si cambian.",
-                  "Un ficheiro .ics coas túas próximas reservas. Non se actualiza só: volve descargalo se cambian.",
+                  "Un archivo con tus próximas reservas para abrirlo en tu calendario. No se actualiza solo: vuelve a descargarlo si cambian.",
+                  "Un ficheiro coas túas próximas reservas para abrilo no teu calendario. Non se actualiza só: volve descargalo se cambian.",
                 )}
               </p>
               <a
                 className={`${button.button} ${button.secondary} ${styles.calendarDownload}`}
                 href={`/api/me/reservations/calendar.ics?lang=${locale}`}
                 download
+                title={t(
+                  "Archivo .ics para Google Calendar, Outlook o Calendario de Apple",
+                  "Ficheiro .ics para Google Calendar, Outlook ou Calendario de Apple",
+                )}
               >
                 <Download size={16} aria-hidden="true" />
                 {t(
-                  "Descargar mis próximas reservas (.ics)",
-                  "Descargar as miñas próximas reservas (.ics)",
+                  "Descargar mis próximas reservas",
+                  "Descargar as miñas próximas reservas",
                 )}
               </a>
             </section>

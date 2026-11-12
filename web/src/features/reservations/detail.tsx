@@ -99,16 +99,14 @@ export function ReservationDetail() {
               className={booking.textLink}
               href={`${reservationPath(tenantId, reservationId)}/calendar.ics?lang=${locale}`}
               download
+              title={t(
+                "Archivo .ics para Google Calendar, Outlook o Calendario de Apple",
+                "Ficheiro .ics para Google Calendar, Outlook ou Calendario de Apple",
+              )}
             >
               {r.status === "CANCELADA"
-                ? t(
-                    "Quitar de mi calendario (.ics)",
-                    "Quitar do meu calendario (.ics)",
-                  )
-                : t(
-                    "Añadir a mi calendario (.ics)",
-                    "Engadir ao meu calendario (.ics)",
-                  )}
+                ? t("Quitar de mi calendario", "Quitar do meu calendario")
+                : t("Añadir a mi calendario", "Engadir ao meu calendario")}
             </a>
           </div>
         )}
