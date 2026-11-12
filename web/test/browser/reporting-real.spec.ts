@@ -194,7 +194,7 @@ test("real reporting preserves municipal exports and jointly reviewed monthly pu
   await page.getByRole("checkbox", { name: /Confirmo/ }).check();
   const downloading = page.waitForEvent("download");
   await page
-    .getByRole("button", { name: "Descargar JSON", exact: true })
+    .getByRole("button", { name: "Descargar datos completos", exact: true })
     .click();
   const file = await downloading;
   expect(file.suggestedFilename()).toBe("quenda-reservations-v3.json");
