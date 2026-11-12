@@ -1,0 +1,165 @@
+# publiccode.yml: catalogue metadata for public sector software.
+# Specification: https://yml.publiccode.tools/
+publiccodeYmlVersion: "0"
+
+name: Quenda
+url: "https://github.com/alanslzrr/quenda"
+logo: web/public/icons/quenda.svg
+
+platforms:
+  - web
+
+categories:
+  - online-booking
+  - facility-management
+  - resource-management
+
+developmentStatus: beta
+softwareType: standalone/web
+
+intendedAudience:
+  countries:
+    - ES
+  scope:
+    - sport
+    - local-authorities
+
+description:
+  es:
+    localisedName: Quenda
+    shortDescription: >-
+      Plataforma libre y multimunicipio para la consulta y reserva de
+      instalaciones deportivas municipales.
+    longDescription: |
+      Quenda permite a los ayuntamientos ofrecer a la ciudadanía la consulta,
+      reserva, modificación y cancelación en línea de sus pistas, salas y
+      pabellones, y al personal municipal mantener instalaciones, horarios,
+      normas de uso e indicadores.
+
+      Una misma instancia aloja varios municipios con datos, permisos y
+      configuración aislados en la propia base de datos, y una cuenta ciudadana
+      única. También puede desplegarse una instancia por entidad. Se distribuye
+      como imágenes OCI con una composición de referencia para un único
+      servidor, sin dependencia de un proveedor de nube.
+
+      La solución utiliza estándares y formatos abiertos (OpenAPI 3,
+      iCalendar, JSON Schema y CSV), permite exportar e importar catálogos y
+      realizar copias íntegras de la instancia, y está disponible en gallego y
+      castellano. La seguridad y la privacidad forman parte del diseño:
+      verificación en dos pasos para el personal, auditoría de accesos,
+      minimización de datos, políticas de conservación y descarga de datos
+      personales. El objetivo de accesibilidad es WCAG 2.1 AA.
+    documentation: "https://github.com/alanslzrr/quenda/tree/main/docs"
+    apiDocumentation: "https://github.com/alanslzrr/quenda/blob/main/docs/10_api.md"
+    features:
+      - Catálogo público con disponibilidad en tiempo real
+      - Reserva, modificación y cancelación en línea
+      - Historial, avisos y calendario personal iCalendar
+      - Código QR para comprobar reservas y registrar llegadas
+      - Recomendaciones de horario sin perfiles almacenados
+      - Gestión de instalaciones, horarios y normas versionadas
+      - Personal y permisos delegados por operación y espacio
+      - Indicadores, análisis de uso y exportación de reservas
+      - Convenios intermunicipales con cuotas e informes agregados
+      - Multimunicipio con aislamiento en la base de datos
+      - Aplicación web instalable en gallego y castellano
+  gl:
+    localisedName: Quenda
+    shortDescription: >-
+      Plataforma libre e multimunicipio para a consulta e reserva de
+      instalacións deportivas municipais.
+    longDescription: |
+      Quenda permite aos concellos ofrecer á cidadanía a consulta, reserva,
+      modificación e cancelación en liña das súas pistas, salas e pavillóns, e
+      ao persoal municipal manter instalacións, horarios, normas de uso e
+      indicadores.
+
+      Unha mesma instancia aloxa varios municipios con datos, permisos e
+      configuración illados na propia base de datos, e unha conta cidadá única.
+      Tamén se pode despregar unha instancia por entidade. Distribúese como
+      imaxes OCI cunha composición de referencia para un único servidor, sen
+      dependencia dun provedor de nube.
+
+      A solución emprega estándares e formatos abertos (OpenAPI 3, iCalendar,
+      JSON Schema e CSV), permite exportar e importar catálogos e realizar
+      copias íntegras da instancia, e está dispoñible en galego e castelán. A
+      seguridade e a privacidade forman parte do deseño: verificación en dous
+      pasos para o persoal, auditoría de accesos, minimización de datos,
+      políticas de conservación e descarga de datos persoais. O obxectivo de
+      accesibilidade é WCAG 2.1 AA.
+    documentation: "https://github.com/alanslzrr/quenda/tree/main/docs"
+    apiDocumentation: "https://github.com/alanslzrr/quenda/blob/main/docs/10_api.md"
+    features:
+      - Catálogo público con dispoñibilidade en tempo real
+      - Reserva, modificación e cancelación en liña
+      - Historial, avisos e calendario persoal iCalendar
+      - Código QR para comprobar reservas e rexistrar chegadas
+      - Recomendacións de horario sen perfís almacenados
+      - Xestión de instalacións, horarios e normas versionadas
+      - Persoal e permisos delegados por operación e espazo
+      - Indicadores, análise de uso e exportación de reservas
+      - Convenios intermunicipais con cotas e informes agregados
+      - Multimunicipio con illamento na base de datos
+      - Aplicación web instalable en galego e castelán
+  en:
+    localisedName: Quenda
+    shortDescription: >-
+      Free, multi-municipality platform for browsing and booking municipal
+      sports facilities.
+    longDescription: |
+      Quenda lets local councils offer residents online browsing, booking,
+      rescheduling and cancellation of their courts, rooms and sports halls,
+      and gives municipal staff the tools to maintain facilities, opening
+      hours, usage rules and indicators.
+
+      A single instance hosts several municipalities, with data, permissions
+      and configuration isolated in the database itself, and one resident
+      account per instance. Each entity can also run its own instance. Quenda
+      ships as OCI images with a single-server reference composition and no
+      dependency on a specific cloud provider.
+
+      It relies on open standards and formats (OpenAPI 3, iCalendar, JSON
+      Schema and CSV), supports catalogue export and import and full instance
+      backups, and is available in Galician and Spanish. Security and privacy
+      are part of the design: two-factor authentication for staff, access
+      auditing, data minimisation, retention policies and personal data
+      download. The accessibility target is WCAG 2.1 AA.
+    documentation: "https://github.com/alanslzrr/quenda/tree/main/docs"
+    apiDocumentation: "https://github.com/alanslzrr/quenda/blob/main/docs/10_api.md"
+    features:
+      - Public catalogue with real-time availability
+      - Online booking, rescheduling and cancellation
+      - Booking history, notices and iCalendar personal calendar
+      - QR code to check bookings and record arrivals
+      - Schedule recommendations without stored profiles
+      - Facility, opening hours and versioned usage rule management
+      - Staff permissions delegated by operation and space
+      - Indicators, usage analytics and booking export
+      - Inter-municipal agreements with shared quotas and aggregate reports
+      - Multi-municipality with database-level isolation
+      - Installable web application in Galician and Spanish
+
+legal:
+  license: AGPL-3.0-only
+
+maintenance:
+  type: internal
+  contacts:
+    - name: Alan Salazar
+
+localisation:
+  localisationReady: true
+  availableLanguages:
+    - gl
+    - es
+
+dependsOn:
+  open:
+    - name: PostgreSQL
+      versionMin: "17.0"
+      optional: false
+    - name: Node.js
+      versionMin: "24.21.0"
+      optional: false
+    - name: nginx
+      optional: false
