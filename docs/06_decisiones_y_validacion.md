@@ -100,7 +100,7 @@ Valores para discutir con la entidad que opere la instancia; **no están aprobad
 | Aspecto | Propuesta de partida | Fundamento y comprobación |
 |---|---|---|
 | Piloto | Un municipio con una a tres instalaciones y personal gestor reducido. | Permite validar catálogo, reglas y avisos con datos reales antes de ampliar. |
-| Topología | Un servidor con la [composición de referencia](../README.md#imagen-web-y-despliegue-de-referencia); PostgreSQL gestionado o con almacenamiento replicado si la entidad lo dispone. | La referencia no incluye alta disponibilidad; multizona y Kubernetes no son requisitos. |
+| Topología | Un servidor con la [composición de referencia](12_operacion.md#imagen-web-y-despliegue-de-referencia); PostgreSQL gestionado o con almacenamiento replicado si la entidad lo dispone. | La referencia no incluye alta disponibilidad; multizona y Kubernetes no son requisitos. |
 | Capacidad | Partir de 2 vCPU, 4 GB de memoria y almacenamiento con margen para crecimiento y copias; ajustar con el ensayo de rendimiento de la instancia. | El escenario de rendimiento mide una configuración concreta, no una capacidad comprometida. |
 | RPO | Máximo 24 horas con una copia lógica diaria; menos exige archivado continuo o réplica, con coste adicional. | Si el RPO admite pérdida, conciliar las reservas confirmadas posteriores al corte. |
 | RTO | Máximo 4 horas con ensayo de restauración trimestral. | T-17 informa tiempos de una fixture pequeña; el RTO real debe medirse con los datos y el proveedor elegidos. |
