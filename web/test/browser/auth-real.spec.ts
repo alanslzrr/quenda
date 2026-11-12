@@ -54,6 +54,24 @@ test("verified account signs in and persists preferences through the real API", 
   await expect(
     page.getByRole("heading", { name: "Preferencias de tu cuenta" }),
   ).toBeVisible();
+  // The appearance control names both themes and marks the active one.
+  const appearance = page.getByRole("group", { name: "Apariencia" });
+  await expect(
+    appearance.getByRole("button", { name: "Oscuro", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await appearance.getByRole("button", { name: "Claro", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(
+    appearance.getByRole("button", { name: "Claro", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  // The account navigation lists only account settings.
+  const accountNav = page.getByRole("navigation", { name: "Mi cuenta" });
+  await expect(
+    accountNav.getByRole("link", { name: "Preferencias" }),
+  ).toBeVisible();
+  await expect(
+    accountNav.getByRole("link", { name: "Mis reservas" }),
+  ).toHaveCount(0);
   await page.setViewportSize({ width: 320, height: 800 });
   expect(
     await page.evaluate(

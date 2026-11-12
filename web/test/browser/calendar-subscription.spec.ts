@@ -1,6 +1,26 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, request, test } from "@playwright/test";
+import { expect, type Page, request, test } from "@playwright/test";
 import { createAccount } from "./account-helpers";
+
+/** Both calendar options live in one dialog opened from the history heading. */
+async function openCalendar(page: Page) {
+  await page
+    .getByRole("button", {
+      name: /^(Añadir a mi calendario|Engadir ao meu calendario)$/,
+    })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: /^(Añadir a tu calendario|Engadir ao teu calendario)$/,
+  });
+  await expect(dialog).toHaveCSS("opacity", "1");
+  // Without reservations there is nothing to download yet; only sync is offered.
+  await expect(
+    dialog.getByRole("heading", {
+      name: /^(Sincronizar automáticamente|Sincronizar automaticamente)$/,
+    }),
+  ).toBeVisible();
+  return dialog;
+}
 
 test("a holder creates, replaces and withdraws a calendar subscription URL", async ({
   page,
@@ -8,11 +28,7 @@ test("a holder creates, replaces and withdraws a calendar subscription URL", asy
 }) => {
   await createAccount(page);
   await page.goto("/reservas");
-  await page
-    .getByRole("button", {
-      name: /Sincronizar con mi aplicación de calendario|Sincronizar coa miña aplicación de calendario/,
-    })
-    .click();
+  await openCalendar(page);
   await page
     .getByRole("button", {
       name: /^(Crear dirección de suscripción|Crear enderezo de subscrición)$/,
@@ -50,11 +66,7 @@ test("a holder creates, replaces and withdraws a calendar subscription URL", asy
 
   // After a reload the URL is no longer shown, only that a subscription exists.
   await page.reload();
-  await page
-    .getByRole("button", {
-      name: /Sincronizar con mi aplicación de calendario|Sincronizar coa miña aplicación de calendario/,
-    })
-    .click();
+  await openCalendar(page);
   await expect(
     page.getByText(/Tienes una suscripción activa|Tes unha subscrición activa/),
   ).toBeVisible();
