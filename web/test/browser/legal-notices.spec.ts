@@ -58,17 +58,50 @@ test("an instance without published texts still explains what the application do
       name: /Información sobre privacidad|Información sobre privacidade/,
     }),
   ).toBeVisible();
+  // Without a published text the page shows the standard sections, never a placeholder,
+  // and omits what only the entity can state.
+  await expect(page.getByText(/Texto pendiente|Texto pendente/)).toHaveCount(0);
+  for (const name of [
+    /^(Finalidades)$/,
+    /^(Base jurídica|Base xurídica)$/,
+    /^(Ejercicio de derechos|Exercicio de dereitos)$/,
+  ])
+    await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
+  await expect(page.getByText(/www\.aepd\.es/)).toBeVisible();
   await expect(
-    page.getByText(/Texto pendiente de completar|Texto pendente de completar/),
-  ).toBeVisible();
+    page.getByRole("heading", {
+      name: /^(Responsable del tratamiento|Responsable do tratamento)$/,
+    }),
+  ).toHaveCount(0);
   await expect(page.getByText("quenda.municipality")).toBeVisible();
   await expect(page.getByText("quenda.reservation-command")).toBeVisible();
   expect(await scan(page)).toEqual([]);
-  for (const path of ["/aviso-legal", "/accesibilidad"]) {
-    await page.goto(path);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    expect(await scan(page)).toEqual([]);
-  }
+
+  // The footer lists the three legal pages only; the source offer lives in the legal notice.
+  const footer = page.getByRole("navigation", { name: "Información legal" });
+  await expect(footer.getByRole("link")).toHaveCount(3);
+  await page.goto("/aviso-legal");
+  await expect(
+    page.getByRole("heading", {
+      name: /^(Titular del sitio|Titular do sitio)$/,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("link", {
+      name: /^(Descargar el código fuente|Descargar o código fonte)/,
+    }),
+  ).toHaveAttribute("href", "/legal/source");
+  expect(await scan(page)).toEqual([]);
+  await page.goto("/accesibilidad");
+  await expect(
+    page.getByText(/Real Decreto 1112\/2018|Real decreto 1112\/2018/).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: /^(Situación de cumplimiento|Situación de cumprimento)$/,
+    }),
+  ).toHaveCount(0);
+  expect(await scan(page)).toEqual([]);
 });
 
 test("a municipality's published text appears in the active language with fallback and the footer links to it", async ({
