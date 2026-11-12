@@ -22,7 +22,7 @@ import { BackLink, BookingSummary, RulesText } from "../catalog/booking";
 import booking from "../catalog/booking.module.css";
 import { useBookingEntry } from "../catalog/journey";
 import { useMunicipality } from "../catalog/municipality";
-import { AccessCode } from "./access-code";
+import { AccessPass } from "./access-code";
 import { accessCodeTarget } from "./access-code-model";
 import styles from "./reservations.module.css";
 import {
@@ -145,25 +145,24 @@ export function ReservationDetail() {
                     {dateTime(r.arrivedAt, r.timeZone, locale)}
                   </p>
                 ) : (
-                  <>
-                    <p>
-                      {t(
-                        "Muestra este código al llegar. El personal lo escanea con su teléfono para comprobar la reserva y registrar tu llegada.",
-                        "Amosa este código ao chegar. O persoal escanéao co seu teléfono para comprobar a reserva e rexistrar a túa chegada.",
-                      )}
-                    </p>
-                    <AccessCode
-                      value={accessCodeTarget(
-                        window.location.origin,
-                        tenantId,
-                        reservationId,
-                      )}
-                      label={t(
-                        "Código QR de acceso de esta reserva",
-                        "Código QR de acceso desta reserva",
-                      )}
-                    />
-                  </>
+                  <AccessPass
+                    value={accessCodeTarget(
+                      window.location.origin,
+                      tenantId,
+                      reservationId,
+                    )}
+                    unitName={
+                      unit.data?.name ??
+                      t("Espacio reservado", "Espazo reservado")
+                    }
+                    context={[municipality.data?.name, facility]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    startsAt={r.startsAt}
+                    endsAt={r.endsAt}
+                    timeZone={r.timeZone}
+                    reference={r.id}
+                  />
                 )}
               </section>
             )}
