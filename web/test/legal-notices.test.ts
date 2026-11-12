@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { baseText } from "../src/features/legal/base-text.ts";
 import {
   kinds,
   noticeApi,
@@ -8,6 +7,12 @@ import {
   noticePath,
   pick,
 } from "../src/features/legal/notices.ts";
+import {
+  accessibilityText,
+  legalText,
+  privacyText,
+  type Text,
+} from "../src/features/legal/standard-text.ts";
 
 test("text follows the active language and falls back to the other co-official one", () => {
   const body = {
@@ -36,17 +41,41 @@ test("municipal and instance texts have distinct pages and endpoints", () => {
   );
 });
 
-test("every kind defines labeled fields and platform text in both languages", () => {
+test("every kind defines labeled fields in both languages", () => {
   for (const kind of kinds) {
     assert.ok(noticeFields[kind].length > 0, kind);
     const keys = noticeFields[kind].map((field) => field.key);
     assert.equal(new Set(keys).size, keys.length, kind);
     for (const field of noticeFields[kind])
       assert.ok(field.label[0] && field.label[1], field.key);
-    for (const locale of ["es", "gl"] as const)
-      assert.ok(baseText[kind][locale].length > 0, `${kind} ${locale}`);
-    assert.equal(baseText[kind].es.length, baseText[kind].gl.length, kind);
   }
+});
+
+test("the standard wording exists in Spanish and Galician and names no placeholder", () => {
+  const texts: Text[] = [
+    ...privacyText.data,
+    ...Object.values(privacyText).filter(
+      (value): value is Text => typeof value[0] === "string",
+    ),
+    ...Object.values(legalText),
+    ...accessibilityText.design,
+    accessibilityText.commitment(undefined),
+    accessibilityText.commitment("Concello de Oleiros"),
+    accessibilityText.feedback,
+    accessibilityText.enforcement,
+  ];
+  for (const [es, gl] of texts) {
+    assert.ok(es.trim() && gl.trim(), es);
+    assert.notEqual(es, gl, es);
+    assert.doesNotMatch(
+      `${es} ${gl}`,
+      /[Pp]endiente|[Pp]endente|\[|\]|XXX|\bTODO\b/,
+    );
+  }
+  assert.match(
+    accessibilityText.commitment("Concello de Oleiros")[0],
+    /^Concello de Oleiros se compromete/,
+  );
 });
 
 test("the privacy information names what the municipality must provide", () => {
