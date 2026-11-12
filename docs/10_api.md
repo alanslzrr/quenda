@@ -285,15 +285,19 @@ La oferta utiliza versiones de calendario y eventos históricos de publicación/
 
 ### Análisis de uso
 
-`GET /api/municipalities/{tenantId}/analytics?from=…&to=…` (opcionalmente `unitId`) completa los indicadores con el mismo permiso (`REPORT_READ` municipal o de la unidad, con MFA), periodo y límite de 366 días. Devuelve:
+`GET /api/municipalities/{tenantId}/analytics?from=…&to=…` (opcionalmente `unitId` y `granularity`) completa los indicadores con el mismo permiso (`REPORT_READ` municipal o de la unidad, con MFA), periodo y límite de 366 días. Devuelve:
 
+- `summary`: los indicadores básicos del mismo ámbito y periodo, calculados con las mismas fórmulas.
+- `series`: minutos ofertados y reservados, porcentaje, reservas y cancelaciones por tramo. `granularity` admite `day`, `week` (semana ISO, desde el lunes) y `month`. Por defecto usa días hasta 31 días, semanas hasta 183 y meses a partir de ahí. El primer y el último tramo se recortan al periodo; los tramos suman lo mismo que `summary`.
 - `weekdayHours`: minutos ofertados y reservados, y su porcentaje, por día ISO (1 = lunes) y hora local.
-- `units`: los mismos minutos por unidad, con su nombre. Suman lo mismo que los indicadores básicos.
+- `units`: los mismos minutos por unidad, con su nombre e instalación, sus reservas y cancelaciones, y su ocupación por tramo de `series` (`trend`). Suman lo mismo que los indicadores básicos.
 - `cancellations`: canceladas por el titular y por el ayuntamiento, según el autor del evento de cancelación.
 - `leadTime`: reservas por tramos de antelación (de la creación al inicio).
 - `attendance`: llegadas registradas con el código QR sobre las reservas confirmadas ya finalizadas. Mide lo que registra el personal, no la asistencia real.
 
-Cancelaciones, antelación y llegadas cuentan las reservas que empiezan en el periodo, como los indicadores. Solo devuelve agregados, sin titulares. Rechaza más de 20.000 reservas. En la web se pide con «Analizar el uso» después de consultar los indicadores. El mapa por día y hora es una tabla con el porcentaje escrito en cada celda; el tono solo lo refuerza.
+Cancelaciones, antelación y llegadas cuentan las reservas que empiezan en el periodo, como los indicadores. Solo devuelve agregados, sin titulares. Rechaza más de 20.000 reservas. En la web se pide con «Analizar el uso» después de consultar los indicadores.
+
+`GET /api/municipalities/{tenantId}/analytics/units` devuelve las unidades que la cuenta puede analizar (`REPORT_READ` municipal o de la unidad), con su instalación y si están retiradas. Exige MFA, incluye las retiradas y las ordena por instalación y nombre. Devuelve hasta 500 y `truncated` indica que hay más. Solo identifica unidades; no concede otros accesos. El mapa por día y hora es una tabla con el porcentaje escrito en cada celda; el tono solo lo refuerza.
 
 ### Exportación de reservas
 
