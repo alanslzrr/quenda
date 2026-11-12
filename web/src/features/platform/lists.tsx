@@ -15,8 +15,8 @@ export function Operators() {
       <h2>{t("Operadores", "Operadores")}</h2>
       <p>
         {t(
-          "El permiso es indefinido. Habilitado exige cuenta activa, correo verificado y MFA configurado; no exige mantener una sesión abierta.",
-          "O permiso é indefinido. Habilitado esixe conta activa, correo verificado e MFA configurado; non esixe manter unha sesión aberta.",
+          "El permiso es indefinido. Habilitado exige cuenta activa, correo verificado y verificación en dos pasos activada; no exige mantener una sesión abierta.",
+          "O permiso é indefinido. Habilitado esixe conta activa, correo verificado e verificación en dous pasos activada; non esixe manter unha sesión aberta.",
         )}
       </p>
       <Link to={`${platformView}/invitar-operador`}>

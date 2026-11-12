@@ -60,16 +60,21 @@ test("MFA enrollment, backup sign-in and password change retain usable sessions"
     .getByRole("link", { name: /Seguridad|Seguridade/, exact: true })
     .click();
   await page
-    .getByRole("button", { name: /Gestionar MFA|Xestionar MFA/ })
+    .getByRole("button", {
+      name: /Gestionar verificación|Xestionar verificación/,
+    })
     .click();
   const enroll = page.locator("form").filter({
-    has: page.getByRole("button", { name: "Configurar MFA", exact: true }),
+    has: page.getByRole("button", {
+      name: "Configurar verificación",
+      exact: true,
+    }),
   });
   await enroll
     .getByLabel(/Contraseña actual|Contrasinal actual/)
     .fill(password);
   await enroll
-    .getByRole("button", { name: "Configurar MFA", exact: true })
+    .getByRole("button", { name: "Configurar verificación", exact: true })
     .click();
   const secret = await page.getByLabel("Clave de configuración").inputValue();
   const codes =
@@ -78,8 +83,14 @@ test("MFA enrollment, backup sign-in and password change retain usable sessions"
   await page
     .getByLabel("Código de autenticación", { exact: true })
     .fill(totp(secret));
-  await page.getByRole("button", { name: "Activar MFA", exact: true }).click();
-  await expect(page.getByText(/MFA está activado/)).toBeVisible();
+  await page
+    .getByRole("button", { name: "Activar verificación", exact: true })
+    .click();
+  await expect(
+    page.getByText(
+      /La verificación en dos pasos está activada|A verificación en dous pasos está activada/,
+    ),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: /He guardado los códigos|Gardei os códigos/ })
     .click();

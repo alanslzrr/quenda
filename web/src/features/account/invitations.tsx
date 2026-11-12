@@ -35,13 +35,16 @@ export function Invitations() {
     <>
       <PageTitle title={t("Tus invitaciones", "As túas invitacións")}>
         {t(
-          "Consultar una invitación no concede permisos. Para aceptarla, configura MFA y verifica el segundo factor.",
-          "Consultar unha invitación non concede permisos. Para aceptala, configura MFA e verifica o segundo factor.",
+          "Consultar una invitación no concede permisos. Para aceptarla necesitas la verificación en dos pasos activada y completada en esta sesión.",
+          "Consultar unha invitación non concede permisos. Para aceptala necesitas a verificación en dous pasos activada e completada nesta sesión.",
         )}
       </PageTitle>
       <p>
         <Link to="/perfil/seguridad">
-          {t("Configurar o verificar MFA", "Configurar ou verificar MFA")}
+          {t(
+            "Configurar la verificación en dos pasos",
+            "Configurar a verificación en dous pasos",
+          )}
         </Link>
       </p>
       <InvitationList

@@ -107,8 +107,8 @@ export function PersonalDetails() {
           <p>
             <Link to="/perfil/seguridad">
               {t(
-                "Verificar MFA antes de continuar",
-                "Verificar MFA antes de continuar",
+                "Completar la verificación en dos pasos",
+                "Completar a verificación en dous pasos",
               )}
             </Link>
           </p>

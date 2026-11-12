@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { CalendarPlus, Check, Copy } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
-import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { serverNow } from "../../app/server-clock.ts";
 import { useSession } from "../../app/session";
@@ -20,7 +19,6 @@ import {
 } from "../../ui/dialog/dialog";
 import { BackLink, BookingSummary, RulesText } from "../catalog/booking";
 import booking from "../catalog/booking.module.css";
-import { useBookingEntry } from "../catalog/journey";
 import { useMunicipality } from "../catalog/municipality";
 import { AccessPass } from "./access-code";
 import { accessCodeTarget } from "./access-code-model";
@@ -39,7 +37,6 @@ export function ReservationDetail() {
   const { account } = useSession();
   const query = useReservation(tenantId, reservationId);
   const municipality = useMunicipality(tenantId);
-  const entry = useBookingEntry();
   const unit = useQuery({
     queryKey: ["public", tenantId, query.data?.unitId, "detail-name"],
     enabled: !!query.data,
@@ -96,29 +93,23 @@ export function ReservationDetail() {
                 )}
           </p>
         )}
-        <div className={booking.introActions}>
-          <LinkButton to={entry}>
-            <CalendarPlus size={16} aria-hidden="true" />
-            {t("Nueva reserva", "Nova reserva")}
-          </LinkButton>
-          {r.accountId === account?.accountId && r.status !== "FINALIZADA" && (
+        {r.accountId === account?.accountId && r.status !== "FINALIZADA" && (
+          <div className={booking.introActions}>
             <a
               className={booking.textLink}
               href={`${reservationPath(tenantId, reservationId)}/calendar.ics?lang=${locale}`}
               download
+              title={t(
+                "Archivo .ics para Google Calendar, Outlook o Calendario de Apple",
+                "Ficheiro .ics para Google Calendar, Outlook ou Calendario de Apple",
+              )}
             >
               {r.status === "CANCELADA"
-                ? t(
-                    "Quitar de mi calendario (.ics)",
-                    "Quitar do meu calendario (.ics)",
-                  )
-                : t(
-                    "Añadir a mi calendario (.ics)",
-                    "Engadir ao meu calendario (.ics)",
-                  )}
+                ? t("Quitar de mi calendario", "Quitar do meu calendario")
+                : t("Añadir a mi calendario", "Engadir ao meu calendario")}
             </a>
-          )}
-        </div>
+          </div>
+        )}
       </header>
       <div className={booking.split}>
         <BookingSummary

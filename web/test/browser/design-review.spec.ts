@@ -345,7 +345,7 @@ test("security composition reveals existing forms without exposing credentials i
     .getByRole("button", { name: "Ocultar formulario", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Gestionar MFA", exact: true })
+    .getByRole("button", { name: "Gestionar verificación", exact: true })
     .click();
   await expect(
     page.getByLabel("Código de autenticación", { exact: true }),

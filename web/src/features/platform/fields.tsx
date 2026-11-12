@@ -44,8 +44,8 @@ export function InvitationDeadline({ role = false }: { role?: boolean }) {
       )}
       <p>
         {t(
-          "La invitación no concede permisos. El destinatario debe aceptarla desde su perfil con MFA.",
-          "A invitación non concede permisos. O destinatario debe aceptala desde o seu perfil con MFA.",
+          "La invitación no concede permisos. El destinatario debe aceptarla desde su perfil con la verificación en dos pasos.",
+          "A invitación non concede permisos. O destinatario debe aceptala desde o seu perfil coa verificación en dous pasos.",
         )}
       </p>
     </>

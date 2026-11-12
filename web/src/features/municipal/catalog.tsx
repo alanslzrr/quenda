@@ -55,8 +55,8 @@ function CatalogDownload() {
       <h2>{t("Copia del catálogo", "Copia do catálogo")}</h2>
       <p>
         {t(
-          "Descarga un archivo JSON con los ajustes del municipio, las instalaciones y espacios con su ficha, los horarios y las normas vigentes. No incluye reservas ni datos personales.",
-          "Descarga un arquivo JSON cos axustes do municipio, as instalacións e espazos coa súa ficha, os horarios e as normas vixentes. Non inclúe reservas nin datos persoais.",
+          "Descarga un archivo con los ajustes del municipio, las instalaciones y espacios con su ficha, los horarios y las normas vigentes. No incluye reservas ni datos personales.",
+          "Descarga un arquivo cos axustes do municipio, as instalacións e espazos coa súa ficha, os horarios e as normas vixentes. Non inclúe reservas nin datos persoais.",
         )}
       </p>
       <ActionForm
@@ -143,8 +143,8 @@ function CatalogImport() {
         <>
           <p>
             {t(
-              "El municipio todavía no tiene instalaciones. Puedes cargar el archivo JSON que descarga «Copia del catálogo» en este u otro municipio o instalación de Quenda. Se crean instalaciones y unidades en borrador con su ficha, horario y normas; no se importan reservas ni recursos retirados.",
-              "O municipio aínda non ten instalacións. Podes cargar o arquivo JSON que descarga «Copia do catálogo» neste ou noutro municipio ou instalación de Quenda. Créanse instalacións e unidades en borrador coa súa ficha, horario e normas; non se importan reservas nin recursos retirados.",
+              "El municipio todavía no tiene instalaciones. Puedes cargar el archivo que descarga «Copia del catálogo» en este u otro municipio o instalación de Quenda. Se crean instalaciones y unidades en borrador con su ficha, horario y normas; no se importan reservas ni recursos retirados.",
+              "O municipio aínda non ten instalacións. Podes cargar o arquivo que descarga «Copia do catálogo» neste ou noutro municipio ou instalación de Quenda. Créanse instalacións e unidades en borrador coa súa ficha, horario e normas; non se importan reservas nin recursos retirados.",
             )}
           </p>
           <ActionForm
@@ -162,8 +162,8 @@ function CatalogImport() {
                   400,
                   "INVALID_INPUT",
                   t(
-                    "Elige un archivo JSON de catálogo de Quenda.",
-                    "Escolle un arquivo JSON de catálogo de Quenda.",
+                    "Elige un archivo de catálogo descargado de Quenda.",
+                    "Escolle un arquivo de catálogo descargado de Quenda.",
                   ),
                 );
               }
@@ -192,10 +192,7 @@ function CatalogImport() {
               name="file"
               accept="application/json,.json"
               required
-              label={t(
-                "Archivo de catálogo (JSON)",
-                "Arquivo de catálogo (JSON)",
-              )}
+              label={t("Archivo de catálogo", "Arquivo de catálogo")}
               onChange={() => setKey(crypto.randomUUID())}
             />
             <Checkbox

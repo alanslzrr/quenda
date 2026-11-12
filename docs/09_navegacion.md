@@ -10,7 +10,7 @@ La interfaz sigue la jerarquía del [modelo de dominio](02_modelo_dominio.md): m
 | Gestión | Cuentas con contexto municipal o permiso de plataforma | Ámbito autorizado |
 | Ajustes | Todas las personas; opciones según sesión | Cuenta, reservas, avisos, idioma, apariencia y cierre de sesión |
 
-La cabecera mantiene estos destinos en escritorio y móvil; sin sesión ofrece acceso. La gestión municipal conserva su navegación lateral y los accesos de uso personal.
+La cabecera mantiene estos destinos en escritorio y móvil; sin sesión ofrece acceso. En móvil, si solo hay un destino, se muestra compacto junto a Ajustes; con varios, ocupan una fila propia como pestañas iguales. La navegación lateral de «Mi cuenta» solo lista los ajustes de la cuenta; «Mis reservas» y «Avisos» son páginas propias, accesibles desde las pestañas de reserva y desde Ajustes. La gestión municipal conserva su navegación lateral y los accesos de uso personal.
 
 «Gestión» se muestra a partir de `/api/me/navigation`. Esa proyección orienta la navegación pero no autoriza: cada operación conserva su comprobación de permiso, ámbito y MFA. Las preferencias de la cuenta no enlazan a la gestión municipal. Como las lecturas privadas comparten un cupo por cuenta, la cabecera no consulta esa proyección dentro de la administración de un municipio y guarda solo el destino de «Gestión» en `sessionStorage`, asociado a la cuenta, durante un minuto; los cambios de permisos invalidan esa caché igual que el resto de la navegación.
 
@@ -108,7 +108,7 @@ El pie de página enlaza con «Privacidad», «Aviso legal» y «Accesibilidad»
 
 ## Descargas
 
-En «Gestión», los administradores descargan la copia del catálogo desde la página de instalaciones y las reservas en JSON o CSV desde «Exportar reservas». En el detalle de una reserva, el titular puede añadirla a su calendario (o quitarla, si está cancelada) y, en «Mis reservas», descargar las próximas. Son enlaces o botones de descarga: abrirlos no modifica nada, y los archivos no se conservan en el almacenamiento del navegador.
+En «Gestión», los administradores descargan la copia del catálogo desde la página de instalaciones y las reservas en JSON o CSV desde «Exportar reservas». En el detalle de una reserva, el titular puede añadirla a su calendario (o quitarla, si está cancelada). En «Mis reservas», «Añadir a mi calendario» abre un diálogo con las dos vías: descargar una vez las próximas reservas o crear la suscripción que se actualiza sola. Son enlaces o botones de descarga: abrirlos no modifica nada, y los archivos no se conservan en el almacenamiento del navegador.
 
 ## Sesión, contexto y actuaciones pendientes
 

@@ -164,8 +164,8 @@ export function StaffInvite({
     <>
       <p>
         {t(
-          "La cuenta debe existir. El destinatario consulta y acepta la invitación desde su perfil con MFA; enviarla no activa permisos.",
-          "A conta debe existir. O destinatario consulta e acepta a invitación desde o seu perfil con MFA; enviala non activa permisos.",
+          "La cuenta debe existir. El destinatario consulta y acepta la invitación desde su perfil con la verificación en dos pasos; enviarla no activa permisos.",
+          "A conta debe existir. O destinatario consulta e acepta a invitación desde o seu perfil coa verificación en dous pasos; enviala non activa permisos.",
         )}
       </p>
       {replacement && (

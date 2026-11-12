@@ -46,7 +46,7 @@ test("an administrator loads an exported catalog into an empty municipality as d
     ).violations,
   ).toEqual([]);
   await page
-    .getByLabel(/^(Archivo de catálogo \(JSON\)|Arquivo de catálogo \(JSON\))$/)
+    .getByLabel(/^(Archivo de catálogo|Arquivo de catálogo)$/)
     .setInputFiles(file);
   const settings = page.getByRole("checkbox", {
     name: /^Aplicar (también la política de reserva y la apariencia del archivo|tamén a política de reserva e a aparencia do arquivo)/,

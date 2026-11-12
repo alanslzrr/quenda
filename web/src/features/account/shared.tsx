@@ -1,7 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Bell,
-  CalendarCheck2,
   LockKeyhole,
   Mail,
   ShieldCheck,
@@ -49,17 +47,9 @@ export function AccountLayout() {
     <SettingsLayout
       title={t("Mi cuenta", "A miña conta")}
       email={account?.email ?? ""}
+      // Only the account's own settings: reservations and notices are their own pages,
+      // reached from the booking tabs and the settings menu.
       links={[
-        {
-          to: "/reservas",
-          label: t("Mis reservas", "As miñas reservas"),
-          icon: <CalendarCheck2 size={16} aria-hidden="true" />,
-        },
-        {
-          to: "/avisos",
-          label: t("Avisos", "Avisos"),
-          icon: <Bell size={16} aria-hidden="true" />,
-        },
         {
           to: "/perfil",
           label: t("Preferencias", "Preferencias"),
