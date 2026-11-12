@@ -1,0 +1,315 @@
+/* Gallery: the cover large and, on wider screens, the next two beside it. Every image is 3:2. */
+.gallery {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  margin: 20px 0 16px;
+}
+.gallery[data-count="1"] {
+  max-width: 600px;
+}
+.gallery[data-count="2"] {
+  grid-template-columns: 1fr 1fr;
+}
+.gallery[data-count="3"] {
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+.gallery[data-count="3"] > .tile[data-main] {
+  grid-row: span 2;
+}
+.tile {
+  position: relative;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: var(--surface-muted);
+  cursor: zoom-in;
+  aspect-ratio: 3 / 2;
+}
+.gallery[data-count="3"] > .tile {
+  aspect-ratio: auto;
+}
+.gallery[data-count="3"] > .tile[data-main] {
+  aspect-ratio: 3 / 2;
+}
+.tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--duration-considered) var(--ease-standard);
+}
+.tile:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+.more {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.45);
+  color: #fff;
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+.all {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgb(0 0 0 / 0.08);
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 0.94);
+  box-shadow: var(--shadow-raised);
+  color: #111;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+.all:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+.gallery[data-count="3"] > .all,
+.gallery[data-count="2"] > .all {
+  display: none;
+}
+/* On a phone only the cover is shown, with a button for the rest. */
+@media (max-width: 560px) {
+  .gallery[data-count="2"],
+  .gallery[data-count="3"] {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+  }
+  .gallery > .tile:not([data-main]) {
+    display: none;
+  }
+  .gallery[data-count="3"] > .tile[data-main] {
+    grid-row: auto;
+  }
+  .gallery[data-count="3"] > .all,
+  .gallery[data-count="2"] > .all {
+    display: inline-flex;
+  }
+}
+
+/* Viewer: always dark, whatever the theme, so the photo is what stands out. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(8 9 12 / 0.97);
+  animation: fade var(--duration-standard) var(--ease-enter);
+}
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  color: #f4f4f5;
+  outline: none;
+  animation: fade var(--duration-standard) var(--ease-enter);
+}
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+}
+.viewerTitle {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-base);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.counter {
+  margin: 0;
+  color: #d4d4d8;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.close,
+.step {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+  cursor: pointer;
+}
+.close:hover,
+.step:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+.close:focus-visible,
+.step:focus-visible,
+.strip button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+  min-height: 0;
+  margin: 0;
+  padding: 0 72px;
+  touch-action: pan-y;
+  user-select: none;
+}
+.stage img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: calc(100dvh - 230px);
+  align-self: center;
+  border-radius: 8px;
+  object-fit: contain;
+  animation: fade var(--duration-fast) var(--ease-enter);
+}
+.stage figcaption {
+  max-width: 70ch;
+  color: #e4e4e7;
+  font-size: var(--text-sm);
+  text-align: center;
+}
+.step {
+  position: fixed;
+  top: 50%;
+  translate: 0 -50%;
+}
+.previous {
+  left: 16px;
+}
+.next {
+  right: 16px;
+}
+.strip {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 16px 16px;
+  overflow-x: auto;
+  list-style: none;
+}
+.strip button {
+  display: block;
+  width: 72px;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: none;
+  opacity: 0.6;
+  cursor: pointer;
+}
+.strip button[aria-current] {
+  border-color: #fff;
+  opacity: 1;
+}
+.strip img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+@media (max-width: 560px) {
+  .stage {
+    padding: 0 12px;
+  }
+  .step {
+    width: 40px;
+    height: 40px;
+    background: rgb(0 0 0 / 0.55);
+  }
+  .previous {
+    left: 8px;
+  }
+  .next {
+    right: 8px;
+  }
+  .strip button {
+    width: 56px;
+  }
+}
+
+/* A cover beside a name in a list. */
+.thumb {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 96px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  aspect-ratio: 3 / 2;
+}
+.thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@media (max-width: 480px) {
+  .thumb {
+    width: 72px;
+    border-radius: 8px;
+  }
+}
+
+@media (hover: hover) {
+  .gallery .tile:hover img {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .viewer,
+  .stage img {
+    animation: none;
+  }
+  .tile img {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .tile,
+  .thumb,
+  .all,
+  .close,
+  .step {
+    border: 1px solid CanvasText;
+  }
+}
