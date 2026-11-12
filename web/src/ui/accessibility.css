@@ -25,7 +25,8 @@
     [role="menuitem"],
     [role="option"],
     [tabindex="-1"],
-    [data-lumen-border-focus]
+    [data-lumen-border-focus],
+    [data-border-focus]
   ) {
   outline: var(--focus-outline-width, 2px) solid
     var(
@@ -35,7 +36,8 @@
   outline-offset: var(--focus-outline-offset, 2px) !important;
 }
 /* Source controls that communicate focus through their own fill/border must not inherit a host or UA outline. */
-[data-lumen] [data-lumen-border-focus]:focus {
+[data-lumen] [data-lumen-border-focus]:focus,
+[data-lumen] [data-border-focus]:focus {
   outline: none !important;
 }
 
@@ -54,7 +56,7 @@
   letter-spacing: var(--tracking-body);
 }
 [data-lumen]:focus:not(:focus-visible) { outline: none; }
-[data-lumen]:focus-visible:not([role="menuitem"], [role="option"], [tabindex="-1"], [data-lumen-border-focus]) {
+[data-lumen]:focus-visible:not([role="menuitem"], [role="option"], [tabindex="-1"], [data-lumen-border-focus], [data-border-focus]) {
   outline: var(--focus-outline-width, 2px) solid var(--focus-outline, color-mix(in oklab, var(--accent-strong) 72%, transparent)) !important;
   outline-offset: var(--focus-outline-offset, 2px) !important;
 }
