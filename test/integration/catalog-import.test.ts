@@ -129,6 +129,7 @@ test("an exported catalog loads into an empty municipality as drafts and exports
           calendars: 2,
           usageRules: 2,
           skippedWithdrawn: 1,
+          settings: { bookingPolicy: false, appearance: false },
         });
         const copy = (
           await admin.request(`/api/municipalities/${target}/exports/catalog`)
@@ -204,6 +205,149 @@ test("an exported catalog loads into an empty municipality as drafts and exports
           ).rows[0].n,
           0,
         );
+      });
+
+      // An empty municipality administered by the importing account.
+      const emptyMunicipality = async (name: string) => {
+        const id = randomUUID();
+        const invitationId = randomUUID();
+        await migration.query(
+          "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,$2,'Europe/Madrid')",
+          [id, name],
+        );
+        await migration.query(
+          "INSERT INTO domain.municipal_profile(tenant_id,account_id) VALUES($1,$2)",
+          [id, f.accountId],
+        );
+        await migration.query(
+          "INSERT INTO domain.administrator_invitation(tenant_id,id,account_id,invited_by,expires_at,accepted_at) VALUES($1,$2,$3,$3,now()+interval '1 day',now())",
+          [id, invitationId, f.accountId],
+        );
+        await migration.query(
+          "INSERT INTO domain.municipal_administrator(tenant_id,account_id,invitation_id) VALUES($1,$2,$3)",
+          [id, f.accountId, invitationId],
+        );
+        return id;
+      };
+      const settingsOf = async (tenant: string) =>
+        (
+          await migration.query(
+            `SELECT advance_days AS "advanceDays",cancellation_minutes AS "cancellationMinutes",booking_policy_version AS "policyVersion",
+             light_palette AS "lightPalette",dark_palette AS "darkPalette",default_theme AS "defaultTheme",appearance_version AS "appearanceVersion",
+             (SELECT count(*)::int FROM domain.municipal_booking_policy_event e WHERE e.tenant_id=m.id AND e.reason='Importado de quenda.catalog') AS "policyEvents",
+             (SELECT count(*)::int FROM domain.municipal_appearance_event e WHERE e.tenant_id=m.id) AS "appearanceEvents"
+             FROM domain.municipality m WHERE id=$1`,
+            [tenant],
+          )
+        ).rows[0];
+      // A source whose policy and appearance differ from the defaults, with a
+      // calendar that reaches further than a default municipality allows.
+      const configured = structuredClone(document);
+      configured.municipality.bookingPolicy = {
+        version: 3,
+        advanceDays: 90,
+        cancellationMinutes: 120,
+      };
+      configured.municipality.appearance = {
+        lightPalette: "green",
+        darkPalette: "blue",
+        defaultTheme: "dark",
+      };
+      configured.units[0].calendar.advanceDays = 60;
+      const withSettings = (
+        tenant: string,
+        body: unknown,
+        key = randomUUID(),
+      ) =>
+        admin.request(
+          `/api/municipalities/${tenant}/imports/catalog?settings=include`,
+          body as Record<string, unknown>,
+          { "idempotency-key": key },
+        );
+
+      await test("with settings=include the booking policy and appearance travel as audited versions", async () => {
+        const tenant = await emptyMunicipality("Con ajustes");
+        // Without the policy, the calendar exceeds the default advance limit.
+        assert.equal((await load(tenant, configured)).statusCode, 400);
+        const key = randomUUID();
+        const response = await withSettings(tenant, configured, key);
+        assert.equal(response.statusCode, 200, response.body);
+        assert.deepEqual(response.json().settings, {
+          bookingPolicy: true,
+          appearance: true,
+        });
+        assert.deepEqual(await settingsOf(tenant), {
+          advanceDays: 90,
+          cancellationMinutes: 120,
+          policyVersion: 2,
+          lightPalette: "green",
+          darkPalette: "blue",
+          defaultTheme: "dark",
+          appearanceVersion: 2,
+          policyEvents: 1,
+          appearanceEvents: 1,
+        });
+        const copy = (
+          await admin.request(`/api/municipalities/${tenant}/exports/catalog`)
+        ).json();
+        assert.deepEqual(copy.municipality.appearance, {
+          lightPalette: "green",
+          darkPalette: "blue",
+          defaultTheme: "dark",
+        });
+        assert.equal(copy.municipality.bookingPolicy.advanceDays, 90);
+        assert.equal(copy.units[0].calendar.advanceDays, 60);
+        // The same key replays; the same key without the option is another command.
+        const again = await withSettings(tenant, configured, key);
+        assert.equal(again.statusCode, 200, again.body);
+        assert.deepEqual(again.json(), response.json());
+        assert.equal((await load(tenant, configured, key)).statusCode, 409);
+        assert.equal((await settingsOf(tenant)).policyVersion, 2);
+      });
+
+      await test("settings equal to the municipality's own add no version", async () => {
+        const tenant = await emptyMunicipality("Ajustes iguales");
+        const same = structuredClone(document);
+        same.municipality.bookingPolicy.advanceDays = 30;
+        same.municipality.bookingPolicy.cancellationMinutes = 1440;
+        same.municipality.appearance = {
+          lightPalette: "neutral",
+          darkPalette: "neutral",
+          defaultTheme: "light",
+        };
+        const response = await withSettings(tenant, same);
+        assert.equal(response.statusCode, 200, response.body);
+        assert.deepEqual(response.json().settings, {
+          bookingPolicy: false,
+          appearance: false,
+        });
+        const after = await settingsOf(tenant);
+        assert.equal(after.policyVersion, 1);
+        assert.equal(after.appearanceVersion, 1);
+      });
+
+      await test("unknown appearance values are rejected only when settings are applied", async () => {
+        const tenant = await emptyMunicipality("Paleta desconocida");
+        const odd = structuredClone(document);
+        odd.municipality.appearance.lightPalette = "purple";
+        assert.equal((await withSettings(tenant, odd)).statusCode, 400);
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::int AS n FROM domain.facility WHERE tenant_id=$1",
+              [tenant],
+            )
+          ).rows[0].n,
+          0,
+        );
+        assert.equal((await settingsOf(tenant)).lightPalette, "neutral");
+        const plain = await load(tenant, odd);
+        assert.equal(plain.statusCode, 200, plain.body);
+        assert.deepEqual(plain.json().settings, {
+          bookingPolicy: false,
+          appearance: false,
+        });
+        assert.equal((await settingsOf(tenant)).lightPalette, "neutral");
       });
 
       await test("only the target's administrator with recent MFA and the configured origin can import", async () => {

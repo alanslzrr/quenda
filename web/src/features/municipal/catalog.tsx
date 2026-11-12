@@ -87,6 +87,28 @@ interface ImportResult {
   calendars: number;
   usageRules: number;
   skippedWithdrawn: number;
+  settings: { bookingPolicy: boolean; appearance: boolean };
+}
+function appliedSettings(
+  settings: ImportResult["settings"],
+  t: (es: string, gl: string) => string,
+) {
+  if (settings.bookingPolicy && settings.appearance)
+    return t(
+      " También se aplicaron la política de reserva y la apariencia del archivo.",
+      " Tamén se aplicaron a política de reserva e a aparencia do arquivo.",
+    );
+  if (settings.bookingPolicy)
+    return t(
+      " También se aplicó la política de reserva del archivo; la apariencia ya coincidía.",
+      " Tamén se aplicou a política de reserva do arquivo; a aparencia xa coincidía.",
+    );
+  if (settings.appearance)
+    return t(
+      " También se aplicó la apariencia del archivo; la política de reserva ya coincidía.",
+      " Tamén se aplicou a aparencia do arquivo; a política de reserva xa coincidía.",
+    );
+  return "";
 }
 /** Loads a quenda.catalog file into a municipality that has no facilities yet. */
 function CatalogImport() {
@@ -115,13 +137,14 @@ function CatalogImport() {
             `Importadas ${result.facilities} instalaciones y ${result.units} unidades, con ${result.calendars} horarios y ${result.usageRules} normas. Están en borrador: revísalas y publícalas. ${result.skippedWithdrawn ? `Se omitieron ${result.skippedWithdrawn} recursos retirados.` : ""}`,
             `Importadas ${result.facilities} instalacións e ${result.units} unidades, con ${result.calendars} horarios e ${result.usageRules} normas. Están en borrador: revísaas e publícaas. ${result.skippedWithdrawn ? `Omitíronse ${result.skippedWithdrawn} recursos retirados.` : ""}`,
           )}
+          {appliedSettings(result.settings, t)}
         </p>
       ) : (
         <>
           <p>
             {t(
-              "El municipio todavía no tiene instalaciones. Puedes cargar el archivo JSON que descarga «Copia del catálogo» en este u otro municipio o instalación de Quenda. Se crean instalaciones y unidades en borrador con su ficha, horario y normas; no se importan reservas, recursos retirados ni los ajustes del municipio.",
-              "O municipio aínda non ten instalacións. Podes cargar o arquivo JSON que descarga «Copia do catálogo» neste ou noutro municipio ou instalación de Quenda. Créanse instalacións e unidades en borrador coa súa ficha, horario e normas; non se importan reservas, recursos retirados nin os axustes do municipio.",
+              "El municipio todavía no tiene instalaciones. Puedes cargar el archivo JSON que descarga «Copia del catálogo» en este u otro municipio o instalación de Quenda. Se crean instalaciones y unidades en borrador con su ficha, horario y normas; no se importan reservas ni recursos retirados.",
+              "O municipio aínda non ten instalacións. Podes cargar o arquivo JSON que descarga «Copia do catálogo» neste ou noutro municipio ou instalación de Quenda. Créanse instalacións e unidades en borrador coa súa ficha, horario e normas; non se importan reservas nin recursos retirados.",
             )}
           </p>
           <ActionForm
@@ -144,20 +167,24 @@ function CatalogImport() {
                   ),
                 );
               }
-              setResult(
-                await api<ImportResult>(
-                  `${endpoint(m.id)}/imports/catalog`,
-                  {
-                    method: "POST",
-                    body: JSON.stringify(document),
-                    headers: { "idempotency-key": key },
-                  },
-                  locale,
-                ),
+              const imported = await api<ImportResult>(
+                `${endpoint(m.id)}/imports/catalog${data.get("settings") ? "?settings=include" : ""}`,
+                {
+                  method: "POST",
+                  body: JSON.stringify(document),
+                  headers: { "idempotency-key": key },
+                },
+                locale,
               );
+              setResult(imported);
               await client.invalidateQueries({
                 queryKey: ["private", account?.accountId, "municipal"],
               });
+              // The municipal colours shown to everyone come from the public read.
+              if (imported.settings.appearance)
+                await client.invalidateQueries({
+                  queryKey: ["public", m.id, "appearance"],
+                });
             }}
           >
             <Input
@@ -170,6 +197,18 @@ function CatalogImport() {
                 "Arquivo de catálogo (JSON)",
               )}
               onChange={() => setKey(crypto.randomUUID())}
+            />
+            <Checkbox
+              name="settings"
+              label={t(
+                "Aplicar también la política de reserva y la apariencia del archivo",
+                "Aplicar tamén a política de reserva e a aparencia do arquivo",
+              )}
+              description={t(
+                "Sustituyen la antelación, el plazo de cancelación, las paletas y el tema inicial de este municipio. Cada cambio queda registrado como una edición.",
+                "Substitúen a antelación, o prazo de cancelación, as paletas e o tema inicial deste municipio. Cada cambio queda rexistrado como unha edición.",
+              )}
+              onCheckedChange={() => setKey(crypto.randomUUID())}
             />
           </ActionForm>
         </>
