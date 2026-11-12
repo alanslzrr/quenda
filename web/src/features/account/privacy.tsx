@@ -64,8 +64,8 @@ export function AccountPrivacy() {
         <p>
           <Link to="/perfil/seguridad">
             {t(
-              "Si tienes MFA, verifícalo antes de continuar",
-              "Se tes MFA, verifícao antes de continuar",
+              "Si tienes la verificación en dos pasos, complétala antes de continuar",
+              "Se tes a verificación en dous pasos, complétaa antes de continuar",
             )}
           </Link>
         </p>
