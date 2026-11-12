@@ -599,7 +599,9 @@ export function DateRangePicker({ value, defaultValue = null, onChange, label: l
   return <motion.div ref={rootRef} className={[styles.root, className].filter(Boolean).join(" ")} style={{ width: rootWidth }} data-open={open || undefined} onKeyDown={onRootKey} onBlur={onRootBlur}>
     {/* The trigger stays in place under the panel. Its icons fade, while the value itself flies to the panel footer and back. */}
     <button ref={triggerRef} type="button" className={styles.trigger} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? `${uid}-panel` : undefined}
-      aria-label={`${label}: ${speak(committed)}`} disabled={!today} inert={open || undefined} onClick={openPanel}>
+      aria-describedby={`${uid}-spoken`} disabled={!today} inert={open || undefined} onClick={openPanel}>
+      {/* Named from content with the visible short range (WCAG 2.5.3); the animated copy is decorative. */}
+      <span className={styles.srOnly}>{`${label}: ${committedText}`}</span>
       <motion.span className={styles.triggerIcon} initial={false} animate={quiet} transition={quietTransition}><CalendarDays size={16} strokeWidth={1.75} aria-hidden="true" /></motion.span>
       {open || !layoutId
         ? <motion.span key="resting" className={styles.value} data-empty={!committed || undefined} initial={false} animate={open ? { opacity: 0 } : { opacity: 1 }} transition={quietTransition}>
@@ -610,6 +612,9 @@ export function DateRangePicker({ value, defaultValue = null, onChange, label: l
         </motion.span>}
       <motion.span className={styles.chevron} initial={false} animate={quiet} transition={quietTransition}><ChevronDown size={16} strokeWidth={1.75} aria-hidden="true" /></motion.span>
     </button>
+
+    {/* The full range, read as the trigger's description. */}
+    <span id={`${uid}-spoken`} className={styles.srOnly} hidden>{speak(committed)}</span>
 
     <motion.div className={styles.surface} style={{ width, height, borderRadius: radius, x }}>
       <AnimatePresence>
