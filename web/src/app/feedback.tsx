@@ -1,10 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { LockKeyhole } from "lucide-react";
 import { useContext, useEffect, useId, useState } from "react";
 import { useLocation } from "react-router";
 import { Alert } from "../ui/alert/alert";
 import { Button } from "../ui/button/button";
 import { Skeleton } from "../ui/skeleton/skeleton";
 import { ApiError } from "./api";
+import styles from "./feedback.module.css";
 import { ActionLink } from "./link-button";
 import { usePreferences } from "./preferences-provider";
 import {
@@ -61,11 +63,22 @@ export function Failure({
     if (error instanceof ApiError && needsFactor && register)
       return register(registration);
   }, [needsFactor, register, registration, error]);
+  // One explanation is enough: the page banner asks for the verification, the first waiting section says why,
+  // and every other section only states what it is waiting for.
+  if (needsFactor && notice?.first && notice.first !== registration)
+    return (
+      <p className={styles.waiting} role="status">
+        <LockKeyhole size={14} aria-hidden="true" />
+        {error instanceof ApiError
+          ? error.message
+          : t("Verifica el acceso", "Verifica o acceso")}
+      </p>
+    );
   if (needsFactor && notice)
     return (
       <section aria-label={t("Resolver el problema", "Resolver o problema")}>
         <Alert
-          tone="danger"
+          tone="warning"
           title={
             error instanceof ApiError
               ? error.message
@@ -147,6 +160,12 @@ export function Failure({
             }}
           >
             {retryLabel ?? t("Reintentar", "Tentar de novo")}
+            {/* The wait shows on the button itself, so a disabled retry reads as "not yet", not as broken. */}
+            {seconds > 0 && (
+              <span className={styles.wait} aria-hidden="true">
+                {seconds} s
+              </span>
+            )}
           </Button>
         )
       )}
