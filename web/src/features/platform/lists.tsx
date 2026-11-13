@@ -169,6 +169,7 @@ export function PlatformInvitations({
                   <Link
                     to={`${platformView}/${privacy ? "retirar-privacidad" : "retirar-invitacion"}?id=${encodeURIComponent(i.invitationId)}`}
                     state={{ name: i.accountName ?? i.accountId }}
+                    danger
                   >
                     {t("Revocar", "Revogar")}
                   </Link>
