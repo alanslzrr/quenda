@@ -31,3 +31,16 @@ export function createRequestActor(
   };
   return actor;
 }
+
+/**
+ * The signed-in account for a read of its own state that the interface repeats on every page, such as GET /api/me
+ * or the unread-notice count. It does not consume the administrative rate limit; anything that changes data or reads
+ * municipal records must use the request actor instead.
+ */
+export function createSessionReader(auth: Authentication) {
+  return async (request: FastifyRequest) => {
+    const account = await auth.authenticate(fromNodeHeaders(request.headers));
+    if (!account) throw new HttpError("UNAUTHENTICATED");
+    return account;
+  };
+}

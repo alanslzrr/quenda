@@ -59,7 +59,7 @@ export {
   recommendationsEnabled,
   saveRecommendationPreference,
 } from "./recommendation-preference.ts";
-export { createRequestActor } from "./request-actor.ts";
+export { createRequestActor, createSessionReader } from "./request-actor.ts";
 export { processRetentionBatch } from "./retention-worker.ts";
 export { authenticationSchema, registerAuthentication } from "./routes.ts";
 export { suspendAccount } from "./security.ts";
