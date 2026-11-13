@@ -232,6 +232,33 @@ export function Administration() {
   );
 }
 /** The last context this account read for the municipality, in any language. */
+const menuKey = "quenda.management-menu";
+/** The last management menu read in this tab, so a page reloaded during a rate limit keeps its navigation. */
+function rememberMenu(accountId: string | undefined, menu: MunicipalContext) {
+  try {
+    browserStorage("session")?.setItem(
+      menuKey,
+      JSON.stringify({ accountId, menu }),
+    );
+  } catch {
+    /* The menu is a convenience; blocked storage only loses it. */
+  }
+}
+function rememberedMenu(
+  accountId: string | undefined,
+  tenantId: string,
+): MunicipalContext | undefined {
+  try {
+    const stored = JSON.parse(
+      browserStorage("session")?.getItem(menuKey) ?? "null",
+    ) as { accountId?: string; menu?: MunicipalContext } | null;
+    return stored?.accountId === accountId && stored?.menu?.id === tenantId
+      ? stored.menu
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
 function cachedMunicipality(
   client: QueryClient,
   accountId: string | undefined,
@@ -283,7 +310,11 @@ export function MunicipalLayout() {
         after = result.municipalities.nextCursor;
         if (!after) break;
       }
-      if (found) return { ...found, name: municipalityLabel(found, seen) };
+      if (found) {
+        const menu = { ...found, name: municipalityLabel(found, seen) };
+        rememberMenu(account?.accountId, menu);
+        return menu;
+      }
       throw new ApiError(
         403,
         "FORBIDDEN",
@@ -299,12 +330,13 @@ export function MunicipalLayout() {
   // management shell so navigation survives while the cooldown runs. The menu
   // uses permissions already read in this session, never assumed ones.
   if (query.isError && !query.data && !discardEditor(query.error)) {
-    const known = cachedMunicipality(client, account?.accountId, tenantId) ?? {
-      id: tenantId,
-      name: t("Gestión municipal", "Xestión municipal"),
-      administrator: false,
-      permissions: [],
-    };
+    const known = cachedMunicipality(client, account?.accountId, tenantId) ??
+      rememberedMenu(account?.accountId, tenantId) ?? {
+        id: tenantId,
+        name: t("Gestión municipal", "Xestión municipal"),
+        administrator: false,
+        permissions: [],
+      };
     return (
       <ResourceShell municipality={known}>
         <h1>{known.name}</h1>
