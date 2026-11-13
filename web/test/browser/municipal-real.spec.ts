@@ -58,12 +58,19 @@ test("municipal catalog and versioned configuration use the real API", async ({
     .getByRole("button", { name: "Crear instalación", exact: true })
     .click();
   await page.getByRole("link", { name: "Centro novo", exact: true }).click();
-  const publish = page.locator("form").filter({
-    has: page.getByRole("button", {
-      name: "Publicar instalación",
-      exact: true,
-    }),
-  });
+  // Publishing is a header action that opens its confirmation.
+  await page
+    .getByRole("button", { name: "Publicar instalación", exact: true })
+    .click();
+  const publish = page
+    .getByRole("dialog")
+    .locator("form")
+    .filter({
+      has: page.getByRole("button", {
+        name: "Publicar instalación",
+        exact: true,
+      }),
+    });
   await publish.getByLabel("Motivo").fill("Apertura del centro");
   await publish
     .getByRole("button", { name: "Publicar instalación", exact: true })

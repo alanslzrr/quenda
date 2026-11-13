@@ -26,6 +26,7 @@ test("a facility profile is edited, audited by version and shown on the public p
   test.setTimeout(90000);
   const f = await enter(page, info.project.name === "desktop" ? 20 : 21);
   await page.goto(`/administracion/${f.tenant}/instalaciones/${f.facility}`);
+  await page.getByRole("tab", { name: "Ficha", exact: true }).click();
   const form = page.locator("form").filter({
     has: page.getByRole("button", { name: save }),
   });
@@ -53,6 +54,7 @@ test("a facility profile is edited, audited by version and shown on the public p
   await expect(page.getByText(saved)).toBeVisible();
 
   await page.reload();
+  await page.getByRole("tab", { name: "Ficha", exact: true }).click();
   await expect(page.getByLabel(/^(Dirección|Enderezo)$/)).toHaveValue(
     "Rúa do Mar 4",
   );
