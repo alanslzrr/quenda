@@ -10,6 +10,7 @@ import { Select } from "../../ui/select/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs/tabs";
 import { Textarea } from "../../ui/textarea/textarea";
 import styles from "../municipal/municipal.module.css";
+import { ManagementPage } from "../municipal/page";
 import { Denied, useMunicipality } from "../municipal/shared";
 import { useNotice } from "./legal-page";
 import {
@@ -158,10 +159,10 @@ function Editors({ tenantId }: { tenantId?: string }) {
   const lang = locale === "gl" ? 1 : 0;
   const [tab, setTab] = useState<NoticeKind>("privacy");
   return (
-    <>
-      <h1>{t("Textos legales", "Textos legais")}</h1>
-      <p>
-        {tenantId
+    <ManagementPage
+      title={t("Textos legales", "Textos legais")}
+      description={
+        tenantId
           ? t(
               "Información que la ciudadanía ve en las páginas públicas de tu municipio. La plataforma aporta lo que hace la aplicación; tú indicas quién es el responsable y cómo contactarlo.",
               "Información que a cidadanía ve nas páxinas públicas do teu municipio. A plataforma achega o que fai a aplicación; ti indicas quen é o responsable e como contactalo.",
@@ -169,8 +170,9 @@ function Editors({ tenantId }: { tenantId?: string }) {
           : t(
               "Textos de la instancia, que se muestran fuera de un municipio concreto.",
               "Textos da instancia, que se amosan fóra dun municipio concreto.",
-            )}
-      </p>
+            )
+      }
+    >
       <Tabs value={tab} onValueChange={(value) => setTab(value as NoticeKind)}>
         <TabsList aria-label={t("Tipo de texto", "Tipo de texto")}>
           {kinds.map((kind) => (
@@ -185,7 +187,7 @@ function Editors({ tenantId }: { tenantId?: string }) {
           </TabsContent>
         ))}
       </Tabs>
-    </>
+    </ManagementPage>
   );
 }
 
