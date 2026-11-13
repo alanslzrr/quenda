@@ -6,7 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useState } from "react";
-import { Outlet, useParams } from "react-router";
+import { Outlet, useLocation, useParams } from "react-router";
 import { ActionForm } from "../../app/action";
 import { ApiError, api, type Navigation, type Page } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
@@ -18,6 +18,7 @@ import {
   EditorRecovery,
   useReadBlocked,
 } from "../../app/read-recovery";
+import { RouteFade } from "../../app/route-fade";
 import { useSession } from "../../app/session";
 import { browserStorage } from "../../app/storage.ts";
 import { useMunicipalTheme } from "../../app/theme-provider";
@@ -254,6 +255,7 @@ export function MunicipalLayout() {
   useMunicipalTheme(undefined);
   const { tenantId = "" } = useParams();
   const { account } = useSession();
+  const { pathname } = useLocation();
   const client = useQueryClient();
   const { locale, t } = usePreferences();
   const query = useQuery({
@@ -326,7 +328,9 @@ export function MunicipalLayout() {
     <Context.Provider value={context}>
       <ResourceShell municipality={context}>
         <EditorRecovery error={query.error} retry={() => void query.refetch()}>
-          <Outlet key={`${account?.accountId}:${tenantId}`} />
+          <RouteFade scene={pathname}>
+            <Outlet key={`${account?.accountId}:${tenantId}`} />
+          </RouteFade>
         </EditorRecovery>
       </ResourceShell>
     </Context.Provider>

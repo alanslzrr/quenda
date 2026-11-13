@@ -1,10 +1,11 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Star } from "lucide-react";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { announce } from "../../app/announce";
 import { api, type Municipality, type Page } from "../../app/api";
 import { useFavorite } from "../../app/favorite";
+import { Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
 import { Badge } from "../../ui/badge/badge";
 import { Button } from "../../ui/button/button";
@@ -70,6 +71,43 @@ export function useMunicipalities() {
 
 export type JourneyStep = 0 | 1 | 2 | 3 | 4;
 
+interface BookingStepsProps {
+  current: JourneyStep;
+  tenantId?: string;
+  municipality?: string;
+  facility?: { id: string; name: string };
+  unit?: { id: string; name: string };
+  slot?: string;
+  query?: string;
+}
+
+// Each step is its own page, so the stepper is drawn again on every navigation. The last one drawn is remembered so the
+// next page can continue from it, and a page still loading can keep showing it.
+let remembered: BookingStepsProps | undefined;
+const journeyPaths =
+  /^\/(?:reservar)?$|^\/municipios\/[^/]+(?:\/instalaciones\/[^/]+|\/unidades\/[^/]+(?:\/reservar)?)?$/;
+
+/** The pages that draw the booking stepper. */
+export const isJourneyPath = (pathname: string) => journeyPaths.test(pathname);
+
+/** Called on every navigation: leaving the booking journey forgets where it was, so returning later starts settled.
+ *  Signing in halfway through keeps it, so the review step still continues from the chosen time. */
+export function forgetJourneyOutside(pathname: string) {
+  if (!isJourneyPath(pathname) && pathname !== "/acceso")
+    remembered = undefined;
+}
+
+/** A journey page that is still loading keeps the previous step on screen instead of dropping the stepper. */
+export function JourneyLoading() {
+  const [last] = useState(() => remembered);
+  return (
+    <div className={styles.page}>
+      {last && <BookingSteps {...last} placeholder />}
+      <Loading />
+    </div>
+  );
+}
+
 /**
  * Municipality, facility, unit, time and review. Every completed step names what was chosen and leads back to it;
  * the date and duration travel along so going back never loses them.
@@ -82,14 +120,10 @@ export function BookingSteps({
   unit,
   slot,
   query = "",
-}: {
-  current: JourneyStep;
-  tenantId?: string;
-  municipality?: string;
-  facility?: { id: string; name: string };
-  unit?: { id: string; name: string };
-  slot?: string;
-  query?: string;
+  placeholder = false,
+}: BookingStepsProps & {
+  /** Stands in while the next page loads: it neither announces nor becomes the remembered step. */
+  placeholder?: boolean;
 }) {
   const { t } = usePreferences();
   const navigate = useNavigate();
@@ -106,8 +140,30 @@ export function BookingSteps({
   );
   // The stepper remounts with every page, so its own live region never sees a change; announce through the persistent one.
   useEffect(() => {
-    announce(position);
-  }, [position]);
+    if (!placeholder) announce(position);
+  }, [position, placeholder]);
+  // Where the previous page left the journey, read once: it decides where the stepper starts and which way the page enters.
+  const [arrival] = useState(() =>
+    placeholder ? undefined : remembered?.current,
+  );
+  useEffect(() => {
+    if (!placeholder)
+      remembered = {
+        current,
+        tenantId,
+        municipality,
+        facility,
+        unit,
+        slot,
+        query,
+      };
+  });
+  const enter =
+    arrival === undefined || arrival === current
+      ? undefined
+      : arrival < current
+        ? "forward"
+        : "back";
   const paths = [
     `${pickerPath}${query}`,
     tenantId ? municipalityPath(tenantId, query) : undefined,
@@ -117,52 +173,54 @@ export function BookingSteps({
     tenantId && unit ? unitPath(tenantId, unit.id, query) : undefined,
   ];
   return (
-    <Stepper
-      className={styles.steps}
-      current={current}
-      label={t("Pasos de la reserva", "Pasos da reserva")}
-      completeLabel={t("Reserva lista", "Reserva lista")}
-      labels={{
-        complete: t("completado", "completado"),
-        upcoming: t("pendiente", "pendente"),
-        error: t("con un problema", "cun problema"),
-        position: (step, total, label) =>
-          t(
-            `Paso ${step} de ${total}: ${label}`,
-            `Paso ${step} de ${total}: ${label}`,
-          ),
-      }}
-      onStepSelect={(index) => {
-        const path = paths[index];
-        if (path) navigate(path);
-      }}
-      steps={[
-        {
-          id: "municipality",
-          label: t("Municipio", "Municipio"),
-          description: municipality,
-        },
-        {
-          id: "facility",
-          label: t("Instalación", "Instalación"),
-          description: facility?.name,
-        },
-        {
-          id: "unit",
-          label: t("Espacio", "Espazo"),
-          description: unit?.name,
-        },
-        {
-          id: "time",
-          label: t("Día y hora", "Día e hora"),
-          description: slot,
-        },
-        {
-          id: "review",
-          label: t("Revisar y confirmar", "Revisar e confirmar"),
-        },
-      ]}
-    />
+    <div className={styles.steps} data-enter={enter}>
+      <Stepper
+        from={arrival}
+        current={current}
+        label={t("Pasos de la reserva", "Pasos da reserva")}
+        completeLabel={t("Reserva lista", "Reserva lista")}
+        labels={{
+          complete: t("completado", "completado"),
+          upcoming: t("pendiente", "pendente"),
+          error: t("con un problema", "cun problema"),
+          position: (step, total, label) =>
+            t(
+              `Paso ${step} de ${total}: ${label}`,
+              `Paso ${step} de ${total}: ${label}`,
+            ),
+        }}
+        onStepSelect={(index) => {
+          const path = paths[index];
+          if (path) navigate(path);
+        }}
+        steps={[
+          {
+            id: "municipality",
+            label: t("Municipio", "Municipio"),
+            description: municipality,
+          },
+          {
+            id: "facility",
+            label: t("Instalación", "Instalación"),
+            description: facility?.name,
+          },
+          {
+            id: "unit",
+            label: t("Espacio", "Espazo"),
+            description: unit?.name,
+          },
+          {
+            id: "time",
+            label: t("Día y hora", "Día e hora"),
+            description: slot,
+          },
+          {
+            id: "review",
+            label: t("Revisar y confirmar", "Revisar e confirmar"),
+          },
+        ]}
+      />
+    </div>
   );
 }
 

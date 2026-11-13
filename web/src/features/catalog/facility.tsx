@@ -13,6 +13,7 @@ import {
   BookingSteps,
   Choice,
   Choices,
+  JourneyLoading,
   municipalityPath,
   searchPath,
   unitPath,
@@ -73,7 +74,7 @@ export function FacilityPage() {
   const facilities = useFacilities(tenantId);
   const units = useUnits(tenantId, facilityId);
   usePublicAppearance(tenantId);
-  if (municipality.isPending || facilities.loading) return <Loading />;
+  if (municipality.isPending || facilities.loading) return <JourneyLoading />;
   if (municipality.isError)
     return municipality.error instanceof ApiError &&
       municipality.error.status === 404 ? (

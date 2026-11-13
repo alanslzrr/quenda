@@ -599,3 +599,29 @@
   outline: 2px solid var(--foreground);
   outline-offset: 3px;
 }
+
+/* The stepper stays put and animates its own progress; what follows it slides in from the side the journey moved to. */
+@media (prefers-reduced-motion: no-preference) {
+  .steps[data-enter] ~ * {
+    animation: journey-enter var(--duration-considered) var(--ease-enter)
+      var(--journey-delay, 0ms) both;
+  }
+}
+.steps[data-enter="forward"] ~ * {
+  --journey-shift: 16px;
+}
+.steps[data-enter="back"] ~ * {
+  --journey-shift: -16px;
+}
+.steps[data-enter] ~ :nth-child(3) {
+  --journey-delay: 40ms;
+}
+.steps[data-enter] ~ :nth-child(n + 4) {
+  --journey-delay: 80ms;
+}
+@keyframes journey-enter {
+  from {
+    opacity: 0;
+    transform: translateX(var(--journey-shift));
+  }
+}

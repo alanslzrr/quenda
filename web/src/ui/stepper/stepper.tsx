@@ -36,6 +36,9 @@ export interface StepperProps {
   steps: StepperStep[];
   /** Index of the step in progress. `steps.length` marks the whole flow complete. */
   current: number;
+  /** Step shown on the first frame, for a stepper that is drawn again on each page of a flow: it then fills or drains
+   *  from where the previous page left off instead of appearing already settled. */
+  from?: number;
   orientation?: StepperOrientation;
   /** Called with the index of a completed step when it is chosen. Without it the stepper is a read-only indicator. */
   onStepSelect?: (index: number) => void;
@@ -130,10 +133,19 @@ const englishLabels: StepperLabels = {
   position: (step, total, label) => `Step ${step} of ${total}: ${label}`,
 };
 
-export function Stepper({ steps, current, orientation = "horizontal", onStepSelect, details = "all", compact = false, label = "Progress", completeLabel = "All steps complete", labels = englishLabels, className }: StepperProps) {
+export function Stepper({ steps, current, from: start, orientation = "horizontal", onStepSelect, details = "all", compact = false, label = "Progress", completeLabel = "All steps complete", labels = englishLabels, className }: StepperProps) {
   const reduced = useReducedMotion() ?? false;
   const count = steps.length;
-  const active = Math.min(Math.max(Math.round(Number.isFinite(current) ? current : 0), 0), count);
+  const clamp = (value: number) => Math.min(Math.max(Math.round(Number.isFinite(value) ? value : 0), 0), count);
+  const target = clamp(current);
+  // Hold the inherited step for one frame, so the move to `current` runs through the same motion as any later change.
+  const [settled, setSettled] = useState(() => reduced || start === undefined || clamp(start) === target);
+  useEffect(() => {
+    if (settled) return;
+    const frame = requestAnimationFrame(() => setSettled(true));
+    return () => cancelAnimationFrame(frame);
+  }, [settled]);
+  const active = settled ? target : clamp(start ?? target);
   // Remember where progress came from, so a jump across several steps fills or drains its connectors one after another.
   const [travel, setTravel] = useState({ to: active, from: active });
   if (travel.to !== active) setTravel({ to: active, from: travel.to });
@@ -197,7 +209,8 @@ export function Stepper({ steps, current, orientation = "horizontal", onStepSele
       <SwapText text={now?.label ?? completeLabel} className={styles.captionLabel} reduced={reduced} />
       <SwapText text={now?.error ?? now?.description} className={now?.error ? styles.error : styles.description} reduced={reduced} />
     </span>}
-    <span className={styles.srOnly} aria-live="polite">{now ? labels.position(active + 1, count, now.label) : completeLabel}</span>
+    {/* Follows `current`, not the inherited first frame, so arriving on a page is not announced as a change. */}
+    <span className={styles.srOnly} aria-live="polite">{target < count ? labels.position(target + 1, count, steps[target].label) : completeLabel}</span>
   </Root>;
 }
 
