@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation, useMatch, useParams } from "react-router";
 import { MfaBoundary, MfaNotice } from "../features/account/mfa-dialog";
 import {
   forgetJourneyOutside,
+  isJourneyPath,
   useBookingEntry,
 } from "../features/catalog/journey";
 import { useMunicipality } from "../features/catalog/municipality";
@@ -15,6 +16,7 @@ import { hasInvalidIds, isUuid } from "./ids.ts";
 import styles from "./layout.module.css";
 import { NotFound } from "./not-found";
 import { usePreferences } from "./preferences-provider";
+import { RouteFade } from "./route-fade";
 import { useSession } from "./session";
 import { SettingsMenu } from "./settings-menu";
 import { useStaffEntry } from "./staff-entry";
@@ -77,6 +79,14 @@ export function Layout() {
   // notices, errors and platform pages line up with booking. Account settings
   // already draw their own centred card and keep the wider frame.
   const ownCard = /^\/perfil(?:\/|$)/.test(location.pathname);
+  // Booking steps move with their own stepper, and account and management pages fade inside their own frame.
+  const scene = resource
+    ? undefined
+    : ownCard
+      ? "/perfil"
+      : isJourneyPath(location.pathname)
+        ? "journey"
+        : location.pathname;
   return (
     <MfaBoundary key={account?.accountId ?? "guest"}>
       <div className={`${styles.shell} ${styles.product}`}>
@@ -184,7 +194,9 @@ export function Layout() {
             <BookingNavigation />
           )}
           {!resource && <MfaNotice />}
-          {hasInvalidIds(params) ? <NotFound /> : <Outlet />}
+          <RouteFade scene={scene}>
+            {hasInvalidIds(params) ? <NotFound /> : <Outlet />}
+          </RouteFade>
         </main>
         {!resource && (
           <footer className={styles.footer}>
