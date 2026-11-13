@@ -40,7 +40,7 @@ function AgreementList() {
         <Link to={`${agreementPath(m.id)}/nuevo`}>
           {t("Nuevo convenio", "Novo convenio")}
         </Link>
-        <Link to={`/administracion/${m.id}/acreditaciones`}>
+        <Link to={`/administracion/${m.id}/acreditaciones`} danger>
           {t("Revocar acreditación", "Revogar acreditación")}
         </Link>
       </div>
