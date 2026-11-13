@@ -8,6 +8,7 @@ import { defaultAppearance } from "../../app/theme";
 import { useAppearancePreview } from "../../app/theme-provider";
 import { Button } from "../../ui/button/button";
 import { Select } from "../../ui/select/select";
+import { ManagementPage } from "./page";
 import {
   Denied,
   endpoint,
@@ -28,14 +29,13 @@ function AppearanceEditor() {
   );
   const [reset, setReset] = useState(0);
   return (
-    <>
-      <h1>{t("Apariencia", "Aparencia")}</h1>
-      <p>
-        {t(
-          "La apariencia guardada se aplica a la interfaz pública del municipio. Puedes probarla temporalmente en toda esta aplicación sin cambiar tu tema personal.",
-          "A aparencia gardada aplícase á interface pública do municipio. Podes probala temporalmente en toda esta aplicación sen cambiar o teu tema persoal.",
-        )}
-      </p>
+    <ManagementPage
+      title={t("Apariencia", "Aparencia")}
+      description={t(
+        "La apariencia guardada se aplica a la interfaz pública del municipio. Puedes probarla temporalmente en toda esta aplicación sin cambiar tu tema personal.",
+        "A aparencia gardada aplícase á interface pública do municipio. Podes probala temporalmente en toda esta aplicación sen cambiar o teu tema persoal.",
+      )}
+    >
       {q.isPending ? (
         <Loading />
       ) : blocksEditor(q) || !q.data ? (
@@ -63,7 +63,7 @@ function AppearanceEditor() {
           </EditorRecovery>
         )
       )}
-    </>
+    </ManagementPage>
   );
 }
 function AppearanceForm({ initial }: { initial: Appearance }) {
