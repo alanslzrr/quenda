@@ -246,7 +246,7 @@ export function ReservationDetail() {
                   </Link>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="ghost">
+                      <Button variant="danger-ghost">
                         {t("Cancelar reserva", "Cancelar reserva")}
                       </Button>
                     </DialogTrigger>
