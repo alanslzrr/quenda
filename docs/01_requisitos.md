@@ -56,6 +56,7 @@ Los actores y conceptos se definen en el [glosario](README.md#terminología). La
 | RF-38 | Analizar el uso | Con el permiso de los indicadores, el sistema muestra la ocupación por día de la semana y hora local y por unidad, las cancelaciones del titular y del ayuntamiento, la antelación de las reservas y las llegadas registradas, para el mismo periodo y ámbito. Solo ofrece agregados; los minutos coinciden con los indicadores básicos. |
 | RF-39 | Sugerir horarios | Cuando el día elegido no tiene huecos de la duración buscada, el sistema propone las primeras franjas libres de días posteriores dentro de la antelación permitida, calculadas como la disponibilidad pública y sin garantizar la reserva. |
 | RF-40 | Recomendar horarios habituales | El titular ve en su historial hasta tres franjas libres que repiten sus propias reservas confirmadas (mismo espacio, día de la semana, hora y duración, al menos dos veces en seis meses), con enlace a reservarlas. Se calculan al consultar, sin guardar perfiles ni usar IA, solo para la cuenta y desactivables por el titular. |
+| RF-41 | Mostrar fotografías de instalaciones y espacios | El administrador o gestor autorizado añade hasta seis fotografías horizontales por instalación y por espacio, con una descripción obligatoria en gallego y castellano; las ordena, y la primera es la portada. El servidor guarda solo su propia versión en formato 3:2, sin metadatos. El catálogo público las muestra solo mientras el recurso está publicado. |
 
 ## Requisitos no funcionales
 

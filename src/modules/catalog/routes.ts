@@ -15,6 +15,7 @@ import {
   inspectCatalogResource,
   renameCatalogResource,
 } from "./maintenance.ts";
+import { photoListSchema, registerCatalogPhotoRoutes } from "./photo-routes.ts";
 import {
   type FacilityProfileInput,
   saveCatalogProfile,
@@ -62,6 +63,7 @@ export async function registerCatalog(
   await registerCalendarRoutes(app, pool, auth, config);
   await registerUsageRulesRoutes(app, pool, auth, config);
   await registerPublicCatalog(app, pool, config.secret);
+  await registerCatalogPhotoRoutes(app, pool, auth, config);
   app.post<{
     Headers: { "idempotency-key"?: string };
     Params: { tenantId: string };
@@ -374,11 +376,17 @@ export async function registerCatalog(
       ...errors,
       200: {
         ...response[200],
-        required: [...response[200].required, "profile", "profileVersion"],
+        required: [
+          ...response[200].required,
+          "profile",
+          "profileVersion",
+          "photos",
+        ],
         properties: {
           ...response[200].properties,
           profile: profileSchema,
           profileVersion: { type: "integer", minimum: 1 },
+          photos: photoListSchema,
         },
       },
     };

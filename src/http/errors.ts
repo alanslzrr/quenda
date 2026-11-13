@@ -75,6 +75,14 @@ const messages = {
     es: "No puedes dar de baja la cuenta mientras tengas reservas confirmadas futuras o en curso. Consulta tus reservas o contacta con el ayuntamiento.",
     gl: "Non podes dar de baixa a conta mentres teñas reservas confirmadas futuras ou en curso. Consulta as túas reservas ou contacta co concello.",
   },
+  PHOTO_INVALID: {
+    es: "No se puede usar esta imagen. Sube una foto horizontal en JPG, PNG o WebP de al menos 900 × 600 píxeles.",
+    gl: "Non se pode usar esta imaxe. Sube unha foto horizontal en JPG, PNG ou WebP de polo menos 900 × 600 píxeles.",
+  },
+  PHOTO_LIMIT_REACHED: {
+    es: "Ya hay 6 fotografías. Elimina una para añadir otra.",
+    gl: "Xa hai 6 fotografías. Elimina unha para engadir outra.",
+  },
   ACCOUNT_INACTIVE: {
     es: "La cuenta no está activa.",
     gl: "A conta non está activa.",
@@ -144,6 +152,8 @@ const statuses = {
   RESERVATION_DEADLINE_PASSED: 409,
   ACCOUNT_HAS_FUTURE_RESERVATIONS: 409,
   ACCOUNT_INACTIVE: 403,
+  PHOTO_INVALID: 400,
+  PHOTO_LIMIT_REACHED: 409,
 
   INVALID_INPUT: 400,
   PAYLOAD_TOO_LARGE: 413,

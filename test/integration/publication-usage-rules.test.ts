@@ -156,8 +156,14 @@ test("usage rules gate new publications and hide legacy offers without rewriting
           ).rows,
         });
         const before = await evidence();
+        // The legacy projection is read directly: today's service also reads tables that do not exist yet.
         assert.equal(
-          (await publicUnits(domain, tenantId, facilityId)).items.length,
+          (
+            await domain.query(
+              "SELECT id FROM domain.public_units($1,$2,NULL)",
+              [tenantId, facilityId],
+            )
+          ).rows.length,
           2,
         );
         await migrate(owner, path.resolve("db/migrations"));

@@ -4,6 +4,7 @@ import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import { type Clock, systemClock } from "../../shared/clock.ts";
 import type { UnitCalendarInput } from "./calendar.ts";
+import { publicPhotos } from "./photos.ts";
 import { type CalendarSlot, calendarSlots } from "./slots.ts";
 
 export async function publicFacilities(
@@ -17,8 +18,14 @@ export async function publicFacilities(
     units: number;
     profile: unknown;
   }>("SELECT * FROM domain.public_facilities($1,$2)", [tenantId, after]);
+  const items = result.rows.slice(0, 20);
+  const photos = await publicPhotos(
+    pool,
+    tenantId,
+    items.map((row) => row.id),
+  );
   return {
-    items: result.rows.slice(0, 20),
+    items: items.map((row) => ({ ...row, photos: photos.get(row.id) ?? [] })),
     nextCursor: result.rows.length > 20 ? (result.rows[19]?.id ?? null) : null,
   };
 }
@@ -40,14 +47,21 @@ export async function publicUnits(
     facilityId,
     after,
   ]);
+  const items = result.rows.slice(0, 20);
+  const photos = await publicPhotos(
+    pool,
+    tenantId,
+    items.map((row) => row.id),
+  );
   return {
-    items: result.rows.slice(0, 20).map((row) => ({
+    items: items.map((row) => ({
       id: row.id,
       name: row.name,
       facilityId: row.facility_id,
       minimumMinutes: row.minimum_minutes,
       maximumMinutes: row.maximum_minutes,
       profile: row.profile,
+      photos: photos.get(row.id) ?? [],
     })),
     nextCursor: result.rows.length > 20 ? (result.rows[19]?.id ?? null) : null,
   };
@@ -88,6 +102,23 @@ export async function publicUnitCalendar(
     calendar: row.calendar,
     profile: row.profile,
     facilityProfile: row.facility_profile,
+  };
+}
+/**
+ * The public page of a unit: its calendar plus the photos of the unit and of
+ * its facility. Booking and availability checks read the calendar alone.
+ */
+export async function publicUnitDetail(
+  pool: Pool,
+  tenantId: string,
+  unitId: string,
+) {
+  const unit = await publicUnitCalendar(pool, tenantId, unitId);
+  const photos = await publicPhotos(pool, tenantId, [unit.id, unit.facilityId]);
+  return {
+    ...unit,
+    photos: photos.get(unit.id) ?? [],
+    facilityPhotos: photos.get(unit.facilityId) ?? [],
   };
 }
 export async function publicAvailability(

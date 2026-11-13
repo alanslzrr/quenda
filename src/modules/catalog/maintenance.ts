@@ -6,6 +6,7 @@ import {
   type AuthenticatedAccount,
   requirePermission,
 } from "../identity/index.ts";
+import { listCatalogPhotos } from "./photos.ts";
 
 export async function inspectCatalogResource(
   pool: Pool,
@@ -59,6 +60,7 @@ export async function inspectCatalogResource(
         publishedAt: row.published_at?.toISOString() ?? null,
         profile: row.profile,
         profileVersion: row.profile_version,
+        photos: await listCatalogPhotos(client, tenantId, kind, row.id),
       };
     },
   );
