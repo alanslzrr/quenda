@@ -13,6 +13,7 @@ import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { discardEditor, EditorRecovery } from "../../app/read-recovery";
+import { RouteFade } from "../../app/route-fade";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { SettingsLayout } from "../../ui/blocks/settings-page/settings-layout";
@@ -41,6 +42,7 @@ export function RequireAccount() {
 }
 export function AccountLayout() {
   const { account } = useSession();
+  const { pathname } = useLocation();
   useMunicipalTheme(undefined);
   const { t } = usePreferences();
   return (
@@ -77,7 +79,9 @@ export function AccountLayout() {
         },
       ]}
     >
-      <Outlet />
+      <RouteFade scene={pathname}>
+        <Outlet />
+      </RouteFade>
     </SettingsLayout>
   );
 }
