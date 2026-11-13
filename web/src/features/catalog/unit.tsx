@@ -26,6 +26,7 @@ import { FacilityDetails } from "./facility-details";
 import {
   BookingSteps,
   facilityPath,
+  JourneyLoading,
   municipalityPath,
   useJourneyQuery,
 } from "./journey";
@@ -116,7 +117,7 @@ export function UnitPage() {
   const unit = usePublicUnit(tenantId, unitId);
   const municipality = useMunicipality(tenantId);
   usePublicAppearance(tenantId);
-  if (unit.isPending) return <Loading />;
+  if (unit.isPending) return <JourneyLoading />;
   if (unit.isError)
     return unit.error instanceof ApiError && unit.error.status === 404 ? (
       <UnitUnavailable to={municipalityPath(tenantId, query)} />

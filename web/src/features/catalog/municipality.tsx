@@ -22,6 +22,7 @@ import {
   Choices,
   FavoriteToggle,
   facilityPath,
+  JourneyLoading,
   municipalityPath,
   pickerPath,
   searchPath,
@@ -113,7 +114,7 @@ export function MunicipalityPage() {
   const municipality = useMunicipality(tenantId);
   const facilities = useFacilities(tenantId);
   usePublicAppearance(tenantId);
-  if (municipality.isPending) return <Loading />;
+  if (municipality.isPending) return <JourneyLoading />;
   if (municipality.isError)
     return missing(municipality.error) ? (
       <MunicipalityGone tenantId={tenantId} />
