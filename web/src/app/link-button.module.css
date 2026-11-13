@@ -30,6 +30,12 @@
 .action:hover {
   color: var(--text-secondary);
 }
+.action.danger {
+  color: var(--danger);
+}
+.action.danger:hover {
+  color: color-mix(in oklab, var(--danger) 75%, var(--foreground));
+}
 @media (pointer: coarse) {
   .action {
     min-height: 44px;
