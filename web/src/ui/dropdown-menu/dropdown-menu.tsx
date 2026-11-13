@@ -4,6 +4,7 @@ import {
   forwardRef,
   Fragment,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -31,11 +32,16 @@ export interface DropdownItem {
   icon?: ReactNode;
   destructive?: boolean;
   separatorBefore?: boolean;
+  /** A short count after the label, such as unread notices. `label` is announced as the item's description, so the
+   *  item keeps its plain name. */
+  badge?: { text: string; label: string };
 }
 export interface DropdownMenuProps {
   label: string;
   items: DropdownItem[];
   icon?: ReactNode;
+  /** Puts a dot on the trigger and announces this text as its description, for news behind the menu. */
+  indicator?: string;
   triggerProps?: Omit<
     ComponentPropsWithoutRef<typeof DropdownPrimitive.Trigger>,
     "children"
@@ -129,8 +135,9 @@ function TriggerLabel({ text }: { text: string }) {
 }
 
 export const DropdownMenu = forwardRef<HTMLButtonElement, DropdownMenuProps>(
-  function DropdownMenu({ label, items, icon, triggerProps }, ref) {
+  function DropdownMenu({ label, items, icon, indicator, triggerProps }, ref) {
     const reduced = useReducedMotion();
+    const ids = useId();
     const [highlight, setHighlight] = useState<Highlight | null>(null);
     const pointer = useRef(false);
     const clearTimer = useRef(0);
@@ -177,10 +184,17 @@ export const DropdownMenu = forwardRef<HTMLButtonElement, DropdownMenuProps>(
             .filter(Boolean)
             .join(" ")}
           type={triggerProps?.type ?? "button"}
+          aria-describedby={indicator ? `${ids}-indicator` : undefined}
         >
           {icon && (
             <span className={styles.triggerIcon} aria-hidden="true">
               {icon}
+              {indicator && <span className={styles.dot} />}
+            </span>
+          )}
+          {indicator && (
+            <span id={`${ids}-indicator`} hidden>
+              {indicator}
             </span>
           )}
           <TriggerLabel text={label} />
@@ -242,6 +256,9 @@ export const DropdownMenu = forwardRef<HTMLButtonElement, DropdownMenuProps>(
                   style={{ "--i": index } as CSSProperties}
                   disabled={item.disabled}
                   aria-current={item.current ? "true" : undefined}
+                  aria-describedby={
+                    item.badge ? `${ids}-badge-${index}` : undefined
+                  }
                   asChild={!!item.to && !item.disabled}
                   onSelect={item.onSelect}
                 >
@@ -253,6 +270,16 @@ export const DropdownMenu = forwardRef<HTMLButtonElement, DropdownMenuProps>(
                         </span>
                       )}
                       {item.label}
+                      {item.badge && (
+                        <>
+                          <span className={styles.badge} aria-hidden="true">
+                            {item.badge.text}
+                          </span>
+                          <span id={`${ids}-badge-${index}`} hidden>
+                            {item.badge.label}
+                          </span>
+                        </>
+                      )}
                     </Link>
                   ) : (
                     <>
@@ -262,6 +289,16 @@ export const DropdownMenu = forwardRef<HTMLButtonElement, DropdownMenuProps>(
                         </span>
                       )}
                       {item.label}
+                      {item.badge && (
+                        <>
+                          <span className={styles.badge} aria-hidden="true">
+                            {item.badge.text}
+                          </span>
+                          <span id={`${ids}-badge-${index}`} hidden>
+                            {item.badge.label}
+                          </span>
+                        </>
+                      )}
                     </>
                   )}
                 </DropdownPrimitive.Item>

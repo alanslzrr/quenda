@@ -140,7 +140,10 @@ test("an invitation exposes its scope and is accepted only by an explicit comman
     },
   );
   await page.goto("/perfil/invitaciones");
-  await expect(page.getByRole("heading", { name: "Oleiros" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Administración municipal" }),
+  ).toBeVisible();
+  await expect(page.getByText("Oleiros", { exact: true })).toBeVisible();
   expect(commands).toBe(0);
   await page.getByRole("button", { name: "Aceptar invitación" }).click();
   await expect(page.getByText("Aceptada", { exact: true })).toBeVisible();
@@ -175,4 +178,21 @@ test("expired reactivation links remain failures without an automatic mutation",
     page.getByText("La verificación ha vencido. Solicita un nuevo enlace."),
   ).toBeVisible();
   expect(commands).toBe(1);
+});
+test("an invitation list that fails to load never reads as having no invitations", async ({
+  page,
+}) => {
+  await page.route("**/api/me/administrator-invitations", (route) =>
+    route.fulfill({
+      status: 503,
+      json: {
+        error: { code: "UNAVAILABLE", message: "Servicio no disponible." },
+      },
+    }),
+  );
+  await page.goto("/perfil/invitaciones");
+  await expect(page.getByText("Servicio no disponible.")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "No tienes invitaciones" }),
+  ).toHaveCount(0);
 });

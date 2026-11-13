@@ -1049,6 +1049,17 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           );
           assert.equal(ownManager.statusCode, 200, ownManager.body);
           assert.equal(ownManager.json().items[0].status, "ACTIVE");
+          // Each space permission names its space; municipality-wide ones carry null.
+          for (const permission of ownManager.json().items[0].permissions as {
+            unitId: string | null;
+            unitName: string | null;
+          }[])
+            assert.equal(
+              permission.unitId === null
+                ? permission.unitName === null
+                : typeof permission.unitName === "string",
+              true,
+            );
           assert.equal(
             (
               await client.request(

@@ -169,7 +169,7 @@ export async function registerManagerRoutes(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Invitaciones y concesiones del titular autenticado, con ámbitos y estado actual. Hasta veinte por página; no acepta otra cuenta como filtro.",
+          "Invitaciones y concesiones del titular autenticado, con ámbitos y estado actual. Cada permiso de un espacio incluye su nombre actual (unitName; nulo en los permisos de todo el municipio). Hasta veinte por página; no acepta otra cuenta como filtro.",
         querystring: {
           type: "object",
           additionalProperties: false,
@@ -227,10 +227,11 @@ export async function registerManagerRoutes(
                       items: {
                         type: "object",
                         additionalProperties: false,
-                        required: ["operation", "unitId"],
+                        required: ["operation", "unitId", "unitName"],
                         properties: {
                           operation: { type: "string", enum: [...operations] },
                           unitId: { ...uuid, nullable: true },
+                          unitName: { type: "string", nullable: true },
                         },
                       },
                     },

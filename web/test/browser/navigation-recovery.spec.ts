@@ -47,6 +47,7 @@ test("a failed navigation projection exposes a cooldown and explicit recovery wi
         platform: { operator: false, permissions: [] },
       };
     } else if (path === "/api/me/preferences") body = { locale: "es" };
+    else if (path === "/api/me/notices/unread") body = { unread: 0 };
     else if (path === "/api/me/theme")
       body = { theme: info.project.name.includes("dark") ? "dark" : "light" };
     else if (path === "/api/public/municipalities")

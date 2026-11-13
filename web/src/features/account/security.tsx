@@ -14,6 +14,7 @@ import security from "../../ui/blocks/security-settings/security-settings.module
 import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
+import { dateTime } from "../reservations/shared";
 import { sessionDevice } from "./session-device";
 import { SecretField, useAuthSession } from "./shared";
 
@@ -407,7 +408,12 @@ export function AccountSecurity() {
                         {item.token === auth.session.token
                           ? t("Esta sesión", "Esta sesión")
                           : t("Otra sesión", "Outra sesión")}{" "}
-                        · {new Date(item.createdAt).toLocaleString(locale)}
+                        ·{" "}
+                        {dateTime(
+                          item.createdAt,
+                          Intl.DateTimeFormat().resolvedOptions().timeZone,
+                          locale,
+                        )}
                       </p>
                     </div>
                     {item.token !== auth.session.token && (

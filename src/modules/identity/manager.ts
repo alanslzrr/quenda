@@ -168,7 +168,11 @@ export async function listOwnManagerInvitations(
         expires_at: Date;
         role_expires_at: Date | null;
         status: string;
-        permissions: ManagerInvitationInput["permissions"];
+        permissions: Array<
+          ManagerInvitationInput["permissions"][number] & {
+            unitName: string | null;
+          }
+        >;
         replaces_invitation_id: string | null;
       }>("SELECT * FROM domain.own_manager_invitations($1)", [after]);
       const page = result.rows.slice(0, 20);
