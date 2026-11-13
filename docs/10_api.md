@@ -59,7 +59,7 @@ Una cuenta habilitada está activa, tiene correo verificado y MFA configurado; n
 
 `POST /api/municipalities/{tenantId}/manager-invitations` recibe `accountId`, `expiresAt`, `roleExpiresAt` opcional y `permissions: [{ operation, unitId }]`. El administrador invita; el destinatario acepta con MFA mediante `/{invitationId}/accept`. `/{invitationId}/revoke` revoca la invitación o concesión con `{ "reason": "..." }`.
 
-`GET /api/me/manager-invitations` devuelve las invitaciones y concesiones de la cuenta autenticada, con sus permisos y estado. Devuelve hasta 20 elementos y `nextCursor`; la página siguiente utiliza `?after=...`. No admite consultas de otra cuenta.
+`GET /api/me/manager-invitations` devuelve las invitaciones y concesiones de la cuenta autenticada, con sus permisos y estado. Cada permiso incluye `unitName`, el nombre actual del espacio, que es `null` en los permisos de todo el municipio. Devuelve hasta 20 elementos y `nextCursor`; la página siguiente utiliza `?after=...`. No admite consultas de otra cuenta.
 
 Para sustituir una concesión, la nueva invitación incluye `replacesInvitationId` y `reason`. La concesión anterior permanece activa hasta la aceptación: esta activa los nuevos permisos y revoca los anteriores en una sola transacción auditada. Las demás concesiones independientes no cambian. Si es necesario retirar acceso inmediatamente, se utiliza la revocación; no se espera a la aceptación de una sustitución.
 
@@ -277,7 +277,9 @@ Ambos endpoints exigen administrador municipal y MFA reciente. El comando exige 
 
 ### Avisos internos
 
-`GET /api/me/notices` devuelve los avisos del usuario autenticado entre municipios, con `Cache-Control: no-store`. Pagina de 20 en 20 por identificador de evento y municipio; `after` acepta el `nextCursor` anterior. Cada aviso contiene tipo, revisión, fecha del evento e intervalo histórico, junto con `reservationPath` para consultar el estado actual. La reubicación administrativa indica si exige aceptar normas antes del uso. En intervenciones administrativas incluye el nombre capturado del autor y el motivo, además de la fecha del evento; los registros antiguos sin nombre capturado no se completan con el nombre actual. No expone identificadores del actor ni correlaciones, y no representa el estado de entrega del correo.
+`GET /api/me/notices` devuelve los avisos del usuario autenticado entre municipios, del más reciente al más antiguo, con `Cache-Control: no-store`. Pagina de 20 en 20; `after` acepta el `nextCursor` anterior. Cada aviso contiene tipo, revisión, fecha del evento e intervalo histórico, el municipio y los nombres actuales del espacio y de la instalación (`null` si ya no existen), `readAt` (la fecha en que su titular lo leyó, o `null` si sigue sin leer) y `reservationPath` para consultar el estado actual. La reubicación administrativa indica si exige aceptar normas antes del uso. En intervenciones administrativas incluye el nombre capturado del autor y el motivo, además de la fecha del evento; los registros antiguos sin nombre capturado no se completan con el nombre actual. No expone identificadores del actor ni correlaciones, y no representa el estado de entrega del correo.
+
+`GET /api/me/notices/unread` devuelve `{ "unread": N }`, el número de avisos sin leer, para el contador del menú. Igual que `GET /api/me`, solo lee el estado de la propia cuenta y no consume el límite de peticiones administrativas. `POST /api/me/notices/{tenantId}/{eventId}/read` marca un aviso como leído y `POST /api/me/notices/read` marca todos; ambos devuelven `{ "read": N }` con el número de avisos que han cambiado y conservan la primera fecha de lectura. Un aviso ajeno o ya leído devuelve `{ "read": 0 }`, sin distinguir ambos casos. Los avisos creados antes de esta función figuran como leídos.
 
 ### Idioma de avisos
 
