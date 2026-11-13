@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, useParams } from "react-router";
 import { textField } from "../../app/action";
 import { announce } from "../../app/announce";
+import { localDateTime } from "../../app/dates";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link } from "../../app/link-button";
@@ -149,7 +150,7 @@ function Administrators() {
                 sortable: false,
                 render: (_, r) =>
                   r.expiresAt
-                    ? new Date(r.expiresAt).toLocaleString(locale)
+                    ? localDateTime(r.expiresAt, locale)
                     : t("Sin caducidad", "Sen caducidade"),
               },
             ]}
@@ -173,7 +174,7 @@ function Administrators() {
           </Disclosure>
           <p>
             {t("Concedida", "Concedida")}:{" "}
-            {new Date(item.grantedAt).toLocaleString(locale)}
+            {localDateTime(item.grantedAt, locale)}
           </p>
           <p>
             {t("Invitación de origen", "Invitación de orixe")}:{" "}
@@ -182,7 +183,7 @@ function Administrators() {
           {item.revokedAt && (
             <p>
               {t("Revocada", "Revogada")}:{" "}
-              {new Date(item.revokedAt).toLocaleString(locale)}
+              {localDateTime(item.revokedAt, locale)}
             </p>
           )}
           {item.active &&
@@ -319,7 +320,7 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
                 key: "expiresAt",
                 label: t("Aceptar antes de", "Aceptar antes de"),
                 sortable: false,
-                render: (_, r) => new Date(r.expiresAt).toLocaleString(locale),
+                render: (_, r) => localDateTime(r.expiresAt, locale),
               },
             ]}
           />
@@ -342,7 +343,7 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
           </p>
           <p>
             {item.roleExpiresAt
-              ? `${t("Permiso hasta", "Permiso ata")}: ${new Date(item.roleExpiresAt).toLocaleString(locale)}`
+              ? `${t("Permiso hasta", "Permiso ata")}: ${localDateTime(item.roleExpiresAt, locale)}`
               : t(
                   "Permiso sin caducidad automática",
                   "Permiso sen caducidade automática",
@@ -351,13 +352,13 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
           {item.acceptedAt && (
             <p>
               {t("Aceptada", "Aceptada")}:{" "}
-              {new Date(item.acceptedAt).toLocaleString(locale)}
+              {localDateTime(item.acceptedAt, locale)}
             </p>
           )}
           {item.revokedAt && (
             <p>
               {t("Revocada", "Revogada")}:{" "}
-              {new Date(item.revokedAt).toLocaleString(locale)}
+              {localDateTime(item.revokedAt, locale)}
             </p>
           )}
           {item.replacesInvitationId && (

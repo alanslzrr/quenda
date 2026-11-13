@@ -13,6 +13,7 @@ import styles from "../municipal/municipal.module.css";
 import { ManagementPage } from "../municipal/page";
 import { Denied, useMunicipality } from "../municipal/shared";
 import { useNotice } from "./legal-page";
+import editor from "./notice-editor.module.css";
 import {
   type Conformance,
   conformanceLabel,
@@ -66,90 +67,95 @@ function NoticeForm({
           {t("Ver la página pública", "Ver a páxina pública")}
         </Link>
       </p>
-      <ActionForm
-        label={t("Publicar texto", "Publicar texto")}
-        success={t("Texto publicado.", "Texto publicado.")}
-        resetOnSuccess={false}
-        submit={async (data) => {
-          const body: NoticeBody = { gl: {}, es: {} };
-          for (const field of noticeFields[kind]) {
-            const gl = textField(data, `gl.${field.key}`).trim();
-            const es = textField(data, `es.${field.key}`).trim();
-            if (gl && body.gl) body.gl[field.key] = gl;
-            if (es && body.es) body.es[field.key] = es;
-          }
-          if (kind === "accessibility") {
-            if (currentStatus !== unset)
-              body.status = currentStatus as Conformance;
-            const prepared = textField(data, "preparedOn");
-            const reviewed = textField(data, "reviewedOn");
-            if (prepared) body.preparedOn = prepared;
-            if (reviewed) body.reviewedOn = reviewed;
-          }
-          const saved = await api<{ version: number }>(
-            path,
-            {
-              method: "PUT",
-              body: JSON.stringify({ expectedVersion: version, body }),
-            },
-            locale,
-          );
-          setKnown(saved.version);
-          await client.invalidateQueries({
-            queryKey: ["public", tenantId ?? "instance", "notice", kind],
-          });
-        }}
-      >
-        {kind === "accessibility" && (
-          <>
-            <Select
-              label={t("Estado de conformidad", "Estado de conformidade")}
-              value={currentStatus}
-              onValueChange={setStatus}
-              options={[
-                { value: unset, label: t("Sin indicar", "Sen indicar") },
-                ...statuses.map((value) => ({
-                  value,
-                  label: conformanceLabel[value][lang],
-                })),
-              ]}
-            />
-            <Input
-              label={t("Fecha de preparación", "Data de preparación")}
-              name="preparedOn"
-              type="date"
-              defaultValue={notice.body.preparedOn ?? ""}
-            />
-            <Input
-              label={t(
-                "Fecha de la última revisión",
-                "Data da última revisión",
-              )}
-              name="reviewedOn"
-              type="date"
-              defaultValue={notice.body.reviewedOn ?? ""}
-            />
-          </>
-        )}
-        {noticeFields[kind].map((field) => (
-          <fieldset key={field.key} className={styles.fieldGroup}>
-            <legend>{field.label[lang]}</legend>
-            {field.hint && <p>{field.hint[lang]}</p>}
-            <Textarea
-              label={t("En gallego", "En galego")}
-              name={`gl.${field.key}`}
-              maxLength={4000}
-              defaultValue={notice.body.gl?.[field.key] ?? ""}
-            />
-            <Textarea
-              label={t("En castellano", "En castelán")}
-              name={`es.${field.key}`}
-              maxLength={4000}
-              defaultValue={notice.body.es?.[field.key] ?? ""}
-            />
-          </fieldset>
-        ))}
-      </ActionForm>
+      <div className={editor.form}>
+        <ActionForm
+          label={t("Publicar texto", "Publicar texto")}
+          success={t("Texto publicado.", "Texto publicado.")}
+          resetOnSuccess={false}
+          submit={async (data) => {
+            const body: NoticeBody = { gl: {}, es: {} };
+            for (const field of noticeFields[kind]) {
+              const gl = textField(data, `gl.${field.key}`).trim();
+              const es = textField(data, `es.${field.key}`).trim();
+              if (gl && body.gl) body.gl[field.key] = gl;
+              if (es && body.es) body.es[field.key] = es;
+            }
+            if (kind === "accessibility") {
+              if (currentStatus !== unset)
+                body.status = currentStatus as Conformance;
+              const prepared = textField(data, "preparedOn");
+              const reviewed = textField(data, "reviewedOn");
+              if (prepared) body.preparedOn = prepared;
+              if (reviewed) body.reviewedOn = reviewed;
+            }
+            const saved = await api<{ version: number }>(
+              path,
+              {
+                method: "PUT",
+                body: JSON.stringify({ expectedVersion: version, body }),
+              },
+              locale,
+            );
+            setKnown(saved.version);
+            await client.invalidateQueries({
+              queryKey: ["public", tenantId ?? "instance", "notice", kind],
+            });
+          }}
+        >
+          {kind === "accessibility" && (
+            <>
+              <Select
+                label={t("Estado de conformidad", "Estado de conformidade")}
+                value={currentStatus}
+                onValueChange={setStatus}
+                options={[
+                  { value: unset, label: t("Sin indicar", "Sen indicar") },
+                  ...statuses.map((value) => ({
+                    value,
+                    label: conformanceLabel[value][lang],
+                  })),
+                ]}
+              />
+              <Input
+                label={t("Fecha de preparación", "Data de preparación")}
+                name="preparedOn"
+                type="date"
+                defaultValue={notice.body.preparedOn ?? ""}
+              />
+              <Input
+                label={t(
+                  "Fecha de la última revisión",
+                  "Data da última revisión",
+                )}
+                name="reviewedOn"
+                type="date"
+                defaultValue={notice.body.reviewedOn ?? ""}
+              />
+            </>
+          )}
+          {noticeFields[kind].map((field) => (
+            <fieldset key={field.key} className={styles.fieldGroup}>
+              <legend>{field.label[lang]}</legend>
+              {field.hint && <p>{field.hint[lang]}</p>}
+              {/* Both languages of one passage side by side, so a translation is written against its original. */}
+              <div className={editor.bilingual}>
+                <Textarea
+                  label={t("En gallego", "En galego")}
+                  name={`gl.${field.key}`}
+                  maxLength={4000}
+                  defaultValue={notice.body.gl?.[field.key] ?? ""}
+                />
+                <Textarea
+                  label={t("En castellano", "En castelán")}
+                  name={`es.${field.key}`}
+                  maxLength={4000}
+                  defaultValue={notice.body.es?.[field.key] ?? ""}
+                />
+              </div>
+            </fieldset>
+          ))}
+        </ActionForm>
+      </div>
     </section>
   );
 }

@@ -3,6 +3,7 @@ import { CalendarSync, Check, Copy, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ActionForm } from "../../app/action";
 import { api } from "../../app/api";
+import { localDate } from "../../app/dates";
 import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
@@ -119,10 +120,7 @@ function CalendarSubscription({
   });
   const active = status.data?.active ?? false;
   const since = status.data?.createdAt
-    ? new Date(status.data.createdAt).toLocaleDateString(
-        locale === "gl" ? "gl-ES" : "es-ES",
-        { dateStyle: "long" },
-      )
+    ? localDate(status.data.createdAt, locale)
     : "";
   return (
     <>

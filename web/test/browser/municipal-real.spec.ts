@@ -189,8 +189,14 @@ test("municipal appearance saves explicitly while preview temporarily overrides 
   const rootAccent = await page
     .locator("html")
     .evaluate((el) => getComputedStyle(el).getPropertyValue("--accent"));
-  await select(page, "Paleta clara", "Azul");
-  await select(page, /Paleta oscura|Paleta escura/, "Verde");
+  await page
+    .getByRole("group", { name: "Paleta clara", exact: true })
+    .getByRole("radio", { name: "Azul", exact: true })
+    .check();
+  await page
+    .getByRole("group", { name: /Paleta oscura|Paleta escura/ })
+    .getByRole("radio", { name: "Verde", exact: true })
+    .check();
   await select(page, "Modo de vista previa", "Claro");
   await expect(page.locator("body")).toHaveCSS(
     "background-color",
@@ -214,8 +220,10 @@ test("municipal appearance saves explicitly while preview temporarily overrides 
   ).toBeVisible();
   await page.reload();
   await expect(
-    page.getByRole("combobox", { name: "Paleta clara", exact: true }),
-  ).toContainText("Azul");
+    page
+      .getByRole("group", { name: "Paleta clara", exact: true })
+      .getByRole("radio", { name: "Azul", exact: true }),
+  ).toBeChecked();
   await select(page, "Modo de vista previa", /Oscuro|Escuro/);
   await expect(page.locator("body")).toHaveCSS(
     "background-color",
@@ -244,8 +252,10 @@ test("municipal appearance saves explicitly while preview temporarily overrides 
   ).toBeVisible();
   await page.reload();
   await expect(
-    page.getByRole("combobox", { name: "Paleta clara", exact: true }),
-  ).toContainText("Neutro");
+    page
+      .getByRole("group", { name: "Paleta clara", exact: true })
+      .getByRole("radio", { name: "Neutro", exact: true }),
+  ).toBeChecked();
 });
 
 test("calendar changes preserve confirmed reservations and withdrawal preserves history", async ({

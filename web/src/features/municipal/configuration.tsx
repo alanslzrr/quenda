@@ -511,10 +511,21 @@ function PolicyEditor() {
     </ManagementPage>
   );
 }
+/** The largest of days, hours or minutes that states the limit exactly: 1440 reads as 1 day. */
+export function cancellationAmount(minutes: number) {
+  const unit =
+    minutes > 0 && minutes % 1440 === 0
+      ? 1440
+      : minutes > 0 && minutes % 60 === 0
+        ? 60
+        : 1;
+  return { amount: minutes / unit, unit: String(unit) };
+}
 function PolicyForm({ initial }: { initial: Policy }) {
   const m = useMunicipality();
   const { t } = usePreferences();
   const [version, setVersion] = useState(initial.version);
+  const cancellation = cancellationAmount(initial.cancellationMinutes);
   return (
     <MunicipalForm
       path={`${endpoint(m.id)}/booking-policy`}
@@ -524,7 +535,9 @@ function PolicyForm({ initial }: { initial: Policy }) {
       body={(d) => ({
         expectedVersion: version,
         advanceDays: Number(d.get("advance")),
-        cancellationMinutes: Number(d.get("cancellation")),
+        cancellationMinutes:
+          Number(d.get("cancellation")) *
+          Number(d.get("cancellationUnit") ?? 1),
         reason: textField(d, "reason"),
       })}
     >
@@ -539,23 +552,30 @@ function PolicyForm({ initial }: { initial: Policy }) {
         required
         defaultValue={initial.advanceDays}
       />
-      <Input
-        type="number"
-        name="cancellation"
-        label={t(
-          "Plazo de cancelación (minutos)",
-          "Prazo de cancelación (minutos)",
-        )}
-        min={0}
-        required
-        defaultValue={initial.cancellationMinutes}
-      />
-      <p>
-        {t(
-          "24 horas son 1440 minutos. Las reservas existentes conservan el plazo aceptado.",
-          "24 horas son 1440 minutos. As reservas existentes conservan o prazo aceptado.",
-        )}
-      </p>
+      <div className={styles.amount}>
+        <Input
+          type="number"
+          name="cancellation"
+          label={t("Plazo de cancelación", "Prazo de cancelación")}
+          description={t(
+            "Hasta cuándo se puede cancelar antes del inicio. Las reservas existentes conservan el plazo aceptado.",
+            "Ata cando se pode cancelar antes do inicio. As reservas existentes conservan o prazo aceptado.",
+          )}
+          min={0}
+          required
+          defaultValue={cancellation.amount}
+        />
+        <Select
+          name="cancellationUnit"
+          label={t("Unidad", "Unidade")}
+          defaultValue={cancellation.unit}
+          options={[
+            { value: "1", label: t("minutos", "minutos") },
+            { value: "60", label: t("horas", "horas") },
+            { value: "1440", label: t("días", "días") },
+          ]}
+        />
+      </div>
       <Reason />
     </MunicipalForm>
   );

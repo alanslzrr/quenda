@@ -1,0 +1,20 @@
+/* A long bilingual form: it uses the page width and keeps its publish button in reach. */
+.form > form {
+  max-width: none;
+}
+.form fieldset {
+  max-width: none;
+}
+.bilingual {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-4);
+}
+/* The publish button follows the reader down the form instead of waiting 4,000 px below. */
+.form > form > button {
+  position: sticky;
+  bottom: var(--space-4);
+  z-index: 1;
+  justify-self: start;
+  box-shadow: var(--shadow-floating);
+}

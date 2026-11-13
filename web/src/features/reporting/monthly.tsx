@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ActionForm, textField } from "../../app/action";
 import { api } from "../../app/api";
+import { localDateTime } from "../../app/dates";
 import { usePreferences } from "../../app/preferences-provider";
 import { MetricCard } from "../../ui/metric-card/metric-card";
 import { useAgreementOptions } from "../collaboration/agreement-select";
@@ -77,9 +78,7 @@ function Report() {
               </p>
               <p>
                 {t("Corte", "Corte")}:{" "}
-                {new Date(result.report.cutoff).toLocaleString(
-                  locale === "gl" ? ["gl-ES", "es-ES"] : "es-ES",
-                )}
+                {localDateTime(result.report.cutoff, locale)}
               </p>
               <div className={styles.metrics}>
                 <MetricCard

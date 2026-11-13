@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { textField } from "../../app/action";
 import { ApiError } from "../../app/api";
+import { localDate } from "../../app/dates";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link, LinkButton } from "../../app/link-button";
@@ -256,7 +257,7 @@ function Revoke() {
             }}
             options={rows.map((row) => ({
               value: row.id,
-              label: `${accountText(row.accountLabel, t("Cuenta no disponible", "Conta non dispoñible"))} · ${row.agreementName} · ${new Date(row.startsAt).toLocaleDateString(locale)} – ${new Date(row.endsAt).toLocaleDateString(locale)}${row.revokedAt ? t(" · Revocada", " · Revogada") : ""}`,
+              label: `${accountText(row.accountLabel, t("Cuenta no disponible", "Conta non dispoñible"))} · ${row.agreementName} · ${localDate(row.startsAt, locale)} – ${localDate(row.endsAt, locale)}${row.revokedAt ? t(" · Revocada", " · Revogada") : ""}`,
               disabled: !!row.revokedAt,
             }))}
           />

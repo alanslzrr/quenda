@@ -4,6 +4,13 @@ import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
 import { AgreementSelect } from "../collaboration/agreement-select";
 import { useMunicipality } from "../municipal/shared";
+
+/** The calendar month before the current one, as YYYY-MM. */
+function lastMonth(now = new Date()) {
+  const date = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
 import { allowed, canExport } from "./model";
 export const uuidPattern =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
@@ -118,6 +125,8 @@ export function MonthlyFields() {
         placeholder="2026-11"
         title={t("Mes en formato AAAA-MM.", "Mes en formato AAAA-MM.")}
         label={t("Mes publicado", "Mes publicado")}
+        // Reports are published after a month closes; starting on the last one avoids an empty "--------- ----".
+        defaultValue={lastMonth()}
       />
     </>
   );

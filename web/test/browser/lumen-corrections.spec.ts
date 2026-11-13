@@ -169,7 +169,10 @@ for (const personal of ["light", "dark"] as const) {
     const preview = personal === "dark" ? "light" : "dark";
     const modeLabel = preview === "light" ? "Claro" : "Oscuro";
     const paletteLabel = preview === "light" ? "Paleta clara" : "Paleta oscura";
-    await select(page, paletteLabel, "Azul");
+    await page
+      .getByRole("group", { name: paletteLabel, exact: true })
+      .getByRole("radio", { name: "Azul", exact: true })
+      .check();
     await select(page, "Modo de vista previa", modeLabel);
     await expect(page.locator("html")).toHaveAttribute("data-theme", preview);
     await expect(page.locator("html")).toHaveAttribute(
@@ -220,8 +223,10 @@ for (const personal of ["light", "dark"] as const) {
       "data-theme-preview",
     );
     await expect(
-      page.getByRole("combobox", { name: paletteLabel, exact: true }),
-    ).toContainText("Azul");
+      page
+        .getByRole("group", { name: paletteLabel, exact: true })
+        .getByRole("radio", { name: "Azul", exact: true }),
+    ).toBeChecked();
     await select(page, "Modo de vista previa", modeLabel);
     await page
       .getByRole("button", {
@@ -231,9 +236,14 @@ for (const personal of ["light", "dark"] as const) {
       .click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", personal);
     await expect(
-      page.getByRole("combobox", { name: paletteLabel, exact: true }),
-    ).toContainText("Neutro");
-    await select(page, paletteLabel, "Azul");
+      page
+        .getByRole("group", { name: paletteLabel, exact: true })
+        .getByRole("radio", { name: "Neutro", exact: true }),
+    ).toBeChecked();
+    await page
+      .getByRole("group", { name: paletteLabel, exact: true })
+      .getByRole("radio", { name: "Azul", exact: true })
+      .check();
     await page
       .getByRole("button", {
         name: "Restaurar valores predeterminados",
@@ -241,8 +251,10 @@ for (const personal of ["light", "dark"] as const) {
       })
       .click();
     await expect(
-      page.getByRole("combobox", { name: paletteLabel, exact: true }),
-    ).toContainText("Neutro");
+      page
+        .getByRole("group", { name: paletteLabel, exact: true })
+        .getByRole("radio", { name: "Neutro", exact: true }),
+    ).toBeChecked();
     expect(writes).toEqual([]);
     await select(page, "Modo de vista previa", modeLabel);
     // SPA navigation proves unmount cleanup; a full reload would mask a leaked preview.
