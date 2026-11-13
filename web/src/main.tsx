@@ -109,7 +109,7 @@ const ReservationHistory = lazy(() =>
   })),
 );
 const Notices = lazy(() =>
-  import("./features/reservations/history").then((m) => ({
+  import("./features/reservations/notices").then((m) => ({
     default: m.Notices,
   })),
 );
