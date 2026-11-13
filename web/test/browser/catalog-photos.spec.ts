@@ -78,6 +78,7 @@ test("staff frame, describe, reorder and remove photos that citizens see in a ga
   const blocked = await productionImagePolicy(page);
   const f = await enter(page, info.project.name === "desktop" ? 28 : 29);
   await page.goto(`/administracion/${f.tenant}/instalaciones/${f.facility}`);
+  await page.getByRole("tab", { name: "Fotos", exact: true }).click();
   const manager = page.getByRole("region", { name: /^Fotografías$/ });
   const list = manager.getByRole("list", {
     name: /Fotos, en el orden|Fotos, na orde/,
@@ -210,6 +211,7 @@ test("staff frame, describe, reorder and remove photos that citizens see in a ga
 
   // Removing a photo takes it out of the public gallery.
   await page.goto(`/administracion/${f.tenant}/instalaciones/${f.facility}`);
+  await page.getByRole("tab", { name: "Fotos", exact: true }).click();
   await manager
     .getByRole("button", { name: /Opciones de la foto 2|Opcións da foto 2/ })
     .click();

@@ -4,7 +4,9 @@ import {
   Clock3,
   FileText,
   Globe,
+  Image as ImageIcon,
   Plus,
+  ScrollText,
   Settings2,
 } from "lucide-react";
 import { useState } from "react";
@@ -17,7 +19,6 @@ import { ActionLink as Link, LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { Badge } from "../../ui/badge/badge";
-import { PageHeader } from "../../ui/blocks/page-header/page-header";
 import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Dialog, DialogContent, DialogTrigger } from "../../ui/dialog/dialog";
@@ -305,7 +306,14 @@ export function Catalog() {
   );
 }
 /** Published, draft or withdrawn, as the same badge the unit page shows. */
-export function ResourceState({ resource }: { resource: Resource }) {
+export function ResourceState({
+  resource,
+  detailed = false,
+}: {
+  resource: Resource;
+  /** On the resource's own page, a withdrawal says where it was withdrawn from. */
+  detailed?: boolean;
+}) {
   const { t } = usePreferences();
   return (
     <Badge
@@ -319,7 +327,9 @@ export function ResourceState({ resource }: { resource: Resource }) {
       }
     >
       {resource.withdrawnAt
-        ? t("Retirada", "Retirada")
+        ? detailed
+          ? t("Retirada del catálogo público", "Retirada do catálogo público")
+          : t("Retirada", "Retirada")
         : resource.publishedAt
           ? t("Publicada", "Publicada")
           : t("Borrador", "Borrador")}
@@ -502,11 +512,6 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
   if (!resource.data) return null;
   // Publishing is offered only while it would change something: a draft or a withdrawn resource.
   const publishable = !resource.data.publishedAt || !!resource.data.withdrawnAt;
-  const state = resource.data.withdrawnAt
-    ? t("Retirada del catálogo público", "Retirada do catálogo público")
-    : resource.data.publishedAt
-      ? t("Publicada", "Publicada")
-      : t("Borrador", "Borrador");
   const nameForm = (
     <MunicipalForm
       path={path}
@@ -543,198 +548,274 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
       />
     </MunicipalForm>
   );
-  if (!unit)
-    return (
-      <EditorRecovery
-        error={resource.error}
-        retry={() => void resource.refetch()}
-      >
-        <Link to={municipalPath(m.id)}>{t("Catálogo", "Catálogo")}</Link>
-        <h1>{resource.data.name}</h1>
-        <p>{state}</p>
-        {nameForm}
-        <FacilityProfileEditor
-          path={path}
-          profile={resource.data.profile ?? {}}
-          version={resource.data.profileVersion ?? 1}
-        />
-        <PhotoManager
-          path={path}
-          kind="facility"
-          name={resource.data.name}
-          photos={resource.data.photos ?? []}
-        />
-        {publishable && <Publication path={path} unit={false} />}
-        {!resource.data.withdrawnAt && (
-          <section className={styles.section}>
-            <h2>{t("Retirar del catálogo", "Retirar do catálogo")}</h2>
-            {withdrawal}
-          </section>
-        )}
-      </EditorRecovery>
-    );
+  const kind = unit
+    ? {
+        description: t(
+          "Lo que la ciudadanía ve y reserva de esta unidad: su ficha y fotos, sus horarios y sus normas.",
+          "O que a cidadanía ve e reserva desta unidade: a súa ficha e fotos, os seus horarios e as súas normas.",
+        ),
+        publish: resource.data.withdrawnAt
+          ? t("Volver a publicar unidad", "Volver publicar unidade")
+          : t("Publicar unidad", "Publicar unidade"),
+        tabs: t("Configuración de la unidad", "Configuración da unidade"),
+        data: t("Datos de la unidad", "Datos da unidade"),
+        dataHint: t(
+          "Este nombre identifica la unidad en el catálogo público y en las reservas.",
+          "Este nome identifica a unidade no catálogo público e nas reservas.",
+        ),
+      }
+    : {
+        description: t(
+          "La instalación agrupa unidades reservables. Su ficha y sus fotos se muestran a la ciudadanía antes de elegir una unidad.",
+          "A instalación agrupa unidades reservables. A súa ficha e as súas fotos amósanse á cidadanía antes de escoller unha unidade.",
+        ),
+        publish: resource.data.withdrawnAt
+          ? t("Volver a publicar instalación", "Volver publicar instalación")
+          : t("Publicar instalación", "Publicar instalación"),
+        tabs: t(
+          "Configuración de la instalación",
+          "Configuración da instalación",
+        ),
+        data: t("Datos de la instalación", "Datos da instalación"),
+        dataHint: t(
+          "Este nombre identifica la instalación en el catálogo público.",
+          "Este nome identifica a instalación no catálogo público.",
+        ),
+      };
+  // Facilities and units share one layout: actions in the header, one tab per concern.
   return (
     <EditorRecovery
       error={resource.error}
       retry={() => void resource.refetch()}
     >
-      <div className={resourceStyles.page}>
-        <PageHeader
-          title={resource.data.name}
-          description={t(
-            "Configura la unidad que los usuarios pueden reservar.",
-            "Configura a unidade que os usuarios poden reservar.",
-          )}
-          status={
-            <Badge
-              size="sm"
-              tone={
-                resource.data.withdrawnAt
-                  ? "neutral"
-                  : resource.data.publishedAt
-                    ? "success"
-                    : "warning"
-              }
-            >
-              {state}
-            </Badge>
-          }
-          actions={
-            <>
-              {publishable && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button size="sm">
-                      <Globe size={16} aria-hidden="true" />
-                      {resource.data.withdrawnAt
-                        ? t(
-                            "Volver a publicar unidad",
-                            "Volver publicar unidade",
-                          )
-                        : t("Publicar unidad", "Publicar unidade")}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent
-                    title={t("Publicar unidad", "Publicar unidade")}
-                    closeLabel={t("Cerrar", "Pechar")}
-                  >
+      <ManagementPage
+        title={resource.data.name}
+        description={kind.description}
+        breadcrumb={
+          <Link to={municipalPath(m.id)}>{t("Catálogo", "Catálogo")}</Link>
+        }
+        status={<ResourceState resource={resource.data} detailed />}
+        actions={
+          <>
+            {!resource.data.withdrawnAt && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="danger-ghost">
+                    <Archive size={16} aria-hidden="true" />
+                    {t("Retirar del catálogo", "Retirar do catálogo")}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent
+                  title={t("Retirar del catálogo", "Retirar do catálogo")}
+                  closeLabel={t("Cerrar", "Pechar")}
+                >
+                  {withdrawal}
+                </DialogContent>
+              </Dialog>
+            )}
+            {publishable && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Globe size={16} aria-hidden="true" />
+                    {kind.publish}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent
+                  title={kind.publish}
+                  closeLabel={t("Cerrar", "Pechar")}
+                >
+                  {unit ? (
                     <UnitPublication path={path} />
-                  </DialogContent>
-                </Dialog>
-              )}
-              {!resource.data.withdrawnAt && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button size="sm" variant="danger-ghost">
-                      <Archive size={16} aria-hidden="true" />
-                      {t("Retirar del catálogo", "Retirar do catálogo")}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent
-                    title={t("Retirar del catálogo", "Retirar do catálogo")}
-                    closeLabel={t("Cerrar", "Pechar")}
-                  >
-                    {withdrawal}
-                  </DialogContent>
-                </Dialog>
-              )}
-            </>
-          }
-        />
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList
-            scrollLabels={{
-              previous: t("Anterior", "Anterior"),
-              next: t("Siguiente", "Seguinte"),
-            }}
-            aria-label={t(
-              "Configuración de la unidad",
-              "Configuración da unidade",
-            )}
-          >
-            <TabsTrigger value="data">
-              <Settings2 size={16} aria-hidden="true" />
-              {t("Datos", "Datos")}
-            </TabsTrigger>
-            <TabsTrigger value="profile">
-              <FileText size={16} aria-hidden="true" />
-              {t("Ficha", "Ficha")}
-            </TabsTrigger>
-            <TabsTrigger value="calendar">
-              <Clock3 size={16} aria-hidden="true" />
-              {t("Horarios", "Horarios")}
-            </TabsTrigger>
-            <TabsTrigger value="rules">
-              <FileText size={16} aria-hidden="true" />
-              {t("Normas", "Normas")}
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="data" forceMount>
-            <section className={resourceStyles.group}>
-              <div>
-                <h2>{t("Datos de la unidad", "Datos da unidade")}</h2>
-                <p>
-                  {t(
-                    "Este nombre identifica la unidad en el catálogo público y en las reservas.",
-                    "Este nome identifica a unidade no catálogo público e nas reservas.",
+                  ) : (
+                    <MunicipalForm
+                      path={`${path}/publish`}
+                      body={(d) => ({ reason: textField(d, "reason") })}
+                      label={t("Publicar instalación", "Publicar instalación")}
+                    >
+                      <Reason />
+                    </MunicipalForm>
                   )}
-                </p>
-              </div>
-              <div>{nameForm}</div>
-            </section>
-            {!resource.data.publishedAt && (
-              <div className={resourceStyles.hint}>
-                {t(
-                  "Antes de publicar, completa las normas de uso y los horarios. La instalación también debe estar publicada.",
-                  "Antes de publicar, completa as normas de uso e os horarios. A instalación tamén debe estar publicada.",
-                )}
-              </div>
+                </DialogContent>
+              </Dialog>
             )}
-          </TabsContent>
-          <TabsContent value="profile" forceMount>
-            <UnitProfileEditor
-              path={path}
-              profile={resource.data.profile ?? {}}
-              version={resource.data.profileVersion ?? 1}
-            />
-            <PhotoManager
-              path={path}
-              kind="unit"
-              name={resource.data.name}
-              photos={resource.data.photos ?? []}
-            />
-          </TabsContent>
-          <TabsContent value="calendar" forceMount>
-            <CalendarEditor path={path} />
-          </TabsContent>
-          <TabsContent value="rules" forceMount>
-            <RulesEditor path={path} />
-          </TabsContent>
-        </Tabs>
-      </div>
+          </>
+        }
+      >
+        <div className={resourceStyles.page}>
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList
+              scrollLabels={{
+                previous: t("Anterior", "Anterior"),
+                next: t("Siguiente", "Seguinte"),
+              }}
+              aria-label={kind.tabs}
+            >
+              <TabsTrigger value="data">
+                <Settings2 size={16} aria-hidden="true" />
+                {t("Datos", "Datos")}
+              </TabsTrigger>
+              <TabsTrigger value="profile">
+                <FileText size={16} aria-hidden="true" />
+                {t("Ficha", "Ficha")}
+              </TabsTrigger>
+              <TabsTrigger value="photos">
+                <ImageIcon size={16} aria-hidden="true" />
+                {t("Fotos", "Fotos")}
+              </TabsTrigger>
+              {unit && (
+                <TabsTrigger value="calendar">
+                  <Clock3 size={16} aria-hidden="true" />
+                  {t("Horarios", "Horarios")}
+                </TabsTrigger>
+              )}
+              {unit && (
+                <TabsTrigger value="rules">
+                  <ScrollText size={16} aria-hidden="true" />
+                  {t("Normas", "Normas")}
+                </TabsTrigger>
+              )}
+            </TabsList>
+            <TabsContent
+              value="data"
+              forceMount
+              className={resourceStyles.panel}
+            >
+              <section className={resourceStyles.group}>
+                <div>
+                  <h2>{kind.data}</h2>
+                  <p>{kind.dataHint}</p>
+                </div>
+                <div>{nameForm}</div>
+              </section>
+              {!unit && <FacilityUnits facilityId={id} />}
+              {unit && !resource.data.publishedAt && (
+                <div className={resourceStyles.hint}>
+                  {t(
+                    "Antes de publicar, completa las normas de uso y los horarios. La instalación también debe estar publicada.",
+                    "Antes de publicar, completa as normas de uso e os horarios. A instalación tamén debe estar publicada.",
+                  )}
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent
+              value="profile"
+              forceMount
+              className={resourceStyles.panel}
+            >
+              {unit ? (
+                <UnitProfileEditor
+                  path={path}
+                  profile={resource.data.profile ?? {}}
+                  version={resource.data.profileVersion ?? 1}
+                />
+              ) : (
+                <FacilityProfileEditor
+                  path={path}
+                  profile={resource.data.profile ?? {}}
+                  version={resource.data.profileVersion ?? 1}
+                />
+              )}
+            </TabsContent>
+            <TabsContent
+              value="photos"
+              forceMount
+              className={resourceStyles.panel}
+            >
+              <PhotoManager
+                path={path}
+                kind={unit ? "unit" : "facility"}
+                name={resource.data.name}
+                photos={resource.data.photos ?? []}
+              />
+            </TabsContent>
+            {unit && (
+              <TabsContent
+                value="calendar"
+                forceMount
+                className={resourceStyles.panel}
+              >
+                <CalendarEditor path={path} />
+              </TabsContent>
+            )}
+            {unit && (
+              <TabsContent
+                value="rules"
+                forceMount
+                className={resourceStyles.panel}
+              >
+                <RulesEditor path={path} />
+              </TabsContent>
+            )}
+          </Tabs>
+        </div>
+      </ManagementPage>
     </EditorRecovery>
   );
 }
 
-function Publication({ path, unit }: { path: string; unit: boolean }) {
+/** The units of one facility, with a way to add another, on the facility's own page. */
+function FacilityUnits({ facilityId }: { facilityId: string }) {
+  const m = useMunicipality();
   const { t } = usePreferences();
+  const units = useMunicipalPages<Resource>(`${endpoint(m.id)}/units`);
+  const own = (units.data?.pages.flatMap((p) => p.items) ?? []).filter(
+    (u) => u.facilityId === facilityId,
+  );
   return (
-    <section className={styles.section}>
-      <h2>{t("Publicación", "Publicación")}</h2>
-      {unit ? (
-        <UnitPublication path={path} />
-      ) : (
-        <MunicipalForm
-          path={`${path}/publish`}
-          body={(d) => ({ reason: textField(d, "reason") })}
-          label={t("Publicar instalación", "Publicar instalación")}
-        >
-          <Reason />
-        </MunicipalForm>
-      )}
+    <section className={resourceStyles.group}>
+      <div>
+        <h2>{t("Unidades", "Unidades")}</h2>
+        <p>
+          {t(
+            "Cada unidad se reserva por separado y tiene sus propios horarios y normas.",
+            "Cada unidade resérvase por separado e ten os seus propios horarios e normas.",
+          )}
+        </p>
+      </div>
+      <div className={resourceStyles.units}>
+        {units.isPending ? (
+          <Loading />
+        ) : units.isError ? (
+          <Failure error={units.error} retry={() => void units.refetch()} />
+        ) : (
+          <>
+            {own.length ? (
+              <ul>
+                {own.map((u) => (
+                  <li key={u.id}>
+                    {permitted(m, "CATALOG_MANAGE", u.id) ? (
+                      <Link to={`${municipalPath(m.id)}/unidades/${u.id}`}>
+                        {u.name}
+                      </Link>
+                    ) : (
+                      u.name
+                    )}
+                    <ResourceState resource={u} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>
+                {t("Todavía no tiene unidades.", "Aínda non ten unidades.")}
+              </p>
+            )}
+            {permitted(m, "CATALOG_CREATE") && (
+              <LinkButton
+                to={`${municipalPath(m.id)}/instalaciones/${facilityId}/nueva-unidad`}
+                variant="secondary"
+              >
+                <Plus size={14} aria-hidden="true" />
+                {t("Crear unidad", "Crear unidade")}
+              </LinkButton>
+            )}
+          </>
+        )}
+      </div>
     </section>
   );
 }
+
 function UnitPublication({ path }: { path: string }) {
   const { t } = usePreferences();
   const calendar = useMunicipalQuery<{ version: number }>(
