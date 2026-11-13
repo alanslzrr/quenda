@@ -66,8 +66,8 @@ export function ResourceShell({
         ...(canEnter(m)
           ? [
               item(
-                "/indicadores",
-                t("Indicadores", "Indicadores"),
+                "/uso-de-los-espacios",
+                t("Uso de los espacios", "Uso dos espazos"),
                 ChartNoAxesCombined,
               ),
             ]

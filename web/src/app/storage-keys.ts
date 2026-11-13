@@ -24,6 +24,18 @@ export const storageEntries: readonly StorageEntry[] = [
     ],
   },
   {
+    key: "quenda.analytics-view",
+    store: "local",
+    purpose: [
+      "Cómo prefieres ver la analítica municipal en este navegador: gráficos o tablas, agrupación y bloques visibles. No cambia ningún dato.",
+      "Como prefires ver a analítica municipal neste navegador: gráficos ou táboas, agrupación e bloques visibles. Non cambia ningún dato.",
+    ],
+    duration: [
+      "Hasta que la restablezcas o borres los datos del sitio",
+      "Ata que a restablezas ou borres os datos do sitio",
+    ],
+  },
+  {
     key: "quenda.preferences",
     store: "local",
     purpose: [

@@ -166,9 +166,10 @@ await withDatabase(async ({ auth, domain, migration, worker }) => {
     "web/test-results/arrival-fixtures.json",
     JSON.stringify(arrivalFixtures),
   );
-  // Usage analytics owns municipal indexes 55 and 56, one per project.
+  // Usage analytics owns municipal indexes 55, 56 and 61 to 66: one account per
+  // test and project, so each test stays within the per-account request limit.
   const analyticsFixtures = [];
-  for (const index of [55, 56])
+  for (const index of [55, 56, 61, 62, 63, 64, 65, 66])
     analyticsFixtures.push(
       await seedMunicipalBrowser(app, auth, domain, migration, index),
     );

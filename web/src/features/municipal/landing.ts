@@ -10,7 +10,7 @@ export function landingSection(m: Authority): string | null {
   if (has("CATALOG_CREATE", "CATALOG_MANAGE")) return "";
   if (has("RESERVATION_READ", "RESERVATION_MANAGE", "UNIT_BLOCK"))
     return "/agenda";
-  if (canEnter(m)) return "/indicadores";
+  if (canEnter(m)) return "/uso-de-los-espacios";
   if (canEnter(m, true)) return "/exportaciones";
   if (allowed(m, "REPORT_READ", null)) return "/informes";
   if (

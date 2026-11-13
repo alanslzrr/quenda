@@ -119,26 +119,28 @@ Una persona puede ejercer varias funciones, sin que una amplíe los permisos de 
 
 **Fundamento:** [RF-08–RF-11 y RF-19](01_requisitos.md#requisitos-funcionales), [publicación y configuración](02_modelo_dominio.md#tiempo-y-configuración-municipal), [cambios de reglas](02_modelo_dominio.md#estados-y-cambios-de-reglas) y [mensajes](03_procesos_y_secuencias.md#contratos-de-interfaz). Retirar, cerrar y eliminar datos son operaciones distintas.
 
-## CU-05 — Consultar indicadores o exportar datos municipales
+## CU-05 — Consultar el uso de los espacios o exportar datos municipales
 
 - **Actor:** gestor municipal autorizado.
 - **Objetivo:** conocer el uso reservado o obtener los datos permitidos.
 - **Precondiciones:** MFA y `REPORT_READ` para indicadores. Exportar exige MFA reciente, `DATA_EXPORT` y lectura de reservas (`RESERVATION_READ` o `RESERVATION_MANAGE`) en el mismo ámbito.
 
 **Flujo principal**
-1. El gestor indica municipio, periodo y, cuando corresponda, unidad.
-2. Quenda comprueba el ámbito y devuelve los indicadores o la exportación autorizada.
-3. La exportación identifica formato, versión, municipio, periodo y entidades incluidas.
+1. El gestor abre «Uso de los espacios»: Quenda muestra el periodo inicial del municipio para todos los espacios que puede analizar.
+2. El gestor cambia el periodo con un atajo o un calendario, o elige un espacio por su nombre; la pantalla se actualiza sin otro paso.
+3. Quenda comprueba el ámbito y muestra lo más destacado, el resumen comparado con el periodo anterior, la evolución, los espacios, la demanda por día y hora y el cumplimiento de las reservas.
+4. Para obtener las reservas una a una, el gestor usa «Exportar reservas»; la exportación identifica formato, versión, municipio, periodo y entidades incluidas.
 
 **Alternativas y excepciones**
-- Sin tiempo ofertado, la ocupación se expresa como «no aplicable», no como cero.
+- Sin tiempo ofertado, la ocupación se expresa como «sin horario ofertado», no como cero.
+- Con permiso sobre algunos espacios, el gestor solo puede elegir esos espacios y no ve el total municipal.
 - La exportación distingue normas aceptadas, pendientes y evidencia ausente.
 - Una exportación de más de 366 días o 10.000 reservas se rechaza sin truncar datos.
 - Un convenio no permite incorporar historiales de otros municipios.
 
 **Resultado esperado:** información reproducible del ámbito autorizado, sin atribuir asistencia real.
 
-**Fundamento:** [RF-12 y RF-18](01_requisitos.md#requisitos-funcionales), [RNF-07](01_requisitos.md#requisitos-no-funcionales), [indicadores](03_procesos_y_secuencias.md#indicadores-municipales) y [exportaciones](03_procesos_y_secuencias.md#contratos-de-interfaz). Los resultados describen reservas, no presencia física.
+**Fundamento:** [RF-12, RF-18 y RF-38](01_requisitos.md#requisitos-funcionales), [RNF-07](01_requisitos.md#requisitos-no-funcionales), [indicadores](03_procesos_y_secuencias.md#indicadores-municipales) y [exportaciones](03_procesos_y_secuencias.md#contratos-de-interfaz). Los resultados describen reservas, no presencia física.
 
 ## CU-06 — Incorporar un municipio
 

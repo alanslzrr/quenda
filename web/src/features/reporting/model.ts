@@ -35,59 +35,6 @@ export function validPeriod(from: string, to: string) {
     86400000;
   return days > 0 && days <= 366;
 }
-export interface Indicators {
-  tenantId: string;
-  unitId?: string;
-  from: string;
-  to: string;
-  timeZone: string;
-  asOf: string;
-  reservations: { CONFIRMADA: number; CANCELADA: number; FINALIZADA: number };
-  reservedMinutes: number;
-  offeredMinutes: number;
-  occupancyPercent: number | null;
-}
-export interface UsageAnalytics {
-  tenantId: string;
-  unitId: string | null;
-  from: string;
-  to: string;
-  timeZone: string;
-  asOf: string;
-  weekdayHours: {
-    weekday: number;
-    hour: number;
-    offeredMinutes: number;
-    reservedMinutes: number;
-    occupancyPercent: number | null;
-  }[];
-  units: {
-    unitId: string;
-    name: string | null;
-    offeredMinutes: number;
-    reservedMinutes: number;
-    occupancyPercent: number | null;
-  }[];
-  cancellations: {
-    reservations: number;
-    cancelled: number;
-    byHolder: number;
-    administrative: number;
-    cancelledPercent: number | null;
-  };
-  leadTime: {
-    lessThanOneDay: number;
-    oneToThreeDays: number;
-    threeToSevenDays: number;
-    sevenToFourteenDays: number;
-    fourteenDaysOrMore: number;
-  };
-  attendance: {
-    finished: number;
-    arrived: number;
-    arrivedPercent: number | null;
-  };
-}
 export type Monthly =
   | { status: "NOT_PUBLISHABLE" }
   | {

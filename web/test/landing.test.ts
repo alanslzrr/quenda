@@ -20,7 +20,7 @@ test("the landing section follows the permissions actually held", () => {
   );
   assert.equal(
     landingSection(authority([grant("REPORT_READ")])),
-    "/indicadores",
+    "/uso-de-los-espacios",
   );
   assert.equal(
     landingSection(authority([grant("PRIVACY_READ")])),

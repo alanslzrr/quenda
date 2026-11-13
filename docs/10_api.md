@@ -307,7 +307,7 @@ La oferta utiliza versiones de calendario y eventos históricos de publicación/
 - `leadTime`: reservas por tramos de antelación (de la creación al inicio).
 - `attendance`: llegadas registradas con el código QR sobre las reservas confirmadas ya finalizadas. Mide lo que registra el personal, no la asistencia real.
 
-Cancelaciones, antelación y llegadas cuentan las reservas que empiezan en el periodo, como los indicadores. Solo devuelve agregados, sin titulares. Rechaza más de 20.000 reservas. En la web se pide con «Analizar el uso» después de consultar los indicadores.
+Cancelaciones, antelación y llegadas cuentan las reservas que empiezan en el periodo, como los indicadores. Solo devuelve agregados, sin titulares. Rechaza más de 20.000 reservas. En la web, «Uso de los espacios» pide el análisis del periodo elegido y el del periodo anterior de la misma duración (los meses anteriores si el periodo son meses completos), y no consulta por separado los indicadores básicos. La antigua dirección `/indicadores` lleva a esa pantalla.
 
 `GET /api/municipalities/{tenantId}/analytics/units` devuelve las unidades que la cuenta puede analizar (`REPORT_READ` municipal o de la unidad), con su instalación y si están retiradas. Exige MFA, incluye las retiradas y las ordena por instalación y nombre. Devuelve hasta 500 y `truncated` indica que hay más. Solo identifica unidades; no concede otros accesos. El mapa por día y hora es una tabla con el porcentaje escrito en cada celda; el tono solo lo refuerza.
 

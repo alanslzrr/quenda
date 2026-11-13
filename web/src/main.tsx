@@ -2,7 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "motion/react";
 import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import "./ui/foundation.css";
 import "./ui/fonts.css";
 import "./ui/accessibility.css";
@@ -208,9 +208,14 @@ const GlobalPrivacy = lazy(() =>
 const Platform = lazy(() =>
   import("./features/platform/page").then((m) => ({ default: m.Platform })),
 );
-const MunicipalIndicators = lazy(() =>
-  import("./features/reporting/municipal").then((m) => ({
-    default: m.MunicipalIndicators,
+const UsageAnalyticsScreen = lazy(() =>
+  import("./features/analytics/screen").then((m) => ({
+    default: m.UsageAnalyticsScreen,
+  })),
+);
+const ReservationExport = lazy(() =>
+  import("./features/reporting/export").then((m) => ({
+    default: m.ReservationExport,
   })),
 );
 const MonthlyReport = lazy(() =>
@@ -363,12 +368,19 @@ createRoot(root).render(
                           >
                             <Route index element={<Catalog />} />
                             <Route
+                              path="uso-de-los-espacios"
+                              element={<UsageAnalyticsScreen />}
+                            />
+                            {/* The former indicators address keeps working. */}
+                            <Route
                               path="indicadores"
-                              element={<MunicipalIndicators />}
+                              element={
+                                <Navigate to="../uso-de-los-espacios" replace />
+                              }
                             />
                             <Route
                               path="exportaciones"
-                              element={<MunicipalIndicators exporting />}
+                              element={<ReservationExport />}
                             />
                             <Route
                               path="informes"

@@ -72,17 +72,66 @@ async function select(
   await page.getByRole("combobox", { name: label, exact: true }).click();
   await page.getByRole("option", { name: option, exact: true }).click();
 }
-const metrics = {
+const settings = {
+  version: 1,
+  highDemandPercent: 85,
+  lowUsePercent: 20,
+  defaultPeriod: "THIS_MONTH",
+};
+const analytics = (offered: number) => ({
   tenantId: tenant,
+  unitId: null,
   from: "2024-03-01",
   to: "2024-04-01",
   timeZone: "Europe/Madrid",
   asOf: "2024-04-02T00:00:00Z",
-  reservations: { CONFIRMADA: 0, CANCELADA: 0, FINALIZADA: 0 },
-  reservedMinutes: 0,
-  offeredMinutes: 0,
-  occupancyPercent: null,
-};
+  granularity: "day",
+  summary: {
+    reservations: { CONFIRMADA: 0, CANCELADA: 0, FINALIZADA: 0 },
+    reservedMinutes: 0,
+    offeredMinutes: offered,
+    occupancyPercent: offered ? 0 : null,
+  },
+  series: [],
+  weekdayHours: [],
+  units: [],
+  cancellations: {
+    reservations: 0,
+    cancelled: 0,
+    byHolder: 0,
+    administrative: 0,
+    cancelledPercent: null,
+  },
+  leadTime: {
+    lessThanOneDay: 0,
+    oneToThreeDays: 0,
+    threeToSevenDays: 0,
+    sevenToFourteenDays: 0,
+    fourteenDaysOrMore: 0,
+  },
+  attendance: { finished: 0, arrived: 0, arrivedPercent: null },
+});
+async function analyticsRoutes(page: Page) {
+  await page.route(`**${base}/analytics/settings`, (r) =>
+    r.fulfill({ json: settings }),
+  );
+  await page.route(`**${base}/analytics/units`, (r) =>
+    r.fulfill({
+      json: {
+        units: [
+          {
+            unitId: unit,
+            name: "Pista autorizada",
+            facilityId: agreement,
+            facilityName: "Pabellón",
+            withdrawn: false,
+          },
+        ],
+        truncated: false,
+      },
+    }),
+  );
+}
 test("unit grants never authorize municipal totals or exports with mismatched reading scopes", async ({
   page,
 }) => {
@@ -91,63 +140,70 @@ test("unit grants never authorize municipal totals or exports with mismatched re
     { operation: "DATA_EXPORT", unitId: unit },
     { operation: "RESERVATION_READ", unitId: agreement },
   ]);
-  let calls = 0;
-  await page.route("**/indicators?**", async (r) => {
-    calls++;
-    expect(new URL(r.request().url()).pathname).toBe(
-      `${base}/units/${unit}/indicators`,
-    );
-    await r.fulfill({ json: { ...metrics, unitId: unit } });
+  await analyticsRoutes(page);
+  const requested: URL[] = [];
+  await page.route("**/analytics?**", async (r) => {
+    requested.push(new URL(r.request().url()));
+    await r.fulfill({ json: { ...analytics(60), unitId: unit } });
   });
-  await page.goto(`${view}/indicadores`);
-  await period(page);
-  await select(page, /Unidad autorizada|Unidade autorizada/, unit);
-  await page.getByRole("combobox", { name: "Ámbito", exact: true }).click();
+  await page.goto(`${view}/uso-de-los-espacios`);
   await expect(
-    page.getByRole("option", { name: /Todo el municipio|Todo o municipio/ }),
+    page.getByRole("region", { name: /^(Resumen|Resumo)$/ }),
+  ).toBeVisible();
+  await expect.poll(() => requested.length).toBeGreaterThan(0);
+  // Only the authorised space is ever analysed, by name, never the municipality.
+  for (const url of requested) {
+    expect(url.pathname).toBe(`${base}/analytics`);
+    expect(url.searchParams.get("unitId")).toBe(unit);
+  }
+  const space = page.getByRole("combobox", { name: /^(Espacio|Espazo)$/ });
+  await expect(space).toHaveValue("Pista autorizada");
+  await space.click();
+  await expect(
+    page.getByRole("option", { name: /Todos los espacios|Todos os espazos/ }),
   ).toHaveCount(0);
   await page.keyboard.press("Escape");
-  await page
-    .getByRole("button", { name: "Consultar indicadores", exact: true })
-    .click();
-  await expect(
-    page.getByRole("region", { name: "Resultado de indicadores" }),
-  ).toBeVisible();
-  expect(calls).toBe(1);
+  const calls = requested.length;
   for (const section of ["exportaciones", "informes", "informes/revision"]) {
     await page.goto(`${view}/${section}`);
     await expect(
       page.getByText(/No tienes permiso|Non tes permiso/),
     ).toBeVisible();
   }
-  expect(calls).toBe(1);
+  expect(requested.length).toBe(calls);
 });
-test("zero offer is not applicable and invalid periods never become requests or stale totals", async ({
+test("zero offer is not applicable and invalid periods never become requests", async ({
   page,
 }) => {
   await fixture(page);
-  let calls = 0;
-  await page.route("**/indicators?**", async (r) => {
-    calls++;
-    await r.fulfill({ json: metrics });
+  await analyticsRoutes(page);
+  const requested: URL[] = [];
+  await page.route("**/analytics?**", async (r) => {
+    requested.push(new URL(r.request().url()));
+    await r.fulfill({ json: analytics(0) });
   });
-  await page.goto(`${view}/indicadores`);
-  await period(page);
-  await page
-    .getByRole("button", { name: "Consultar indicadores", exact: true })
-    .click();
+  // More than 366 days: the screen falls back to its default period.
+  await page.goto(
+    `${view}/uso-de-los-espacios?desde=2024-01-01&hasta=2025-01-05`,
+  );
   await expect(
-    page.getByText(/No aplicable|Non aplicable/, { exact: true }),
+    page.getByText(/^(Sin horario ofertado|Sen horario ofertado)$/),
   ).toBeVisible();
-  expect(calls).toBe(1);
-  await expect(page.getByRole("article")).toHaveCount(6);
-  await period(page, "2024-01-01", "2025-01-02");
-  await expect(page.getByRole("article")).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Consultar indicadores", exact: true })
-    .click();
-  await expect(page.getByText(/Selecciona un ámbito/)).toBeVisible();
-  expect(calls).toBe(1);
+  await expect(
+    page.getByText(
+      /No hubo horario ofertado ni reservas en este periodo|Non houbo horario ofertado nin reservas neste período/,
+    ),
+  ).toBeVisible();
+  await expect.poll(() => requested.length).toBeGreaterThan(0);
+  for (const url of requested) {
+    expect(url.searchParams.get("from")).not.toBe("2024-01-01");
+    const days =
+      (Date.parse(url.searchParams.get("to") ?? "") -
+        Date.parse(url.searchParams.get("from") ?? "")) /
+      86400000;
+    expect(days).toBeGreaterThan(0);
+    expect(days).toBeLessThanOrEqual(366);
+  }
 });
 test("exports reject MFA and size failures without files and retain exact v3 acceptance evidence on download", async ({
   page,

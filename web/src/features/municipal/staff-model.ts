@@ -5,7 +5,10 @@ export const staffOperations = {
   RESERVATION_READ: ["Consultar reservas", "Consultar reservas"],
   RESERVATION_MANAGE: ["Gestionar reservas", "Xestionar reservas"],
   UNIT_BLOCK: ["Bloquear unidades", "Bloquear unidades"],
-  REPORT_READ: ["Consultar indicadores", "Consultar indicadores"],
+  REPORT_READ: [
+    "Consultar el uso de los espacios",
+    "Consultar o uso dos espazos",
+  ],
   DATA_EXPORT: ["Exportar datos", "Exportar datos"],
   PRIVACY_READ: ["Consultar datos personales", "Consultar datos persoais"],
   PRIVACY_EXECUTE: [
