@@ -70,6 +70,7 @@ function Restriction() {
             <CollaborationAction
               path={`${path}/release`}
               label={t("Retirar vinculación", "Retirar vinculación")}
+              danger
               body={(d) => ({
                 expectedAgreementId: r.agreementId,
                 expectedVersion: r.version,

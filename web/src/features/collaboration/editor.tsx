@@ -323,7 +323,7 @@ export function AgreementEditor({ original }: { original?: Agreement }) {
             ) : (
               <Button
                 type="button"
-                variant="ghost"
+                variant="danger-ghost"
                 onClick={() =>
                   setRows((old) => old.filter((x) => x.key !== p.key))
                 }
