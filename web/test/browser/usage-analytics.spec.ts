@@ -297,15 +297,25 @@ test("every occupancy step keeps its value readable in light and dark", async ({
           reservations: 5,
           cancelled: 1,
         })),
-        weekdayHours: [0, 10, 40, 60, 90, 100].flatMap((occupancy, n) =>
-          [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
-            weekday,
-            hour: 8 + n,
-            offeredMinutes: 60,
-            reservedMinutes: (60 * occupancy) / 100,
-            occupancyPercent: occupancy,
-          })),
-        ),
+        weekdayHours: [
+          ...[0, 10, 40, 60, 90, 100].flatMap((occupancy, n) =>
+            [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
+              weekday,
+              hour: 8 + n,
+              offeredMinutes: 60,
+              reservedMinutes: (60 * occupancy) / 100,
+              occupancyPercent: occupancy,
+            })),
+          ),
+          // A Friday booking that runs ten minutes past midnight.
+          {
+            weekday: 6,
+            hour: 0,
+            offeredMinutes: 10,
+            reservedMinutes: 10,
+            occupancyPercent: 100,
+          },
+        ],
         units: [
           unit("00000000-0000-4000-8000-000000000001", "Pista central", 90),
           unit("00000000-0000-4000-8000-000000000002", "Sala", 10),
@@ -337,6 +347,28 @@ test("every occupancy step keeps its value readable in light and dark", async ({
   await expect(
     demand.getByRole("cell", { name: "90 %" }).first(),
   ).toBeVisible();
+  // The hour after midnight belongs to Friday night, and an hour barely open is never named the peak.
+  await expect(demand.locator('[data-cell="5:24"]')).toHaveText("100 %");
+  await expect(demand.locator('[data-cell="6:0"]')).toHaveCount(0);
+  await expect(
+    demand.getByText(
+      /^(La franja con más demanda es el lunes|A franxa con máis demanda é o luns) de 13:00 a 14:00/,
+    ),
+  ).toBeVisible();
+  await demand.locator('[data-cell="5:24"]').focus();
+  const tip = page.getByRole("tooltip");
+  await expect(tip).toContainText(
+    /(Noche del viernes|Noite do venres) · 00:00–01:00/,
+  );
+  await expect(demand.locator('[data-cell="5:24"]')).toHaveAttribute(
+    "aria-describedby",
+    (await tip.getAttribute("id")) ?? "",
+  );
+  await page.keyboard.press("Home");
+  await expect(page.locator(":focus")).toHaveAttribute("data-cell", "5:day");
+  await expect(tip).toContainText(/(Ocupación del día|Ocupación do día)/);
+  await page.keyboard.press("Escape");
+  await expect(tip).toHaveCount(0);
   const spaces = region(page, /^(Espacios|Espazos)$/);
   await expect(spaces.getByText("Alta demanda", { exact: true })).toBeVisible();
   await expect(spaces.getByText(/^(Poco uso|Pouco uso)$/)).toBeVisible();

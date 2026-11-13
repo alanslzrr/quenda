@@ -1,4 +1,7 @@
 import {
+  type FocusEvent,
+  type KeyboardEvent,
+  type PointerEvent,
   type ReactNode,
   useId,
   useLayoutEffect,
@@ -14,10 +17,15 @@ import { MetricCard } from "../../ui/metric-card/metric-card";
 import SegmentedControl from "../../ui/segmented-control/segmented-control";
 import { Sparkline } from "../../ui/sparkline/sparkline";
 import { SplitBar } from "../../ui/split-bar/split-bar";
+import {
+  AnchoredTooltip,
+  TooltipContent,
+} from "../../ui/tooltip/anchored-tooltip";
 import styles from "./analytics.module.css";
 import {
   type AnalyticsSettings,
   compare,
+  daySummary,
   demand,
   formatHours,
   formatNumber,
@@ -26,6 +34,9 @@ import {
   type Period,
   peakText,
   periodName,
+  serviceCells,
+  serviceSlots,
+  slotClock,
   slotLabels,
   type UnitUsage,
   type UsageAnalytics,
@@ -612,6 +623,8 @@ const level = (percent: number | null) =>
             ? 3
             : 4;
 
+type Focus = { day: number; slot: number | "day" };
+
 export function Demand({
   data,
   view,
@@ -620,18 +633,138 @@ export function Demand({
   view: ViewPreferences;
 }) {
   const { t, locale } = usePreferences();
-  const shown = data.weekdayHours.map((cell) => cell.hour);
-  const first = shown.length ? Math.min(...shown) : 0;
-  const columns = shown.length
-    ? Array.from(
-        { length: Math.max(...shown) - first + 1 },
-        (_, n) => first + n,
-      )
-    : [];
-  const cell = (day: number, hour: number) =>
-    data.weekdayHours.find((c) => c.weekday === day && c.hour === hour);
+  const tipId = useId();
+  const cells = serviceCells(data.weekdayHours);
+  const columns = serviceSlots(cells);
+  const cell = (day: number, slot: number) =>
+    cells.find((c) => c.day === day && c.slot === slot);
   const hoursMode = view.demandMetric === "hours";
   const busiest = peakText(data.weekdayHours, t, locale);
+  const days = [1, 2, 3, 4, 5, 6, 7];
+  // The cell that answers to the pointer or the arrow keys: it carries the crosshair, the single tab stop and the tooltip.
+  const [focus, setFocus] = useState<Focus>();
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [tabStop, setTabStop] = useState<Focus>({
+    day: 1,
+    slot: columns[0] ?? "day",
+  });
+  const table = useRef<HTMLTableElement>(null);
+  const dayName = (day: number) => weekdayNames[locale][day - 1] ?? "";
+  const capital = (text: string) =>
+    text.charAt(0).toLocaleUpperCase(tagOf(locale)) + text.slice(1);
+  const span = (slot: number) => `${slotClock(slot)}–${slotClock(slot + 1)}`;
+  const nightOf = (day: number) =>
+    t(`Noche del ${dayName(day)}`, `Noite do ${dayName(day)}`);
+  const hoursText = (minutes: number) => `${formatHours(minutes, locale)} h`;
+  const keyOf = (f: Focus) => `${f.day}:${f.slot}`;
+  const show = (target: HTMLElement, next: Focus) => {
+    setFocus(next);
+    setAnchor(target);
+  };
+  const hide = () => {
+    setFocus(undefined);
+    setAnchor(null);
+  };
+  /** Arrow keys walk the grid, the day names included; Home and End jump along the row; Escape hides the detail. */
+  const onKeyDown = (event: KeyboardEvent<HTMLTableElement>) => {
+    if (event.key === "Escape") {
+      setAnchor(null);
+      return;
+    }
+    const current = focus ?? stop;
+    const order: (number | "day")[] = ["day", ...columns];
+    const x = order.indexOf(current.slot);
+    const y = days.indexOf(current.day);
+    const moves: Record<string, [number, number]> = {
+      ArrowLeft: [x - 1, y],
+      ArrowRight: [x + 1, y],
+      ArrowUp: [x, y - 1],
+      ArrowDown: [x, y + 1],
+      Home: [0, y],
+      End: [order.length - 1, y],
+    };
+    const move = moves[event.key];
+    if (!move) return;
+    event.preventDefault();
+    const [nx, ny] = [
+      Math.min(Math.max(move[0], 0), order.length - 1),
+      Math.min(Math.max(move[1], 0), days.length - 1),
+    ];
+    const next = { day: days[ny] ?? 1, slot: order[nx] ?? "day" };
+    table.current
+      ?.querySelector<HTMLElement>(`[data-cell="${keyOf(next)}"]`)
+      ?.focus();
+  };
+  const tip = (() => {
+    if (!focus) return null;
+    if (focus.slot === "day") {
+      const summary = daySummary(cells, focus.day);
+      const top = summary.busiest;
+      return (
+        <TooltipContent
+          title={capital(dayName(focus.day))}
+          rows={[
+            [
+              t("Ocupación del día", "Ocupación do día"),
+              formatPercent(summary.occupancyPercent, locale),
+            ],
+            [
+              t("Horas reservadas", "Horas reservadas"),
+              hoursText(summary.reservedMinutes),
+            ],
+            [
+              t("Horas ofertadas", "Horas ofertadas"),
+              hoursText(summary.offeredMinutes),
+            ],
+            ...(top
+              ? ([
+                  [
+                    t("Hora con más demanda", "Hora con máis demanda"),
+                    `${span(top.slot)} · ${formatPercent(top.occupancyPercent, locale)}`,
+                  ],
+                ] as [string, string][])
+              : []),
+          ]}
+          note={t(
+            "El día va de 06:00 a 05:59: la madrugada cuenta para la noche anterior.",
+            "O día vai de 06:00 a 05:59: a madrugada conta para a noite anterior.",
+          )}
+        />
+      );
+    }
+    const value = cell(focus.day, focus.slot);
+    const title = `${focus.slot >= 24 ? nightOf(focus.day) : capital(dayName(focus.day))} · ${span(focus.slot)}`;
+    if (!value || value.offeredMinutes === 0)
+      return (
+        <TooltipContent
+          title={title}
+          rows={[]}
+          note={t(
+            "Sin horario ofertado en esta franja.",
+            "Sen horario ofertado nesta franxa.",
+          )}
+        />
+      );
+    return (
+      <TooltipContent
+        title={title}
+        rows={[
+          [
+            t("Ocupación", "Ocupación"),
+            formatPercent(value.occupancyPercent, locale),
+          ],
+          [
+            t("Horas reservadas", "Horas reservadas"),
+            hoursText(value.reservedMinutes),
+          ],
+          [
+            t("Horas ofertadas", "Horas ofertadas"),
+            hoursText(value.offeredMinutes),
+          ],
+        ]}
+      />
+    );
+  })();
   const legend = [
     [0, "0 %"],
     [1, t("menos del 25 %", "menos do 25 %")],
@@ -639,18 +772,38 @@ export function Demand({
     [3, "50–74 %"],
     [4, t("75 % o más", "75 % ou máis")],
   ] as const;
+  // A new period can drop the column that held the tab stop; the table must stay reachable.
+  const stop =
+    tabStop.slot === "day" || columns.includes(tabStop.slot)
+      ? tabStop
+      : { day: 1, slot: columns[0] ?? "day" };
+  /** Props shared by every cell that can hold the focus. */
+  const target = (at: Focus) => {
+    const active = focus && keyOf(focus) === keyOf(at);
+    return {
+      "data-cell": keyOf(at),
+      tabIndex: keyOf(stop) === keyOf(at) ? 0 : -1,
+      "aria-describedby": active && anchor ? tipId : undefined,
+      onPointerEnter: (event: PointerEvent<HTMLElement>) =>
+        event.pointerType === "mouse" && show(event.currentTarget, at),
+      onFocus: (event: FocusEvent<HTMLElement>) => {
+        setTabStop(at);
+        show(event.currentTarget, at);
+      },
+    };
+  };
   return (
     <Block
       title={t("Cuándo hay más demanda", "Cando hai máis demanda")}
       description={
         hoursMode
           ? t(
-              "Horas reservadas por día de la semana y hora. El tono indica la ocupación; «—», que no hubo horario ofertado.",
-              "Horas reservadas por día da semana e hora. O ton indica a ocupación; «—», que non houbo horario ofertado.",
+              "Horas reservadas por día de la semana y hora. El tono indica la ocupación; «—», que no hubo horario ofertado. La madrugada cuenta para la noche anterior.",
+              "Horas reservadas por día da semana e hora. O ton indica a ocupación; «—», que non houbo horario ofertado. A madrugada conta para a noite anterior.",
             )
           : t(
-              "Ocupación por día de la semana y hora. Cuanto más intenso el tono, más ocupada; «—», que no hubo horario ofertado.",
-              "Ocupación por día da semana e hora. Canto máis intenso o ton, máis ocupada; «—», que non houbo horario ofertado.",
+              "Ocupación por día de la semana y hora. Cuanto más intenso el tono, más ocupada; «—», que no hubo horario ofertado. La madrugada cuenta para la noche anterior.",
+              "Ocupación por día da semana e hora. Canto máis intenso o ton, máis ocupada; «—», que non houbo horario ofertado. A madrugada conta para a noite anterior.",
             )
       }
     >
@@ -665,7 +818,18 @@ export function Demand({
       ) : (
         <>
           <Scroll label={t("Demanda por día y hora", "Demanda por día e hora")}>
-            <table className={styles.heatmap}>
+            <table
+              ref={table}
+              className={styles.heatmap}
+              onKeyDown={onKeyDown}
+              onPointerLeave={() => {
+                if (!table.current?.contains(document.activeElement)) hide();
+              }}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node))
+                  hide();
+              }}
+            >
               <caption className={styles.hidden}>
                 {hoursMode
                   ? t(
@@ -673,33 +837,59 @@ export function Demand({
                       "Horas reservadas por día e hora",
                     )
                   : t("Ocupación por día y hora", "Ocupación por día e hora")}
+                .{" "}
+                {t(
+                  "Usa las flechas para recorrer la tabla y oír el detalle de cada hora y de cada día.",
+                  "Usa as frechas para percorrer a táboa e oír o detalle de cada hora e de cada día.",
+                )}
               </caption>
               <thead>
                 <tr>
                   <td />
-                  {columns.map((hour) => (
-                    <th key={hour} scope="col">
-                      {`${String(hour).padStart(2, "0")}:00`}
+                  {columns.map((slot) => (
+                    <th
+                      key={slot}
+                      scope="col"
+                      data-active={focus?.slot === slot || undefined}
+                      aria-label={
+                        slot >= 24
+                          ? t(
+                              `${slotClock(slot)}, del día siguiente`,
+                              `${slotClock(slot)}, do día seguinte`,
+                            )
+                          : undefined
+                      }
+                    >
+                      {slotClock(slot)}
+                      {slot >= 24 && (
+                        <sup className={styles.nextDay} aria-hidden="true">
+                          +1
+                        </sup>
+                      )}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {[1, 2, 3, 4, 5, 6, 7].map((day) => (
-                  <tr key={day}>
-                    <th scope="row">{weekdayNames[locale][day - 1]}</th>
-                    {columns.map((hour) => {
-                      const value = cell(day, hour);
+                {days.map((day) => (
+                  <tr key={day} data-active={focus?.day === day || undefined}>
+                    <th scope="row" {...target({ day, slot: "day" })}>
+                      {dayName(day)}
+                    </th>
+                    {columns.map((slot) => {
+                      const value = cell(day, slot);
                       const offered = !!value && value.offeredMinutes > 0;
                       return (
                         <td
-                          key={hour}
+                          key={slot}
                           data-level={level(value?.occupancyPercent ?? null)}
+                          data-night={slot >= 24 || undefined}
+                          {...target({ day, slot })}
                         >
                           {!offered
                             ? "—"
                             : hoursMode
-                              ? `${formatHours(value.reservedMinutes, locale)} h`
+                              ? hoursText(value.reservedMinutes)
                               : formatPercent(
                                   value.occupancyPercent ?? 0,
                                   locale,
@@ -712,6 +902,9 @@ export function Demand({
               </tbody>
             </table>
           </Scroll>
+          <AnchoredTooltip anchor={anchor} id={tipId}>
+            {tip}
+          </AnchoredTooltip>
           <ul
             className={styles.legend}
             aria-label={t("Leyenda de tonos", "Lenda de tons")}
