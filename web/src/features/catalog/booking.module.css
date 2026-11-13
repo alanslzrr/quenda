@@ -146,6 +146,17 @@
   flex: none;
   color: var(--text-muted);
 }
+.chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition:
+    transform var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+.choice:not([data-off]):hover .chevron {
+  color: var(--foreground);
+  transform: translateX(2px);
+}
 .choiceText {
   display: grid;
   flex: 1;
@@ -624,4 +635,33 @@
     opacity: 0;
     transform: translateX(var(--journey-shift));
   }
+}
+
+/* A unit's header: its text beside a smaller gallery on wide screens, stacked on a phone. */
+.unitIntro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+  gap: 16px 32px;
+  align-items: start;
+}
+.unitText,
+.unitMedia {
+  min-width: 0;
+}
+.unitMedia:empty {
+  display: none;
+}
+@media (max-width: 720px) {
+  .unitIntro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Day and duration share a row only while both fit without cutting the day's name. */
+@media (max-width: 30rem) {
+  .search[data-fields="2"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.unitIntro:has(.unitMedia:empty) {
+  grid-template-columns: minmax(0, 1fr);
 }

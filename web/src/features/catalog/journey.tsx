@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Star } from "lucide-react";
+import { ChevronRight, Star } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { announce } from "../../app/announce";
@@ -262,6 +262,12 @@ export function Choice({
       {to ? (
         <Link className={styles.choiceLink} to={to}>
           {body}
+          {/* Says the whole card opens the next step. */}
+          <ChevronRight
+            className={styles.chevron}
+            size={18}
+            aria-hidden="true"
+          />
         </Link>
       ) : (
         <div className={styles.choiceLink}>{body}</div>
