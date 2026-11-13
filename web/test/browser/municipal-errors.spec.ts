@@ -110,9 +110,9 @@ test("stale appearance retains its draft and expected version until explicit rel
   });
   await page.goto(`/administracion/${tenant}/apariencia`);
   await page
-    .getByRole("combobox", { name: "Paleta clara", exact: true })
-    .click();
-  await page.getByRole("option", { name: "Azul", exact: true }).click();
+    .getByRole("group", { name: "Paleta clara", exact: true })
+    .getByRole("radio", { name: "Azul", exact: true })
+    .check();
   version = 2;
   await page
     .getByRole("button", { name: /Guardar apariencia|Gardar aparencia/ })
@@ -121,8 +121,10 @@ test("stale appearance retains its draft and expected version until explicit rel
     page.getByText("La versión cambió. Consulta la configuración actual."),
   ).toBeVisible();
   await expect(
-    page.getByRole("combobox", { name: "Paleta clara", exact: true }),
-  ).toContainText("Azul");
+    page
+      .getByRole("group", { name: "Paleta clara", exact: true })
+      .getByRole("radio", { name: "Azul", exact: true }),
+  ).toBeChecked();
   await page
     .getByRole("button", { name: /Guardar apariencia|Gardar aparencia/ })
     .click();
@@ -134,8 +136,10 @@ test("stale appearance retains its draft and expected version until explicit rel
     })
     .click();
   await expect(
-    page.getByRole("combobox", { name: "Paleta clara", exact: true }),
-  ).toContainText("Neutro");
+    page
+      .getByRole("group", { name: "Paleta clara", exact: true })
+      .getByRole("radio", { name: "Neutro", exact: true }),
+  ).toBeChecked();
   await page
     .getByRole("button", { name: /Guardar apariencia|Gardar aparencia/ })
     .click();
@@ -247,9 +251,9 @@ test("expired MFA preserves the appearance draft and offers verification without
   });
   await page.goto(`/administracion/${tenant}/apariencia`);
   await page
-    .getByRole("combobox", { name: "Paleta clara", exact: true })
-    .click();
-  await page.getByRole("option", { name: "Azul", exact: true }).click();
+    .getByRole("group", { name: "Paleta clara", exact: true })
+    .getByRole("radio", { name: "Azul", exact: true })
+    .check();
   await page
     .getByRole("button", { name: /Guardar apariencia|Gardar aparencia/ })
     .click();
@@ -257,8 +261,10 @@ test("expired MFA preserves the appearance draft and offers verification without
     page.getByText("Verifica de nuevo el segundo factor."),
   ).toBeVisible();
   await expect(
-    page.getByRole("combobox", { name: "Paleta clara", exact: true }),
-  ).toContainText("Azul");
+    page
+      .getByRole("group", { name: "Paleta clara", exact: true })
+      .getByRole("radio", { name: "Azul", exact: true }),
+  ).toBeChecked();
   expect(writes).toBe(1);
   await page
     .getByRole("button", { name: /Verificar acceso/ })
