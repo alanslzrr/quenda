@@ -2,7 +2,10 @@ import { Building2, CalendarPlus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useMatch, useParams } from "react-router";
 import { MfaBoundary, MfaNotice } from "../features/account/mfa-dialog";
-import { useBookingEntry } from "../features/catalog/journey";
+import {
+  forgetJourneyOutside,
+  useBookingEntry,
+} from "../features/catalog/journey";
 import { useMunicipality } from "../features/catalog/municipality";
 import { kindShort, kinds, noticePath } from "../features/legal/notices";
 import { Announcer } from "./announce";
@@ -35,6 +38,7 @@ export function Layout() {
     : undefined;
   const municipality = useMunicipality(tenantId);
   useEffect(() => {
+    forgetJourneyOutside(location.pathname);
     if (previous.current !== location.pathname) {
       previous.current = location.pathname;
       main.current?.focus({ preventScroll: true });
