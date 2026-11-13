@@ -18,7 +18,7 @@ El destinatario acepta con MFA mediante `POST /api/municipalities/{tenantId}/adm
 
 La prueba MFA para estas operaciones caduca a los cinco minutos. La API responde `403` con `REAUTHENTICATION_REQUIRED`; verificar de nuevo mediante `POST /api/auth/two-factor/verify-totp` permite repetir la operación sin cerrar la sesión. Un intento incorrecto no renueva la prueba y mantiene los límites de intentos de Better Auth.
 
-Las operaciones municipales comparten un límite de 60 intentos por cuenta en ventanas de 60 segundos. Los intentos autenticados consumen cuota aunque la operación se rechace; al agotarse, la respuesta es `429 RATE_LIMITED` con `Retry-After`. Los límites de autenticación y TOTP son independientes.
+Las operaciones autenticadas tienen dos límites por cuenta en ventanas de 60 segundos: 600 lecturas (`GET`) y 120 operaciones que cambian datos. Son independientes, de modo que consultar pantallas no agota el margen para actuar. Los intentos consumen cuota aunque la operación se rechace; al agotarse, la respuesta es `429 RATE_LIMITED` con `Retry-After`. `GET /api/me` y `GET /api/me/notices/unread` solo leen la sesión y no consumen ninguno de los dos. Los límites de autenticación y TOTP son independientes.
 
 Un administrador con MFA reciente puede invitar mediante `POST /api/municipalities/{tenantId}/administrator-invitations` (`accountId`, `expiresAt`) y revocar una invitación pendiente mediante `POST /api/municipalities/{tenantId}/administrator-invitations/{invitationId}/revoke` (`{}`). La aceptación comprueba también que el emisor conserva su autorización; revocar una invitación aceptada no retira el rol ya concedido.
 
