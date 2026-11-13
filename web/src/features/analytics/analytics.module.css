@@ -112,6 +112,9 @@
   max-width: 100%;
   overflow-x: auto;
 }
+.scroll[data-more] {
+  mask-image: linear-gradient(to left, transparent, #000 2.5rem);
+}
 .scroll:focus-visible {
   outline: 2px solid var(--foreground);
   outline-offset: 2px;
@@ -128,7 +131,7 @@
 }
 /* The demand table spans the block with equal hour columns; below its minimum width it scrolls instead. */
 .heatmap {
-  --day-column: 6.5rem;
+  --day-column: 5.75rem;
   width: 100%;
   table-layout: fixed;
 }
@@ -221,7 +224,10 @@
   white-space: nowrap;
 }
 .heatmap thead th {
+  position: relative;
+  padding: 0.85rem 0 0.25rem;
   color: var(--text-secondary);
+  text-align: center;
   transition: color var(--duration-fast) var(--ease-standard);
 }
 .heatmap tbody th {
@@ -247,15 +253,18 @@
 .heatmap td[data-cell]:hover {
   box-shadow: inset 0 0 0 2px var(--foreground);
 }
+/* Sits on the hour's top corner without widening its column. */
 .nextDay {
-  margin-inline-start: 2px;
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0.15rem;
   color: var(--text-muted);
   font-size: 0.7em;
   font-weight: 500;
 }
 .heatmap td {
   min-width: 3.25rem;
-  padding: 0.4rem 0.35rem;
+  padding: 0.4rem 0.15rem;
   border-radius: 4px;
   color: var(--foreground);
   text-align: center;

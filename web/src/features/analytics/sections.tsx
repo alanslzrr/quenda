@@ -73,24 +73,36 @@ function Block({
   );
 }
 
-/** A table frame that becomes a named, focusable scroll region only while it overflows. */
+/** A table frame that becomes a named, focusable scroll region only while it overflows. Until the reader reaches the
+ *  end, its trailing edge fades, so a table cut by the screen reads as one that continues. */
 function Scroll({ label, children }: { label: string; children: ReactNode }) {
   const frame = useRef<HTMLDivElement>(null);
   const [overflowing, setOverflowing] = useState(false);
+  const [more, setMore] = useState(false);
   useLayoutEffect(() => {
     const node = frame.current;
     if (!node) return;
-    const measure = () => setOverflowing(node.scrollWidth > node.clientWidth);
+    const measure = () => {
+      setOverflowing(node.scrollWidth - node.clientWidth > 1);
+      setMore(
+        node.scrollWidth - node.clientWidth - Math.abs(node.scrollLeft) > 2,
+      );
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     if (node.firstElementChild) observer.observe(node.firstElementChild);
-    return () => observer.disconnect();
+    node.addEventListener("scroll", measure, { passive: true });
+    return () => {
+      observer.disconnect();
+      node.removeEventListener("scroll", measure);
+    };
   }, []);
   return (
     <div
       ref={frame}
       className={styles.scroll}
+      data-more={more || undefined}
       {...(overflowing
         ? { tabIndex: 0, role: "group", "aria-label": label }
         : {})}
@@ -822,7 +834,7 @@ export function Demand({
               ref={table}
               className={styles.heatmap}
               style={{
-                minWidth: `calc(var(--day-column) + ${columns.length} * 3.5rem)`,
+                minWidth: `calc(var(--day-column) + ${columns.length} * 3.25rem)`,
               }}
               onKeyDown={onKeyDown}
               onPointerLeave={() => {
