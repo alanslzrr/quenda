@@ -327,16 +327,67 @@ export const weekdayNames = {
   ],
   gl: ["luns", "martes", "mércores", "xoves", "venres", "sábado", "domingo"],
 } as const;
-const clock = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
+const clock = (hour: number) => `${String(hour % 24).padStart(2, "0")}:00`;
+
 /**
- * The busiest stretch of the week: the cell with the highest occupancy and the
- * neighbouring hours of the same day within five points of it.
+ * Demand is read by service day, from 06:00 to 05:59: the hours after midnight belong to the night before, so a Friday
+ * booking that runs past midnight stays on Friday. `slot` counts hours from that day's midnight (24 and up are the
+ * small hours of the next calendar day).
  */
-export function peak(cells: WeekdayHour[]) {
+export const serviceDayStart = 6;
+export interface ServiceCell extends WeekdayHour {
+  /** Service day, 1 (Monday) to 7 (Sunday). */
+  day: number;
+  /** 6–29: 24 is 00:00 of the following calendar day. */
+  slot: number;
+}
+export function serviceCells(cells: WeekdayHour[]): ServiceCell[] {
+  return cells.map((cell) =>
+    cell.hour < serviceDayStart
+      ? {
+          ...cell,
+          day: cell.weekday === 1 ? 7 : cell.weekday - 1,
+          slot: cell.hour + 24,
+        }
+      : { ...cell, day: cell.weekday, slot: cell.hour },
+  );
+}
+export const slotClock = (slot: number) => clock(slot);
+/** Columns from the first to the last hour with opening hours or bookings, never before 06:00. */
+export function serviceSlots(cells: ServiceCell[]) {
+  const used = cells
+    .filter((cell) => cell.offeredMinutes > 0 || cell.reservedMinutes > 0)
+    .map((cell) => cell.slot);
+  if (!used.length) return [];
+  const first = Math.min(...used);
+  return Array.from(
+    { length: Math.max(...used) - first + 1 },
+    (_, n) => first + n,
+  );
+}
+
+/**
+ * Hours that were barely open, such as a booking that runs past closing time or a one-off late opening, would win
+ * at 100 % with a single booking. Only hours open at least half as long as the typical open hour can be the peak.
+ */
+function representative<T extends WeekdayHour>(cells: T[]) {
   const offered = cells.filter(
     (cell) => cell.offeredMinutes > 0 && cell.occupancyPercent !== null,
   );
-  const best = offered.reduce<WeekdayHour | undefined>(
+  const minutes = offered
+    .map((cell) => cell.offeredMinutes)
+    .sort((a, b) => a - b);
+  const median = minutes[Math.floor((minutes.length - 1) / 2)] ?? 0;
+  return offered.filter((cell) => cell.offeredMinutes >= median / 2);
+}
+
+/**
+ * The busiest stretch of the week: the representative hour with the highest occupancy and the neighbouring hours of
+ * the same service day within five points of it. `start` and `end` are service-day slots.
+ */
+export function peak(cells: WeekdayHour[]) {
+  const offered = representative(serviceCells(cells));
+  const best = offered.reduce<ServiceCell | undefined>(
     (top, cell) =>
       !top || (cell.occupancyPercent ?? 0) > (top.occupancyPercent ?? 0)
         ? cell
@@ -344,20 +395,18 @@ export function peak(cells: WeekdayHour[]) {
     undefined,
   );
   if (!best?.occupancyPercent) return undefined;
-  const near = (hour: number) => {
-    const cell = offered.find(
-      (c) => c.weekday === best.weekday && c.hour === hour,
-    );
+  const near = (slot: number) => {
+    const cell = offered.find((c) => c.day === best.day && c.slot === slot);
     return (
       !!cell && (cell.occupancyPercent ?? 0) >= (best.occupancyPercent ?? 0) - 5
     );
   };
-  let start = best.hour,
-    end = best.hour + 1;
-  while (start > 0 && near(start - 1)) start--;
-  while (end < 24 && near(end)) end++;
+  let start = best.slot,
+    end = best.slot + 1;
+  while (start > serviceDayStart && near(start - 1)) start--;
+  while (end < serviceDayStart + 24 && near(end)) end++;
   return {
-    weekday: best.weekday,
+    weekday: best.day,
     start,
     end,
     occupancyPercent: best.occupancyPercent,
@@ -368,10 +417,46 @@ export function peakText(cells: WeekdayHour[], t: Translate, locale: Language) {
   if (!top) return undefined;
   const day = weekdayNames[locale][top.weekday - 1] ?? "";
   const percent = formatPercent(top.occupancyPercent, locale);
-  return t(
-    `La franja con más demanda es el ${day} de ${clock(top.start)} a ${clock(top.end)} (${percent}).`,
-    `A franxa con máis demanda é o ${day} de ${clock(top.start)} a ${clock(top.end)} (${percent}).`,
+  const from = clock(top.start),
+    to = clock(top.end);
+  return top.start >= 24
+    ? t(
+        `La franja con más demanda es la noche del ${day}, de ${from} a ${to} (${percent}).`,
+        `A franxa con máis demanda é a noite do ${day}, de ${from} a ${to} (${percent}).`,
+      )
+    : t(
+        `La franja con más demanda es el ${day} de ${from} a ${to} (${percent}).`,
+        `A franxa con máis demanda é o ${day} de ${from} a ${to} (${percent}).`,
+      );
+}
+
+/** One service day in a sentence's worth of numbers, for the day's summary in the demand table. */
+export function daySummary(cells: ServiceCell[], day: number) {
+  const own = cells.filter((cell) => cell.day === day);
+  const offeredMinutes = own.reduce(
+    (sum, cell) => sum + cell.offeredMinutes,
+    0,
   );
+  const reservedMinutes = own.reduce(
+    (sum, cell) => sum + cell.reservedMinutes,
+    0,
+  );
+  const busiest = representative(own).reduce<ServiceCell | undefined>(
+    (top, cell) =>
+      !top || (cell.occupancyPercent ?? 0) > (top.occupancyPercent ?? 0)
+        ? cell
+        : top,
+    undefined,
+  );
+  return {
+    offeredMinutes,
+    reservedMinutes,
+    occupancyPercent:
+      offeredMinutes > 0
+        ? Math.round((reservedMinutes / offeredMinutes) * 100)
+        : null,
+    busiest: busiest?.occupancyPercent ? busiest : undefined,
+  };
 }
 export const unitName = (unit: Pick<UnitUsage, "name" | "facilityName">) =>
   [unit.name ?? "", unit.facilityName ?? ""].filter(Boolean).join(" · ");

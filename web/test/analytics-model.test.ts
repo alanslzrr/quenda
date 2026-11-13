@@ -4,14 +4,18 @@ import {
   analyticsCsv,
   compare,
   comparisonName,
+  daySummary,
   defaultView,
   demand,
   highlights,
   parseView,
   peak,
+  peakText,
   periodName,
   presetPeriod,
   previousPeriod,
+  serviceCells,
+  serviceSlots,
   slotLabels,
   type UsageAnalytics,
   validPeriod,
@@ -234,6 +238,63 @@ test("the busiest stretch joins neighbouring hours of the same day", () => {
     occupancyPercent: 92,
   });
   assert.equal(peak([]), undefined);
+});
+
+test("hours after midnight belong to the service day before, so Friday night stays on Friday", () => {
+  const cells = serviceCells([
+    cell(6, 0, 100),
+    cell(1, 3, 50),
+    cell(5, 23, 40),
+  ]);
+  assert.deepEqual(
+    cells.map(({ day, slot }) => ({ day, slot })),
+    [
+      { day: 5, slot: 24 },
+      { day: 7, slot: 27 },
+      { day: 5, slot: 23 },
+    ],
+  );
+  assert.deepEqual(serviceSlots(cells), [23, 24, 25, 26, 27]);
+  assert.deepEqual(
+    serviceSlots(serviceCells([cell(2, 9, 0), cell(2, 11, 0)])),
+    [9, 10, 11],
+  );
+  assert.deepEqual(serviceSlots([]), []);
+});
+
+test("an hour that was barely open cannot be the peak, and a busy late night is named as the night before", () => {
+  const spill = { ...cell(6, 0, 100), offeredMinutes: 10, reservedMinutes: 10 };
+  const evening = [cell(5, 20, 70), cell(5, 21, 60), cell(5, 22, 30)];
+  assert.deepEqual(peak([spill, ...evening]), {
+    weekday: 5,
+    start: 20,
+    end: 21,
+    occupancyPercent: 70,
+  });
+  assert.equal(
+    peakText([cell(6, 0, 95), cell(6, 1, 92), ...evening], es, "es"),
+    "La franja con más demanda es la noche del viernes, de 00:00 a 02:00 (95 %).",
+  );
+  assert.equal(
+    peakText([cell(5, 23, 90), cell(6, 0, 88), ...evening], gl, "gl"),
+    "A franxa con máis demanda é o venres de 23:00 a 01:00 (90 %).",
+  );
+});
+
+test("a day summary adds up the service day and names its busiest representative hour", () => {
+  const cells = serviceCells([
+    cell(5, 18, 50),
+    cell(5, 19, 100),
+    { ...cell(6, 0, 100), offeredMinutes: 10, reservedMinutes: 10 },
+    cell(6, 10, 20),
+  ]);
+  const friday = daySummary(cells, 5);
+  assert.equal(friday.offeredMinutes, 130);
+  assert.equal(friday.reservedMinutes, 100);
+  assert.equal(friday.occupancyPercent, 77);
+  assert.equal(friday.busiest?.slot, 19);
+  assert.equal(daySummary(cells, 1).occupancyPercent, null);
+  assert.equal(daySummary(cells, 1).busiest, undefined);
 });
 
 test("highlights state the change, the busiest space, little-used spaces and peak hours", () => {
