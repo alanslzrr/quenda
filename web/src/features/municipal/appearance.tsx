@@ -1,13 +1,14 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { Appearance } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
 import layout from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
-import { defaultAppearance } from "../../app/theme";
+import { defaultAppearance, paletteColors } from "../../app/theme";
 import { useAppearancePreview } from "../../app/theme-provider";
 import { Button } from "../../ui/button/button";
 import { Select } from "../../ui/select/select";
+import styles from "./municipal.module.css";
 import { ManagementPage } from "./page";
 import {
   Denied,
@@ -66,6 +67,58 @@ function AppearanceEditor() {
     </ManagementPage>
   );
 }
+type Palette = Appearance["lightPalette"];
+/** Palettes chosen by their colours, not only their names: each card shows background, surface, accent and text. */
+function PaletteChoice({
+  legend,
+  mode,
+  options,
+  value,
+  onChange,
+}: {
+  legend: string;
+  mode: "light" | "dark";
+  options: { value: Palette; label: string }[];
+  value: Palette;
+  onChange: (value: Palette) => void;
+}) {
+  const name = useId();
+  return (
+    <fieldset className={styles.palettes}>
+      <legend>{legend}</legend>
+      <div className={styles.paletteRow}>
+        {options.map((option) => {
+          const colors = paletteColors[mode][option.value];
+          return (
+            <label key={option.value} className={styles.palette}>
+              <input
+                type="radio"
+                className={styles.paletteInput}
+                name={name}
+                value={option.value}
+                checked={value === option.value}
+                onChange={() => onChange(option.value)}
+              />
+              <span
+                className={styles.swatch}
+                style={{
+                  background: colors.background,
+                  borderColor: colors.border,
+                }}
+                aria-hidden="true"
+              >
+                <span style={{ background: colors.surface }} />
+                <span style={{ background: colors.accent }} />
+                <span style={{ background: colors.text }} />
+              </span>
+              <span className={styles.paletteName}>{option.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
 function AppearanceForm({ initial }: { initial: Appearance }) {
   const m = useMunicipality();
   const { t } = usePreferences();
@@ -73,7 +126,7 @@ function AppearanceForm({ initial }: { initial: Appearance }) {
   const [preview, setPreview] = useState<"light" | "dark" | null>(null);
   const previewTrigger = useRef<HTMLButtonElement>(null);
   useAppearancePreview(draft, preview);
-  const palettes = [
+  const palettes: { value: Palette; label: string }[] = [
     { value: "neutral", label: t("Neutro", "Neutro") },
     { value: "blue", label: t("Azul", "Azul") },
     { value: "green", label: t("Verde", "Verde") },
@@ -145,26 +198,19 @@ function AppearanceForm({ initial }: { initial: Appearance }) {
         })}
         onSaved={(r) => setDraft(r as Appearance)}
       >
-        <Select
-          placeholder={t("Selecciona una opción", "Selecciona unha opción")}
-          label={t("Paleta clara", "Paleta clara")}
+        <PaletteChoice
+          legend={t("Paleta clara", "Paleta clara")}
+          mode="light"
           options={palettes}
           value={draft.lightPalette}
-          onValueChange={(v) =>
-            setDraft({
-              ...draft,
-              lightPalette: v as Appearance["lightPalette"],
-            })
-          }
+          onChange={(v) => setDraft({ ...draft, lightPalette: v })}
         />
-        <Select
-          placeholder={t("Selecciona una opción", "Selecciona unha opción")}
-          label={t("Paleta oscura", "Paleta escura")}
+        <PaletteChoice
+          legend={t("Paleta oscura", "Paleta escura")}
+          mode="dark"
           options={palettes}
           value={draft.darkPalette}
-          onValueChange={(v) =>
-            setDraft({ ...draft, darkPalette: v as Appearance["darkPalette"] })
-          }
+          onChange={(v) => setDraft({ ...draft, darkPalette: v })}
         />
         <Select
           placeholder={t("Selecciona una opción", "Selecciona unha opción")}
