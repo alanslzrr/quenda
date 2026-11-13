@@ -4,6 +4,7 @@ import { DropdownMenu } from "../ui/dropdown-menu/dropdown-menu";
 import { Failure } from "./feedback";
 import { usePreferences } from "./preferences-provider";
 import { useSession } from "./session";
+import { useUnreadNotices } from "./unread-notices";
 
 export function SettingsMenu() {
   const { account, signOut } = useSession();
@@ -21,6 +22,11 @@ export function SettingsMenu() {
   }
   const { locale, theme, save, pending, t } = usePreferences();
   const [error, setError] = useState<unknown>();
+  const unread = useUnreadNotices();
+  const unreadText =
+    unread === 1
+      ? t("1 aviso sin leer", "1 aviso sen ler")
+      : t(`${unread} avisos sin leer`, `${unread} avisos sen ler`);
   const update = (value: Parameters<typeof save>[0]) => {
     setError(undefined);
     void save(value).catch(setError);
@@ -30,6 +36,7 @@ export function SettingsMenu() {
       <DropdownMenu
         label={t("Ajustes", "Axustes")}
         icon={<Settings size={16} />}
+        indicator={unread > 0 ? unreadText : undefined}
         items={[
           ...(account
             ? [
@@ -44,6 +51,14 @@ export function SettingsMenu() {
                 {
                   label: t("Avisos", "Avisos"),
                   to: "/avisos",
+                  ...(unread > 0
+                    ? {
+                        badge: {
+                          text: unread > 99 ? "99+" : String(unread),
+                          label: unreadText,
+                        },
+                      }
+                    : {}),
                 },
               ]
             : []),
