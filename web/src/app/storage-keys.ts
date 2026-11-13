@@ -39,8 +39,8 @@ export const storageEntries: readonly StorageEntry[] = [
     key: "quenda.preferences",
     store: "local",
     purpose: [
-      "Idioma y tema elegidos por quien no ha iniciado sesión.",
-      "Idioma e tema escollidos por quen non iniciou sesión.",
+      "Idioma y tema elegidos sin iniciar sesión, o los últimos de tu cuenta, para mostrarlos mientras la cuenta carga o si no puede leerse.",
+      "Idioma e tema escollidos sen iniciar sesión, ou os últimos da túa conta, para amosalos mentres a conta carga ou se non pode lerse.",
     ],
     duration: [
       "Hasta que borres los datos del sitio",

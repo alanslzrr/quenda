@@ -4,7 +4,10 @@ import type { Pool } from "pg";
 import { HttpError } from "../../http/errors.ts";
 import { rememberAuditActor } from "./access-audit.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
-import { consumeAdministrativeAttempt } from "./rate-limit.ts";
+import {
+  consumeAdministrativeAttempt,
+  consumeReadAttempt,
+} from "./rate-limit.ts";
 export function createRequestActor(
   pool: Pool,
   auth: Authentication,
@@ -22,7 +25,10 @@ export function createRequestActor(
     const account = await auth.authenticate(fromNodeHeaders(request.headers));
     if (!account) throw new HttpError("UNAUTHENTICATED");
     rememberAuditActor(request, account.accountId);
-    const limit = await consumeAdministrativeAttempt(pool, account.accountId);
+    // Reading a screen must not use up the budget for changing data.
+    const limit = await (request.method === "GET" || request.method === "HEAD"
+      ? consumeReadAttempt
+      : consumeAdministrativeAttempt)(pool, account.accountId);
     if (!limit.allowed) {
       reply.header("retry-after", limit.retryAfter);
       throw new HttpError("RATE_LIMITED");
