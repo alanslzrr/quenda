@@ -97,7 +97,13 @@
 .danger:disabled {
   color: color-mix(in oklab, var(--danger) 55%, var(--surface-muted));
 }
-.ghost:disabled {
+.danger-ghost {
+  color: var(--danger);
+  background: transparent;
+  border-color: transparent;
+}
+.ghost:disabled,
+.danger-ghost:disabled {
   opacity: 1;
   color: var(--text-muted);
 }
@@ -118,6 +124,9 @@
     border-color: var(--danger);
     background: var(--surface-muted);
   }
+  .danger-ghost:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--danger) 10%, transparent);
+  }
 }
 /* Color feedback on press, so touch and menu triggers (which never scale) still answer the finger. */
 .primary:active:not(:disabled) {
@@ -131,6 +140,9 @@
 .danger:active:not(:disabled) {
   border-color: var(--danger);
   background: var(--surface-muted);
+}
+.danger-ghost:active:not(:disabled) {
+  background: color-mix(in oklab, var(--danger) 14%, transparent);
 }
 .sm {
   min-height: var(--control-height-sm);

@@ -21,7 +21,13 @@ import type { TargetAndTransition, Variants } from "motion/react";
 import { motionTokens } from "../lib/motion-tokens";
 import styles from "./button.module.css";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+/** `danger` confirms a destructive action; `danger-ghost` opens or starts one, or removes an item from a list being edited. */
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "danger"
+  | "danger-ghost";
 export type ButtonSize = "sm" | "md" | "lg";
 
 export interface ButtonProps
