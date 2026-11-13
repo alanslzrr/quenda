@@ -266,15 +266,8 @@ function Revoke() {
             <Failure error={query.error} retry={() => void query.refetch()} />
           ) : (
             <>
+              {/* With nothing to choose, the disabled button already says why. */}
               <More query={query} />
-              {!rows.length && (
-                <p>
-                  {t(
-                    "No hay acreditaciones emitidas por este municipio.",
-                    "Non hai acreditacións emitidas por este municipio.",
-                  )}
-                </p>
-              )}
             </>
           )}
           <Disclosure
