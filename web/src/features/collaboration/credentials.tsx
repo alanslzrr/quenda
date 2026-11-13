@@ -4,7 +4,7 @@ import { textField } from "../../app/action";
 import { ApiError } from "../../app/api";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink as Link } from "../../app/link-button";
+import { ActionLink as Link, LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { Checkbox } from "../../ui/checkbox/checkbox";
@@ -15,6 +15,7 @@ import {
   accountText,
 } from "../municipal/account-label";
 import { AccountSelect } from "../municipal/account-select";
+import { ManagementPage } from "../municipal/page";
 import {
   Denied,
   endpoint,
@@ -58,97 +59,102 @@ function Issue() {
       error={query.isError ? query.error : null}
       retry={() => void query.refetch()}
     >
-      <Link to={agreementPath(m.id, a.agreementId, a.version)}>
-        {a.name} · {a.version}
-      </Link>
-      <h1>{t("Emitir acreditación", "Emitir acreditación")}</h1>
-      {receipt ? (
-        <section role="status">
-          <p>
-            {t(
-              "Acreditación emitida. Conserva su identificador para una posible revocación.",
-              "Acreditación emitida. Conserva o seu identificador para unha posible revogación.",
-            )}
-          </p>
-          <p>{receipt}</p>
-          <Link
-            to={`/administracion/${m.id}/acreditaciones?referencia=${encodeURIComponent(receipt)}`}
-            danger
-          >
-            {t("Revocar acreditación", "Revogar acreditación")}
+      <ManagementPage
+        title={t("Emitir acreditación", "Emitir acreditación")}
+        breadcrumb={
+          <Link to={agreementPath(m.id, a.agreementId, a.version)}>
+            {a.name} · {a.version}
           </Link>
-        </section>
-      ) : (
-        <CollaborationAction
-          path={`${endpoint(m.id)}/credentials`}
-          label={t("Emitir acreditación", "Emitir acreditación")}
-          onResult={(r) => setReceipt(r.id)}
-          body={(d) => {
-            const startsAt = textField(d, "startsAt"),
-              endsAt = textField(d, "endsAt");
-            if (
-              !startsAt ||
-              !endsAt ||
-              Date.parse(startsAt) >= Date.parse(endsAt)
-            )
-              throw new ApiError(
-                400,
-                "INVALID_INPUT",
-                t(
-                  "Revisa la vigencia de la acreditación.",
-                  "Revisa a vixencia da acreditación.",
-                ),
-              );
-            return {
-              agreementId: a.agreementId,
-              version: a.version,
-              accountId: textField(d, "accountId").trim(),
-              startsAt,
-              endsAt,
-              verificationReference: textField(
-                d,
-                "verificationReference",
-              ).trim(),
-            };
-          }}
-        >
-          <p>
-            {t(
-              "La cuenta debe estar vinculada a este municipio. El sistema comprueba la versión efectiva y el permiso de emisión; la acreditación no garantiza por sí sola una reserva.",
-              "A conta debe estar vinculada a este municipio. O sistema comproba a versión efectiva e o permiso de emisión; a acreditación non garante por si soa unha reserva.",
-            )}
-          </p>
-          <AccountSelect
-            label={t("Persona beneficiaria", "Persoa beneficiaria")}
-          />
-          <InstantField
-            name="startsAt"
-            label={t("Inicio de acreditación", "Inicio de acreditación")}
-            zone={a.timeZone}
-          />
-          <InstantField
-            name="endsAt"
-            label={t("Fin de acreditación", "Fin de acreditación")}
-            zone={a.timeZone}
-          />
-          <Input
-            required
-            name="verificationReference"
-            maxLength={500}
-            label={t(
-              "Referencia de verificación",
-              "Referencia de verificación",
-            )}
-          />
-          <Checkbox
-            required
-            label={t(
-              "Confirmo la verificación y la vigencia indicadas",
-              "Confirmo a verificación e a vixencia indicadas",
-            )}
-          />
-        </CollaborationAction>
-      )}
+        }
+      >
+        {receipt ? (
+          <section role="status">
+            <p>
+              {t(
+                "Acreditación emitida. Conserva su identificador para una posible revocación.",
+                "Acreditación emitida. Conserva o seu identificador para unha posible revogación.",
+              )}
+            </p>
+            <p>{receipt}</p>
+            <Link
+              to={`/administracion/${m.id}/acreditaciones?referencia=${encodeURIComponent(receipt)}`}
+              danger
+            >
+              {t("Revocar acreditación", "Revogar acreditación")}
+            </Link>
+          </section>
+        ) : (
+          <CollaborationAction
+            path={`${endpoint(m.id)}/credentials`}
+            label={t("Emitir acreditación", "Emitir acreditación")}
+            onResult={(r) => setReceipt(r.id)}
+            body={(d) => {
+              const startsAt = textField(d, "startsAt"),
+                endsAt = textField(d, "endsAt");
+              if (
+                !startsAt ||
+                !endsAt ||
+                Date.parse(startsAt) >= Date.parse(endsAt)
+              )
+                throw new ApiError(
+                  400,
+                  "INVALID_INPUT",
+                  t(
+                    "Revisa la vigencia de la acreditación.",
+                    "Revisa a vixencia da acreditación.",
+                  ),
+                );
+              return {
+                agreementId: a.agreementId,
+                version: a.version,
+                accountId: textField(d, "accountId").trim(),
+                startsAt,
+                endsAt,
+                verificationReference: textField(
+                  d,
+                  "verificationReference",
+                ).trim(),
+              };
+            }}
+          >
+            <p>
+              {t(
+                "La cuenta debe estar vinculada a este municipio. El sistema comprueba la versión efectiva y el permiso de emisión; la acreditación no garantiza por sí sola una reserva.",
+                "A conta debe estar vinculada a este municipio. O sistema comproba a versión efectiva e o permiso de emisión; a acreditación non garante por si soa unha reserva.",
+              )}
+            </p>
+            <AccountSelect
+              label={t("Persona beneficiaria", "Persoa beneficiaria")}
+            />
+            <InstantField
+              name="startsAt"
+              label={t("Inicio de acreditación", "Inicio de acreditación")}
+              zone={a.timeZone}
+            />
+            <InstantField
+              name="endsAt"
+              label={t("Fin de acreditación", "Fin de acreditación")}
+              zone={a.timeZone}
+            />
+            <Input
+              required
+              name="verificationReference"
+              maxLength={500}
+              label={t(
+                "Referencia de verificación",
+                "Referencia de verificación",
+              )}
+            />
+            <Checkbox
+              required
+              label={t(
+                "Confirmo la verificación y la vigencia indicadas",
+                "Confirmo a verificación e a vixencia indicadas",
+              )}
+            />
+          </CollaborationAction>
+        )}
+      </ManagementPage>
     </EditorRecovery>
   );
 }
@@ -186,23 +192,18 @@ function Revoke() {
   const nothingToRevoke =
     query.isSuccess && !query.hasNextPage && rows.every((row) => row.revokedAt);
   return (
-    <>
-      <h1>{t("Acreditaciones de uso", "Acreditacións de uso")}</h1>
-      <p>
-        {t(
-          "Autorizan a una persona a usar los espacios de un convenio que exige acreditación. No son reservas ni garantizan disponibilidad.",
-          "Autorizan unha persoa a usar os espazos dun convenio que esixe acreditación. Non son reservas nin garanten dispoñibilidade.",
-        )}
-      </p>
-      <p>
-        {t(
-          "Para emitir una acreditación, abre la versión del convenio. Para revocar, selecciona una acreditación emitida por este municipio; no se consultan acreditaciones ajenas.",
-          "Para emitir unha acreditación, abre a versión do convenio. Para revogar, selecciona unha acreditación emitida por este municipio; non se consultan acreditacións alleas.",
-        )}
-      </p>
-      <Link to={agreementPath(m.id)}>
-        {t("Emitir desde un convenio", "Emitir desde un convenio")}
-      </Link>
+    <ManagementPage
+      title={t("Acreditaciones de uso", "Acreditacións de uso")}
+      description={t(
+        "Autorizan a una persona a usar los espacios de un convenio que exige acreditación. No son reservas ni garantizan disponibilidad. Se emiten desde la versión del convenio; aquí se revocan las emitidas por este municipio.",
+        "Autorizan unha persoa a usar os espazos dun convenio que esixe acreditación. Non son reservas nin garanten dispoñibilidade. Emítense desde a versión do convenio; aquí revóganse as emitidas por este municipio.",
+      )}
+      actions={
+        <LinkButton to={agreementPath(m.id)} variant="secondary">
+          {t("Emitir desde un convenio", "Emitir desde un convenio")}
+        </LinkButton>
+      }
+    >
       <h2>{t("Revocar acreditación", "Revogar acreditación")}</h2>
       {receipt ? (
         <p role="status">
@@ -306,6 +307,6 @@ function Revoke() {
           />
         </CollaborationAction>
       )}
-    </>
+    </ManagementPage>
   );
 }

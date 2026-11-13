@@ -4,6 +4,7 @@ import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
+import { ManagementPage } from "../municipal/page";
 import {
   Denied,
   endpoint,
@@ -35,17 +36,17 @@ function Restriction() {
     return <Failure error={query.error} retry={() => void query.refetch()} />;
   const r = query.data.restriction;
   return (
-    <>
-      <Link to={agreementPath(m.id)}>{t("Convenios", "Convenios")}</Link>
-      <h1>{t("Vinculación de la unidad", "Vinculación da unidade")}</h1>
-      <p>{unitId}</p>
+    <ManagementPage
+      title={t("Vinculación de la unidad", "Vinculación da unidade")}
+      breadcrumb={
+        <Link to={agreementPath(m.id)}>{t("Convenios", "Convenios")}</Link>
+      }
+      description={t(
+        "Retirar la vinculación no publica la unidad ni modifica horarios, reservas o bloqueos.",
+        "Retirar a vinculación non publica a unidade nin modifica horarios, reservas ou bloqueos.",
+      )}
+    >
       <PendingLink />
-      <p>
-        {t(
-          "Retirar la vinculación no publica la unidad ni modifica horarios, reservas o bloqueos.",
-          "Retirar a vinculación non publica a unidade nin modifica horarios, reservas ou bloqueos.",
-        )}
-      </p>
       {!r ? (
         <p role="status">
           {t(
@@ -95,6 +96,6 @@ function Restriction() {
           )}
         </>
       )}
-    </>
+    </ManagementPage>
   );
 }
