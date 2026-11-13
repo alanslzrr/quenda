@@ -12,6 +12,7 @@ import { Button } from "../../ui/button/button";
 import { Combobox } from "../../ui/combobox/combobox";
 import { DateRangePicker } from "../../ui/date-range-picker/date-range-picker";
 import { Skeleton } from "../../ui/skeleton/skeleton";
+import { ManagementPage } from "../municipal/page";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
 import { allowed, canEnter } from "../reporting/model";
 import styles from "./analytics.module.css";
@@ -63,18 +64,14 @@ function Loader() {
     `${endpoint(m.id)}/analytics/units`,
   );
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <div>
-          <h1>{t("Uso de los espacios", "Uso dos espazos")}</h1>
-          <p className={styles.lead}>
-            {t(
-              "Cuánto se reservan los espacios del municipio, cómo evoluciona y cuándo hay más demanda. Las cifras describen reservas, no asistencia.",
-              "Canto se reservan os espazos do municipio, como evoluciona e cando hai máis demanda. As cifras describen reservas, non asistencia.",
-            )}
-          </p>
-        </div>
-      </header>
+    <ManagementPage
+      width="wide"
+      title={t("Uso de los espacios", "Uso dos espazos")}
+      description={t(
+        "Cuánto se reservan los espacios del municipio, cómo evoluciona y cuándo hay más demanda. Las cifras describen reservas, no asistencia.",
+        "Canto se reservan os espazos do municipio, como evoluciona e cando hai máis demanda. As cifras describen reservas, non asistencia.",
+      )}
+    >
       {settings.isPending || units.isPending ? (
         <Loading />
       ) : settings.data && units.data ? (
@@ -88,7 +85,7 @@ function Loader() {
           }}
         />
       )}
-    </div>
+    </ManagementPage>
   );
 }
 
@@ -269,7 +266,7 @@ function Report({
           {data && (
             <Button
               type="button"
-              variant="ghost"
+              variant="secondary"
               onClick={() =>
                 saveFile(
                   `quenda-uso-espacios-${data.from}-${addDays(data.to, -1)}.csv`,
