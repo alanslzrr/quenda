@@ -15,7 +15,12 @@ import {
 } from "../catalog/booking";
 import booking from "../catalog/booking.module.css";
 import { durationLabel, intervalLabel, municipalToday } from "../catalog/dates";
-import { BookingSteps, municipalityPath, unitPath } from "../catalog/journey";
+import {
+  BookingSteps,
+  JourneyLoading,
+  municipalityPath,
+  unitPath,
+} from "../catalog/journey";
 import { useMunicipality, usePublicAppearance } from "../catalog/municipality";
 import { UnitUnavailable, usePublicUnit } from "../catalog/unit";
 import type { CommandPolicy } from "./commands";
@@ -104,7 +109,7 @@ export function Checkout() {
     policy.isPending ||
     (reservationId && original.isPending)
   )
-    return <Loading />;
+    return reservationId ? <Loading /> : <JourneyLoading />;
   const refresh = async () => {
     setGeneration((n) => n + 1);
     await Promise.all([
