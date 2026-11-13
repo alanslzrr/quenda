@@ -315,3 +315,36 @@ test("an uncertain catalog creation cannot be resubmitted without reviewing its 
   expect(JSON.parse(stored.body)).toEqual({ name: "Centro deportivo" });
   expect(stored.path).toBe(`/api/municipalities/${tenant}/facilities`);
 });
+test("sections waiting for the identity check explain it once, then wait quietly", async ({
+  page,
+}) => {
+  await fixture(page);
+  // Both catalog lists need a recent second factor.
+  await page.route(
+    /\/api\/municipalities\/[^/]+\/(facilities|units)(\?|$)/,
+    (route) =>
+      route.fulfill({
+        status: 403,
+        json: {
+          error: {
+            code: "REAUTHENTICATION_REQUIRED",
+            message: "Verifica de nuevo el segundo factor.",
+          },
+        },
+      }),
+  );
+  await page.goto(`/administracion/${tenant}`);
+  await expect(
+    page.getByRole("status", { name: /Verificación de seguridade?/ }),
+  ).toBeVisible();
+  // One section carries the full explanation and the way to the check; the other only says what it waits for.
+  await expect(
+    page.getByRole("region", { name: /^Resolver (el|o) problema$/ }),
+  ).toHaveCount(1);
+  await expect(
+    page.getByRole("link", { name: /Ir a la verificación|Ir á verificación/ }),
+  ).toHaveCount(1);
+  await expect(
+    page.getByText("Verifica de nuevo el segundo factor."),
+  ).toHaveCount(2);
+});

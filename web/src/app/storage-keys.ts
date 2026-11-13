@@ -57,6 +57,15 @@ export const storageEntries: readonly StorageEntry[] = [
     duration: ["Hasta cerrar la pestaña", "Ata pechar a lapela"],
   },
   {
+    key: "quenda.management-menu",
+    store: "session",
+    purpose: [
+      "Último menú de gestión leído en esta pestaña, para conservar la navegación si una página no puede cargarse. Solo muestra enlaces; los permisos se comprueban siempre en el servidor.",
+      "Último menú de xestión lido nesta lapela, para conservar a navegación se unha páxina non pode cargarse. Só amosa ligazóns; os permisos compróbanse sempre no servidor.",
+    ],
+    duration: ["Hasta cerrar la pestaña", "Ata pechar a lapela"],
+  },
+  {
     key: "quenda.reservation-command",
     store: "session",
     purpose: [

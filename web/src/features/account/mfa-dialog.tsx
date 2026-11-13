@@ -60,15 +60,13 @@ export function MfaBoundary({ children }: { children: ReactNode }) {
   const { account, refresh } = useSession();
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [requests, setRequests] = useState<Set<string>>(() => new Set());
+  // In registration order, so the first waiting section can carry the full explanation.
+  const [requests, setRequests] = useState<string[]>([]);
   const register = useCallback((id: string) => {
-    setRequests((previous) => new Set(previous).add(id));
-    return () =>
-      setRequests((previous) => {
-        const next = new Set(previous);
-        next.delete(id);
-        return next;
-      });
+    setRequests((previous) =>
+      previous.includes(id) ? previous : [...previous, id],
+    );
+    return () => setRequests((previous) => previous.filter((x) => x !== id));
   }, []);
   const returnFocus = useRef<HTMLElement | null>(null);
   const requestVerification = useCallback(() => {
@@ -82,7 +80,7 @@ export function MfaBoundary({ children }: { children: ReactNode }) {
   return (
     <ReauthenticationContext.Provider value={requestVerification}>
       <ReauthenticationNoticeContext.Provider
-        value={{ register, pending: requests.size > 0 }}
+        value={{ register, pending: requests.length > 0, first: requests[0] }}
       >
         {children}
       </ReauthenticationNoticeContext.Provider>
@@ -110,7 +108,7 @@ export function MfaBoundary({ children }: { children: ReactNode }) {
               await client.invalidateQueries({
                 queryKey: ["private", account?.accountId],
               });
-              setRequests(new Set());
+              setRequests([]);
               setOpen(false);
             }}
           >

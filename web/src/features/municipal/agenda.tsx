@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { CalendarOff } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ActionForm, textField } from "../../app/action";
@@ -12,6 +13,7 @@ import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { useSession } from "../../app/session";
 import { Badge } from "../../ui/badge/badge";
 import { Checkbox } from "../../ui/checkbox/checkbox";
+import { EmptyState } from "../../ui/empty-state/empty-state";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
@@ -289,12 +291,14 @@ function BlockList({
       ) : (
         <>
           {!q.data.pages[0]?.items.length && (
-            <p>
-              {t(
-                "No hay bloqueos para este día y ámbito.",
-                "Non hai bloqueos para este día e ámbito.",
+            <EmptyState
+              icon={<CalendarOff width={24} height={24} strokeWidth={1.5} />}
+              title={t("Sin bloqueos", "Sen bloqueos")}
+              description={t(
+                "No hay bloqueos para este día y ámbito. Para reservar una unidad para mantenimiento o actos propios, usa «Nuevo bloqueo».",
+                "Non hai bloqueos para este día e ámbito. Para reservar unha unidade para mantemento ou actos propios, usa «Novo bloqueo».",
               )}
-            </p>
+            />
           )}
           {q.data.pages
             .flatMap((p) => p.items)
