@@ -53,7 +53,10 @@ export {
   saveAccountPreferences,
 } from "./preferences.ts";
 export { listMunicipalProfiles } from "./profiles.ts";
-export { consumeAdministrativeAttempt } from "./rate-limit.ts";
+export {
+  consumeAdministrativeAttempt,
+  consumeReadAttempt,
+} from "./rate-limit.ts";
 export { requireMfaSession, requireRecentMfa } from "./reauthentication.ts";
 export {
   recommendationsEnabled,
