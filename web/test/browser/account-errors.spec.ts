@@ -140,7 +140,10 @@ test("an invitation exposes its scope and is accepted only by an explicit comman
     },
   );
   await page.goto("/perfil/invitaciones");
-  await expect(page.getByRole("heading", { name: "Oleiros" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Administración municipal" }),
+  ).toBeVisible();
+  await expect(page.getByText("Oleiros", { exact: true })).toBeVisible();
   expect(commands).toBe(0);
   await page.getByRole("button", { name: "Aceptar invitación" }).click();
   await expect(page.getByText("Aceptada", { exact: true })).toBeVisible();

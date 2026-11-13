@@ -36,9 +36,11 @@ async function confirm(page: Page, label: string | RegExp) {
 }
 async function accept(page: Page, kind: string) {
   await page.goto("/perfil/invitaciones");
+  // Each invitation is its own card, named by its role.
   const area = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: kind, exact: true }) });
+    .locator("li")
+    .filter({ has: page.getByRole("heading", { name: kind, exact: true }) })
+    .filter({ hasText: /Pendiente|Pendente/ });
   const button = area.getByRole("button", {
     name: "Aceptar invitación",
     exact: true,
