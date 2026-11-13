@@ -533,7 +533,7 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
               {!resource.data.withdrawnAt && (
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button size="sm" variant="secondary">
+                    <Button size="sm" variant="danger-ghost">
                       <Archive size={16} aria-hidden="true" />
                       {t("Retirar del catálogo", "Retirar do catálogo")}
                     </Button>

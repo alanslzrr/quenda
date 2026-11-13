@@ -296,7 +296,7 @@ function CalendarForm({
             )}
             <Button
               type="button"
-              variant="ghost"
+              variant="danger-ghost"
               onClick={() => set(values.filter((x) => x.id !== r.id))}
             >
               {t("Quitar franja", "Quitar franxa")} {index + 1}
