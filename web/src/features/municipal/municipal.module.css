@@ -129,3 +129,10 @@
     margin-bottom: 1rem;
   }
 }
+/* A quantity and its unit, side by side. */
+.amount {
+  display: grid;
+  grid-template-columns: minmax(0, 12rem) minmax(0, 10rem);
+  gap: var(--space-3);
+  align-items: start;
+}
