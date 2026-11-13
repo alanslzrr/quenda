@@ -311,6 +311,18 @@ Cancelaciones, antelación y llegadas cuentan las reservas que empiezan en el pe
 
 `GET /api/municipalities/{tenantId}/analytics/units` devuelve las unidades que la cuenta puede analizar (`REPORT_READ` municipal o de la unidad), con su instalación y si están retiradas. Exige MFA, incluye las retiradas y las ordena por instalación y nombre. Devuelve hasta 500 y `truncated` indica que hay más. Solo identifica unidades; no concede otros accesos. El mapa por día y hora es una tabla con el porcentaje escrito en cada celda; el tono solo lo refuerza.
 
+### Ajustes de analítica
+
+`GET /api/municipalities/{tenantId}/analytics/settings` devuelve los ajustes del municipio con `version`:
+
+- `highDemandPercent`: una ocupación igual o superior marca un espacio como de alta demanda. Por defecto, 85.
+- `lowUsePercent`: una ocupación inferior lo marca como de poco uso. Por defecto, 20.
+- `defaultPeriod`: periodo con el que se abre el análisis: `THIS_WEEK`, `THIS_MONTH` (por defecto), `LAST_MONTH` o `LAST_30_DAYS`.
+
+La lectura exige MFA y `REPORT_READ` municipal o de alguna unidad. Los ajustes no cambian ningún cálculo: solo etiquetan resultados y eligen el periodo inicial.
+
+`PUT` sobre la misma ruta los sustituye con `expectedVersion`. Exige administración del municipio y MFA reciente. Los umbrales son enteros entre 1 y 99, y «poco uso» debe ser menor que «alta demanda». Una versión obsoleta responde `409`. Cada cambio registra autor, versión, valores anteriores y nuevos en una misma transacción. Afecta a todas las personas que analizan el municipio. Las preferencias de presentación de cada persona (tipo de gráfico, bloques visibles) se guardan en su navegador y no pasan por la API. La exportación del catálogo no incluye estos ajustes.
+
 ### Exportación de reservas
 
 `GET /api/municipalities/{tenantId}/exports/reservations?from=2030-01-01&to=2030-02-01` descarga JSON `quenda.reservations`, versión 3. El parámetro opcional `unitId` limita el conjunto a una unidad. Exige `DATA_EXPORT` y `RESERVATION_READ` o `RESERVATION_MANAGE` para el mismo ámbito, con MFA de los últimos cinco minutos. Sin `unitId`, ambos permisos deben ser municipales.
