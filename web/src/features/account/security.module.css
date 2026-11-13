@@ -1,0 +1,10 @@
+/* The security sections inside the account frame: no second card, aligned with the page title. */
+div.flat {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+div.flat > section {
+  padding-inline: 0;
+}
