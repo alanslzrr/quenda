@@ -130,6 +130,7 @@ export function RevokePolicy() {
         <PrivacyForm
           path={`${s.base}/retention-policies/${id}/revoke`}
           label={t("Retirar política", "Retirar política")}
+          danger
           onResult={() => setDone(true)}
           body={(d) => ({ reason: value(d, "reason") })}
         >

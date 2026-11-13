@@ -73,6 +73,7 @@ function Issue() {
           <p>{receipt}</p>
           <Link
             to={`/administracion/${m.id}/acreditaciones?referencia=${encodeURIComponent(receipt)}`}
+            danger
           >
             {t("Revocar acreditación", "Revogar acreditación")}
           </Link>

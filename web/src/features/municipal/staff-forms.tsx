@@ -83,7 +83,7 @@ function PermissionEditor({
               : t("Todo el municipio", "Todo o municipio")}{" "}
             <Button
               type="button"
-              variant="ghost"
+              variant="danger-ghost"
               onClick={() => onChange(value.filter((_, i) => i !== index))}
               aria-label={`${t("Quitar permiso", "Quitar permiso")} ${index + 1}`}
             >

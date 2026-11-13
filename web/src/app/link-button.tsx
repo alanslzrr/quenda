@@ -18,6 +18,17 @@ export function LinkButton({
     />
   );
 }
-export function ActionLink(props: ComponentProps<typeof Link>) {
-  return <LinkButton {...props} variant="quiet" />;
+/** A text action. `danger` marks one that leads to withdrawing, revoking or removing something. */
+export function ActionLink({
+  danger = false,
+  className = "",
+  ...props
+}: ComponentProps<typeof Link> & { danger?: boolean }) {
+  return (
+    <LinkButton
+      {...props}
+      variant="quiet"
+      className={`${danger ? styles.danger : ""} ${className}`}
+    />
+  );
 }

@@ -83,7 +83,7 @@ export function Policies() {
             </p>
           )}
           {s.execute && !p.revokedAt && !p.supersededAt && (
-            <Link to={`${s.view}/retirar?id=${p.policyId}`}>
+            <Link to={`${s.view}/retirar?id=${p.policyId}`} danger>
               {t("Retirar política", "Retirar política")}
             </Link>
           )}
