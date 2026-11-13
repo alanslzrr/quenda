@@ -54,8 +54,18 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
-  const locale = id ? (query.data?.locale ?? visitor.locale) : visitor.locale;
-  const theme = id ? (query.data?.theme ?? null) : visitor.theme;
+  // Until the account's preferences arrive, or when they cannot be read (rate limit, network), the last ones seen in
+  // this browser apply, so the page never flashes into the other theme or language.
+  const known = id ? query.data : undefined;
+  const locale = known ? (known.locale ?? visitor.locale) : visitor.locale;
+  const theme = known ? known.theme : visitor.theme;
+  useEffect(() => {
+    if (!known) return;
+    const next = { locale: known.locale ?? visitor.locale, theme: known.theme };
+    if (next.locale === visitor.locale && next.theme === visitor.theme) return;
+    setVisitor(next);
+    saveVisitorPreferences(browserStorage("local"), next);
+  }, [known, visitor]);
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
