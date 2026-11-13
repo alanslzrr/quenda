@@ -90,6 +90,18 @@
   min-width: 0;
   flex: 1 1 130px;
 }
+/* Filters keep the width of their content and sit side by side; on a phone each takes its own line. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: var(--space-3) var(--space-4);
+}
+.filters > * {
+  flex: 1 1 14rem;
+  min-width: 0;
+  max-width: 20rem;
+}
 .notice {
   padding: 1rem;
   border-left: 3px solid var(--accent);
