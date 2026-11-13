@@ -1126,7 +1126,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             403,
           );
           assert.equal((await client.request("/api/me")).statusCode, 200);
-          for (let i = 0; i < 60; i++)
+          for (let i = 0; i < 120; i++)
             await consumeAdministrativeAttempt(domain, accountId);
           const throttled = await replica.inject({
             method: "POST",
@@ -1141,6 +1141,11 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           assert.equal(throttled.statusCode, 429, throttled.body);
           assert.equal(throttled.json().error.code, "RATE_LIMITED");
           assert.ok(Number(throttled.headers["retry-after"]) >= 1);
+          // Reads keep their own budget, so a throttled command does not lock the screens.
+          assert.equal(
+            (await client.request("/api/me/navigation")).statusCode,
+            200,
+          );
           const recovery = browser(replica, "192.0.2.32");
           assert.equal(
             (
