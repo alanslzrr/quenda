@@ -372,6 +372,75 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       );
       assert.equal(events[0].startsAt, body.startsAt);
       assert.equal(events[2].reservationPath, `${url}/${created.json().id}`);
+      // Newest first, naming where the reservation is; new notices start unread.
+      const listed = notices.json().items as {
+        tenantId: string;
+        eventId: string;
+        occurredAt: string;
+        readAt: string | null;
+      }[];
+      for (let i = 1; i < listed.length; i++)
+        assert.ok(
+          Date.parse(listed[i - 1]?.occurredAt ?? "") >=
+            Date.parse(listed[i]?.occurredAt ?? ""),
+        );
+      assert.ok(
+        events.every(
+          (n: {
+            municipality: string;
+            unitName: string | null;
+            facilityName: string | null;
+            readAt: string | null;
+          }) =>
+            n.municipality.length > 0 &&
+            !!n.unitName &&
+            !!n.facilityName &&
+            n.readAt === null,
+        ),
+      );
+      const unreadInDatabase = async () =>
+        (
+          await migration.query(
+            "SELECT count(*)::int AS n FROM domain.reservation_notice WHERE account_id=$1 AND read_at IS NULL",
+            [accountId],
+          )
+        ).rows[0].n as number;
+      const counted = await client.request("/api/me/notices/unread");
+      assert.equal(counted.statusCode, 200, counted.body);
+      assert.equal(counted.headers["cache-control"], "no-store");
+      const before = counted.json().unread as number;
+      assert.ok(before >= 3);
+      assert.equal(before, await unreadInDatabase());
+      const readOne = await client.request(
+        `/api/me/notices/${events[0].tenantId}/${events[0].eventId}/read`,
+        {},
+      );
+      assert.equal(readOne.statusCode, 200, readOne.body);
+      assert.deepEqual(readOne.json(), { read: 1 });
+      assert.equal(await unreadInDatabase(), before - 1);
+      assert.deepEqual(
+        (await client.request("/api/me/notices/read", {})).json(),
+        { read: before - 1 },
+      );
+      assert.equal(await unreadInDatabase(), 0);
+      // Start a fresh rate-limit window, so these checks never push the rest of the journey over the limit.
+      await migration.query(
+        "UPDATE domain.administrative_rate_limit SET window_started_at=now()-interval '1 minute' WHERE account_id=$1",
+        [accountId],
+      );
+      assert.equal(
+        (await app.inject({ url: "/api/me/notices/unread" })).statusCode,
+        401,
+      );
+      assert.equal(
+        (
+          await client.request(
+            "/api/me/notices/not-a-tenant/not-an-event/read",
+            {},
+          )
+        ).statusCode,
+        400,
+      );
       assert.equal(
         (await app.inject({ url: "/api/me/notices" })).statusCode,
         401,

@@ -149,7 +149,8 @@ test("0066 upgrades a populated 0065 database without rewriting historical evide
           ).rows,
           notices: (
             await owner.query(
-              "SELECT to_jsonb(n)::text AS value FROM domain.reservation_notice n ORDER BY event_id",
+              // read_at arrives in a later migration and is not historical evidence.
+              "SELECT (to_jsonb(n)-'read_at')::text AS value FROM domain.reservation_notice n ORDER BY event_id",
             )
           ).rows,
           email: (
