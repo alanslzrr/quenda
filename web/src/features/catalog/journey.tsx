@@ -177,15 +177,19 @@ export function Choice({
   meta,
   badge,
   aside,
+  media,
 }: {
   to?: string;
   title: string;
   meta?: ReactNode;
   badge?: ReactNode;
   aside?: ReactNode;
+  /** A cover photo or its placeholder, before the text. */
+  media?: ReactNode;
 }) {
   const body = (
     <>
+      {media}
       <span className={styles.choiceText}>
         <span className={styles.choiceTitle}>
           {title}

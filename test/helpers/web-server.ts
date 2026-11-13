@@ -75,6 +75,9 @@ await withDatabase(async ({ auth, domain, migration, worker }) => {
     // Lost-response creation recovery has separate accounts and resources.
     51,
     52,
+    // Catalog photos own these two, one per project.
+    59,
+    60,
   ])
     municipalFixtures.push(
       await seedMunicipalBrowser(app, auth, domain, migration, index),

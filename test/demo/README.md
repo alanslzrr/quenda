@@ -4,6 +4,10 @@ La API de demostración escucha exclusivamente en `127.0.0.1:3100`; Vite se conf
 
 Cada arranque de `pnpm demo:local` crea una base efímera nueva: no reinicies una demostración en uso para recuperar acceso sin avisar de la pérdida de sus datos. La supervivencia del proceso depende del terminal o supervisor que lo lance; este comando no lo convierte en un servicio persistente.
 
+## Fotografías
+
+Las instalaciones y los espacios de Valdeira tienen fotografías de ejemplo, procesadas como si las subiera el ayuntamiento. La Pista central no tiene fotos propias y muestra las de su pabellón. Ribasanta no tiene fotos. El origen y la licencia de cada imagen están en [photos/README.md](photos/README.md).
+
 ## Cuentas
 
 | Cuenta | Usuario | Contraseña |

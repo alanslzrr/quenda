@@ -30,6 +30,8 @@ import {
   useJourneyQuery,
 } from "./journey";
 import { useMunicipality, usePublicAppearance } from "./municipality";
+import { PhotoGallery } from "./photo-gallery";
+import { type CatalogPhoto, publicPhotos } from "./photos";
 import {
   type FacilityProfile,
   localized,
@@ -50,6 +52,8 @@ export interface Unit {
   calendarVersion: number;
   profile?: UnitProfile;
   facilityProfile?: FacilityProfile;
+  photos?: CatalogPhoto[];
+  facilityPhotos?: CatalogPhoto[];
   calendar: {
     minimumMinutes: number;
     maximumMinutes: number;
@@ -220,6 +224,14 @@ export function UnitAvailability({
                 {unitFacts(unit.profile, locale).join(" · ")}
               </p>
             )}
+            {/* Without photos of its own, a space shows those of its facility. */}
+            <PhotoGallery
+              photos={
+                unit.photos?.length ? unit.photos : (unit.facilityPhotos ?? [])
+              }
+              source={publicPhotos(tenantId)}
+              label={unit.photos?.length ? unit.name : `${unit.facilityName}`}
+            />
             {localized(unit.profile?.description, locale) && (
               <p className={styles.lead}>
                 {localized(unit.profile?.description, locale)}
