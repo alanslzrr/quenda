@@ -5,6 +5,7 @@ import { HttpError } from "../../http/errors.ts";
 import { civilDate } from "../../shared/civil-date.ts";
 import {
   type AuthenticatedAccount,
+  requireMfaSession,
   requirePermission,
 } from "../identity/index.ts";
 import {
@@ -18,6 +19,8 @@ import {
 } from "./indicators.ts";
 import {
   type AnalyticsReservation,
+  type AnalyticsUnitInfo,
+  type Granularity,
   usageAnalytics,
 } from "./usage-analytics.ts";
 
@@ -53,8 +56,39 @@ export function readUsageAnalytics(
   unitId: string | null,
   from: string,
   to: string,
+  granularity?: Granularity,
 ) {
-  return readIndicators(pool, actor, tenantId, unitId, from, to, true);
+  return readIndicators(pool, actor, tenantId, unitId, from, to, {
+    granularity,
+  });
+}
+/**
+ * Spaces the account may analyse, grouped by facility, including withdrawn
+ * ones. Up to 500; `truncated` tells the client that more exist.
+ */
+export async function readReportUnits(
+  pool: Pool,
+  actor: AuthenticatedAccount,
+  tenantId: string,
+) {
+  requireMfaSession(actor);
+  const rows = await command(
+    pool,
+    { accountId: actor.accountId, tenantId },
+    async (client) =>
+      (
+        await client.query<{
+          unitId: string;
+          name: string;
+          facilityId: string;
+          facilityName: string;
+          withdrawn: boolean;
+        }>(
+          'SELECT id AS "unitId",name,facility_id AS "facilityId",facility_name AS "facilityName",withdrawn FROM domain.report_units()',
+        )
+      ).rows,
+  );
+  return { units: rows.slice(0, 500), truncated: rows.length > 500 };
 }
 async function readIndicators(
   pool: Pool,
@@ -63,7 +97,7 @@ async function readIndicators(
   unitId: string | null,
   from: string,
   to: string,
-  analytics = false,
+  analytics?: { granularity?: Granularity | undefined },
 ) {
   try {
     if (
@@ -128,7 +162,7 @@ async function readIndicators(
             await client.query<{
               source: {
                 reservations: AnalyticsReservation[];
-                unitNames: Record<string, string>;
+                units: Record<string, AnalyticsUnitInfo>;
               };
             }>("SELECT domain.usage_analytics_source($1,$2,$3) AS source", [
               unitId,
@@ -147,7 +181,8 @@ async function readIndicators(
               asOf,
               units,
               reservations: facts.reservations,
-              unitNames: facts.unitNames,
+              unitInfo: facts.units,
+              granularity: analytics.granularity,
             }),
           };
         }

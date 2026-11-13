@@ -7,9 +7,11 @@ import {
 } from "../identity/index.ts";
 import {
   readMunicipalIndicators,
+  readReportUnits,
   readUnitIndicators,
   readUsageAnalytics,
 } from "./indicator-query.ts";
+import type { Granularity } from "./usage-analytics.ts";
 export async function registerIndicatorRoutes(
   app: FastifyInstance,
   pool: Pool,
@@ -157,6 +159,7 @@ export async function registerIndicatorRoutes(
     required: Object.keys(properties),
     properties,
   });
+  const granularity = { type: "string", enum: ["day", "week", "month"] };
   const analytics = object({
     tenantId: uuid,
     unitId: { ...uuid, nullable: true },
@@ -164,6 +167,26 @@ export async function registerIndicatorRoutes(
     to: date,
     timeZone: { type: "string" },
     asOf: { type: "string", format: "date-time" },
+    granularity,
+    summary: object({
+      reservations: properties.reservations,
+      reservedMinutes: minutes,
+      offeredMinutes: minutes,
+      occupancyPercent: share,
+    }),
+    series: {
+      type: "array",
+      maxItems: 366,
+      items: object({
+        from: date,
+        to: date,
+        offeredMinutes: minutes,
+        reservedMinutes: minutes,
+        occupancyPercent: share,
+        reservations: count,
+        cancelled: count,
+      }),
+    },
     weekdayHours: {
       type: "array",
       items: object({
@@ -179,9 +202,14 @@ export async function registerIndicatorRoutes(
       items: object({
         unitId: uuid,
         name: { type: "string", nullable: true },
+        facilityId: { ...uuid, nullable: true },
+        facilityName: { type: "string", nullable: true },
         offeredMinutes: minutes,
         reservedMinutes: minutes,
         occupancyPercent: share,
+        reservations: count,
+        cancelled: count,
+        trend: { type: "array", maxItems: 366, items: share },
       }),
     },
     cancellations: object({
@@ -206,7 +234,12 @@ export async function registerIndicatorRoutes(
   });
   app.get<{
     Params: { tenantId: string };
-    Querystring: { from: string; to: string; unitId?: string };
+    Querystring: {
+      from: string;
+      to: string;
+      unitId?: string;
+      granularity?: Granularity;
+    };
   }>(
     "/api/municipalities/:tenantId/analytics",
     {
@@ -215,7 +248,7 @@ export async function registerIndicatorRoutes(
         tags: ["Communications"],
         security: [{ quendaSession: [] }],
         description:
-          "Análisis de uso del municipio o de una unidad (unitId) en el periodo local [from,to), máximo 366 días. REPORT_READ municipal o de la unidad y MFA. weekdayHours reparte minutos ofertados y reservados por día ISO (1 = lunes) y hora local; units, por unidad, con los mismos minutos que los indicadores básicos. cancellations, leadTime (desde la creación hasta el inicio) y attendance (llegadas registradas sobre reservas confirmadas finalizadas) cuentan las reservas que empiezan en el periodo. Solo devuelve agregados, sin titulares. Hasta 20000 reservas; reducir el periodo si se excede.",
+          "Análisis de uso del municipio o de una unidad (unitId) en el periodo local [from,to), máximo 366 días. REPORT_READ municipal o de la unidad y MFA. summary repite los indicadores básicos con las mismas fórmulas. series los reparte por día, semana ISO (lunes) o mes local según granularity; por defecto, días hasta 31 días, semanas hasta 183 y meses después. El primer y el último tramo se recortan al periodo. Cada unidad indica su instalación y su ocupación por tramo (trend). weekdayHours reparte minutos ofertados y reservados por día ISO (1 = lunes) y hora local; units, por unidad, con los mismos minutos que los indicadores básicos. cancellations, leadTime (desde la creación hasta el inicio) y attendance (llegadas registradas sobre reservas confirmadas finalizadas) cuentan las reservas que empiezan en el periodo. Solo devuelve agregados, sin titulares. Hasta 20000 reservas; reducir el periodo si se excede.",
         params: {
           type: "object",
           additionalProperties: false,
@@ -226,7 +259,7 @@ export async function registerIndicatorRoutes(
           type: "object",
           additionalProperties: false,
           required: ["from", "to"],
-          properties: { from: date, to: date, unitId: uuid },
+          properties: { from: date, to: date, unitId: uuid, granularity },
         },
         response: {
           ...Object.fromEntries(
@@ -251,8 +284,52 @@ export async function registerIndicatorRoutes(
             request.query.unitId ?? null,
             request.query.from,
             request.query.to,
+            request.query.granularity,
           ),
         );
+    },
+  );
+  const reportUnit = object({
+    unitId: uuid,
+    name: { type: "string" },
+    facilityId: uuid,
+    facilityName: { type: "string" },
+    withdrawn: { type: "boolean" },
+  });
+  app.get<{ Params: { tenantId: string } }>(
+    "/api/municipalities/:tenantId/analytics/units",
+    {
+      schema: {
+        operationId: "usageAnalyticsUnits",
+        tags: ["Communications"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Unidades que la cuenta puede analizar con REPORT_READ, municipal o por unidad, con su instalación e incluidas las retiradas. Ordenadas por instalación y nombre; hasta 500, truncated indica que hay más. Requiere MFA; solo identifica unidades y no concede otros accesos.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId"],
+          properties: { tenantId: uuid },
+        },
+        response: {
+          ...Object.fromEntries(
+            [400, 401, 403, 429, 500, 503].map((status) => [
+              status,
+              { $ref: "ErrorResponse#" },
+            ]),
+          ),
+          200: object({
+            units: { type: "array", maxItems: 500, items: reportUnit },
+            truncated: { type: "boolean" },
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const account = await actor(request, reply);
+      return reply
+        .header("cache-control", "no-store")
+        .send(await readReportUnits(pool, account, request.params.tenantId));
     },
   );
 }

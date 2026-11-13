@@ -149,6 +149,48 @@ test("usage analytics aggregates cancellations, lead time and arrivals within re
           `/api/municipalities/${f.tenant}/indicators?from=${from}&to=${to}`,
         );
         assert.equal(basic.json().reservedMinutes, 120);
+        const {
+          tenantId: _t,
+          from: _f,
+          to: _to,
+          timeZone: _z,
+          asOf: _a,
+          ...totals
+        } = basic.json();
+        assert.deepEqual(body.summary, totals);
+        assert.ok(
+          body.units.every(
+            (u: { facilityId: string; facilityName: string }) =>
+              u.facilityId === f.facility &&
+              u.facilityName === "Centro de proba",
+          ),
+        );
+        assert.equal(
+          body.series.reduce(
+            (sum: number, slot: { reservedMinutes: number }) =>
+              sum + slot.reservedMinutes,
+            0,
+          ),
+          120,
+        );
+        assert.equal(body.series[0].from, from);
+        assert.equal(body.series.at(-1).to, to);
+      });
+
+      await test("the series can be grouped by week or month on request", async () => {
+        const weekly = await admin.request(`${path}&granularity=week`);
+        assert.equal(weekly.statusCode, 200, weekly.body);
+        assert.equal(weekly.json().granularity, "week");
+        assert.equal(
+          weekly.json().units[0].trend.length,
+          weekly.json().series.length,
+        );
+        const monthly = await admin.request(`${path}&granularity=month`);
+        assert.equal(monthly.json().series.length, 1);
+        assert.equal(
+          (await admin.request(`${path}&granularity=year`)).statusCode,
+          400,
+        );
       });
 
       await test("one unit can be analysed on its own", async () => {
@@ -188,11 +230,40 @@ test("usage analytics aggregates cancellations, lead time and arrivals within re
           (await limited.request(`${path}&unitId=${f.unit}`)).statusCode,
           200,
         );
+        const units = `/api/municipalities/${f.tenant}/analytics/units`;
+        const own = await limited.request(units);
+        assert.equal(own.statusCode, 200, own.body);
+        assert.deepEqual(own.json(), {
+          units: [
+            {
+              unitId: f.unit,
+              name: "Pista 1",
+              facilityId: f.facility,
+              facilityName: "Centro de proba",
+              withdrawn: false,
+            },
+          ],
+          truncated: false,
+        });
+        const all = await admin.request(units);
+        assert.deepEqual(
+          all.json().units.map((u: { name: string }) => u.name),
+          ["Pista 1", "Pista 2"],
+        );
       });
 
       await test("a session without MFA and invalid periods are refused", async () => {
         const plain = await signIn(f, "192.0.2.162", false);
         assert.ok([401, 403].includes((await plain.request(path)).statusCode));
+        assert.ok(
+          [401, 403].includes(
+            (
+              await plain.request(
+                `/api/municipalities/${f.tenant}/analytics/units`,
+              )
+            ).statusCode,
+          ),
+        );
         assert.equal(
           (
             await admin.request(
