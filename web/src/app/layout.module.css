@@ -432,6 +432,7 @@
   margin-bottom: 28px;
 }
 .bookingNav a {
+  position: relative;
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -441,12 +442,27 @@
   color: var(--text-secondary);
   text-decoration: none;
   font-size: var(--text-sm);
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
 }
-.bookingNav a[aria-current],
-.bookingNav a:hover {
-  background: var(--surface-muted);
+.bookingNav a > span {
+  position: relative;
+}
+.bookingNav a[aria-current] {
   color: var(--foreground);
-  border-color: var(--border-strong);
+}
+.bookingNav a:not([aria-current]):hover {
+  background: color-mix(in oklab, var(--surface-muted) 55%, transparent);
+  color: var(--foreground);
+}
+/* The current tab's fill and edge, drawn once and slid between tabs. */
+.bookingNav .bookingMark {
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--border-strong);
+  border-radius: inherit;
+  background: var(--surface-muted);
 }
 .bookingNav a:focus-visible {
   outline: 2px solid var(--foreground);
