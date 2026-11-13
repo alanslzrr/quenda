@@ -821,6 +821,9 @@ export function Demand({
             <table
               ref={table}
               className={styles.heatmap}
+              style={{
+                minWidth: `calc(var(--day-column) + ${columns.length} * 3.5rem)`,
+              }}
               onKeyDown={onKeyDown}
               onPointerLeave={() => {
                 if (!table.current?.contains(document.activeElement)) hide();

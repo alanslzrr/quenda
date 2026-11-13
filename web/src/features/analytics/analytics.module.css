@@ -126,6 +126,12 @@
   width: 100%;
   border-spacing: 0;
 }
+/* The demand table spans the block with equal hour columns; below its minimum width it scrolls instead. */
+.heatmap {
+  --day-column: 6.5rem;
+  width: 100%;
+  table-layout: fixed;
+}
 .table th,
 .table td {
   padding: var(--space-2) var(--space-3);
@@ -257,6 +263,7 @@
 }
 /* The day names stay in view while a long day scrolls sideways. */
 .heatmap thead td {
+  width: var(--day-column);
   position: sticky;
   z-index: 1;
   inset-inline-start: 0;
