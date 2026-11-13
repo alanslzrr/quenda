@@ -118,6 +118,17 @@ test("real reservation, overlapping reschedule, notices, history filter and canc
   );
   await page.goto("/avisos");
   await expect(page.getByText(/Reserva modificada/)).toBeVisible();
+  // New notices are unread: the settings menu says so until they are marked as read.
+  const settings = page.getByRole("button", { name: /^(Ajustes|Axustes)$/ });
+  await expect(settings).toHaveAccessibleDescription(/(sin leer|sen ler)$/);
+  await expect(page.locator("[data-unread]").first()).toBeVisible();
+  const markAll = page.getByRole("button", {
+    name: /^Marcar todo como (leído|lido)$/,
+  });
+  await markAll.click();
+  await expect(markAll).toHaveCount(0);
+  await expect(page.locator("[data-unread]")).toHaveCount(0);
+  await expect(settings).toHaveAccessibleDescription("");
   await page.goto("/reservas");
   await expect(
     page.getByRole("combobox", { name: "Municipio", exact: true }),
