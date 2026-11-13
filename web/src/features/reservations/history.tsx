@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { CalendarPlus } from "lucide-react";
+import { CalendarDays, CalendarPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { api, type Page } from "../../app/api";
@@ -10,6 +10,7 @@ import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Badge } from "../../ui/badge/badge";
 import { Button } from "../../ui/button/button";
+import { EmptyState } from "../../ui/empty-state/empty-state";
 import { Select } from "../../ui/select/select";
 import { PageTitle } from "../account/shared";
 import { endsNextDay, intervalLabel } from "../catalog/dates";
@@ -132,10 +133,11 @@ export function ReservationHistory() {
       ) : query.isError ? (
         <Failure error={query.error} retry={() => void query.refetch()} />
       ) : !items.length ? (
-        <div className={styles.empty}>
-          <p>{t("Todavía no tienes reservas.", "Aínda non tes reservas.")}</p>
-          <span>
-            {tenant === "all"
+        <EmptyState
+          icon={<CalendarDays width={24} height={24} strokeWidth={1.5} />}
+          title={t("Todavía no tienes reservas", "Aínda non tes reservas")}
+          description={
+            tenant === "all"
               ? t(
                   "Elige municipio, instalación, espacio y hora. La reserva aparecerá aquí.",
                   "Escolle municipio, instalación, espazo e hora. A reserva aparecerá aquí.",
@@ -143,10 +145,11 @@ export function ReservationHistory() {
               : t(
                   "No tienes reservas en este municipio.",
                   "Non tes reservas neste municipio.",
-                )}
-          </span>
-          <div className={styles.actions}>{newBooking}</div>
-        </div>
+                )
+          }
+          action={newBooking}
+          headingLevel={2}
+        />
       ) : (
         <>
           <ul className={styles.rows}>
