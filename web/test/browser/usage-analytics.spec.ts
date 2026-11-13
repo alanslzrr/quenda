@@ -207,23 +207,33 @@ test("the administrator changes the municipal thresholds and every reader sees t
   await expect(spaces).toBeVisible();
   await page.getByRole("button", { name: analyticsSettings }).click();
   const dialog = page.getByRole("dialog");
+  const municipal = dialog.getByRole("tab", {
+    name: /^(Para todo el municipio|Para todo o municipio)$/,
+  });
+  await municipal.click();
   const high = dialog.getByRole("spinbutton", {
     name: /^Alta demanda desde \(%\)/,
   });
   const low = dialog.getByRole("spinbutton", {
     name: /^(Poco uso por debajo de|Pouco uso por debaixo de) \(%\)/,
   });
-  // A low threshold above the high one is refused before any request.
+  // A low threshold above the high one is flagged as it is typed and refused before any request.
   await low.fill("90");
   await low.press("Tab");
+  await expect(
+    dialog
+      .locator("[aria-live=polite]")
+      .getByText(/(Poco|Pouco) uso» debe ser menor/),
+  ).toBeVisible();
   await dialog
     .getByRole("button", {
       name: /^(Guardar para el municipio|Gardar para o municipio)$/,
     })
     .click();
+  // The submitted form reports the same refusal next to the inline warning.
   await expect(
     dialog.getByText(/(Poco|Pouco) uso» debe ser menor/),
-  ).toBeVisible();
+  ).toHaveCount(2);
   await low.fill("15");
   await low.press("Tab");
   await high.fill("80");
@@ -241,6 +251,7 @@ test("the administrator changes the municipal thresholds and every reader sees t
   await expect(spaces.getByText(/15\s%/).first()).toBeVisible();
   // Restore the defaults for any later run against the same data.
   await page.getByRole("button", { name: analyticsSettings }).click();
+  await municipal.click();
   await high.fill("85");
   await high.press("Tab");
   await low.fill("20");
