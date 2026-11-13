@@ -103,3 +103,5 @@
 @container(max-width:719px) { .account { display:flex; padding:8px 20px; margin:0; } .navItem { min-height:44px; } }
 
 .navItem:focus-visible { outline:2px solid var(--foreground); outline-offset:2px; }
+/* Account sections wrap onto a second line on a phone instead of scrolling out of sight. */
+@container(max-width:719px) { .navList { flex-wrap:wrap; overflow-x:visible; } }
