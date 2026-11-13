@@ -103,15 +103,18 @@ export function Invitations() {
       {queries.some((query) => query.isPending) ? (
         <Loading />
       ) : !entries.length ? (
-        <EmptyState
-          icon={<MailOpen width={24} height={24} strokeWidth={1.5} />}
-          title={t("No tienes invitaciones", "Non tes invitacións")}
-          description={t(
-            "Cuando un municipio te invite a gestionar o administrar, la invitación aparecerá aquí.",
-            "Cando un municipio te convide a xestionar ou administrar, a invitación aparecerá aquí.",
-          )}
-          headingLevel={2}
-        />
+        // With a list that failed to load, "no invitations" would be a claim the page cannot make.
+        failed ? null : (
+          <EmptyState
+            icon={<MailOpen width={24} height={24} strokeWidth={1.5} />}
+            title={t("No tienes invitaciones", "Non tes invitacións")}
+            description={t(
+              "Cuando un municipio te invite a gestionar o administrar, la invitación aparecerá aquí.",
+              "Cando un municipio te convide a xestionar ou administrar, a invitación aparecerá aquí.",
+            )}
+            headingLevel={2}
+          />
+        )
       ) : (
         <>
           {pending.length > 0 && (
