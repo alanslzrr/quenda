@@ -587,7 +587,8 @@ export function Spaces({
                               data={unit.trend}
                               locale={tag}
                               decorative
-                              width={96}
+                              area
+                              width={112}
                               height={28}
                               fixedSize
                             />
@@ -1020,63 +1021,93 @@ export function Compliance({
         />
       )}
 
-      <h3>{t("Antelación de las reservas", "Antelación das reservas")}</h3>
-      <p className={styles.description}>
-        {t(
-          "Tiempo entre hacer la reserva y su inicio.",
-          "Tempo entre facer a reserva e o seu inicio.",
-        )}
-      </p>
-      {/* Five categories read best as a table; the bars only illustrate the counts. */}
-      <table className={`${styles.table} ${styles.shares}`}>
-        <caption className={styles.hidden}>
-          {t("Antelación de las reservas", "Antelación das reservas")}
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">{t("Antelación", "Antelación")}</th>
-            <th scope="col">{t("Reservas", "Reservas")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lead.map(([key, label]) => {
-            const count = data.leadTime[key];
-            const share = c.reservations ? (count / c.reservations) * 100 : 0;
-            return (
-              <tr key={key}>
-                <th scope="row">{label}</th>
-                <td>
-                  <div className={styles.occupancy}>
-                    {view.display === "chart" && (
-                      <span className={styles.bar} aria-hidden="true">
-                        <span style={{ width: `${share}%` }} />
-                      </span>
-                    )}
-                    <span className={styles.value}>
-                      {formatNumber(count, locale)}
-                      {c.reservations > 0 &&
-                        ` (${formatPercent(share, locale)})`}
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      <h3>{t("Llegadas registradas", "Chegadas rexistradas")}</h3>
-      <p>
-        {a.finished === 0
-          ? t(
-              "Todavía no hay reservas finalizadas en el periodo.",
-              "Aínda non hai reservas finalizadas no período.",
-            )
-          : t(
-              `${a.arrived} de ${a.finished} reservas finalizadas tienen la llegada registrada con el código QR (${formatPercent(a.arrivedPercent, "es")}). Mide lo que registra el personal, no la asistencia real.`,
-              `${a.arrived} de ${a.finished} reservas finalizadas teñen a chegada rexistrada co código QR (${formatPercent(a.arrivedPercent, "gl")}). Mide o que rexistra o persoal, non a asistencia real.`,
+      {/* How early people book and whether they turn up, side by side on a wide screen. */}
+      <div className={styles.complianceGrid}>
+        <section aria-labelledby="compliance-lead">
+          <h3 id="compliance-lead">
+            {t("Antelación de las reservas", "Antelación das reservas")}
+          </h3>
+          <p className={styles.description}>
+            {t(
+              "Tiempo entre hacer la reserva y su inicio.",
+              "Tempo entre facer a reserva e o seu inicio.",
             )}
-      </p>
+          </p>
+          {/* Five categories read best as a table; the bars only illustrate the counts. */}
+          <table className={`${styles.table} ${styles.shares}`}>
+            <caption className={styles.hidden}>
+              {t("Antelación de las reservas", "Antelación das reservas")}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">{t("Antelación", "Antelación")}</th>
+                <th scope="col">{t("Reservas", "Reservas")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lead.map(([key, label]) => {
+                const count = data.leadTime[key];
+                const share = c.reservations
+                  ? (count / c.reservations) * 100
+                  : 0;
+                return (
+                  <tr key={key}>
+                    <th scope="row">{label}</th>
+                    <td>
+                      <div className={styles.occupancy}>
+                        {view.display === "chart" && (
+                          <span className={styles.bar} aria-hidden="true">
+                            <span style={{ width: `${share}%` }} />
+                          </span>
+                        )}
+                        <span className={styles.value}>
+                          {formatNumber(count, locale)}
+                          {c.reservations > 0 &&
+                            ` (${formatPercent(share, locale)})`}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+        <section
+          className={styles.figure}
+          aria-labelledby="compliance-arrivals"
+        >
+          <h3 id="compliance-arrivals">
+            {t("Llegadas registradas", "Chegadas rexistradas")}
+          </h3>
+          {a.finished === 0 ? (
+            <p>
+              {t(
+                "Todavía no hay reservas finalizadas en el periodo.",
+                "Aínda non hai reservas finalizadas no período.",
+              )}
+            </p>
+          ) : (
+            <>
+              <p className={styles.figureValue}>
+                {formatPercent(a.arrivedPercent, locale)}
+              </p>
+              <p>
+                {t(
+                  `${a.arrived} de ${a.finished} reservas finalizadas tienen la llegada registrada con el código QR.`,
+                  `${a.arrived} de ${a.finished} reservas finalizadas teñen a chegada rexistrada co código QR.`,
+                )}
+              </p>
+              <p className={styles.description}>
+                {t(
+                  "Mide lo que registra el personal, no la asistencia real.",
+                  "Mide o que rexistra o persoal, non a asistencia real.",
+                )}
+              </p>
+            </>
+          )}
+        </section>
+      </div>
     </Block>
   );
 }

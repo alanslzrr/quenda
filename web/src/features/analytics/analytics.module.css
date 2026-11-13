@@ -148,8 +148,9 @@
   text-align: start;
 }
 .shares {
-  max-width: 34rem;
+  width: 100%;
 }
+
 .table .groupHeading {
   padding-top: var(--space-4);
   border-bottom: 0;
@@ -173,7 +174,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  min-width: 13rem;
+  min-width: 11rem;
 }
 .bar {
   position: relative;
@@ -327,4 +328,46 @@
   .block {
     padding: var(--space-4);
   }
+}
+
+/* Lead time beside arrivals; one column on narrow screens. */
+.complianceGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.complianceGrid > section {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.complianceGrid h3 {
+  margin: 0;
+}
+.figure {
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-surface);
+}
+.figure p {
+  margin: 0;
+}
+.figureValue {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+@media (max-width: 48rem) {
+  .complianceGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.shares .occupancy {
+  flex-wrap: nowrap;
+}
+.shares .bar {
+  flex: 1 1 8rem;
 }
