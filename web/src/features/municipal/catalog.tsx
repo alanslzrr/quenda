@@ -1,12 +1,19 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Archive, Clock3, FileText, Globe, Settings2 } from "lucide-react";
+import {
+  Archive,
+  Clock3,
+  FileText,
+  Globe,
+  Plus,
+  Settings2,
+} from "lucide-react";
 import { useState } from "react";
 import { Navigate, useParams } from "react-router";
 import { ActionForm, textField } from "../../app/action";
 import { ApiError, api } from "../../app/api";
 import { saveFile } from "../../app/download";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink as Link } from "../../app/link-button";
+import { ActionLink as Link, LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { Badge } from "../../ui/badge/badge";
@@ -22,6 +29,7 @@ import type { FacilityProfile, UnitProfile } from "../catalog/profile";
 import { CalendarEditor, RulesEditor } from "./configuration";
 import { landingSection } from "./landing.ts";
 import styles from "./municipal.module.css";
+import { ManagementPage } from "./page";
 import { PhotoManager } from "./photo-manager";
 import { FacilityProfileEditor, UnitProfileEditor } from "./profile-editor";
 import resourceStyles from "./resource.module.css";
@@ -227,30 +235,56 @@ export function Catalog() {
     if (landing !== null)
       return <Navigate replace to={`${municipalPath(m.id)}${landing}`} />;
     return (
-      <>
-        <h1>{t("Sin secciones de gestión", "Sen seccións de xestión")}</h1>
-        <p>
-          {t(
-            "Tus permisos en este municipio no abren ninguna sección de gestión.",
-            "Os teus permisos neste municipio non abren ningunha sección de xestión.",
-          )}
-        </p>
+      <ManagementPage
+        title={t("Sin secciones de gestión", "Sen seccións de xestión")}
+        description={t(
+          "Tus permisos en este municipio no abren ninguna sección de gestión.",
+          "Os teus permisos neste municipio non abren ningunha sección de xestión.",
+        )}
+      >
         <Link to="/administracion">
           {t("Volver a Gestión", "Volver a Xestión")}
         </Link>
-      </>
+      </ManagementPage>
     );
   }
+  const creates = permitted(m, "CATALOG_CREATE");
   return (
-    <>
-      <h1>{t("Instalaciones y unidades", "Instalacións e unidades")}</h1>
+    <ManagementPage
+      title={t("Instalaciones y unidades", "Instalacións e unidades")}
+      description={t(
+        "Lo que la ciudadanía puede reservar: cada instalación agrupa sus unidades. Entra en una para cambiar su ficha, horario, normas y fotos.",
+        "O que a cidadanía pode reservar: cada instalación agrupa as súas unidades. Entra nunha para cambiar a súa ficha, horario, normas e fotos.",
+      )}
+      actions={
+        creates ? (
+          <Button
+            size="sm"
+            onClick={() => {
+              // The form lives at the end of the page; take the person there with the name field ready.
+              const form = document.getElementById("nueva-instalacion");
+              form?.scrollIntoView({ behavior: "smooth", block: "start" });
+              form?.querySelector("input")?.focus({ preventScroll: true });
+            }}
+          >
+            <Plus size={16} aria-hidden="true" />
+            {t("Nueva instalación", "Nova instalación")}
+          </Button>
+        ) : undefined
+      }
+    >
       <ResourceList kind="facilities" />
       <ResourceList kind="units" />
       {m.administrator && <CatalogImport />}
-      {m.administrator && <CatalogDownload />}
-      {permitted(m, "CATALOG_CREATE") && (
-        <section className={styles.section}>
+      {creates && (
+        <section className={styles.section} id="nueva-instalacion">
           <h2>{t("Nueva instalación", "Nova instalación")}</h2>
+          <p>
+            {t(
+              "Empieza por el nombre; después añade sus unidades, la ficha y las fotos. Se crea en borrador y nadie la ve hasta que la publiques.",
+              "Comeza polo nome; despois engade as súas unidades, a ficha e as fotos. Créase en borrador e ninguén a ve ata que a publiques.",
+            )}
+          </p>
           <MunicipalForm
             path={`${endpoint(m.id)}/facilities`}
             resetOnSuccess
@@ -266,17 +300,46 @@ export function Catalog() {
           </MunicipalForm>
         </section>
       )}
-    </>
+      {m.administrator && <CatalogDownload />}
+    </ManagementPage>
+  );
+}
+/** Published, draft or withdrawn, as the same badge the unit page shows. */
+export function ResourceState({ resource }: { resource: Resource }) {
+  const { t } = usePreferences();
+  return (
+    <Badge
+      size="sm"
+      tone={
+        resource.withdrawnAt
+          ? "neutral"
+          : resource.publishedAt
+            ? "success"
+            : "warning"
+      }
+    >
+      {resource.withdrawnAt
+        ? t("Retirada", "Retirada")
+        : resource.publishedAt
+          ? t("Publicada", "Publicada")
+          : t("Borrador", "Borrador")}
+    </Badge>
   );
 }
 function ResourceList({ kind }: { kind: "facilities" | "units" }) {
   const m = useMunicipality();
   const { t } = usePreferences();
   const query = useMunicipalPages<Resource>(`${endpoint(m.id)}/${kind}`);
+  // The other list of the page shares its cache entry, so counts and names cost no extra request.
+  const other = useMunicipalPages<Resource>(
+    `${endpoint(m.id)}/${kind === "facilities" ? "units" : "facilities"}`,
+  );
+  const others = other.data?.pages.flatMap((p) => p.items) ?? [];
   const title =
     kind === "facilities"
       ? t("Instalaciones", "Instalacións")
       : t("Unidades reservables", "Unidades reservables");
+  const creates = kind === "facilities" && permitted(m, "CATALOG_CREATE");
   return (
     <section className={styles.section}>
       <h2>{title}</h2>
@@ -290,10 +353,17 @@ function ResourceList({ kind }: { kind: "facilities" | "units" }) {
             rows={query.data.pages.flatMap((p) => p.items)}
             rowKey="id"
             caption={title}
-            emptyMessage={t(
-              "No hay recursos en este ámbito.",
-              "Non hai recursos neste ámbito.",
-            )}
+            emptyMessage={
+              kind === "facilities"
+                ? t(
+                    "Todavía no hay instalaciones. Crea la primera con «Nueva instalación».",
+                    "Aínda non hai instalacións. Crea a primeira con «Nova instalación».",
+                  )
+                : t(
+                    "Todavía no hay unidades. Créalas desde su instalación.",
+                    "Aínda non hai unidades. Créaas desde a súa instalación.",
+                  )
+            }
             columns={[
               {
                 key: "name",
@@ -314,30 +384,51 @@ function ResourceList({ kind }: { kind: "facilities" | "units" }) {
                     r.name
                   ),
               },
+              kind === "facilities"
+                ? {
+                    key: "units",
+                    sortable: false,
+                    width: "8rem",
+                    label: t("Unidades", "Unidades"),
+                    render: (_: unknown, r: Resource) =>
+                      other.data
+                        ? others.filter((u) => u.facilityId === r.id).length
+                        : "—",
+                  }
+                : {
+                    key: "facilityId",
+                    sortable: false,
+                    label: t("Instalación", "Instalación"),
+                    render: (_: unknown, r: Resource) =>
+                      others.find((f) => f.id === r.facilityId)?.name ?? "—",
+                  },
               {
                 key: "publishedAt",
                 sortable: false,
+                width: "8rem",
                 label: t("Estado", "Estado"),
-                render: (_, r) =>
-                  r.withdrawnAt
-                    ? t("Retirada", "Retirada")
-                    : r.publishedAt
-                      ? t("Publicada", "Publicada")
-                      : t("Borrador", "Borrador"),
+                render: (_, r) => <ResourceState resource={r} />,
               },
-              ...(kind === "facilities" && permitted(m, "CATALOG_CREATE")
+              ...(creates
                 ? [
                     {
                       key: "create",
                       sortable: false,
-                      label: t("Unidades", "Unidades"),
+                      width: "9rem",
+                      label: t("Acciones", "Accións"),
                       render: (_: unknown, r: Resource) =>
                         !r.withdrawnAt ? (
-                          <Link
+                          <LinkButton
                             to={`${municipalPath(m.id)}/instalaciones/${r.id}/nueva-unidad`}
+                            variant="secondary"
+                            aria-label={t(
+                              `Crear unidad en ${r.name}`,
+                              `Crear unidade en ${r.name}`,
+                            )}
                           >
-                            {t("Crear unidad", "Crear unidade")}
-                          </Link>
+                            <Plus size={14} aria-hidden="true" />
+                            {t("Unidad", "Unidade")}
+                          </LinkButton>
                         ) : null,
                     },
                   ]
@@ -356,8 +447,18 @@ export function NewUnit() {
   const { t } = usePreferences();
   if (!permitted(m, "CATALOG_CREATE")) return <Denied />;
   return (
-    <>
-      <h1>{t("Nueva unidad reservable", "Nova unidade reservable")}</h1>
+    <ManagementPage
+      title={t("Nueva unidad reservable", "Nova unidade reservable")}
+      description={t(
+        "La unidad se crea en borrador. Configura sus horarios y normas antes de publicarla.",
+        "A unidade créase en borrador. Configura os seus horarios e normas antes de publicala.",
+      )}
+      breadcrumb={
+        <Link to={municipalPath(m.id)}>
+          {t("Volver al catálogo", "Volver ao catálogo")}
+        </Link>
+      }
+    >
       <MunicipalForm
         path={`${endpoint(m.id)}/facilities/${resourceId}/units`}
         resetOnSuccess
@@ -370,17 +471,8 @@ export function NewUnit() {
           required
           maxLength={200}
         />
-        <p>
-          {t(
-            "La unidad se crea en borrador. Configura sus horarios y normas antes de publicarla.",
-            "A unidade créase en borrador. Configura os seus horarios e normas antes de publicala.",
-          )}
-        </p>
       </MunicipalForm>
-      <Link to={municipalPath(m.id)}>
-        {t("Volver al catálogo", "Volver ao catálogo")}
-      </Link>
-    </>
+    </ManagementPage>
   );
 }
 export function ResourcePage({ unit = false }: { unit?: boolean }) {
