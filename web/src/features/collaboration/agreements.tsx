@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import { useParams } from "react-router";
 import { textField } from "../../app/action";
+import { localDateTime } from "../../app/dates";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link, LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
@@ -274,7 +275,7 @@ function VersionDetails({ item: a }: { item: Agreement }) {
             )}
             <p>
               {approval
-                ? `${approval.approvedBy ? `${t("Aprobada por", "Aprobada por")} ${approval.approvedBy}` : t("Aprobada", "Aprobada")} · ${new Date(approval.approvedAt).toLocaleString(locale)}`
+                ? `${approval.approvedBy ? `${t("Aprobada por", "Aprobada por")} ${approval.approvedBy}` : t("Aprobada", "Aprobada")} · ${localDateTime(approval.approvedAt, locale)}`
                 : t("Sin aprobación registrada.", "Sen aprobación rexistrada.")}
             </p>
           </section>

@@ -1,3 +1,4 @@
+import { localDateTime } from "../../app/dates";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
@@ -63,10 +64,7 @@ export function Policies() {
               [t("Responsable", "Responsable"), p.controllerReference],
               [t("Aprobación", "Aprobación"), p.approvalReference],
               [t("Motivo", "Motivo"), p.reason],
-              [
-                t("Registro", "Rexistro"),
-                new Date(p.approvedAt).toLocaleString(locale),
-              ],
+              [t("Registro", "Rexistro"), localDateTime(p.approvedAt, locale)],
             ].map(([label, value]) => (
               <div key={label}>
                 <dt>
@@ -136,7 +134,7 @@ export function RetentionOverview() {
           <p>
             {t("Autorización", "Autorización")}: {h.authorizationReference}
           </p>
-          <p>{new Date(h.createdAt).toLocaleString(locale)}</p>
+          <p>{localDateTime(h.createdAt, locale)}</p>
           {s.execute && (
             <Link to={`${s.view}/levantar?id=${h.holdId}`}>
               {t("Levantar excepción", "Levantar excepción")}
@@ -176,7 +174,7 @@ export function RetentionOverview() {
             {t("Registro", "Rexistro")}: {c.targetKey}
           </p>
           <p>{c.reason}</p>
-          <p>{new Date(c.lastSeenAt).toLocaleString(locale)}</p>
+          <p>{localDateTime(c.lastSeenAt, locale)}</p>
         </section>
       ))}
     </>
