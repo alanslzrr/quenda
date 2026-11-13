@@ -413,6 +413,7 @@ export function AccountSecurity() {
                     {item.token !== auth.session.token && (
                       <ActionForm
                         label={t("Cerrar esta sesión", "Pechar esta sesión")}
+                        danger
                         submit={async () => {
                           await api(
                             "/api/auth/revoke-session",
@@ -434,6 +435,7 @@ export function AccountSecurity() {
           <div className={security.sessionsFoot}>
             <ActionForm
               label={t("Cerrar las demás sesiones", "Pechar as demais sesións")}
+              danger
               success={t(
                 "Las demás sesiones se han cerrado.",
                 "As demais sesións pecháronse.",
