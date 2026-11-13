@@ -313,6 +313,8 @@ function Report({
         view={view}
         onViewChange={update}
         onViewReset={reset}
+        data={data}
+        previous={previousData}
       />
       {current.isPending ? (
         <Skeleton
