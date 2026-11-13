@@ -1,3 +1,4 @@
+import { localDateTime } from "../../app/dates";
 import { Failure, Loading } from "../../app/feedback";
 import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
@@ -52,12 +53,12 @@ export function Operators() {
                 </p>
                 <p>
                   {t("Concesión", "Concesión")}:{" "}
-                  {new Date(o.grantedAt).toLocaleString(locale)}
+                  {localDateTime(o.grantedAt, locale)}
                 </p>
                 {o.revokedAt ? (
                   <p>
                     {t("Revocación", "Revogación")}:{" "}
-                    {new Date(o.revokedAt).toLocaleString(locale)}
+                    {localDateTime(o.revokedAt, locale)}
                   </p>
                 ) : (
                   <Link
@@ -143,13 +144,13 @@ export function PlatformInvitations({
                 <p>{t(...(statuses[i.status] ?? [i.status, i.status]))}</p>
                 <p>
                   {t("Aceptar antes de", "Aceptar antes de")}:{" "}
-                  {new Date(i.expiresAt).toLocaleString(locale)}
+                  {localDateTime(i.expiresAt, locale)}
                 </p>
                 {privacy && (
                   <>
                     <p>
                       {i.roleExpiresAt
-                        ? `${t("Permiso hasta", "Permiso ata")}: ${new Date(i.roleExpiresAt).toLocaleString(locale)}`
+                        ? `${t("Permiso hasta", "Permiso ata")}: ${localDateTime(i.roleExpiresAt, locale)}`
                         : t(
                             "Permiso sin caducidad automática",
                             "Permiso sen caducidade automática",
