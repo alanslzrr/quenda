@@ -4,6 +4,7 @@ import { api } from "../../app/api";
 import { usePreferences } from "../../app/preferences-provider";
 import { MetricCard } from "../../ui/metric-card/metric-card";
 import { useAgreementOptions } from "../collaboration/agreement-select";
+import { ManagementPage } from "../municipal/page";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
 import { MonthlyFields } from "./fields";
 import { allowed, type Monthly } from "./model";
@@ -23,14 +24,13 @@ function Report() {
   // Administrators choose from the municipality's agreements; others type an identifier.
   const { none } = useAgreementOptions(m.administrator);
   return (
-    <div className={styles.surface}>
-      <h1>{t("Informe conjunto mensual", "Informe conxunto mensual")}</h1>
-      <p>
-        {t(
-          "Consulta el último informe autorizado para tu cuenta y municipio. Cada entrega se registra. No admite filtros adicionales ni selección de revisiones; las cifras describen reservas, no asistencia.",
-          "Consulta o último informe autorizado para a túa conta e municipio. Cada entrega rexístrase. Non admite filtros adicionais nin selección de revisións; as cifras describen reservas, non asistencia.",
-        )}
-      </p>
+    <ManagementPage
+      title={t("Informe conjunto mensual", "Informe conxunto mensual")}
+      description={t(
+        "Consulta el último informe autorizado para tu cuenta y municipio. Cada entrega se registra. No admite filtros adicionales ni selección de revisiones; las cifras describen reservas, no asistencia.",
+        "Consulta o último informe autorizado para a túa conta e municipio. Cada entrega rexístrase. Non admite filtros adicionais nin selección de revisións; as cifras describen reservas, non asistencia.",
+      )}
+    >
       <div onChange={() => setResult(undefined)}>
         <ActionForm
           label={t("Consultar informe", "Consultar informe")}
@@ -103,6 +103,6 @@ function Report() {
           )}
         </section>
       )}
-    </div>
+    </ManagementPage>
   );
 }

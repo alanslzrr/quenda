@@ -13,6 +13,7 @@ import { Input } from "../../ui/input/input";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
 import { AccountLabel } from "./account-label";
 import styles from "./municipal.module.css";
+import { ManagementPage } from "./page";
 import {
   Denied,
   endpoint,
@@ -40,8 +41,13 @@ export function MunicipalStaff() {
   if (!m.administrator) return <Denied />;
   const base = `${municipalPath(m.id)}/personal`;
   return (
-    <div className={staffStyles.staff}>
-      <h1>{t("Personal y permisos", "Persoal e permisos")}</h1>
+    <ManagementPage
+      title={t("Personal y permisos", "Persoal e permisos")}
+      description={t(
+        "Quién administra y gestiona el municipio y con qué permisos. Los cambios se aplican cuando la persona acepta la invitación.",
+        "Quen administra e xestiona o municipio e con que permisos. Os cambios aplícanse cando a persoa acepta a invitación.",
+      )}
+    >
       <nav
         className={staffStyles.navigation}
         aria-label={t("Personal municipal", "Persoal municipal")}
@@ -71,7 +77,7 @@ export function MunicipalStaff() {
           {t("Volver al personal municipal", "Volver ao persoal municipal")}
         </Link>
       )}
-    </div>
+    </ManagementPage>
   );
 }
 function Administrators() {

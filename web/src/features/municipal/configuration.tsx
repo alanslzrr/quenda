@@ -15,6 +15,7 @@ import {
   type UnitCalendar,
 } from "./calendar-model";
 import styles from "./municipal.module.css";
+import { ManagementPage } from "./page";
 import resource from "./resource.module.css";
 import {
   Denied,
@@ -474,8 +475,13 @@ function PolicyEditor() {
   const q = useMunicipalQuery<Policy>(`${endpoint(m.id)}/booking-policy`);
   const [reset, setReset] = useState(0);
   return (
-    <>
-      <h1>{t("Condiciones de reserva", "Condicións de reserva")}</h1>
+    <ManagementPage
+      title={t("Condiciones de reserva", "Condicións de reserva")}
+      description={t(
+        "Con cuánta antelación se puede reservar y hasta cuándo cancelar, para todas las unidades del municipio. Cada unidad puede tener además sus horarios y normas.",
+        "Con canta antelación se pode reservar e ata cando cancelar, para todas as unidades do municipio. Cada unidade pode ter ademais os seus horarios e normas.",
+      )}
+    >
       {q.isPending ? (
         <Loading />
       ) : q.isError && (q.data === undefined || discardEditor(q.error)) ? (
@@ -502,7 +508,7 @@ function PolicyEditor() {
           </>
         )
       )}
-    </>
+    </ManagementPage>
   );
 }
 function PolicyForm({ initial }: { initial: Policy }) {

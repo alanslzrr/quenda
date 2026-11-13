@@ -11,3 +11,9 @@
   gap: 1rem;
   margin-top: 1.5rem;
 }
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}

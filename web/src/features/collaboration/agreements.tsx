@@ -1,13 +1,16 @@
+import { Plus } from "lucide-react";
 import { useParams } from "react-router";
 import { textField } from "../../app/action";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink as Link } from "../../app/link-button";
+import { ActionLink as Link, LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
+import { Badge } from "../../ui/badge/badge";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
 import styles from "../municipal/municipal.module.css";
+import { ManagementPage } from "../municipal/page";
 import {
   Denied,
   endpoint,
@@ -34,23 +37,28 @@ function AgreementList() {
     `${endpoint(m.id)}/agreements`,
   );
   return (
-    <div className={ui.surface}>
-      <h1>{t("Convenios intermunicipales", "Convenios intermunicipais")}</h1>
-      <div className={ui.actions}>
-        <Link to={`${agreementPath(m.id)}/nuevo`}>
-          {t("Nuevo convenio", "Novo convenio")}
-        </Link>
-        <Link to={`/administracion/${m.id}/acreditaciones`} danger>
-          {t("Revocar acreditación", "Revogar acreditación")}
-        </Link>
-      </div>
+    <ManagementPage
+      title={t("Convenios intermunicipales", "Convenios intermunicipais")}
+      description={t(
+        "Acuerdos con otros municipios para compartir instalaciones. Se muestran las versiones en las que participa este municipio; el estado registrado no identifica por sí solo la versión efectiva.",
+        "Acordos con outros municipios para compartir instalacións. Amósanse as versións nas que participa este municipio; o estado rexistrado non identifica por si só a versión efectiva.",
+      )}
+      actions={
+        <>
+          <LinkButton
+            to={`/administracion/${m.id}/acreditaciones`}
+            variant="secondary"
+          >
+            {t("Acreditaciones", "Acreditacións")}
+          </LinkButton>
+          <LinkButton to={`${agreementPath(m.id)}/nuevo`} variant="primary">
+            <Plus size={16} aria-hidden="true" />
+            {t("Nuevo convenio", "Novo convenio")}
+          </LinkButton>
+        </>
+      }
+    >
       <PendingLink />
-      <p>
-        {t(
-          "Se muestran versiones en las que participa este municipio. El estado registrado no identifica por sí solo la versión efectiva.",
-          "Amósanse versións nas que participa este municipio. O estado rexistrado non identifica por si só a versión efectiva.",
-        )}
-      </p>
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
@@ -99,7 +107,7 @@ function AgreementList() {
           <More query={query} />
         </>
       )}
-    </div>
+    </ManagementPage>
   );
 }
 export function NewAgreement() {
@@ -144,17 +152,15 @@ function VersionDetails({ item: a }: { item: Agreement }) {
   const path = `${endpoint(m.id)}/agreements/${a.agreementId}`;
   const view = agreementPath(m.id, a.agreementId, a.version);
   return (
-    <div className={ui.surface}>
-      <Link to={agreementPath(m.id)}>
-        {t("Versiones del convenio", "Versións do convenio")}
-      </Link>
-      <h1>
-        {a.name} · {t("versión", "versión")} {a.version}
-      </h1>
-      <p>
-        {t("Estado registrado", "Estado rexistrado")}:{" "}
-        <strong>{a.status}</strong>
-      </p>
+    <ManagementPage
+      title={`${a.name} · ${t("versión", "versión")} ${a.version}`}
+      breadcrumb={
+        <Link to={agreementPath(m.id)}>
+          {t("Versiones del convenio", "Versións do convenio")}
+        </Link>
+      }
+      status={<Badge size="sm">{a.status}</Badge>}
+    >
       <p>
         {dateTime(a.startsAt, a.timeZone, locale)} —{" "}
         {dateTime(a.endsAt, a.timeZone, locale)}
@@ -397,6 +403,6 @@ function VersionDetails({ item: a }: { item: Agreement }) {
           )}
         </p>
       )}
-    </div>
+    </ManagementPage>
   );
 }

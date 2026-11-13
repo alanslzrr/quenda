@@ -10,6 +10,7 @@ import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
 import { Textarea } from "../../ui/textarea/textarea";
 import styles from "../municipal/municipal.module.css";
+import { ManagementPage } from "../municipal/page";
 import {
   endpoint,
   More,
@@ -61,15 +62,18 @@ export function AgreementEditor({ original }: { original?: Agreement }) {
   const error = (es: string, gl: string) =>
     new ApiError(400, "INVALID_INPUT", t(es, gl));
   return (
-    <div className={ui.surface}>
-      <Link to={agreementPath(m.id)}>
-        {t("Consultar versiones", "Consultar versións")}
-      </Link>
-      <h1>
-        {original
+    <ManagementPage
+      title={
+        original
           ? t("Nueva versión del convenio", "Nova versión do convenio")
-          : t("Nuevo convenio", "Novo convenio")}
-      </h1>
+          : t("Nuevo convenio", "Novo convenio")
+      }
+      breadcrumb={
+        <Link to={agreementPath(m.id)}>
+          {t("Consultar versiones", "Consultar versións")}
+        </Link>
+      }
+    >
       {original && (
         <p className={styles.notice}>
           {original.name} · {t("Versión de partida", "Versión de partida")}:{" "}
@@ -361,6 +365,6 @@ export function AgreementEditor({ original }: { original?: Agreement }) {
           )}
         />
       </CollaborationAction>
-    </div>
+    </ManagementPage>
   );
 }

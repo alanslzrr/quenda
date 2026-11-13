@@ -13,6 +13,7 @@ import {
   AgreementSelect,
   useAgreementOptions,
 } from "../collaboration/agreement-select";
+import { ManagementPage } from "../municipal/page";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
 import type { CommandResult } from "../reservations/commands";
 import type { ReviewContext } from "./model";
@@ -40,19 +41,16 @@ function Review() {
     ? `${endpoint(m.id)}/agreements/${context.agreementId}/reports/${context.month}`
     : "";
   return (
-    <>
-      <h1>
-        {t(
-          "Revisión de privacidad de informes",
-          "Revisión de privacidade de informes",
-        )}
-      </h1>
-      <p>
-        {t(
-          "Evalúa si compartir este informe conjunto puede revelar información de personas. Una evaluación favorable no publica el informe ni concede permisos al destinatario.",
-          "Avalía se compartir este informe conxunto pode revelar información de persoas. Unha avaliación favorable non publica o informe nin concede permisos ao destinatario.",
-        )}
-      </p>
+    <ManagementPage
+      title={t(
+        "Revisión de privacidad de informes",
+        "Revisión de privacidade de informes",
+      )}
+      description={t(
+        "Evalúa si compartir este informe conjunto puede revelar información de personas. Una evaluación favorable no publica el informe ni concede permisos al destinatario.",
+        "Avalía se compartir este informe conxunto pode revelar información de persoas. Unha avaliación favorable non publica o informe nin concede permisos ao destinatario.",
+      )}
+    >
       <p>
         {t(
           "Registra la evaluación de riesgo para una revisión y destinatario concretos. Las referencias documentan la revisión humana; no acreditan anonimato ni autorizan por sí solas la entrega. No introduzcas datos personales ni documentos completos.",
@@ -236,6 +234,6 @@ function Review() {
           </Button>
         </>
       )}
-    </>
+    </ManagementPage>
   );
 }

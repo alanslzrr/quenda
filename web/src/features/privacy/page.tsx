@@ -1,6 +1,8 @@
 import { useParams } from "react-router";
 import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
+import { Badge } from "../../ui/badge/badge";
+import { ManagementPage } from "../municipal/page";
 import { Denied } from "../municipal/shared";
 import {
   GlobalPrivacyScope,
@@ -99,17 +101,14 @@ function Workspace() {
   ];
   const page = pages.find((p) => p.id === current);
   return (
-    <div className={styles.surface}>
-      <h1>{t("Conservación y derechos", "Conservación e dereitos")}</h1>
-      <p>
-        <strong>{s.name}</strong>
-      </p>
-      <p>
-        {t(
-          "Consulta y ejecución requieren permisos independientes y una verificación en dos pasos reciente. Las solicitudes de derechos se tramitan por los canales administrativos existentes.",
-          "Consulta e execución requiren permisos independentes e unha verificación en dous pasos recente. As solicitudes de dereitos tramítanse polas canles administrativas existentes.",
-        )}
-      </p>
+    <ManagementPage
+      title={t("Conservación y derechos", "Conservación e dereitos")}
+      status={<Badge size="sm">{s.name}</Badge>}
+      description={t(
+        "Consulta y ejecución requieren permisos independientes y una verificación en dos pasos reciente. Las solicitudes de derechos se tramitan por los canales administrativos existentes.",
+        "Consulta e execución requiren permisos independentes e unha verificación en dous pasos recente. As solicitudes de dereitos tramítanse polas canles administrativas existentes.",
+      )}
+    >
       <nav
         className={styles.nav}
         aria-label={t("Gestión de privacidad", "Xestión de privacidade")}
@@ -137,6 +136,6 @@ function Workspace() {
           <p>{t("Sección no encontrada.", "Sección non atopada.")}</p>
         )}
       </div>
-    </div>
+    </ManagementPage>
   );
 }

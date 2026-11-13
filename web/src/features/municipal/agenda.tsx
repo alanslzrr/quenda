@@ -10,11 +10,17 @@ import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { useSession } from "../../app/session";
+import { Badge } from "../../ui/badge/badge";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
-import { municipalToday } from "../catalog/dates";
+import {
+  durationLabel,
+  endsNextDay,
+  intervalLabel,
+  municipalToday,
+} from "../catalog/dates";
 import type { Availability, Unit } from "../catalog/unit";
 import {
   type CommandPolicy,
@@ -26,11 +32,11 @@ import {
   dateTime,
   PendingLink,
   type Reservation,
-  ReservationSummary,
 } from "../reservations/shared";
 import { admissibleDuration } from "./calendar-model";
 import { localInstants } from "./local-instants";
 import styles from "./municipal.module.css";
+import { ManagementPage } from "./page";
 import {
   Denied,
   endpoint,
@@ -64,10 +70,15 @@ export function Agenda() {
     );
   if (!canPlan) return <Denied />;
   return (
-    <>
-      <h1>{t("Agenda diaria", "Axenda diaria")}</h1>
+    <ManagementPage
+      title={t("Agenda diaria", "Axenda diaria")}
+      description={t(
+        "Las reservas y los bloqueos de un día, con la hora del municipio. Bloquea una unidad para mantenimiento o actos propios.",
+        "As reservas e os bloqueos dun día, coa hora do municipio. Bloquea unha unidade para mantemento ou actos propios.",
+      )}
+    >
       <AgendaData />
-    </>
+    </ManagementPage>
   );
 }
 function AgendaData() {
@@ -125,15 +136,13 @@ function AgendaDay({
     m.administrator || m.permissions.some((p) => p.operation === "UNIT_BLOCK");
   return (
     <>
-      <p>
-        {t("Horas del municipio:", "Horas do municipio:")} {timeZone}
-      </p>
-      <div className={styles.row}>
+      <div className={styles.filters}>
         <Input
           type="date"
           label={t("Fecha de la agenda", "Data da axenda")}
           value={date}
           required
+          description={`${t("Hora del municipio", "Hora do municipio")}: ${timeZone}`}
           onChange={(e) => setDate(e.target.value)}
         />
         <Select
@@ -525,7 +534,7 @@ export function AdministrativeReservation() {
   const units = useMunicipalPages<PlanningUnit>(
     `${endpoint(m.id)}/agenda/units`,
   );
-  const { t } = usePreferences();
+  const { t, locale } = usePreferences();
   const unitName = (id: string) =>
     units.data?.pages.flatMap((p) => p.items).find((u) => u.id === id)?.name ??
     id;
@@ -540,20 +549,27 @@ export function AdministrativeReservation() {
   )
     return <Denied />;
   return (
-    <>
-      <Link to={`${municipalPath(m.id)}/agenda`}>
-        {t("Agenda diaria", "Axenda diaria")}
-      </Link>
-      <h1>{t("Reserva", "Reserva")}</h1>
-      <ReservationSummary reservation={r} />
-      <p>
-        {t("Unidad:", "Unidade:")} {unitName(r.unitId)} ·{" "}
-        {r.status === "CONFIRMADA"
-          ? t("Confirmada", "Confirmada")
-          : r.status === "CANCELADA"
-            ? t("Cancelada", "Cancelada")
-            : t("Finalizada", "Finalizada")}
-      </p>
+    <ManagementPage
+      title={`${t("Reserva", "Reserva")} · ${unitName(r.unitId)}`}
+      breadcrumb={
+        <Link to={`${municipalPath(m.id)}/agenda`}>
+          {t("Agenda diaria", "Axenda diaria")}
+        </Link>
+      }
+      status={
+        <Badge
+          size="sm"
+          tone={r.status === "CONFIRMADA" ? "success" : "neutral"}
+        >
+          {r.status === "CONFIRMADA"
+            ? t("Confirmada", "Confirmada")
+            : r.status === "CANCELADA"
+              ? t("Cancelada", "Cancelada")
+              : t("Finalizada", "Finalizada")}
+        </Badge>
+      }
+      description={`${intervalLabel(r.startsAt, r.endsAt, r.timeZone, locale)}${endsNextDay(r.startsAt, r.endsAt, r.timeZone) ? ` · ${t("termina al día siguiente", "remata ao día seguinte")}` : ""}`}
+    >
       <Arrival key={`${r.id}:${r.arrivedAt ?? ""}`} reservation={r} />
       {r.usageRulesUnitId && r.usageRulesVersion !== null ? (
         <Disclosure
@@ -604,11 +620,10 @@ export function AdministrativeReservation() {
         </p>
       )}
       <p>
-        {t(
-          "Plazo de cancelación aceptado (minutos):",
-          "Prazo de cancelación aceptado (minutos):",
-        )}{" "}
-        {r.cancellationMinutes}
+        {t("Plazo de cancelación aceptado:", "Prazo de cancelación aceptado:")}{" "}
+        {r.cancellationMinutes === 0
+          ? t("hasta el inicio", "ata o inicio")
+          : `${durationLabel(r.cancellationMinutes)} ${t("antes del inicio", "antes do inicio")}`}
       </p>
       {permitted(m, "RESERVATION_MANAGE", r.unitId) &&
         r.status === "CONFIRMADA" &&
@@ -618,7 +633,7 @@ export function AdministrativeReservation() {
             reservation={r}
           />
         )}
-    </>
+    </ManagementPage>
   );
 }
 /** Checking the holder's access code ends here: the page the QR code opens. */

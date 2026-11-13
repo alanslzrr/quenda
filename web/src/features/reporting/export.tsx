@@ -5,6 +5,7 @@ import { saveFile } from "../../app/download";
 import { usePreferences } from "../../app/preferences-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Select } from "../../ui/select/select";
+import { ManagementPage } from "../municipal/page";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
 import { PeriodFields, ScopeField } from "./fields";
 import { canEnter, canExport, validPeriod } from "./model";
@@ -20,14 +21,13 @@ function Export() {
   const [download, setDownload] = useState(false);
   const [format, setFormat] = useState<"json" | "csv">("json");
   return (
-    <div className={styles.surface}>
-      <h1>{t("Exportar reservas", "Exportar reservas")}</h1>
-      <p>
-        {t(
-          "Una hoja de cálculo con una fila por reserva, o los datos completos para otros sistemas. Incluye las reservas que coinciden con el periodo, con su horario completo. Los datos completos añaden el texto de las normas aceptadas o pendientes; la hoja de cálculo, solo sus versiones y fechas. No es una copia de seguridad ni acredita asistencia.",
-          "Unha folla de cálculo cunha fila por reserva, ou os datos completos para outros sistemas. Inclúe as reservas que coinciden co período, co seu horario completo. Os datos completos engaden o texto das normas aceptadas ou pendentes; a folla de cálculo, só as súas versións e datas. Non é unha copia de seguridade nin acredita asistencia.",
-        )}
-      </p>
+    <ManagementPage
+      title={t("Exportar reservas", "Exportar reservas")}
+      description={t(
+        "Una hoja de cálculo con una fila por reserva, o los datos completos para otros sistemas.",
+        "Unha folla de cálculo cunha fila por reserva, ou os datos completos para outros sistemas.",
+      )}
+    >
       <div onChange={() => setDownload(false)}>
         <ActionForm
           label={
@@ -135,6 +135,12 @@ function Export() {
           )}
         </p>
       )}
-    </div>
+      <p className={styles.note}>
+        {t(
+          "Incluye las reservas que coinciden con el periodo, con su horario completo. Los datos completos añaden el texto de las normas aceptadas o pendientes; la hoja de cálculo, solo sus versiones y fechas. No es una copia de seguridad ni acredita asistencia.",
+          "Inclúe as reservas que coinciden co período, co seu horario completo. Os datos completos engaden o texto das normas aceptadas ou pendentes; a folla de cálculo, só as súas versións e datas. Non é unha copia de seguridade nin acredita asistencia.",
+        )}
+      </p>
+    </ManagementPage>
   );
 }
