@@ -22,13 +22,13 @@ export function PersonalDetails() {
       error={session.isError ? session.error : null}
       retry={() => void session.refetch()}
     >
-      <PageTitle title={t("Datos personales", "Datos persoais")} />
-      <p>
-        {t("Identificador de cuenta", "Identificador de conta")}:{" "}
-        <code>{auth.user.id}</code>
-      </p>
+      <PageTitle title={t("Datos personales", "Datos persoais")}>
+        {t(
+          "El nombre que ve el personal municipal en tus reservas y el correo con el que accedes.",
+          "O nome que ve o persoal municipal nas túas reservas e o correo co que accedes.",
+        )}
+      </PageTitle>
       <section className={styles.section}>
-        <h2>{t("Nombre", "Nome")}</h2>
         <ActionForm
           label={t("Guardar nombre", "Gardar nome")}
           success={t("Nombre actualizado.", "Nome actualizado.")}
@@ -114,6 +114,14 @@ export function PersonalDetails() {
           </p>
         )}
       </section>
+      {/* Only support needs this reference, so it stays at the end and out of the way. */}
+      <p className={styles.reference}>
+        {t(
+          "Identificador de cuenta, por si te lo pide soporte",
+          "Identificador de conta, por se cho pide soporte",
+        )}
+        : <code>{auth.user.id}</code>
+      </p>
     </EditorRecovery>
   );
 }

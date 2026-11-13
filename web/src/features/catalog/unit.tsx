@@ -215,43 +215,50 @@ export function UnitAvailability({
             unit={unit}
             query={query}
           />
-          <header className={styles.intro}>
-            <p className={styles.context}>
-              {[municipality, unit.facilityName].filter(Boolean).join(" · ")}
-            </p>
-            <h1 className={styles.title}>{unit.name}</h1>
-            {unitFacts(unit.profile, locale).length > 0 && (
+          {/* Text on the left and a smaller gallery on the right, so the day and time controls stay in view. */}
+          <header className={`${styles.intro} ${styles.unitIntro}`}>
+            <div className={styles.unitText}>
               <p className={styles.context}>
-                {unitFacts(unit.profile, locale).join(" · ")}
+                {[municipality, unit.facilityName].filter(Boolean).join(" · ")}
               </p>
-            )}
-            {/* Without photos of its own, a space shows those of its facility. */}
-            <PhotoGallery
-              photos={
-                unit.photos?.length ? unit.photos : (unit.facilityPhotos ?? [])
-              }
-              source={publicPhotos(tenantId)}
-              label={unit.photos?.length ? unit.name : `${unit.facilityName}`}
-            />
-            {localized(unit.profile?.description, locale) && (
-              <p className={styles.lead}>
-                {localized(unit.profile?.description, locale)}
-              </p>
-            )}
-            <FacilityDetails profile={unit.facilityProfile} />
-            <p className={styles.lead}>
-              {t(
-                "Elige el día, la duración y una hora libre.",
-                "Escolle o día, a duración e unha hora libre.",
+              <h1 className={styles.title}>{unit.name}</h1>
+              {unitFacts(unit.profile, locale).length > 0 && (
+                <p className={styles.context}>
+                  {unitFacts(unit.profile, locale).join(" · ")}
+                </p>
               )}
-            </p>
-            <div className={styles.introActions}>
-              <Link
-                className={styles.textLink}
-                to={facilityPath(tenantId, unit.facilityId, query)}
-              >
-                {t("Cambiar espacio", "Cambiar espazo")}
-              </Link>
+              <p className={styles.lead}>
+                {t(
+                  "Elige el día, la duración y una hora libre.",
+                  "Escolle o día, a duración e unha hora libre.",
+                )}
+              </p>
+              {localized(unit.profile?.description, locale) && (
+                <p className={styles.lead}>
+                  {localized(unit.profile?.description, locale)}
+                </p>
+              )}
+              <FacilityDetails profile={unit.facilityProfile} />
+              <div className={styles.introActions}>
+                <Link
+                  className={styles.textLink}
+                  to={facilityPath(tenantId, unit.facilityId, query)}
+                >
+                  {t("Cambiar espacio", "Cambiar espazo")}
+                </Link>
+              </div>
+            </div>
+            {/* Without photos of its own, a space shows those of its facility. */}
+            <div className={styles.unitMedia}>
+              <PhotoGallery
+                photos={
+                  unit.photos?.length
+                    ? unit.photos
+                    : (unit.facilityPhotos ?? [])
+                }
+                source={publicPhotos(tenantId)}
+                label={unit.photos?.length ? unit.name : `${unit.facilityName}`}
+              />
             </div>
           </header>
         </>

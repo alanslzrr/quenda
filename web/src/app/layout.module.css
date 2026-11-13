@@ -468,3 +468,13 @@
   outline: 2px solid var(--foreground);
   outline-offset: 3px;
 }
+/* A support reference: small and muted, at the end of the page. */
+.reference {
+  margin: 32px 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+.reference code {
+  font-size: inherit;
+}

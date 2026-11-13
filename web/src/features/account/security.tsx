@@ -15,8 +15,9 @@ import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { dateTime } from "../reservations/shared";
+import flat from "./security.module.css";
 import { sessionDevice } from "./session-device";
-import { SecretField, useAuthSession } from "./shared";
+import { PageTitle, SecretField, useAuthSession } from "./shared";
 
 export function FactorField({
   optional = false,
@@ -109,18 +110,14 @@ export function AccountSecurity() {
       error={session.isError ? session.error : null}
       retry={() => void session.refetch()}
     >
-      <div className={security.block}>
-        <header className={security.header}>
-          <h1 style={{ fontSize: 22, margin: 0, letterSpacing: "-.03em" }}>
-            {t("Seguridad de tu cuenta", "Seguridade da túa conta")}
-          </h1>
-          <p>
-            {t(
-              "Controla cómo accedes y dónde mantienes la sesión abierta.",
-              "Controla como accedes e onde mantés a sesión aberta.",
-            )}
-          </p>
-        </header>
+      <PageTitle title={t("Seguridad de tu cuenta", "Seguridade da túa conta")}>
+        {t(
+          "Controla cómo accedes y dónde mantienes la sesión abierta.",
+          "Controla como accedes e onde mantés a sesión aberta.",
+        )}
+      </PageTitle>
+      {/* The account frame is already the card: the sections sit flat inside it, like the other account pages. */}
+      <div className={`${security.block} ${flat.flat}`}>
         <SecuritySection
           title={t("Contraseña", "Contrasinal")}
           description={t(
@@ -420,6 +417,7 @@ export function AccountSecurity() {
                       <ActionForm
                         label={t("Cerrar esta sesión", "Pechar esta sesión")}
                         danger
+                        quiet
                         submit={async () => {
                           await api(
                             "/api/auth/revoke-session",

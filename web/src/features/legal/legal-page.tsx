@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
@@ -53,6 +53,40 @@ export function LegalPage({ kind }: { kind: NoticeKind }) {
     <MunicipalPage kind={kind} tenantId={tenantId} />
   ) : (
     <InstancePage kind={kind} />
+  );
+}
+
+/** "On this page": the section titles as links, read from the rendered text so it never drifts from it. */
+function Contents({ of }: { of: React.RefObject<HTMLElement | null> }) {
+  const { t } = usePreferences();
+  const [items, setItems] = useState<{ id: string; title: string }[]>([]);
+  useEffect(() => {
+    const headings =
+      of.current?.querySelectorAll<HTMLElement>("section > h2[id]");
+    setItems(
+      Array.from(headings ?? []).map((h) => ({
+        id: h.id,
+        title: h.textContent ?? "",
+      })),
+    );
+  }, [of]);
+  if (items.length < 3) return null;
+  return (
+    <nav
+      className={styles.contents}
+      aria-label={t("En esta página", "Nesta páxina")}
+    >
+      <p className={styles.contentsTitle}>
+        {t("En esta página", "Nesta páxina")}
+      </p>
+      <ol>
+        {items.map((item) => (
+          <li key={item.id}>
+            <a href={`#${item.id}`}>{item.title}</a>
+          </li>
+        ))}
+      </ol>
+    </nav>
   );
 }
 
@@ -111,6 +145,7 @@ function Content({
 }) {
   const { locale, t } = usePreferences();
   const query = useNotice(kind, tenantId);
+  const article = useRef<HTMLElement>(null);
   const lang = locale === "gl" ? 1 : 0;
   if (query.isPending) return <Loading />;
   if (query.isError)
@@ -125,7 +160,7 @@ function Content({
       )
     : undefined;
   return (
-    <article className={styles.page}>
+    <article className={styles.page} ref={article}>
       <header>
         <h1 className={styles.title}>{kindTitle[kind][lang]}</h1>
         {owner && <p className={styles.owner}>{owner}</p>}
@@ -135,6 +170,7 @@ function Content({
           </p>
         )}
       </header>
+      <Contents of={article} />
       {kind === "privacy" && (
         <Privacy field={field} label={label} lang={lang} />
       )}

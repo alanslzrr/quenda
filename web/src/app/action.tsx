@@ -18,6 +18,7 @@ export function ActionForm({
   label,
   success,
   danger = false,
+  quiet = false,
   resetOnSuccess = true,
   clearOnSuccess = [],
   disabled = false,
@@ -30,6 +31,8 @@ export function ActionForm({
   label: string;
   success?: string;
   danger?: boolean;
+  /** A destructive action repeated on many rows: red text instead of a bordered button. */
+  quiet?: boolean;
   resetOnSuccess?: boolean;
   /** Fields to empty after success when the rest of the form must stay as edited, such as a one-off reason. */
   clearOnSuccess?: string[];
@@ -87,7 +90,7 @@ export function ActionForm({
           {secondary}
           <Button
             type="submit"
-            variant={danger ? "danger" : "primary"}
+            variant={danger ? (quiet ? "danger-ghost" : "danger") : "primary"}
             loading={busy}
             disabled={busy || blocked}
             aria-describedby={unavailable ? reasonId : undefined}
@@ -98,7 +101,7 @@ export function ActionForm({
       ) : (
         <Button
           type="submit"
-          variant={danger ? "danger" : "primary"}
+          variant={danger ? (quiet ? "danger-ghost" : "danger") : "primary"}
           loading={busy}
           disabled={busy || blocked}
           aria-describedby={unavailable ? reasonId : undefined}
