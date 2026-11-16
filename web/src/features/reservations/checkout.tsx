@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { ApiError, api } from "../../app/api";
 import { useMunicipality, usePublicAppearance } from "../../app/branding";
+import { useClockBoundaries } from "../../app/clock-boundaries";
 import { Failure, Loading } from "../../app/feedback";
 import { isUuid } from "../../app/ids.ts";
 import { usePreferences } from "../../app/preferences-provider";
@@ -59,11 +60,6 @@ export function Checkout() {
   const { locale, t } = usePreferences();
   const [failure, setFailure] = useState<unknown>();
   const [generation, setGeneration] = useState(0);
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => tick((n) => n + 1), 1000);
-    return () => clearInterval(timer);
-  }, []);
   const municipality = useMunicipality(tenantId);
   usePublicAppearance(tenantId);
   const original = useReservation(tenantId, reservationId);
@@ -89,6 +85,21 @@ export function Checkout() {
       ),
     staleTime: 0,
   });
+  // The policy's server time, advanced by the time elapsed since it arrived.
+  const policyTime = policy.data?.serverTime;
+  const policyAt = policy.dataUpdatedAt;
+  const serverClock = useCallback(
+    () => Date.parse(policyTime ?? "") + Math.max(0, Date.now() - policyAt),
+    [policyTime, policyAt],
+  );
+  // Only the cancellation deadline changes this page, so it re-renders then rather than every second.
+  useClockBoundaries(
+    [
+      Date.parse(startsAt) -
+        (unit.data?.cancellationMinutes ?? Number.NaN) * 60000,
+    ],
+    serverClock,
+  );
   const changeBack = reservationId
     ? `/reservas/${tenantId}/${reservationId}/modificar`
     : municipalityPath(tenantId);
@@ -169,9 +180,7 @@ export function Checkout() {
         label={t("Elegir horario", "Escoller horario")}
       />
     );
-  const now =
-    Date.parse(policy.data.serverTime) +
-    Math.max(0, Date.now() - policy.dataUpdatedAt);
+  const now = serverClock();
   const window = unit.data.cancellationMinutes * 60000;
   const nonCancellable = now > Date.parse(startsAt) - window;
   const deadline = new Date(Date.parse(startsAt) - window).toISOString();
