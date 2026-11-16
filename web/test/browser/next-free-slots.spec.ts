@@ -57,6 +57,13 @@ test("a full day suggests the next free slots and links straight to booking them
         corners: "round",
         defaultTheme: "light",
       };
+    else if (url.pathname.endsWith("/branding"))
+      body = {
+        version: 1,
+        name: "Oleiros",
+        officialName: "Oleiros",
+        logos: { light: false, dark: false },
+      };
     else if (url.pathname.endsWith(`/units/${unit}`))
       body = {
         id: unit,

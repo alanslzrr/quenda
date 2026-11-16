@@ -39,6 +39,13 @@ async function mockCatalog(page: Page, dark: boolean) {
         corners: "round",
         defaultTheme: dark ? "dark" : "light",
       };
+    else if (url.pathname.endsWith("/branding"))
+      body = {
+        version: 1,
+        name: "Oleiros",
+        officialName: "Oleiros",
+        logos: { light: false, dark: false },
+      };
     else if (url.pathname.endsWith(`/units/${unit}`))
       body = {
         id: unit,
