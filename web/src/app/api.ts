@@ -1,5 +1,6 @@
 import { retryAfterDeadline } from "./retry-after.ts";
 import { recordServerDate } from "./server-clock.ts";
+import type { CornerId, FontId, ThemeId } from "./themes.ts";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -98,10 +99,16 @@ export interface Municipality {
   name: string;
   timeZone: string;
 }
+export type ColorOverrides = Partial<
+  Record<"background" | "foreground" | "accent", string>
+>;
 export interface Appearance {
   version: number;
-  lightPalette: "neutral" | "blue" | "green";
-  darkPalette: "neutral" | "blue" | "green";
+  theme: ThemeId;
+  light: ColorOverrides;
+  dark: ColorOverrides;
+  font: FontId;
+  corners: CornerId;
   defaultTheme: "light" | "dark";
 }
 export interface Navigation {
