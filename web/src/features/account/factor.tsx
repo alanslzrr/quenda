@@ -32,12 +32,25 @@ export function FactorField({
             ? t("Código de respaldo", "Código de respaldo")
             : t("Código de autenticación", "Código de autenticación")
         }
+        description={
+          backup
+            ? t(
+                "Letras y cifras con guion: XXXXX-XXXXX",
+                "Letras e cifras con guión: XXXXX-XXXXX",
+              )
+            : t("6 cifras", "6 cifras")
+        }
+        descriptionAbove
         required={!optional}
         autoFocus={focus}
         autoComplete="one-time-code"
         inputMode={backup ? "text" : "numeric"}
         pattern={backup ? "[A-Za-z0-9]{5}-[A-Za-z0-9]{5}" : "[0-9]{6}"}
         maxLength={backup ? 11 : 6}
+        // A backup code is an identifier: correction or capitalisation would change it.
+        spellCheck={backup ? false : undefined}
+        autoCapitalize={backup ? "none" : undefined}
+        autoCorrect={backup ? "off" : undefined}
       />
     </>
   );
