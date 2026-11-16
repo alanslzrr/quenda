@@ -223,12 +223,16 @@
     -webkit-backdrop-filter: none;
   }
 }
+/* Reduced motion stops the travel (the chevron's turn, the items' slide) and keeps colour and fades easing. */
 @media (prefers-reduced-motion: reduce) {
-  .trigger,
-  .chevron,
-  .item,
-  .highlight {
-    transition: none;
+  .chevron {
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+  .item {
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-standard) var(--ease-enter)
+        calc(min(var(--i, 0), 4) * 35ms);
   }
   .menu,
   .menu[data-state="closed"] {

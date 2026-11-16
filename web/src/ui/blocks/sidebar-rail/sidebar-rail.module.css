@@ -131,8 +131,8 @@
   .stat>span { font-size:var(--text-lg); }
   .row { min-height:48px; gap:10px; }
 }
+/* Only movement stops; the rows' colour and the sidebar's shadow keep easing. */
 @media (prefers-reduced-motion:reduce) {
-  .iconButton,.icon,.item,.sidebar { transition:none; }
   .tip,.tip[data-state=closed] { transform:none; transition:opacity 90ms linear; }
 }
 

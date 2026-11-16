@@ -417,12 +417,6 @@
     white-space: nowrap;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .navItem,
-  .navItem svg {
-    transition: none;
-  }
-}
 
 /* Width variants center the composition, not its text. */
 .columnMain {
