@@ -120,7 +120,7 @@ export function FacilityPage() {
         </LinkButton>
       </div>
     );
-  const items = [...units.items].sort((a, b) =>
+  const items = units.items.toSorted((a, b) =>
     a.name.localeCompare(b.name, locale),
   );
   const lengths = (unit: UnitChoice) =>

@@ -85,7 +85,7 @@ export function MunicipalityPage() {
       />
     );
   const name = municipality.data.name;
-  const items = [...facilities.items].sort(
+  const items = facilities.items.toSorted(
     (a, b) =>
       Number(b.units > 0) - Number(a.units > 0) ||
       a.name.localeCompare(b.name, locale),
