@@ -167,8 +167,9 @@
 .main:focus {
   outline: none;
 }
+/* Headings are blocks in the page column, so a long name still wraps; ordinary words never split mid-word. */
 .main :is(h1, h2, h3) {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .workspaceMain {
   min-width: 0;
@@ -295,7 +296,7 @@
 }
 .section p {
   line-height: 1.65;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .secret {
   white-space: pre-wrap;

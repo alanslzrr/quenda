@@ -1,5 +1,5 @@
 .staff {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 /* Sections stay on one line and scroll sideways on a phone, instead of a lone tab wrapping below the rest. */
 .navigation {

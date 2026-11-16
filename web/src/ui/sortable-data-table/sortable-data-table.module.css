@@ -14,7 +14,9 @@
 .table th { height: 44px; padding: 0 var(--space-4); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: var(--text-sm); font-weight: 500; text-align: left; white-space: nowrap; }
 .table th[data-sortable] { padding: 0; }
 .table th[data-sorted] { color: var(--foreground); }
-.table td { height: 52px; padding: 0 var(--space-4); border-bottom: 1px solid var(--border-subtle); color: var(--foreground); font-weight: 400; vertical-align: middle; overflow-wrap: anywhere; }
+.table td { height: 52px; padding: 0 var(--space-4); border-bottom: 1px solid var(--border-subtle); color: var(--foreground); font-weight: 400; vertical-align: middle; overflow-wrap: break-word; }
+/* Ordinary words wrap whole; links and code may still break anywhere so a long URL cannot widen its column. */
+.table td :where(a, code) { overflow-wrap: anywhere; }
 .table tbody tr:last-child td { border-bottom: 0; }
 .table [data-numeric] { text-align: right; font-variant-numeric: tabular-nums; }
 .table[data-selectable] tbody tr { cursor: pointer; -webkit-tap-highlight-color: transparent; }
