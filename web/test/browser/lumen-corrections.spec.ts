@@ -303,8 +303,17 @@ test("municipal identity uploads a raster logo, refuses SVG before sending and r
     logos: { light: false, dark: false },
   };
   const sent: { path: string; body: Record<string, unknown> }[] = [];
-  await page.route(`**/api/public/municipalities/${tenant}/branding`, (route) =>
-    route.fulfill({ json: state }),
+  // Branding travels with the public municipality record.
+  await page.route(`**/api/public/municipalities/${tenant}`, (route) =>
+    route.fulfill({
+      json: {
+        id: tenant,
+        name: state.name,
+        timeZone: "Europe/Madrid",
+        officialName: state.officialName,
+        branding: { version: state.version, logos: state.logos },
+      },
+    }),
   );
   await page.route(`**/api/public/municipalities/${tenant}/logo/**`, (route) =>
     route.fulfill({ body: logo, contentType: "image/png" }),
