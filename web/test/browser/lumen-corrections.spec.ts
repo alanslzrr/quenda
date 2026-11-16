@@ -250,6 +250,43 @@ for (const personal of ["light", "dark"] as const) {
   });
 }
 
+test("municipal management wears the municipality's saved theme, typeface and corners", async ({
+  page,
+}) => {
+  await fixture(page, "light");
+  await page.route(
+    `**/api/public/municipalities/${tenant}/appearance`,
+    (route) =>
+      route.fulfill({
+        json: {
+          version: 4,
+          theme: "vineyard",
+          light: { accent: "#6d1a3a" },
+          dark: {},
+          font: "serif",
+          corners: "square",
+          defaultTheme: "light",
+        },
+      }),
+  );
+  await page.goto(`${base}/agenda`);
+  await expect(page.locator("html")).toHaveAttribute("data-accent", "vineyard");
+  await expect(page.locator("body")).toHaveCSS(
+    "background-color",
+    "rgb(252, 247, 248)",
+  );
+  const root = (name: string) =>
+    page
+      .locator("html")
+      .evaluate((el, n) => el.style.getPropertyValue(n), name);
+  expect(await root("--accent")).toBe("#6d1a3a");
+  expect(await root("--radius-control")).toBe("0.25rem");
+  expect(await root("--font-body")).toMatch(/serif$/);
+  // Leaving the municipality returns to the instance theme.
+  await page.goto("/reservas");
+  await expect(page.locator("html")).toHaveAttribute("data-accent", "neutral");
+});
+
 test("audit regression: pagination cannot submit a valid revocation", async ({
   page,
 }) => {
