@@ -14,6 +14,11 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
+/* Pages that scroll the document (the platform's legal texts) pin a bar the same way the management frame does; a
+   field reached with Tab scrolls clear of it. The sidebar shell's own scroller has the matching rule. */
+html:has([data-pinned-end]) {
+  scroll-padding-bottom: 7.5rem;
+}
 a {
   color: var(--accent-strong);
 }
