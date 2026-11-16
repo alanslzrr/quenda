@@ -53,6 +53,9 @@ export function usePublicAppearance(tenantId: string | undefined) {
   const appearance = useQuery({
     queryKey,
     enabled: !!tenantId,
+    // Every page of a municipality (public, management, reservations) needs it, and it rarely changes; reading it
+    // once every few minutes keeps it from using up the shared public request budget. Saving it refreshes it.
+    staleTime: 5 * 60_000,
     // Appearance falls back silently, so there is no manual retry control.
     // Re-entering may recover it, but never before its rate-limit deadline.
     retryOnMount: canRefetch(client.getQueryState(queryKey)?.error),
