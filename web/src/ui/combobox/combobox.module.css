@@ -37,3 +37,5 @@
 /* V09: Explicit consumer-safe control metrics; no global reset dependency. */
 .clear { padding: 0; font: inherit; }
 .control input:focus { outline-offset: 0; }
+/* Forced colours drop the background that marks the keyboard-active option, so it gets a system outline. */
+@media (forced-colors: active) { .option[data-active="true"] { outline: 2px solid Highlight; outline-offset: -2px; } }
