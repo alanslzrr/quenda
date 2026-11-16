@@ -37,9 +37,9 @@
 .metaIcon { display: inline-flex; align-items: center; gap: 6px; }
 .meta strong { color: var(--text-secondary); font-weight: 500; }
 
-/* Tabs bleed to the frame edges so the rule under them spans the page; the first label lines up with the title. */
-.tabs { position: relative; display: flex; gap: 2px; margin: 2px calc(var(--pad) * -1) 0; padding: 0 calc(var(--pad) - 10px); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
-.tabs::-webkit-scrollbar { display: none; }
+/* Tabs bleed to the frame edges so the rule under them spans the page; the first label lines up with the title.
+   The scrollbar stays: the row has no Previous/Next buttons, so it is the pointer's way to reach hidden tabs. */
+.tabs { position: relative; display: flex; gap: 2px; margin: 2px calc(var(--pad) * -1) 0; padding: 0 calc(var(--pad) - 10px); overflow-x: auto; overscroll-behavior-x: contain; }
 .tab { position: relative; display: inline-flex; height: 44px; flex: none; align-items: center; gap: 6px; border: 0; padding: 0 10px; background: none; color: var(--text-secondary); font: inherit; font-weight: 500; letter-spacing: inherit; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard); }
 .tab::before { position: absolute; inset: 8px 0; border-radius: 8px; background: color-mix(in oklab, var(--foreground) 4.5%, transparent); content: ""; opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard); }
 .tab[data-state="active"] { color: var(--foreground); }
@@ -50,7 +50,7 @@
 .count > span { color: inherit; font-family: inherit; font-size: inherit; font-weight: inherit; letter-spacing: inherit; line-height: inherit; }
 .indicator { position: absolute; right: 10px; bottom: 0; left: 10px; height: 2px; border-radius: 2px 2px 0 0; background: var(--accent); }
 
-.scroller { position: relative; flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 28px var(--pad) 84px; scrollbar-color: var(--border-strong) transparent; scrollbar-width: thin; }
+.scroller { position: relative; flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 28px var(--pad) 84px; scrollbar-color: var(--border-strong) transparent; }
 /* Every panel is taller than the condensed viewport, so condensing never clamps the scroll back to the top. */
 .panel { min-height: 600px; }
 .sectionTitle { margin: 0 0 8px; font-size: var(--text-sm); font-weight: 500; }
