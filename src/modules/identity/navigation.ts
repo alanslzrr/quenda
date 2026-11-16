@@ -8,6 +8,9 @@ export interface PublicMunicipality {
   id: string;
   name: string;
   timeZone: string;
+  officialName: string;
+  /** Which logos exist; version changes with every name or logo change and addresses the current image. */
+  branding: { version: number; logos: { light: boolean; dark: boolean } };
 }
 export interface MunicipalContext {
   id: string;
@@ -30,10 +33,25 @@ export async function publicMunicipalities(
     id: string;
     name: string;
     timezone: string;
+    official_name: string;
+    branding_version: number;
+    light_logo: boolean;
+    dark_logo: boolean;
   }>("SELECT * FROM domain.public_municipalities($1,$2)", [after, selected]);
   if (selected && result.rows.length === 0) throw new HttpError("NOT_FOUND");
   return page(
-    result.rows.map(({ timezone, ...row }) => ({ ...row, timeZone: timezone })),
+    result.rows.map(
+      (row): PublicMunicipality => ({
+        id: row.id,
+        name: row.name,
+        timeZone: row.timezone,
+        officialName: row.official_name,
+        branding: {
+          version: row.branding_version,
+          logos: { light: row.light_logo, dark: row.dark_logo },
+        },
+      }),
+    ),
   );
 }
 export async function accountNavigation(

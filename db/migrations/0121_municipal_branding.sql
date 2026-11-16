@@ -144,3 +144,19 @@ REVOKE ALL ON FUNCTION domain.public_municipal_branding(uuid),domain.public_muni
 GRANT EXECUTE ON FUNCTION domain.public_municipal_branding(uuid),domain.public_municipal_logo(uuid,text),
  domain.rename_municipality(integer,text,uuid),domain.save_municipal_logo(integer,text,bytea,integer,integer,uuid),
  domain.remove_municipal_logo(integer,text,uuid) TO quenda_domain;
+
+-- Every page of a municipality already reads its public record; carrying the branding state there means showing
+-- its logo costs no extra request against the shared public budget.
+DROP FUNCTION domain.public_municipalities(uuid,uuid);
+CREATE FUNCTION domain.public_municipalities(after_id uuid,selected_id uuid DEFAULT NULL)
+RETURNS TABLE(id uuid,name text,timezone text,official_name text,branding_version integer,light_logo boolean,dark_logo boolean)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
+ SELECT m.id,m.name,m.timezone,m.official_name,m.branding_version,
+  EXISTS(SELECT 1 FROM domain.municipal_logo l WHERE l.tenant_id=m.id AND l.variant='light'),
+  EXISTS(SELECT 1 FROM domain.municipal_logo l WHERE l.tenant_id=m.id AND l.variant='dark')
+ FROM domain.municipality m
+ WHERE (after_id IS NULL OR m.id>after_id) AND (selected_id IS NULL OR m.id=selected_id)
+ ORDER BY m.id LIMIT 21
+$$;
+REVOKE ALL ON FUNCTION domain.public_municipalities(uuid,uuid) FROM PUBLIC,quenda_auth,quenda_worker;
+GRANT EXECUTE ON FUNCTION domain.public_municipalities(uuid,uuid) TO quenda_domain;
