@@ -92,6 +92,11 @@ const clouds: Record<string, Cloud> = {
       );
     },
   },
+  gcp: {
+    health: "http://gcp:4588/health",
+    env: { GOOGLE_OAUTH_ACCESS_TOKEN: "floci-gcp-placeholder" },
+    targets: [],
+  },
 };
 
 interface Phase {
