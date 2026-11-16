@@ -97,7 +97,7 @@ Los enlaces de recuperación y cambio de correo se leen una vez y se retiran de 
 
 El selector público utiliza una proyección de identificador, nombre y zona horaria municipal. La navegación administrativa consulta únicamente los ámbitos y permisos propios; esa proyección no sustituye la autorización ni la comprobación de MFA de cada operación.
 
-La [apariencia municipal](02_modelo_dominio.md#apariencia-y-preferencias) utiliza variables CSS y combinaciones predefinidas verificadas. La vista pública muestra un calendario de fechas y franjas; la administración utiliza una agenda diaria. Los controles representan fechas civiles del municipio. Las franjas de reserva conservan los instantes y desplazamientos UTC recibidos del servidor; los bloqueos convierten la hora municipal, rechazan horas inexistentes y exigen elegir el desplazamiento cuando una hora se repite. La agenda filtra intervalos por día municipal antes de paginar, sin ampliar permisos.
+La [apariencia municipal](02_modelo_dominio.md#apariencia-y-preferencias) utiliza variables CSS derivadas de un catálogo de temas verificado y de los ajustes de color validados por el servidor. La vista pública muestra un calendario de fechas y franjas; la administración utiliza una agenda diaria. Los controles representan fechas civiles del municipio. Las franjas de reserva conservan los instantes y desplazamientos UTC recibidos del servidor; los bloqueos convierten la hora municipal, rechazan horas inexistentes y exigen elegir el desplazamiento cuando una hora se repite. La agenda filtra intervalos por día municipal antes de paginar, sin ampliar permisos.
 
 ## ADR-09 Entornos y versiones
 
