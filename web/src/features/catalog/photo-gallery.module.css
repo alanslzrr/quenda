@@ -118,6 +118,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto;
+  /* Scrollbars and native focus follow the fixed dark palette, not the page; `only` stops browsers re-adapting it.
+     The backdrop paints its background and every colour inside is fixed, so nothing mixes schemes. */
+  color-scheme: only dark;
   color: #f4f4f5;
   outline: none;
   animation: fade var(--duration-standard) var(--ease-enter);
