@@ -115,8 +115,9 @@
   }
 }
 
+/* Only the checkbox press scale moves; colour, background and opacity keep easing. */
 @media (prefers-reduced-motion: reduce) {
-  .table th, .table td, .table tbody tr, .sortInner, .sortHint, .selectBox, .count, .clear, .table th .sortButton { transition: none !important; }
+  .selectBox, .selectInput:active + .selectBox { transition: border-color var(--duration-fast) var(--ease-standard); }
   .selectInput:active + .selectBox { transform: none; }
 }
 
