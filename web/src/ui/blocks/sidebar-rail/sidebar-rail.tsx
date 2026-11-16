@@ -40,6 +40,8 @@ export interface SidebarRailProps {
   active: string;
   onSelect: (id: string) => void;
   municipality: string;
+  /** The municipality's own logo, shown instead of the product mark when it has one. */
+  mark?: ReactNode;
   email: string;
   toolbar: ReactNode;
   children: ReactNode;
@@ -358,9 +360,9 @@ function NavSections({
 }
 
 function Brand({ collapsed, reduce }: { collapsed: boolean; reduce: boolean }) {
-  const { municipality, labels } = useRail();
+  const { municipality, mark, labels } = useRail();
   return <Link to="/administracion" className={styles.brand}>
-    <span className={styles.mark} aria-hidden="true">q</span>
+    {mark ?? <span className={styles.mark} aria-hidden="true">q</span>}
     <motion.span className={styles.stack} initial={false} animate={{opacity: collapsed ? 0 : 1, x: collapsed ? -6 : 0}} transition={labelOut(collapsed, reduce)}>
       <strong>{municipality}</strong><span>{labels.municipalities}</span>
     </motion.span>
