@@ -147,7 +147,9 @@ export function SignIn({ register = false }: { register?: boolean }) {
                 label={t("Correo electrónico", "Correo electrónico")}
                 name="email"
                 type="email"
-                autoComplete="email"
+                // Password managers pair "username" with the password field, on sign-up as on sign-in.
+                autoComplete="username"
+                spellCheck={false}
                 required
               />
               <PasswordField
@@ -158,6 +160,13 @@ export function SignIn({ register = false }: { register?: boolean }) {
                 label={t("Contraseña", "Contrasinal")}
                 name="password"
                 autoComplete={register ? "new-password" : "current-password"}
+                // The account service rejects new passwords shorter than eight characters.
+                minLength={register ? 8 : undefined}
+                description={
+                  register
+                    ? t("Mínimo 8 caracteres", "Mínimo 8 caracteres")
+                    : undefined
+                }
                 required
               />
             </>

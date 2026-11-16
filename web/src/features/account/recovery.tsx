@@ -95,7 +95,9 @@ export function RecoveryRequest({
           name="email"
           type="email"
           required
-          autoComplete="email"
+          // The address identifies an existing account, so password managers fill it as the username.
+          autoComplete="username"
+          spellCheck={false}
         />
         {kind === "reactivate" && (
           <SecretField
@@ -162,6 +164,7 @@ export function ResetPassword() {
             name="password"
             autoComplete="new-password"
             minLength={8}
+            description={t("Mínimo 8 caracteres", "Mínimo 8 caracteres")}
           />
         </ActionForm>
       )}
