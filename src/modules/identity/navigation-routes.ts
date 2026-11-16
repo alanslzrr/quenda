@@ -15,11 +15,29 @@ const querystring = {
 const municipality = {
   type: "object",
   additionalProperties: false,
-  required: ["id", "name", "timeZone"],
+  required: ["id", "name", "timeZone", "officialName", "branding"],
   properties: {
     id: uuid,
     name: { type: "string" },
     timeZone: { type: "string" },
+    officialName: { type: "string" },
+    branding: {
+      type: "object",
+      additionalProperties: false,
+      required: ["version", "logos"],
+      properties: {
+        version: { type: "integer", minimum: 1 },
+        logos: {
+          type: "object",
+          additionalProperties: false,
+          required: ["light", "dark"],
+          properties: {
+            light: { type: "boolean" },
+            dark: { type: "boolean" },
+          },
+        },
+      },
+    },
   },
 };
 const page = (items: object) => ({

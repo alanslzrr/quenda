@@ -287,6 +287,87 @@ test("municipal management wears the municipality's saved theme, typeface and co
   await expect(page.locator("html")).toHaveAttribute("data-accent", "neutral");
 });
 
+test("municipal identity uploads a raster logo, refuses SVG before sending and renames the municipality", async ({
+  page,
+}) => {
+  // Branding writes go to their own routes below; nothing else may be written.
+  const writes = await fixture(page, "light");
+  const logo = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAvUlEQVR4nOXOIQEAIBAAsWvwPRH0d3yMCcT8mnvez9IBLR3Q0gEtHdDSAS0d0NIBLR3Q0gEtHdDSAS0d0NIBLR3Q0gEtHdDSAS0d0NIBLR3Q0gEtHdDSAS0d0NIBLR3Q0gEtHdDSAS0d0NIBLR3Q0gEtHdDSAS0d0NIBLR3Q0gEtHdDSAS0d0NIBLR3Q0gEtHdDSAS0d0NIBLR3Q0gEtHdDSAS0d0NIBLR3Q0gEtHdDSAS0d0NIBLR3Q0gFtAQ9BYcMzBICoAAAAAElFTkSuQmCC",
+    "base64",
+  );
+  let state = {
+    version: 1,
+    name: "Valdeira",
+    officialName: "Concello de Valdeira",
+    logos: { light: false, dark: false },
+  };
+  const sent: { path: string; body: Record<string, unknown> }[] = [];
+  // Branding travels with the public municipality record.
+  await page.route(`**/api/public/municipalities/${tenant}`, (route) =>
+    route.fulfill({
+      json: {
+        id: tenant,
+        name: state.name,
+        timeZone: "Europe/Madrid",
+        officialName: state.officialName,
+        branding: { version: state.version, logos: state.logos },
+      },
+    }),
+  );
+  await page.route(`**/api/public/municipalities/${tenant}/logo/**`, (route) =>
+    route.fulfill({ body: logo, contentType: "image/png" }),
+  );
+  await page.route(`**/api/municipalities/${tenant}/branding/**`, (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    sent.push({ path, body });
+    state = path.endsWith("/name")
+      ? { ...state, version: state.version + 1, name: String(body.name) }
+      : {
+          ...state,
+          version: state.version + 1,
+          logos: { ...state.logos, light: true },
+        };
+    return route.fulfill({ json: state });
+  });
+  await page.goto(`${base}/apariencia`);
+  await expect(
+    page.getByText(/Nombre oficial de alta: Concello de Valdeira/),
+  ).toBeVisible();
+  // A vector file never leaves the browser.
+  await page.getByLabel("Logo", { exact: true }).setInputFiles({
+    name: "logo.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+  });
+  await expect(page.getByText(/No se admiten SVG/)).toBeVisible();
+  expect(sent).toEqual([]);
+  await page.getByLabel("Logo", { exact: true }).setInputFiles({
+    name: "logo.png",
+    mimeType: "image/png",
+    buffer: logo,
+  });
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toEqual({
+    path: `/api/municipalities/${tenant}/branding/logos/light`,
+    body: { expectedVersion: 1, image: logo.toString("base64") },
+  });
+  // The menu shows the logo instead of the product mark, and the dark version becomes available.
+  await expect(
+    page.locator(`img[src*="/logo/light?v=2"]`).first(),
+  ).toBeAttached();
+  await expect(page.getByText("Logo para fondo oscuro")).toBeVisible();
+  await page.getByLabel("Nombre visible").fill("  Concello de Valdeira ");
+  await page.getByRole("button", { name: "Guardar nombre" }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1]?.body).toEqual({
+    expectedVersion: 2,
+    name: "  Concello de Valdeira ",
+  });
+  expect(writes).toEqual([]);
+});
+
 test("audit regression: pagination cannot submit a valid revocation", async ({
   page,
 }) => {

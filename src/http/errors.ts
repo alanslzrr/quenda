@@ -75,6 +75,10 @@ const messages = {
     es: "No puedes dar de baja la cuenta mientras tengas reservas confirmadas futuras o en curso. Consulta tus reservas o contacta con el ayuntamiento.",
     gl: "Non podes dar de baixa a conta mentres teñas reservas confirmadas futuras ou en curso. Consulta as túas reservas ou contacta co concello.",
   },
+  LOGO_INVALID: {
+    es: "No se puede usar esta imagen como logo. Sube un PNG, JPG o WebP de hasta 2 MB, de al menos 32 píxeles por lado y no más de 4 veces más ancho que alto (ni al revés).",
+    gl: "Non se pode usar esta imaxe como logo. Sube un PNG, JPG ou WebP de ata 2 MB, de polo menos 32 píxeles por lado e non máis de 4 veces máis ancho ca alto (nin ao revés).",
+  },
   PHOTO_INVALID: {
     es: "No se puede usar esta imagen. Sube una foto horizontal en JPG, PNG o WebP de al menos 900 × 600 píxeles.",
     gl: "Non se pode usar esta imaxe. Sube unha foto horizontal en JPG, PNG ou WebP de polo menos 900 × 600 píxeles.",
@@ -153,6 +157,7 @@ const statuses = {
   ACCOUNT_HAS_FUTURE_RESERVATIONS: 409,
   ACCOUNT_INACTIVE: 403,
   PHOTO_INVALID: 400,
+  LOGO_INVALID: 400,
   PHOTO_LIMIT_REACHED: 409,
 
   INVALID_INPUT: 400,

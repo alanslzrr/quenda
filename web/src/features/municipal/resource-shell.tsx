@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { MunicipalLogo, useBranding } from "../../app/branding";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { SettingsMenu } from "../../app/settings-menu";
@@ -34,6 +35,7 @@ export function ResourceShell({
   children: ReactNode;
 }) {
   const { t } = usePreferences();
+  const branding = useBranding(m.id).data;
   const { account } = useSession();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -183,6 +185,11 @@ export function ResourceShell({
       }
       onSelect={navigate}
       municipality={m.name}
+      mark={
+        branding?.logos.light ? (
+          <MunicipalLogo tenantId={m.id} branding={branding} size="sm" />
+        ) : undefined
+      }
       email={account?.email ?? ""}
       labels={{
         navigation: t("Gestión municipal", "Xestión municipal"),

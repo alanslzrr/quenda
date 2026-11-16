@@ -1,6 +1,9 @@
+.page,
 .editor {
   display: grid;
   gap: var(--space-8);
+}
+.page {
   max-width: 46rem;
 }
 .notice {
@@ -311,4 +314,52 @@
   .window {
     transition: none;
   }
+}
+
+/* Identity: the name form and the logo controls sit on the right of their rows. */
+.nameForm {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+.nameForm form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+.nameForm form > :first-child {
+  flex: 1 1 12rem;
+}
+.logoControl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* The logo is previewed on the background it will sit on. */
+.logoPreview {
+  display: grid;
+  width: 5.5rem;
+  height: 3rem;
+  place-items: center;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: #ffffff;
+}
+.logoPreview[data-variant="dark"] {
+  background: #191919;
+}
+.logoPreview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
