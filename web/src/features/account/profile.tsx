@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Navigate } from "react-router";
 import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
@@ -38,6 +38,19 @@ export function Profile() {
     }, 600);
     return () => window.clearTimeout(timer);
   }, [choice, pending, saved]);
+  // A choice still waiting for its debounce is saved when the page goes away, so a quick click is never lost.
+  const unsaved = useRef<{ theme?: Theme; save: typeof save }>({ save });
+  unsaved.current = {
+    theme: choice && choice !== saved ? choice : undefined,
+    save,
+  };
+  useEffect(
+    () => () => {
+      const { theme: pendingTheme, save: flush } = unsaved.current;
+      if (pendingTheme) void flush({ theme: pendingTheme }).catch(() => {});
+    },
+    [],
+  );
   // The language select stays enabled while saving, so keyboard focus stays on it; a language chosen meanwhile is
   // held and saved once the running save ends, as the theme is.
   const [language, setLanguage] = useState<Locale>();
