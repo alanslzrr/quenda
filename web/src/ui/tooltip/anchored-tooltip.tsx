@@ -1,13 +1,42 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { type ReactNode, useLayoutEffect, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { motionTokens } from "../motion-tokens";
 import styles from "./anchored-tooltip.module.css";
 
 const gap = 8;
 const margin = 8;
+/** Long enough to cross the gap onto the tooltip, short enough that leaving still reads as closing it. */
+const grace = 150;
+
+/**
+ * Hover hiding for an `AnchoredTooltip` that the pointer can move onto and read (WCAG 1.4.13, hoverable). `leave` hides
+ * after a short grace; `stay` cancels a pending hide. Call `stay` whenever the tooltip is shown or hidden on purpose, and
+ * give both to the tooltip's own pointer handlers.
+ */
+export function useHoverGrace(hide: () => void) {
+  const timer = useRef(0);
+  const latest = useRef(hide);
+  useEffect(() => {
+    latest.current = hide;
+  });
+  const stay = useCallback(() => window.clearTimeout(timer.current), []);
+  const leave = useCallback(() => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => latest.current(), grace);
+  }, []);
+  useEffect(() => stay, [stay]);
+  return { stay, leave };
+}
 
 interface Place {
   left: number;
@@ -19,16 +48,21 @@ interface Place {
  * A floating label for whatever element is `anchor`, drawn above it (below when there is no room) and kept inside the
  * viewport. Moving to another anchor slides the same tooltip there instead of closing and reopening it, so scanning a
  * grid of cells reads as one continuous readout. The owner decides when it shows: pass `anchor={null}` to hide it, and
- * point the anchor's `aria-describedby` at `id` so the content is announced with it.
+ * point the anchor's `aria-describedby` at `id` so the content is announced with it. Wire the pointer handlers to
+ * `useHoverGrace` so the pointer can rest on the tooltip itself.
  */
 export function AnchoredTooltip({
   anchor,
   id,
   children,
+  onPointerEnter,
+  onPointerLeave,
 }: {
   anchor: HTMLElement | null;
   id: string;
   children: ReactNode;
+  onPointerEnter?: () => void;
+  onPointerLeave?: () => void;
 }) {
   const reduced = useReducedMotion() ?? false;
   const [node, setNode] = useState<HTMLDivElement | null>(null);
@@ -77,6 +111,8 @@ export function AnchoredTooltip({
           data-lumen=""
           data-side={place?.side}
           className={styles.tooltip}
+          onPointerEnter={onPointerEnter}
+          onPointerLeave={onPointerLeave}
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{
             opacity: place ? 1 : 0,

@@ -14,7 +14,9 @@
   font-family: var(--font-body);
   font-size: var(--text-sm);
   line-height: var(--leading-body);
-  pointer-events: none;
+  /* Hoverable (WCAG 1.4.13): the pointer can rest on it to read it. Explicit, because a modal dialog turns pointer
+     events off on the body this tooltip is portalled into. */
+  pointer-events: auto;
 }
 .tooltip[data-side="above"] {
   transform-origin: center bottom;

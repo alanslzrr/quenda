@@ -20,6 +20,7 @@ import { SplitBar } from "../../ui/split-bar/split-bar";
 import {
   AnchoredTooltip,
   TooltipContent,
+  useHoverGrace,
 } from "../../ui/tooltip/anchored-tooltip";
 import styles from "./analytics.module.css";
 import {
@@ -670,17 +671,24 @@ export function Demand({
     t(`Noche del ${dayName(day)}`, `Noite do ${dayName(day)}`);
   const hoursText = (minutes: number) => `${formatHours(minutes, locale)} h`;
   const keyOf = (f: Focus) => `${f.day}:${f.slot}`;
+  const grace = useHoverGrace(() => {
+    setFocus(undefined);
+    setAnchor(null);
+  });
   const show = (target: HTMLElement, next: Focus) => {
+    grace.stay();
     setFocus(next);
     setAnchor(target);
   };
   const hide = () => {
+    grace.stay();
     setFocus(undefined);
     setAnchor(null);
   };
   /** Arrow keys walk the grid, the day names included; Home and End jump along the row; Escape hides the detail. */
   const onKeyDown = (event: KeyboardEvent<HTMLTableElement>) => {
     if (event.key === "Escape") {
+      grace.stay();
       setAnchor(null);
       return;
     }
@@ -839,7 +847,9 @@ export function Demand({
               }}
               onKeyDown={onKeyDown}
               onPointerLeave={() => {
-                if (!table.current?.contains(document.activeElement)) hide();
+                // A short grace lets the pointer cross onto the tooltip and rest there.
+                if (!table.current?.contains(document.activeElement))
+                  grace.leave();
               }}
               onBlur={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget as Node))
@@ -918,7 +928,15 @@ export function Demand({
               </tbody>
             </table>
           </Scroll>
-          <AnchoredTooltip anchor={anchor} id={tipId}>
+          <AnchoredTooltip
+            anchor={anchor}
+            id={tipId}
+            onPointerEnter={grace.stay}
+            onPointerLeave={() => {
+              if (!table.current?.contains(document.activeElement))
+                grace.leave();
+            }}
+          >
             {tip}
           </AnchoredTooltip>
           <ul
