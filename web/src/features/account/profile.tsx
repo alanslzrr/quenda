@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { Navigate } from "react-router";
 import { Failure, Loading } from "../../app/feedback";
 import styles from "../../app/layout.module.css";
-import type { Theme } from "../../app/preferences";
+import type { Locale, Theme } from "../../app/preferences";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
@@ -38,16 +38,38 @@ export function Profile() {
     }, 600);
     return () => window.clearTimeout(timer);
   }, [choice, pending, saved]);
+  // The language select stays enabled while saving, so keyboard focus stays on it; a language chosen meanwhile is
+  // held and saved once the running save ends, as the theme is.
+  const [language, setLanguage] = useState<Locale>();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `save` is a new function on every render; the save starts only when the choice or the saved state changes.
+  useEffect(() => {
+    if (!language || pending) return;
+    if (language === locale) {
+      setLanguage(undefined);
+      return;
+    }
+    // A tick later, so a failed save clears the choice before this effect could send it again.
+    const timer = window.setTimeout(() => {
+      setFailure(undefined);
+      save({ locale: language }).then(
+        () =>
+          setLanguage((current) =>
+            current === language ? undefined : current,
+          ),
+        (error: unknown) => {
+          setFailure(error);
+          setLanguage(undefined);
+        },
+      );
+    });
+    return () => window.clearTimeout(timer);
+  }, [language, pending, locale]);
   if (loading) return <Loading />;
   if (error)
     return (
       <Failure error={error} retry={() => void refresh().catch(() => {})} />
     );
   if (!account) return <Navigate to="/acceso" replace />;
-  const update = (patch: Parameters<typeof save>[0]) => {
-    setFailure(undefined);
-    void save(patch).catch(setFailure);
-  };
   return (
     <>
       <div className={styles.hero}>
@@ -64,13 +86,12 @@ export function Profile() {
       <div className={styles.form}>
         <Select
           label={t("Idioma", "Idioma")}
-          value={locale}
-          disabled={pending}
+          value={language ?? locale}
           options={[
             { value: "gl", label: "Galego" },
             { value: "es", label: "Castellano" },
           ]}
-          onValueChange={(value) => update({ locale: value as "es" | "gl" })}
+          onValueChange={(value) => setLanguage(value as Locale)}
         />
         <div className={styles.choiceGroup}>
           <span id={appearanceId} className={styles.choiceLabel}>
