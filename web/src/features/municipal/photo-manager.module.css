@@ -112,6 +112,8 @@
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  /* The standard property; ignored until supported, the prefixed set does the work meanwhile. */
+  line-clamp: 2;
 }
 .cardFoot {
   display: flex;
