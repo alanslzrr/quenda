@@ -29,7 +29,15 @@ export interface DialogContentProps extends ComponentPropsWithoutRef<typeof Dial
   children: ReactNode;
   /** `lg` widens the dialog for settings with side-by-side choices. */
   size?: "md" | "lg";
+  /**
+   * Where focus lands on open. An element marked `data-autofocus` always wins (the safe action of a destructive
+   * confirmation); `field` picks the first field of a form. Otherwise Radix focuses the first control, the close button.
+   */
+  initialFocus?: "field";
 }
+
+/** Fields a person types into or picks from; checkboxes and radios are choices, not the start of a form. */
+const fields = "input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not(:disabled), select:not(:disabled), textarea:not(:disabled)";
 
 const fade: Transition = { duration: motionTokens.duration.instant };
 const leave: Transition = { duration: motionTokens.duration.fast, ease: [...motionTokens.ease.standard] };
@@ -42,9 +50,22 @@ function SwapText({ text }: { text: string }) {
   </AnimatePresence>;
 }
 
-export function DialogContent({ closeLabel = "Cerrar", title, description, children, className, size = "md", onPointerDownOutside, ...props }: DialogContentProps) {
+export function DialogContent({ closeLabel = "Cerrar", title, description, children, className, size = "md", initialFocus, onPointerDownOutside, onOpenAutoFocus, ...props }: DialogContentProps) {
   const open = useContext(OpenContext);
   const reduced = useReducedMotion();
+  const body = useRef<HTMLDivElement>(null);
+  // The close button comes first in the markup, so without this every dialog would open on it instead of on its task.
+  const openFocus: DialogContentProps["onOpenAutoFocus"] = event => {
+    onOpenAutoFocus?.(event);
+    if (event.defaultPrevented || !body.current) return;
+    const usable = (node: HTMLElement) => !node.closest("[hidden], [inert]");
+    const marked = Array.from(body.current.querySelectorAll<HTMLElement>("[data-autofocus]")).find(usable);
+    const field = initialFocus === "field" ? Array.from(body.current.querySelectorAll<HTMLElement>(fields)).find(usable) : undefined;
+    const target = marked ?? field;
+    if (!target) return;
+    event.preventDefault();
+    target.focus();
+  };
   // When the open state last changed. Radix waits for the click before treating a press as outside, and a press on the trigger
   // while the dialog leaves reopens it first, so that press must not close it again.
   const change = useRef({ open, at: 0 });
@@ -56,18 +77,18 @@ export function DialogContent({ closeLabel = "Cerrar", title, description, child
   const classes = [styles.content, size === "lg" ? styles.large : "", className].filter(Boolean).join(" ");
   const inner = <>
     <div className={styles.header}><div><DialogPrimitive.Title className={styles.title}><SwapText text={title}/></DialogPrimitive.Title>{description ? <DialogPrimitive.Description className={styles.description}><SwapText text={description}/></DialogPrimitive.Description> : null}</div><DialogPrimitive.Close className={styles.close} aria-label={closeLabel}><X size={16} strokeWidth={1.75} aria-hidden="true"/></DialogPrimitive.Close></div>
-    <div className={styles.body}>{children}</div>
+    <div ref={body} className={styles.body}>{children}</div>
   </>;
   // Under a bare Radix root the open state is unknown here, so CSS keyframes keyed off data-state animate the layers instead.
   if (open === null) return <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay className={`${styles.overlay} ${styles.keyframes}`}/>
-    <DialogPrimitive.Content {...(!description ? {"aria-describedby":undefined} : {})} {...props} onPointerDownOutside={pressOutside} data-lumen="" className={`${classes} ${styles.keyframes}`}>{inner}</DialogPrimitive.Content>
+    <DialogPrimitive.Content {...(!description ? {"aria-describedby":undefined} : {})} {...props} onPointerDownOutside={pressOutside} onOpenAutoFocus={openFocus} data-lumen="" className={`${classes} ${styles.keyframes}`}>{inner}</DialogPrimitive.Content>
   </DialogPrimitive.Portal>;
   // The overlay fades while the dialog rises 8px and scales up on a spring. Closing is shorter and quieter, and starts from wherever the entrance is.
   return <AnimatePresence>
     {open && <DialogPrimitive.Portal key="dialog" forceMount>
       <DialogPrimitive.Overlay asChild forceMount><motion.div className={styles.overlay} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: reduced ? fade : leave }} transition={reduced ? fade : { duration: motionTokens.duration.standard, ease: [...motionTokens.ease.enter] }}/></DialogPrimitive.Overlay>
-      <DialogPrimitive.Content {...(!description ? {"aria-describedby":undefined} : {})} {...props} onPointerDownOutside={pressOutside} asChild forceMount>
+      <DialogPrimitive.Content {...(!description ? {"aria-describedby":undefined} : {})} {...props} onPointerDownOutside={pressOutside} onOpenAutoFocus={openFocus} asChild forceMount>
         <motion.div data-lumen="" className={classes} initial={reduced ? { opacity: 0 } : { opacity: 0, y: 8, scale: .96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={reduced ? { opacity: 0, transition: fade } : { opacity: 0, y: 4, scale: .98, transition: leave }} transition={reduced ? fade : { default: motionTokens.spring.smooth, opacity: { duration: motionTokens.duration.fast, ease: [...motionTokens.ease.enter] } }}>{inner}</motion.div>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>}

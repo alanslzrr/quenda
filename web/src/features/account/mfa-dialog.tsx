@@ -95,6 +95,7 @@ export function MfaBoundary({ children }: { children: ReactNode }) {
           }}
           title={t("Verificar acceso", "Verificar acceso")}
           closeLabel={t("Cerrar", "Pechar")}
+          initialFocus="field"
           description={t(
             "La verificación dura cinco minutos. Tus cambios se conservan; ninguna operación se ejecutará automáticamente.",
             "A verificación dura cinco minutos. Os teus cambios consérvanse; ningunha operación se executará automaticamente.",

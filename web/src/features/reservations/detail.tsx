@@ -269,7 +269,11 @@ export function ReservationDetail() {
                         danger
                         secondary={
                           <DialogClose asChild>
-                            <Button type="button" variant="secondary">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              data-autofocus=""
+                            >
                               {t("Mantener reserva", "Manter reserva")}
                             </Button>
                           </DialogClose>

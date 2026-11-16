@@ -608,6 +608,7 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
                 <DialogContent
                   title={t("Retirar del catálogo", "Retirar do catálogo")}
                   closeLabel={t("Cerrar", "Pechar")}
+                  initialFocus="field"
                 >
                   {withdrawal}
                 </DialogContent>
@@ -624,6 +625,7 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
                 <DialogContent
                   title={kind.publish}
                   closeLabel={t("Cerrar", "Pechar")}
+                  initialFocus="field"
                 >
                   {unit ? (
                     <UnitPublication path={path} />
