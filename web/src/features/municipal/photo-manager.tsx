@@ -9,7 +9,15 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { type DragEvent, type FormEvent, useId, useRef, useState } from "react";
+import {
+  type DragEvent,
+  type FormEvent,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { ApiError, api } from "../../app/api";
 import { Failure } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
@@ -180,11 +188,14 @@ function AddPhoto({
   kind,
   name,
   onSaved,
+  onDirtyChange,
 }: {
   path: string;
   kind: Kind;
   name: string;
   onSaved: (saved: Saved) => void;
+  /** Reports whether closing now would lose a chosen photo, its framing and its description. */
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const { locale, t } = usePreferences();
   const inputId = useId();
@@ -195,6 +206,11 @@ function AddPhoto({
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
+  // The description can only be typed once a photo is chosen, so the photo alone marks the work as unsaved.
+  useEffect(() => {
+    onDirtyChange(picture !== null);
+  }, [picture, onDirtyChange]);
+  useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
 
   async function choose(chosen: File | undefined) {
     setProblem(null);
@@ -444,6 +460,34 @@ export function PhotoManager({
   const [error, setError] = useState<unknown>();
   const [status, setStatus] = useState("");
   const returnFocus = useRef<HTMLButtonElement>(null);
+  const [addDirty, setAddDirty] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
+  const discardId = useId();
+  const keepEditing = useRef<HTMLButtonElement>(null);
+  const editingFocus = useRef<HTMLElement | null>(null);
+  // A discarded attempt starts over with a fresh form; the question stays until then so the dialog does not flash the form while it leaves.
+  const [attempt, setAttempt] = useState(0);
+  const openAdd = () => {
+    setDiscarding(false);
+    setOpen({ action: "add" });
+  };
+  // The question takes focus on its safe answer; going back to the form returns to the field that was in use.
+  useLayoutEffect(() => {
+    if (discarding) {
+      keepEditing.current?.focus();
+      return;
+    }
+    if (editingFocus.current?.isConnected) editingFocus.current.focus();
+    editingFocus.current = null;
+  }, [discarding]);
+  const askToDiscard = () => {
+    if (!discarding)
+      editingFocus.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+    setDiscarding(true);
+  };
 
   const saved = (result: Saved, message: string) => {
     setPhotos(result.photos);
@@ -528,7 +572,7 @@ export function PhotoManager({
             ref={returnFocus}
             variant="secondary"
             disabled={full}
-            onClick={() => setOpen({ action: "add" })}
+            onClick={openAdd}
           >
             <ImagePlus size={16} aria-hidden="true" />
             {t("Añadir foto", "Engadir foto")}
@@ -549,11 +593,7 @@ export function PhotoManager({
         </p>
       )}
       {photos.length === 0 ? (
-        <button
-          type="button"
-          className={styles.empty}
-          onClick={() => setOpen({ action: "add" })}
-        >
+        <button type="button" className={styles.empty} onClick={openAdd}>
           <ImagePlus size={28} strokeWidth={1.5} aria-hidden="true" />
           <span className={styles.dropTitle}>
             {t("Añade la primera foto", "Engade a primeira foto")}
@@ -665,7 +705,12 @@ export function PhotoManager({
       )}
       <Dialog
         open={open?.action === "add"}
-        onOpenChange={(value) => !value && setOpen(null)}
+        onOpenChange={(value) => {
+          if (value) return;
+          // Escape, a press outside and the close button would lose the chosen photo, its framing and its description.
+          if (addDirty) askToDiscard();
+          else setOpen(null);
+        }}
       >
         <DialogContent
           className={styles.dialog}
@@ -675,15 +720,63 @@ export function PhotoManager({
             "Elige una foto horizontal, encuádrala y descríbela.",
             "Escolle unha foto horizontal, encádraa e descríbea.",
           )}
+          initialFocus="field"
+          onEscapeKeyDown={(event) => {
+            // Escape on the question answers "not now" and goes back to the form.
+            if (!discarding) return;
+            event.preventDefault();
+            setDiscarding(false);
+          }}
         >
-          <AddPhoto
-            path={path}
-            kind={kind}
-            name={name}
-            onSaved={(result) =>
-              saved(result, t("Foto añadida.", "Foto engadida."))
-            }
-          />
+          {/* Hidden rather than unmounted, so going back to the form keeps the photo, framing and description. */}
+          <div hidden={discarding}>
+            <AddPhoto
+              key={attempt}
+              path={path}
+              kind={kind}
+              name={name}
+              onSaved={(result) =>
+                saved(result, t("Foto añadida.", "Foto engadida."))
+              }
+              onDirtyChange={setAddDirty}
+            />
+          </div>
+          {discarding && (
+            <div className={styles.compose}>
+              <Alert
+                id={discardId}
+                tone="warning"
+                title={t("¿Descartar los cambios?", "Descartar os cambios?")}
+              >
+                <p>
+                  {t(
+                    "Se perderán la foto elegida, el encuadre y la descripción.",
+                    "Perderanse a foto escollida, o encadre e a descrición.",
+                  )}
+                </p>
+              </Alert>
+              <div className={styles.composeActions}>
+                <Button
+                  ref={keepEditing}
+                  variant="secondary"
+                  aria-describedby={discardId}
+                  onClick={() => setDiscarding(false)}
+                >
+                  {t("Seguir editando", "Seguir editando")}
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    editingFocus.current = null;
+                    setOpen(null);
+                    setAttempt((current) => current + 1);
+                  }}
+                >
+                  {t("Descartar", "Descartar")}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       <Dialog
@@ -693,6 +786,7 @@ export function PhotoManager({
         <DialogContent
           closeLabel={t("Cerrar", "Pechar")}
           title={t("Editar descripción", "Editar descrición")}
+          initialFocus="field"
         >
           {open?.action === "describe" && (
             <Describe
@@ -731,6 +825,7 @@ export function PhotoManager({
                 <Button
                   variant="secondary"
                   disabled={busy}
+                  data-autofocus=""
                   onClick={() => setOpen(null)}
                 >
                   {t("Cancelar", "Cancelar")}
