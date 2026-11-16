@@ -20,6 +20,8 @@
 @media (forced-colors: active) { .control:has(input:focus) { outline: 2px solid Highlight; outline-offset: 2px; } }
 .control[data-warn], .control[data-warn]:hover { border-color: color-mix(in oklab, var(--warning) 55%, var(--border)); background: color-mix(in oklab, var(--warning) 5%, var(--surface)); }
 .control[data-warn]:has(input:focus) { border-color: color-mix(in oklab, var(--warning) 80%, var(--border)); }
+/* A failed native constraint, once the field was left or a submit was tried, as on the text fields. */
+.control:has(.input:user-invalid) { border-color: var(--danger); }
 .control[data-disabled] { opacity: .5; background: var(--surface-muted); }
 /* Radius steps in by the shell's inset, so the pressed fill sits concentric with the shell. */
 .step { display: grid; width: var(--nf-step); height: var(--nf-step); flex: 0 0 var(--nf-step); place-items: center; border: 0; border-radius: calc(var(--radius-control) - var(--nf-inset) - 1px); padding: 0; background: transparent; color: var(--text-secondary); cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard), opacity var(--duration-standard) var(--ease-standard); }

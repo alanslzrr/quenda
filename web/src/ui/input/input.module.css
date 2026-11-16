@@ -33,14 +33,15 @@
   color: var(--text-muted);
 }
 @media (hover: hover) and (pointer: fine) {
-  .input:hover:not(:disabled, [aria-invalid="true"]) {
+  .input:hover:not(:disabled, [aria-invalid="true"], :user-invalid) {
     border-color: var(--foreground);
   }
 }
 .input:focus-visible {
   border-color: var(--foreground);
 }
-.input[aria-invalid="true"] {
+/* :user-invalid marks a failed native constraint only once the field was left or a submit was tried. */
+.input:is([aria-invalid="true"], :user-invalid) {
   border-color: var(--danger);
 }
 .input:disabled {

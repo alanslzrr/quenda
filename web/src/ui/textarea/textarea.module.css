@@ -33,7 +33,7 @@
   color: var(--text-muted);
 }
 @media (hover: hover) and (pointer: fine) {
-  .control:hover:not(:disabled, [aria-invalid="true"]) {
+  .control:hover:not(:disabled, [aria-invalid="true"], :user-invalid) {
     border-color: var(--foreground);
   }
 }
@@ -43,7 +43,8 @@
   outline: 2px solid transparent;
   outline-offset: 2px;
 }
-.control[aria-invalid="true"] {
+/* :user-invalid marks a failed native constraint only once the field was left or a submit was tried. */
+.control:is([aria-invalid="true"], :user-invalid) {
   border-color: var(--danger);
 }
 .control:disabled {
