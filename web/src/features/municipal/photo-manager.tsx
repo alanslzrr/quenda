@@ -74,16 +74,17 @@ function Requirements({ kind }: { kind: Kind }) {
   );
 }
 
-function readAsBase64(blob: Blob): Promise<string> {
+function readAsDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () =>
-      resolve(
-        String(reader.result).slice(String(reader.result).indexOf(",") + 1),
-      );
+    reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(blob);
   });
+}
+async function readAsBase64(blob: Blob) {
+  const url = await readAsDataUrl(blob);
+  return url.slice(url.indexOf(",") + 1);
 }
 
 /** Draws the framed part of the picture at its own resolution and encodes it as JPEG. */
@@ -124,7 +125,7 @@ async function frameImage(file: File, picture: Picture, crop: Crop) {
  * security policy admits images only from the origin and data: URLs. The
  * upload is drawn later from the original file at full resolution.
  */
-function previewOf(bitmap: ImageBitmap) {
+async function previewOf(bitmap: ImageBitmap) {
   const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
@@ -132,7 +133,12 @@ function previewOf(bitmap: ImageBitmap) {
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Canvas unavailable");
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.85);
+  // toBlob encodes off the main thread; toDataURL would block input while a 2000 px JPEG is built.
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.85),
+  );
+  if (!blob) throw new Error("Encoding failed");
+  return readAsDataUrl(blob);
 }
 
 function AltFields({ photo }: { photo?: CatalogPhoto }) {
@@ -219,7 +225,7 @@ function AddPhoto({
     try {
       const bitmap = await createImageBitmap(chosen);
       size = { width: bitmap.width, height: bitmap.height };
-      preview = previewOf(bitmap);
+      preview = await previewOf(bitmap);
       bitmap.close();
     } catch {
       return setProblem(
