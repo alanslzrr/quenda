@@ -40,7 +40,6 @@ export function FactorField({
               )
             : t("6 cifras", "6 cifras")
         }
-        descriptionAbove
         required={!optional}
         autoFocus={focus}
         autoComplete="one-time-code"

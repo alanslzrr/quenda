@@ -254,13 +254,11 @@ export function StaffInvite({
           maxLength={128}
           defaultValue={replacement?.accountId}
           readOnly={!!replacement}
-        />
-        <p>
-          {t(
+          description={t(
             "El usuario puede consultar su identificador en los datos de su cuenta. No se busca por correo ni se consulta un directorio global.",
             "O usuario pode consultar o seu identificador nos datos da súa conta. Non se busca por correo nin se consulta un directorio global.",
           )}
-        </p>
+        />
         <p>
           {t("Zona horaria", "Zona horaria")}:{" "}
           {Intl.DateTimeFormat().resolvedOptions().timeZone}

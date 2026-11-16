@@ -49,19 +49,9 @@
   opacity: 0.5;
   background: var(--surface-muted);
 }
-/* The row's space is padding inside the clipped slot, so the height animates from a true zero. */
-.description,
-.error {
-  display: block;
-  padding-top: var(--space-2);
-  font-size: var(--text-xs);
-  line-height: var(--leading-body);
-}
+/* The row's space is padding inside the clipped slot, so the height animates from a true zero. The hint sits above the
+   field with its space below the copy (the label keeps its own gap); the error sits below with its space above. */
 .description {
-  color: var(--text-muted);
-}
-/* Above the field the row's space sits below the copy; the label already keeps its own gap. */
-.descriptionAbove {
   display: block;
   padding-bottom: var(--space-2);
   color: var(--text-muted);
@@ -69,7 +59,11 @@
   line-height: var(--leading-body);
 }
 .error {
+  display: block;
+  padding-top: var(--space-2);
   color: var(--danger);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
 }
 @media (prefers-reduced-motion: reduce) {
   .input {

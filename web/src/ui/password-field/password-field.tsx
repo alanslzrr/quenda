@@ -10,6 +10,7 @@ export interface PasswordFieldMessages { showPassword: string; hidePassword: str
 export const defaultPasswordFieldMessages: PasswordFieldMessages = { showPassword: "Show password", hidePassword: "Hide password" };
 export interface PasswordFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   label: string;
+  /** Shown between the label and the field, where autofill popovers and on-screen keyboards cannot cover it. */
   description?: string;
   /** Translated or reworded toggle names. */
   messages?: Partial<PasswordFieldMessages>;
@@ -62,5 +63,5 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(fu
   const generated = useId(); const controlId = id ?? generated; const [visible, setVisible] = useState(false); const [toggled, setToggled] = useState(false);
   const hintId = description ? `${controlId}-description` : undefined;
   // data-reveal only appears after the first toggle, so the value resolves on each change but never on mount.
-  return <div data-lumen="" className={styles.field}><label htmlFor={controlId}>{label}</label><div className={styles.shell}><input data-lumen-border-focus="" data-lumen-reset-input="" {...props} ref={ref} id={controlId} type={visible ? "text" : "password"} data-reveal={toggled ? (visible ? "shown" : "hidden") : undefined} aria-describedby={[props["aria-describedby"], hintId].filter(Boolean).join(" ") || undefined} className={[styles.input, className].filter(Boolean).join(" ")} /><button type="button" disabled={props.disabled} onClick={() => { setVisible(current => !current); setToggled(true); }} aria-label={visible ? messages.hidePassword : messages.showPassword}><EyeMorph slashed={visible} /></button></div><FieldMessage id={hintId} text={description} className={styles.hint} /></div>;
+  return <div data-lumen="" className={styles.field}><label htmlFor={controlId}>{label}</label><FieldMessage id={hintId} text={description} className={styles.hint} /><div className={styles.shell}><input data-lumen-border-focus="" data-lumen-reset-input="" {...props} ref={ref} id={controlId} type={visible ? "text" : "password"} data-reveal={toggled ? (visible ? "shown" : "hidden") : undefined} aria-describedby={[props["aria-describedby"], hintId].filter(Boolean).join(" ") || undefined} className={[styles.input, className].filter(Boolean).join(" ")} /><button type="button" disabled={props.disabled} onClick={() => { setVisible(current => !current); setToggled(true); }} aria-label={visible ? messages.hidePassword : messages.showPassword}><EyeMorph slashed={visible} /></button></div></div>;
 });

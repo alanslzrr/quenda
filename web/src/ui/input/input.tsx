@@ -7,14 +7,14 @@ import styles from "./input.module.css";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
+  /** Shown between the label and the field, where autofill popovers and on-screen keyboards cannot cover it. */
   description?: string;
-  /** Shows the description between the label and the field, where autofill popovers and on-screen keyboards cannot cover it (one-time codes). */
-  descriptionAbove?: boolean;
+  /** Shown below the field. */
   error?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, description, descriptionAbove = false, error, id, className, ...props },
+  { label, description, error, id, className, ...props },
   ref,
 ) {
   const generatedId = useId();
@@ -24,19 +24,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const describedBy =
     [props["aria-describedby"], hintId, errorId].filter(Boolean).join(" ") ||
     undefined;
-  const hint = (
-    <FieldMessage
-      id={hintId}
-      text={description}
-      className={descriptionAbove ? styles.descriptionAbove : styles.description}
-    />
-  );
   return (
     <div className={styles.field}>
       <label className={styles.label} htmlFor={controlId}>
         {label}
       </label>
-      {descriptionAbove && hint}
+      <FieldMessage id={hintId} text={description} className={styles.description} />
       <input
         {...props}
         data-lumen-border-focus=""
@@ -46,7 +39,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         aria-invalid={error ? true : props["aria-invalid"]}
         aria-describedby={describedBy}
       />
-      {!descriptionAbove && hint}
       <FieldMessage id={errorId} text={error} className={styles.error} />
     </div>
   );
