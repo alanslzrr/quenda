@@ -12,10 +12,10 @@
 .mark[data-logo] svg { width:60%; height:60%; }
 [data-theme=dark] .mark[data-logo] { background:#f4f4f5; color:#17181b; box-shadow:none; }
 .stack { display:grid; min-width:0; gap:2px; line-height:1.25; }
-.stack strong { overflow:hidden; font-size:13px; font-weight:500; text-overflow:clip; }
+.stack strong { overflow:hidden; font-size:.8125rem; font-weight:500; text-overflow:clip; }
 .stack span { overflow:hidden; color:var(--text-muted); font-size:var(--text-xs); text-overflow:clip; }
-.nav { display:flex; flex:1; min-height:0; flex-direction:column; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; padding:4px 12px 8px; scrollbar-width:none; }
-.nav::-webkit-scrollbar { display:none; }
+/* The scrollbar stays: it is the only visible sign, and pointer handle, that a long menu continues. */
+.nav { display:flex; flex:1; min-height:0; flex-direction:column; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; padding:4px 12px 8px; }
 .section+.section { margin-top:4px; }
 .heading { position:relative; overflow:hidden; }
 .headingText { position:absolute; bottom:7px; left:12px; color:var(--text-muted); font-size:var(--text-xs); font-weight:500; line-height:1; white-space:nowrap; }
