@@ -78,6 +78,8 @@ export function PhotoGallery({
             height={photo.height}
             alt=""
             loading={index === 0 ? "eager" : "lazy"}
+            // The cover is the largest image above the fold on these pages.
+            fetchPriority={index === 0 ? "high" : undefined}
             decoding="async"
           />
           {index === 2 && count > 3 && (
@@ -300,10 +302,13 @@ export function PhotoThumb({
   photo,
   source,
   icon: Icon,
+  eager = false,
 }: {
   photo: CatalogPhoto | undefined;
   source: PhotoSource;
   icon: LucideIcon;
+  /** The first rows of a list are on screen when the page opens, so they load at once. */
+  eager?: boolean;
 }) {
   return (
     <span className={styles.thumb} aria-hidden="true">
@@ -313,7 +318,7 @@ export function PhotoThumb({
           width={photo.width}
           height={photo.height}
           alt=""
-          loading="lazy"
+          loading={eager ? "eager" : "lazy"}
           decoding="async"
         />
       ) : (

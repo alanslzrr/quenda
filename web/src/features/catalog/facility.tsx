@@ -201,7 +201,7 @@ export function FacilityPage() {
       ) : (
         <div className={styles.sections}>
           <Choices>
-            {items.map((unit) => (
+            {items.map((unit, index) => (
               <Choice
                 key={unit.id}
                 to={unitPath(tenantId, unit.id, query)}
@@ -212,6 +212,8 @@ export function FacilityPage() {
                       photo={unit.photos?.[0]}
                       source={photoSource}
                       icon={LayoutGrid}
+                      // The facility's gallery pushes the list below the fold; without one the first rows show at once.
+                      eager={index < 3 && !facility.photos?.length}
                     />
                   )
                 }
