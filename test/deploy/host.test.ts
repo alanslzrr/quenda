@@ -123,6 +123,8 @@ test("a cloud-init host boots from the shared module and serves a shipped releas
       "/run/lock",
       "--mount",
       "type=volume,dst=/var/lib/docker",
+      "--mount",
+      "type=volume,dst=/var/lib/containerd",
       "-p",
       "127.0.0.1::22",
       "-p",
