@@ -6,7 +6,13 @@ import {
   type LucideIcon,
   X,
 } from "lucide-react";
-import { type PointerEvent, useRef, useState } from "react";
+import {
+  type PointerEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { usePreferences } from "../../app/preferences-provider";
 import styles from "./photo-gallery.module.css";
 import {
@@ -122,6 +128,23 @@ function RoundButton({
   );
 }
 
+/**
+ * Brings the active thumbnail inside the strip's padding. Only the strip scrolls,
+ * so the page behind the viewer never moves.
+ */
+function revealActive(strip: HTMLElement, behavior: ScrollBehavior) {
+  const thumb = strip.querySelector<HTMLElement>("[aria-current]");
+  if (!thumb) return;
+  const frame = strip.getBoundingClientRect();
+  const box = thumb.getBoundingClientRect();
+  const style = getComputedStyle(strip);
+  const start = frame.left + Number.parseFloat(style.paddingLeft);
+  const end = frame.right - Number.parseFloat(style.paddingRight);
+  const shift =
+    box.left < start ? box.left - start : box.right > end ? box.right - end : 0;
+  if (shift) strip.scrollBy({ left: shift, behavior });
+}
+
 /** Full-screen viewer: arrows, keyboard and swipe move between photos; the description is the caption. */
 export function PhotoViewer({
   photos,
@@ -138,6 +161,16 @@ export function PhotoViewer({
 }) {
   const { locale, t } = usePreferences();
   const start = useRef<{ x: number; y: number } | null>(null);
+  const strip = useRef<HTMLUListElement | null>(null);
+  // Opening places the active thumbnail at once: easing there from the start would read as a jump.
+  const placeStrip = useCallback((node: HTMLUListElement | null) => {
+    strip.current = node;
+    if (node) revealActive(node, "instant");
+  }, []);
+  // Moving between photos keeps the active thumbnail in view; the strip's CSS decides whether it eases.
+  useEffect(() => {
+    if (index !== null && strip.current) revealActive(strip.current, "auto");
+  }, [index]);
   const count = photos.length;
   const current = index === null ? undefined : photos[index];
   const go = (step: number) => {
@@ -227,7 +260,7 @@ export function PhotoViewer({
                 label={t("Foto siguiente", "Foto seguinte")}
                 onClick={() => go(1)}
               />
-              <ul className={styles.strip}>
+              <ul ref={placeStrip} className={styles.strip}>
                 {photos.map((photo, position) => (
                   <li key={photo.id}>
                     <button
