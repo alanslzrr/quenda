@@ -429,6 +429,7 @@ function AppearanceForm({
         <div
           className={styles.saveBar}
           data-problem={problems.length > 0 || undefined}
+          data-pinned-end=""
         >
           {problems.length > 0 ? (
             <div className={styles.problems} role="alert">

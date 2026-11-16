@@ -60,9 +60,13 @@
 .crumbCurrent>span { min-width:0; overflow:hidden; text-overflow:ellipsis; }
 .team { display:flex; flex:none; }
 .content { flex:1; min-height:0; overflow-x:hidden; overflow-y:auto; padding:24px 28px 28px; container:content/inline-size; }
+/* A page that pins a bar to the bottom of this scroller marks it with data-pinned-end, so a field reached with Tab
+   scrolls clear of the bar instead of behind it. The value covers the tallest bar (the save bar wrapped onto two
+   lines on a phone) plus its offset from the edge. */
+.content:has([data-pinned-end]) { scroll-padding-bottom:7.5rem; }
 .swap { position:relative; }
 .title { margin:0; font-family:var(--font-body); font-size:var(--text-xl); font-weight:500; letter-spacing:var(--tracking-body); line-height:1.25; text-wrap:balance; }
-.summary { max-width:60ch; margin:4px 0 0; color:var(--text-secondary); font-size:13px; line-height:1.5; text-wrap:pretty; }
+.summary { max-width:60ch; margin:4px 0 0; color:var(--text-secondary); font-size:.8125rem; line-height:1.5; text-wrap:pretty; }
 .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:20px; border:1px solid var(--border); border-radius:12px; }
 .stat { display:flex; min-width:0; padding:14px 16px; }
 .stat+.stat { border-left:1px solid var(--border); }

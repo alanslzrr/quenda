@@ -67,7 +67,8 @@ function NoticeForm({
           {t("Ver la página pública", "Ver a páxina pública")}
         </Link>
       </p>
-      <div className={editor.form}>
+      {/* Its publish button is pinned to the bottom of the scroller (see notice-editor.module.css). */}
+      <div className={editor.form} data-pinned-end="">
         <ActionForm
           label={t("Publicar texto", "Publicar texto")}
           success={t("Texto publicado.", "Texto publicado.")}
