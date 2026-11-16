@@ -30,11 +30,14 @@ export async function exportCatalog(
           booking_policy_version: number;
           advance_days: number;
           cancellation_minutes: number;
-          light_palette: string;
-          dark_palette: string;
+          theme: string;
+          theme_light: unknown;
+          theme_dark: unknown;
+          theme_font: string;
+          theme_corners: string;
           default_theme: string;
         }>(
-          "SELECT name,timezone,booking_policy_version,advance_days,cancellation_minutes,light_palette,dark_palette,default_theme FROM domain.municipality WHERE id=$1",
+          "SELECT name,timezone,booking_policy_version,advance_days,cancellation_minutes,theme,theme_light,theme_dark,theme_font,theme_corners,default_theme FROM domain.municipality WHERE id=$1",
           [tenantId],
         )
       ).rows[0];
@@ -92,8 +95,11 @@ export async function exportCatalog(
             cancellationMinutes: municipality.cancellation_minutes,
           },
           appearance: {
-            lightPalette: municipality.light_palette,
-            darkPalette: municipality.dark_palette,
+            theme: municipality.theme,
+            light: municipality.theme_light,
+            dark: municipality.theme_dark,
+            font: municipality.theme_font,
+            corners: municipality.theme_corners,
             defaultTheme: municipality.default_theme,
           },
         },
