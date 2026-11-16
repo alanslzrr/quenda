@@ -6,9 +6,10 @@ write_files:
     permissions: "0600"
     encoding: b64
     content: ${settings}
+  # Compressed: AWS caps user data at 16 KiB and OCI at 32 KiB.
   - path: /usr/local/sbin/quenda
     permissions: "0755"
-    encoding: b64
+    encoding: gz+b64
     content: ${cli}
 runcmd:
   - [/usr/local/sbin/quenda, install]
