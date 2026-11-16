@@ -22,18 +22,28 @@ export function useAnchorName() {
  * component's own state, so an exit animation still runs in the top layer; the popover is hidden only when the panel
  * unmounts. The optional ref object keeps receiving the element for the component's own use.
  */
-export function useTopLayerRef<T extends HTMLElement>(ref?: RefObject<T | null>) {
+export function useTopLayerRef<T extends HTMLElement>(
+  ref?: RefObject<T | null>,
+  anchor?: RefObject<HTMLElement | null>,
+) {
   return useCallback(
     (panel: T | null) => {
       if (ref) ref.current = panel;
       if (!panel) return;
-      if (anchoredPopovers && panel.hasAttribute("popover")) panel.showPopover();
+      if (anchoredPopovers && panel.hasAttribute("popover")) {
+        panel.showPopover();
+        // A fallback may have placed the panel above its trigger; data-side lets it grow out of the edge it touches.
+        const trigger = anchor?.current?.getBoundingClientRect();
+        if (trigger)
+          panel.dataset.side =
+            panel.getBoundingClientRect().top < trigger.top ? "top" : "bottom";
+      }
       return () => {
         if (ref) ref.current = null;
         if (panel.matches(":popover-open")) panel.hidePopover();
       };
     },
-    [ref],
+    [ref, anchor],
   );
 }
 

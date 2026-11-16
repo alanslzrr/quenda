@@ -19,6 +19,7 @@
 /* Where supported, the list lives in the top layer, so no later section or clipping ancestor can paint over it; anchor positioning keeps it as wide as the control and flips it above when there is no room below. */
 @supports (position-area: block-end) {
   .popover:popover-open { position: fixed; inset: auto; width: anchor-size(width); margin: 8px 0 0; position-area: block-end span-inline-end; position-try-fallbacks: flip-block; }
+  .popover:popover-open[data-side="top"] { transform-origin: bottom center; }
 }
 .autoHeight { overflow: hidden; }
 .listbox { max-height: min(300px, 40vh); overflow-y: auto; overscroll-behavior: contain; }

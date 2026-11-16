@@ -19,11 +19,12 @@
 /* Grows out of the trigger's calendar icon and returns there on close. */
 .popover { position: absolute; z-index: 20; top: calc(100% + 8px); left: 0; width: min(320px, calc(100vw - 32px)); overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-panel); padding: 16px; background: var(--surface-raised); color: var(--foreground); box-shadow: var(--shadow-floating); transform-origin: 22px -8px; will-change: transform, opacity; }
 /* On phone widths the calendar matches the field instead of running past the screen edge, and a tighter inset keeps the month and its controls on one row. */
-@media (max-width: 360px) { .popover { right: 0; width: auto; padding: 12px; } }
+@media (max-width: 22.5em) { .popover { right: 0; width: auto; padding: 12px; } }
 /* Where supported, the calendar lives in the top layer, so no later section or clipping ancestor can paint over it, and anchor positioning keeps it under the trigger, flipping above or toward the start when the viewport has no room. */
 @supports (position-area: block-end) {
   .popover:popover-open { position: fixed; inset: auto; margin: 8px 0 0; position-area: block-end span-inline-end; position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline; }
-  @media (max-width: 360px) { .popover:popover-open { width: anchor-size(width); } }
+  @media (max-width: 22.5em) { .popover:popover-open { width: anchor-size(width); } }
+  .popover:popover-open[data-side="top"] { transform-origin: 22px calc(100% + 8px); }
 }
 .description { color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-body); transition: opacity var(--duration-fast) var(--ease-standard); }
 /* The open calendar covers the hint; fading it keeps its first letters from peeking past the popover's rounded corner. */

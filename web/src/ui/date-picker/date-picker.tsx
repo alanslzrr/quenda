@@ -87,7 +87,7 @@ export function DatePicker({
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const panelRef = useTopLayerRef(popoverRef);
+  const panelRef = useTopLayerRef(popoverRef, triggerRef);
   const anchor = useAnchorName();
   const closeTimer = useRef<number | undefined>(undefined);
   const reduce = useReducedMotion() ?? false;

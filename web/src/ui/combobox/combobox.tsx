@@ -24,6 +24,7 @@ import type {
   KeyboardEvent,
   MouseEvent as ReactMouseEvent,
   ReactNode,
+  RefObject,
 } from "react";
 import {
   anchorStyle,
@@ -98,9 +99,9 @@ function AutoHeight({
   );
 }
 
-function Popover({ children, reduceMotion, anchor }: { children: ReactNode; reduceMotion: boolean | null; anchor: string }) {
+function Popover({ children, reduceMotion, anchor, anchorRef }: { children: ReactNode; reduceMotion: boolean | null; anchor: string; anchorRef: RefObject<HTMLDivElement | null> }) {
   const present = useIsPresent();
-  const ref = useTopLayerRef<HTMLDivElement>();
+  const ref = useTopLayerRef<HTMLDivElement>(undefined, anchorRef);
   const layer = topLayerProps(anchor);
   return (
     <motion.div
@@ -174,6 +175,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
     const hintId = description ? `${controlId}-description` : undefined;
     const rootRef = useRef<HTMLDivElement>(null);
     const anchor = useAnchorName();
+    const controlRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const composing = useRef(false);
     const resetRevision = useRef(0);
@@ -421,6 +423,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
       <div ref={rootRef} className={styles.field}>
         <label htmlFor={controlId}>{label}</label>
         <div
+          ref={controlRef}
           style={anchorStyle(anchor)}
           className={[
             styles.control,
@@ -511,7 +514,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
         )}
         <AnimatePresence initial={false}>
           {open && (
-            <Popover reduceMotion={reduceMotion} anchor={anchor}>
+            <Popover reduceMotion={reduceMotion} anchor={anchor} anchorRef={controlRef}>
               <AutoHeight reduceMotion={reduceMotion}>
                 {filteredOptions.length ? (
                   <div
