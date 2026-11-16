@@ -226,6 +226,10 @@ test("the web image serves the bundle with strict headers and proxies the API", 
       "default-src 'none'; frame-ancestors 'none'",
     );
     assert.equal(health.headers.get("x-content-type-options"), "nosniff");
+    assert.equal(
+      health.headers.get("cross-origin-resource-policy"),
+      "same-origin",
+    );
     const forwarded = (await health.json()) as {
       url: string;
       forwardedFor: string | null;
