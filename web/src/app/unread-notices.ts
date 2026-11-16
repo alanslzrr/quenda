@@ -15,8 +15,13 @@ export function useUnreadNotices() {
   const { locale } = usePreferences();
   const query = useQuery({
     queryKey: unreadNoticesKey(account?.accountId),
+    // A badge count polled in the background must not compete with the page's own requests.
     queryFn: ({ signal }) =>
-      api<{ unread: number }>("/api/me/notices/unread", { signal }, locale),
+      api<{ unread: number }>(
+        "/api/me/notices/unread",
+        { signal, priority: "low" },
+        locale,
+      ),
     enabled: !!account,
     staleTime: 30_000,
     refetchInterval: 60_000,
