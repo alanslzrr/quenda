@@ -35,10 +35,12 @@
     ) !important;
   outline-offset: var(--focus-outline-offset, 2px) !important;
 }
-/* Source controls that communicate focus through their own fill/border must not inherit a host or UA outline. */
+/* Source controls that communicate focus through their own fill/border must not inherit a host or UA outline.
+   A transparent one stays invisible but keeps a slot that forced colours fill (see the forced-colors block). */
 [data-lumen] [data-lumen-border-focus]:focus,
 [data-lumen] [data-border-focus]:focus {
-  outline: none !important;
+  outline: var(--field-focus-outline-width, 2px) solid
+    var(--field-focus-outline, transparent) !important;
 }
 
 /* Source disclosure headings inherit the display family without resetting host headings. */
@@ -86,6 +88,16 @@
   [data-lumen] textarea,
   [data-lumen] [role="combobox"] {
     border-color: ButtonText;
+  }
+  /* A border colour change is the only focus cue of a text field, and forced colours flatten it. */
+  [data-lumen] :is(input, textarea)[data-lumen-border-focus]:not([data-lumen-reset-input]):focus-visible {
+    --field-focus-outline: Highlight;
+    outline-offset: 2px;
+  }
+  /* Inputs embedded in a shell (password, combobox, number) leave the ring to the shell, so it is not drawn twice. */
+  [data-lumen] [data-lumen-reset-input][data-lumen-border-focus],
+  [data-lumen] [data-border-focus] {
+    --field-focus-outline-width: 0px;
   }
 }
 
