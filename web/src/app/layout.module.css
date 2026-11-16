@@ -103,8 +103,20 @@
   background: var(--surface-muted);
 }
 .navItem[aria-current="page"] {
+  position: relative;
   color: var(--foreground);
   background: var(--surface-muted);
+}
+/* A bar under the label marks the current page by shape as well as colour (WCAG 1.4.1). A border, not a background,
+   so forced colours keep it. */
+.navItem[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 12px;
+  inset-block-end: 3px;
+  border-block-end: 2px solid var(--foreground);
+  border-radius: 1px;
+  pointer-events: none;
 }
 .navItem:hover svg,
 .navItem[aria-current="page"] svg {
@@ -477,4 +489,10 @@
 }
 .reference code {
   font-size: inherit;
+}
+
+@media (forced-colors: active) {
+  .navItem[aria-current="page"]::after {
+    border-color: CanvasText;
+  }
 }
