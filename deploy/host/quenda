@@ -123,7 +123,8 @@ receive() {
   [[ $revision =~ ^[a-f0-9]{40}$ ]] || die "invalid revision"
   local target=$RELEASES/$revision tmp
   tmp=$(mktemp -d "$RELEASES/.incoming.XXXXXX")
-  tar -x -C "$tmp" -f -
+  # Release files are public configuration; containers read them as non-root.
+  (umask 022; tar -x --no-same-owner -C "$tmp" -f -)
   [[ -f $tmp/compose.production.example.yaml && -f $tmp/deploy/compose.edge.yaml ]] ||
     { rm -rf "$tmp"; die "incomplete release"; }
   chmod -R go-w "$tmp"
