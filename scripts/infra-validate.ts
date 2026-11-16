@@ -193,7 +193,8 @@ async function validate(name: string, cloud: Cloud, keep: boolean) {
         tofu("plan", "-detailed-exitcode", ...common, ...vars, ...targets),
       )) &&
       (await phase("destroy", () =>
-        tofu("destroy", "-auto-approve", ...common, ...vars, ...targets),
+        // Untargeted: removes what was applied, dependencies included.
+        tofu("destroy", "-auto-approve", ...common, ...vars),
       )) &&
       (await phase(
         "state empty",
