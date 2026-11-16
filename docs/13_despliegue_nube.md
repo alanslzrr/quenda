@@ -123,7 +123,7 @@ La contraseña es la clave de API y se entrega con `quenda smtp-password`. El re
 El conjunto de datos ([test/demo/cloud.ts](../test/demo/cloud.ts)) parte del de la demostración local y añade:
 
 - **Personas y permisos**: operación de la plataforma, administración de Valdeira y de Ribasanta, una gestora de reservas de Valdeira (lectura y gestión de reservas, bloqueos e informes) y nueve vecinos. Las cuatro cuentas de personal tienen verificación en dos pasos.
-- **Identidad municipal**: nombre visible, tema (Atlántico y Viñedo) y escudo, con versión para fondo oscuro en Valdeira.
+- **Identidad municipal**: nombre visible y escudo, con versión para fondo oscuro en Valdeira. No se preinstala ningún tema: cada administración elige el suyo en Apariencia.
 - **Catálogo**: instalaciones y espacios con fotografías, normas de uso, cierres y horario reducido en Navidad y Reyes, y un bloqueo por mantenimiento la próxima semana.
 - **Actividad**: unas 2.000 reservas en ocho semanas de historial y las tres siguientes, con más demanda por la tarde y en fin de semana, cancelaciones de vecinos y de la administración con motivo, llegadas registradas y una reserva semanal fija que alimenta las recomendaciones. Las fechas de creación son retroactivas, de modo que la antelación y la ocupación de los indicadores son verosímiles.
 - **Cuenta de la vecina**: avisos leídos y sin leer, idioma y suscripción de calendario.
