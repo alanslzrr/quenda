@@ -213,6 +213,7 @@ function ReservationList({
       ) : (
         <>
           <SortableDataTable
+            locale={locale}
             caption={t("Reservas del día", "Reservas do día")}
             rows={q.data.pages.flatMap((p) => p.items).map((r) => ({ ...r }))}
             rowKey="id"

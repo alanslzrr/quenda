@@ -338,7 +338,7 @@ export function ResourceState({
 }
 function ResourceList({ kind }: { kind: "facilities" | "units" }) {
   const m = useMunicipality();
-  const { t } = usePreferences();
+  const { t, locale } = usePreferences();
   const query = useMunicipalPages<Resource>(`${endpoint(m.id)}/${kind}`);
   // The other list of the page shares its cache entry, so counts and names cost no extra request.
   const other = useMunicipalPages<Resource>(
@@ -360,6 +360,7 @@ function ResourceList({ kind }: { kind: "facilities" | "units" }) {
       ) : (
         <>
           <SortableDataTable
+            locale={locale}
             rows={query.data.pages.flatMap((p) => p.items)}
             rowKey="id"
             caption={title}

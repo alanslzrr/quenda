@@ -37,9 +37,10 @@ export type SortableDataTableProps<T extends Record<string, unknown>> = {
   onSelectionChange?: (keys: string[]) => void;
   /** Noun for the count line, as in "6 projects". */
   itemName?: { one: string; other: string };
+  /** Language whose alphabet orders text columns (accents, ñ); the browser's when absent. */
+  locale?: string;
 };
 
-const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
 const isEmpty = (value: unknown) => value == null || value === "";
 const comparable = (value: unknown) => value instanceof Date ? value.getTime() : value;
 const blur = (px: number) => `blur(${px}px)`;
@@ -123,7 +124,7 @@ function SelectBox({ checked, mixed = false, label, nav, reduced, onToggle, inpu
   </label>;
 }
 
-export function SortableDataTable<T extends Record<string, unknown>>({ rows, columns, rowKey, caption = "Data table", emptyMessage = "No rows to show", defaultSort, onSortChange, selectable = false, selectedKeys, defaultSelectedKeys, onSelectionChange, itemName = { one: "row", other: "rows" } }: SortableDataTableProps<T>) {
+export function SortableDataTable<T extends Record<string, unknown>>({ rows, columns, rowKey, caption = "Data table", emptyMessage = "No rows to show", defaultSort, onSortChange, selectable = false, selectedKeys, defaultSelectedKeys, onSelectionChange, itemName = { one: "row", other: "rows" }, locale }: SortableDataTableProps<T>) {
   const reduced = useReducedMotion() ?? false;
   const tableRef = useRef<HTMLTableElement>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
@@ -133,6 +134,7 @@ export function SortableDataTable<T extends Record<string, unknown>>({ rows, col
   const [internalSelection, setInternalSelection] = useState<string[]>(defaultSelectedKeys ?? []);
   const selection = useMemo(() => new Set(selectedKeys ?? internalSelection), [internalSelection, selectedKeys]);
 
+  const collator = useMemo(() => new Intl.Collator(locale, { numeric: true, sensitivity: "base" }), [locale]);
   const sortedRows = useMemo(() => {
     if (!sort) return rows;
     return rows.map((row, index) => ({ row, index })).sort((a, b) => {
@@ -143,7 +145,7 @@ export function SortableDataTable<T extends Record<string, unknown>>({ rows, col
       const result = typeof left === "number" && typeof right === "number" ? left - right : collator.compare(String(left), String(right));
       return (sort.direction === "asc" ? result : -result) || a.index - b.index;
     }).map(entry => entry.row);
-  }, [rows, sort]);
+  }, [rows, sort, collator]);
 
   const numeric = useMemo(() => new Set(columns.filter(column => column.numeric ?? (rows.some(row => typeof row[column.key] === "number") && rows.every(row => typeof row[column.key] === "number" || isEmpty(row[column.key])))).map(column => column.key)), [columns, rows]);
   const getRowKey = (row: T) => String(typeof rowKey === "function" ? rowKey(row) : row[rowKey]);

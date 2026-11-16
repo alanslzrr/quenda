@@ -67,6 +67,7 @@ function AgreementList() {
       ) : (
         <>
           <SortableDataTable
+            locale={locale}
             rows={query.data.pages
               .flatMap((p) => p.items)
               .map((p) => ({ ...p, key: `${p.agreementId}:${p.version}` }))}

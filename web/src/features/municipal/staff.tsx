@@ -108,6 +108,7 @@ function Administrators() {
       ) : (
         <>
           <SortableDataTable
+            locale={locale}
             rows={rows}
             rowKey="accountId"
             caption={t("Administradores", "Administradores")}
@@ -282,6 +283,7 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
       ) : (
         <>
           <SortableDataTable
+            locale={locale}
             rows={rows}
             rowKey="invitationId"
             caption={t("Historial de invitaciones", "Historial de invitacións")}
