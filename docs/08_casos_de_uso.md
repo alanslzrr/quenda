@@ -495,22 +495,24 @@ Una persona puede ejercer varias funciones, sin que una amplíe los permisos de 
 ## CU-23 — Configurar la apariencia pública
 
 - **Actor:** administrador municipal.
-- **Objetivo:** aplicar la identidad visual permitida a la interfaz pública de su municipio.
+- **Objetivo:** dar al municipio su nombre, su logo y su identidad visual en su página pública y en su gestión.
 - **Precondiciones:** permiso vigente y MFA reciente para guardar.
 
 **Flujo principal**
-1. El administrador abre «Apariencia», selecciona una combinación predefinida para cada modo y el modo inicial.
-2. Quenda aplica temporalmente el borrador a toda la aplicación visible, sin publicar ni cambiar preferencias; salir, descartar o recargar termina la vista previa.
-3. Al guardar, comprueba permisos y revisión, persiste la configuración y registra la actuación.
+1. El administrador abre «Apariencia». Puede cambiar el nombre visible y subir o quitar el logo y su versión oscura; cada uno se guarda por separado.
+2. Elige un tema del catálogo y, si quiere, ajusta acento, fondo y texto del modo que está viendo, la tipografía, las esquinas y el modo inicial. Cada cambio se aplica al momento a toda la aplicación visible, sin publicar ni cambiar preferencias.
+3. Al guardar, Quenda comprueba permisos, contraste y revisión, persiste la configuración y registra la actuación.
 
 **Alternativas y excepciones**
-- Restaurar aplica la combinación neutra en ambos modos y el modo claro mediante la misma operación de guardado.
-- Una revisión obsoleta exige consultar la configuración actual; no sobrescribe el cambio de otro administrador.
-- Fuera de la vista previa, la elección personal de claro/oscuro prevalece sobre el modo inicial del municipio.
-- Salvo durante la vista previa temporal, la administración conserva el tema de Quenda. No se admiten colores libres ni estilos por componente.
+- Restaurar vuelve al tema neutro sin ajustes y al modo claro mediante la misma operación de guardado.
+- Una combinación sin contraste suficiente se señala antes de guardar y el servidor la rechaza.
+- Una revisión obsoleta exige descartar el borrador, que vuelve a leer la configuración actual; no sobrescribe el cambio de otro administrador.
+- El borrador sin guardar se conserva en la pestaña si el administrador navega o recarga.
+- Un logo SVG, demasiado pequeño o demasiado alargado se rechaza sin guardarse.
+- La elección personal de claro/oscuro prevalece sobre el modo inicial del municipio. No se admite CSS ni estilos por componente.
 
-**Resultado esperado:** apariencia pública persistida únicamente en el municipio autorizado.
+**Resultado esperado:** nombre, logo y apariencia persistidos únicamente en el municipio autorizado y aplicados a sus páginas públicas y a su gestión.
 
-**Fundamento:** [RF-30](01_requisitos.md#requisitos-funcionales), [RNF-02 y RNF-04](01_requisitos.md#requisitos-no-funcionales) y [apariencia y preferencias](02_modelo_dominio.md#apariencia-y-preferencias). Las combinaciones cerradas mantienen contraste y coherencia sin exponer un editor de estilos.
+**Fundamento:** [RF-30](01_requisitos.md#requisitos-funcionales), [RNF-02 y RNF-04](01_requisitos.md#requisitos-no-funcionales) y [apariencia y preferencias](02_modelo_dominio.md#apariencia-y-preferencias). Un catálogo cerrado con ajustes verificados mantiene contraste y coherencia sin exponer un editor de estilos.
 
 Referencia de estructura: [IBM — Use case specification outline](https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/doors-next/7.2.0?topic=cases-use-case-specification-outline).
