@@ -3,7 +3,8 @@
   z-index: 60;
   display: grid;
   min-width: 11rem;
-  max-width: min(20rem, calc(100vw - 16px));
+  /* Portalled to the body and fixed, so 100% is the viewport without its scrollbar. */
+  max-width: min(20rem, calc(100% - 16px));
   gap: var(--space-1);
   padding: 10px 12px;
   border: 1px solid var(--border);

@@ -1,7 +1,8 @@
 .overlay { position: fixed; inset: 0; z-index: 50; background: oklch(10% 0 0 / .46); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); }
-/* Centered with auto margins (like a native modal dialog) so transform stays free for the entrance spring. */
-.content { position: fixed; z-index: 51; inset: 0; width: min(calc(100vw - var(--space-8)), 440px); height: fit-content; max-height: calc(100dvh - var(--space-8)); margin: auto; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-surface); background: var(--surface-raised); color: var(--foreground); box-shadow: var(--shadow-floating); }
-.large { width: min(calc(100vw - var(--space-8)), 760px); }
+/* Centered with auto margins (like a native modal dialog) so transform stays free for the entrance spring.
+   Fixed to the viewport, so 100% is its width without the scrollbar, which 100vw would include. */
+.content { position: fixed; z-index: 51; inset: 0; width: min(calc(100% - var(--space-8)), 440px); height: fit-content; max-height: calc(100dvh - var(--space-8)); margin: auto; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-surface); background: var(--surface-raised); color: var(--foreground); box-shadow: var(--shadow-floating); }
+.large { width: min(calc(100% - var(--space-8)), 760px); }
 /* Motion animates both layers. Keyframes only run when DialogContent sits under a bare Radix root. */
 .keyframes.overlay[data-state="open"] { animation: overlay-in var(--duration-standard) var(--ease-enter) both; }
 .keyframes.overlay[data-state="closed"] { animation: overlay-out var(--duration-fast) var(--ease-standard) both; }

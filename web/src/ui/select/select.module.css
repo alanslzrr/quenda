@@ -99,7 +99,8 @@
   z-index: 1000;
   width: var(--radix-select-trigger-width);
   min-width: var(--radix-select-trigger-width);
-  max-width: min(24rem, calc(100vw - 20px));
+  /* Inside Radix's positioned wrapper a percentage would follow the menu itself, so the viewport sets the cap. */
+  max-width: min(24rem, calc(100dvw - 20px));
   max-height: min(320px, var(--radix-select-content-available-height));
   overflow: hidden;
   border: 1px solid var(--border);

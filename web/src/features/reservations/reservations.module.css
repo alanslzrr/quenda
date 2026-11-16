@@ -120,7 +120,7 @@
 }
 /* Calendar dialog: one-off download and automatic sync as two options. */
 .calendarDialog {
-  width: min(calc(100vw - 32px), 520px);
+  width: min(calc(100% - 32px), 520px);
 }
 .calendarOptions {
   display: grid;
