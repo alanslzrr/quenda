@@ -80,10 +80,12 @@
   border-radius: 12px;
   background: var(--surface-muted);
   padding: 16px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--text-secondary);
 }
-@media (max-width: 700px) {
+/* These pages render in the management frame's content area (container "content" in the sidebar shell), so they
+   follow its width: a closed or open sidebar changes the room as much as the screen does. */
+@container content (max-width: 36rem) {
   .group {
     grid-template-columns: 1fr;
     gap: 20px;
@@ -101,10 +103,10 @@
 }
 .subheading {
   margin: 12px 0 0;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
 }
-@media (max-width: 600px) {
+@container content (max-width: 30rem) {
   .calendarParameters {
     grid-template-columns: 1fr;
     gap: 16px;

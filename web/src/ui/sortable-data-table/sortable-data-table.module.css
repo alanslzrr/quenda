@@ -1,5 +1,6 @@
 /* Cells are opaque so rows passing each other during a sort cover one another cleanly instead of blending text. */
-.wrapper { --column-tint: var(--surface-muted); position: relative; width: 100%; min-width: 0; max-width: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--foreground); font-family: var(--font-body); }
+/* The table folds on its own width, not the viewport's, so it also folds in a narrow column of a wide screen. */
+.wrapper { --column-tint: var(--surface-muted); container: data-table / inline-size; position: relative; width: 100%; min-width: 0; max-width: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--foreground); font-family: var(--font-body); }
 .scroller { position: relative; overflow-x: auto; overscroll-behavior-x: contain; }
 .scroller:focus-visible { --focus-outline-offset: -2px; }
 .band { position: absolute; top: 0; bottom: 0; background: var(--column-tint); pointer-events: none; }
@@ -66,7 +67,7 @@
   .clear:hover { background: var(--surface-muted); }
 }
 
-@media (max-width: 620px) {
+@container data-table (max-width: 620px) {
   .scroller { overflow: visible; }
   .band { display: none; }
   .table { display: block; width: 100%; min-width: 0; max-width: 100%; }
@@ -104,10 +105,12 @@
   .table .empty { flex: 1 0 100%; height: auto !important; padding: var(--space-6) 0; }
   .table[data-selectable] tbody tr:has(.empty) { padding-left: var(--space-4); }
 }
-@media (max-width: 620px) and (hover: hover) and (pointer: fine) {
-  .table tbody tr:hover { --row-fill: color-mix(in oklab, var(--foreground) 3%, var(--surface)); }
-  .table[data-selectable] tbody tr[data-selected]:hover { --row-fill: color-mix(in oklab, var(--accent) 11%, var(--surface)); }
-  .table tbody tr:hover td { background: transparent; }
+@container data-table (max-width: 620px) {
+  @media (hover: hover) and (pointer: fine) {
+    .table tbody tr:hover { --row-fill: color-mix(in oklab, var(--foreground) 3%, var(--surface)); }
+    .table[data-selectable] tbody tr[data-selected]:hover { --row-fill: color-mix(in oklab, var(--accent) 11%, var(--surface)); }
+    .table tbody tr:hover td { background: transparent; }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -118,9 +121,11 @@
 @keyframes stripFade { to { opacity: 1; } }
 
 /* Static paged results retain column labels when rows fold into mobile cards. */
-@media (max-width: 620px) {
+@container data-table (max-width: 620px) {
   .table[data-static] thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .table[data-static] thead tr { overflow: visible; }
   .table[data-static] td:not([data-primary]) { flex-basis: 100%; }
   .table[data-static] td:not([data-primary]):not(.empty)::before { content: attr(data-label) ": "; font-weight: 500; }
+  /* Sortable tables keep their header as a strip of sort buttons, which does not name the folded values; each detail carries its column. */
+  .table:not([data-static]) td:not([data-primary]):not(.empty):not(.selectCell)::before { content: attr(data-label) ": "; }
 }
