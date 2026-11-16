@@ -121,6 +121,7 @@ test("the web image serves the bundle with strict headers and proxies the API", 
     assert.ok(!policy.includes("unsafe-eval"));
     assert.ok(!/script-src[^;]*unsafe-inline/.test(policy));
     assert.equal(index.headers.get("x-content-type-options"), "nosniff");
+    assert.equal(index.headers.get("x-frame-options"), "DENY");
     assert.equal(index.headers.get("referrer-policy"), "no-referrer");
     assert.equal(
       index.headers.get("cross-origin-opener-policy"),
