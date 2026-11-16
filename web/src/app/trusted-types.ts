@@ -4,7 +4,7 @@
  * This `default` policy (the one name the CSP allows) accepts exactly that markup and rejects anything else, so any
  * other string reaching `innerHTML` still throws. Browsers without Trusted Types do not enforce the directive.
  */
-const allowedHtml = new Set([
+export const allowedHtml = new Set([
   "[data-radix-select-viewport]{scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}[data-radix-select-viewport]::-webkit-scrollbar{display:none}",
 ]);
 
