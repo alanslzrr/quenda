@@ -17,7 +17,7 @@ die() { echo "quenda: $*" >&2; exit 1; }
 need_root() { [[ $EUID -eq 0 ]] || die "run as root (sudo quenda $*)"; }
 # shellcheck source=/dev/null
 setting() { (set -a; . "$SETTINGS"; set +a; printf '%s' "${!1:-}"); }
-current() { readlink -f "$STATE/current" 2>/dev/null || true; }
+current() { readlink -e "$STATE/current" 2>/dev/null || true; }
 
 compose() {
   local release
