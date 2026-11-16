@@ -6,19 +6,19 @@ import { Failure, Loading } from "../../app/feedback";
 import { isUuid } from "../../app/ids.ts";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
-import { useMunicipalTheme } from "../../app/theme-provider";
 import { Select } from "../../ui/select/select";
 import { BackLink, BookingSummary } from "../catalog/booking";
 import booking from "../catalog/booking.module.css";
 import { municipalToday } from "../catalog/dates";
-import { useMunicipality } from "../catalog/municipality";
+import { useMunicipality, usePublicAppearance } from "../catalog/municipality";
 import { useFacilities } from "../catalog/search";
 import { type Unit, UnitAvailability } from "../catalog/unit";
 import { detailPath, PendingLink, useReservation } from "./shared";
 
 export function ModifyReservation() {
-  useMunicipalTheme(undefined);
   const { tenantId = "", reservationId = "" } = useParams();
+  // A reservation is shown in the theme of the municipality it belongs to.
+  usePublicAppearance(tenantId);
   const { locale, t } = usePreferences();
   const { account } = useSession();
   const [search, setSearch] = useSearchParams();
