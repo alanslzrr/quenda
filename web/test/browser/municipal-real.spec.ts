@@ -174,7 +174,7 @@ test("municipal appearance saves explicitly while preview temporarily overrides 
     .getByRole("button", { name: /Guardar condiciones|Gardar condicións/ })
     .click();
   await expect(
-    page.getByText(/Cambios guardados|Cambios gardados/),
+    page.getByRole("main").getByText(/Cambios guardados|Cambios gardados/),
   ).toBeVisible();
   await page.reload();
   await expect(page.getByLabel(/Antelación máxima/)).toHaveValue("35");
@@ -187,7 +187,11 @@ test("municipal appearance saves explicitly while preview temporarily overrides 
       .click();
   await page.getByRole("link", { name: /^Apariencia$|^Aparencia$/ }).click();
   const theme = (name: RegExp) => page.getByRole("button", { name });
-  await page.getByRole("radio", { name: "Claro", exact: true }).check();
+  // "Modo inicial" is a radio group with the same two names, so the previewed mode is picked within its own group.
+  const viewing = page.getByRole("group", {
+    name: /^Modo que estás (viendo|vendo)$/,
+  });
+  await viewing.getByRole("radio", { name: "Claro", exact: true }).check();
   await theme(/^Neutro$/).click();
   await page.getByRole("menuitem", { name: "Azul", exact: true }).click();
   // Every choice shows at once, before saving.
@@ -195,7 +199,7 @@ test("municipal appearance saves explicitly while preview temporarily overrides 
     "background-color",
     "rgb(249, 251, 255)",
   );
-  await page.getByRole("radio", { name: /^(Oscuro|Escuro)$/ }).check();
+  await viewing.getByRole("radio", { name: /^(Oscuro|Escuro)$/ }).check();
   await page
     .getByLabel(/^Acento en modo (oscuro|escuro), en hexadecimal$/)
     .fill("#7fb0ff");
@@ -205,7 +209,7 @@ test("municipal appearance saves explicitly while preview temporarily overrides 
   ).toBeVisible();
   await page.reload();
   await expect(theme(/^Azul$/)).toBeVisible();
-  await page.getByRole("radio", { name: /^(Oscuro|Escuro)$/ }).check();
+  await viewing.getByRole("radio", { name: /^(Oscuro|Escuro)$/ }).check();
   await expect(page.locator("body")).toHaveCSS(
     "background-color",
     "rgb(20, 29, 43)",

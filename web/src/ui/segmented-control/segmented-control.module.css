@@ -69,7 +69,7 @@
   }
 }
 .button:active,
-.button[aria-pressed="true"] {
+.button[aria-checked="true"] {
   color: var(--foreground);
 }
 .selection {

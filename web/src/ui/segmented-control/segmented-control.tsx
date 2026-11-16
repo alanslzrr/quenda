@@ -21,7 +21,10 @@ export interface SegmentedControlProps {
   options: Segment[];
   value: string;
   onValueChange: (value: string) => void;
+  /** Names the choice. Pass this or `labelledBy`: a radio group needs a name. */
   label?: string;
+  /** The id of a visible element that names the choice. */
+  labelledBy?: string;
   /** Called when the pointer or focus reaches an option, before it is chosen. Use it to start loading what that option shows. */
   onOptionIntent?: (value: string) => void;
   className?: string;
@@ -32,6 +35,7 @@ export default function SegmentedControl({
   value,
   onValueChange,
   label,
+  labelledBy,
   onOptionIntent,
   className,
 }: SegmentedControlProps) {
@@ -68,7 +72,7 @@ export default function SegmentedControl({
     const node = track.current;
     if (!node) return;
     const reveal = (behavior: ScrollBehavior) => {
-      const button = node.querySelector<HTMLElement>('[aria-pressed="true"]');
+      const button = node.querySelector<HTMLElement>('[aria-checked="true"]');
       if (!button || node.scrollWidth <= node.clientWidth) return;
       // Rectangles share a coordinate system even when the host is positioned.
       const start = button.getBoundingClientRect().left - node.getBoundingClientRect().left + node.scrollLeft - 20;
@@ -90,7 +94,8 @@ export default function SegmentedControl({
     return () => observer?.disconnect();
   }, [value, reduced, options]);
 
-  // Arrow keys, Home and End move the selection like a tab list; only the selected option is a tab stop.
+  // One exclusive choice is a radio group: arrow keys, Home and End move focus and the selection together, and only the
+  // selected option is a tab stop. A consumer whose change has a cost (a save) defers that cost, not the selection.
   const selectedIndex = Math.max(
     0,
     options.findIndex((option) => option.value === value),
@@ -122,22 +127,24 @@ export default function SegmentedControl({
   };
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: This named interaction group is not a form fieldset.
     <div
       className={`${styles.root} ${className ?? ""}`}
-      role="group"
+      role="radiogroup"
       aria-label={label}
+      aria-labelledby={labelledBy}
     >
       <LayoutGroup id={id}>
         <motion.div ref={track} layoutScroll className={styles.track}>
           {options.map((option, index) => (
+            // biome-ignore lint/a11y/useSemanticElements: Native radios cannot carry the shared sliding selection, so each option is a button.
             <button
               key={option.value}
               id={`${id}-${option.value}`}
               className={styles.button}
               type="button"
               data-value={option.value}
-              aria-pressed={value === option.value}
+              role="radio"
+              aria-checked={value === option.value}
               tabIndex={index === selectedIndex ? 0 : -1}
               onClick={() => onValueChange(option.value)}
               onKeyDown={onKeyDown}

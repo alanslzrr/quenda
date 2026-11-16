@@ -54,16 +54,16 @@ test("verified account signs in and persists preferences through the real API", 
   await expect(
     page.getByRole("heading", { name: "Preferencias de tu cuenta" }),
   ).toBeVisible();
-  // The appearance control names both themes and marks the active one.
-  const appearance = page.getByRole("group", { name: "Apariencia" });
+  // The appearance control is a radio group that names both themes and checks the active one.
+  const appearance = page.getByRole("radiogroup", { name: "Apariencia" });
   await expect(
-    appearance.getByRole("button", { name: "Oscuro", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
-  await appearance.getByRole("button", { name: "Claro", exact: true }).click();
+    appearance.getByRole("radio", { name: "Oscuro", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await appearance.getByRole("radio", { name: "Claro", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(
-    appearance.getByRole("button", { name: "Claro", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    appearance.getByRole("radio", { name: "Claro", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
   // The account navigation lists only account settings.
   const accountNav = page.getByRole("navigation", { name: "Mi cuenta" });
   await expect(
