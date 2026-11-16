@@ -316,6 +316,21 @@ test("booking composition exposes the real selection and explicit acceptance", a
       name: "He leído y acepto las normas de uso y las condiciones de cancelación.",
     }),
   ).not.toBeChecked();
+  // Submitting without the acceptance lands on the visible checkbox, flagged and explained, not on Radix's hidden input.
+  const acceptance = page.getByRole("checkbox", {
+    name: "He leído y acepto las normas de uso y las condiciones de cancelación.",
+  });
+  await page
+    .getByRole("button", { name: "Confirmar reserva", exact: true })
+    .click();
+  await expect(acceptance).toBeFocused();
+  await expect(acceptance).toHaveAttribute("aria-invalid", "true");
+  await expect(acceptance).toHaveAccessibleDescription(
+    /Marca esta casilla para continuar/,
+  );
+  await acceptance.check();
+  await expect(acceptance).not.toHaveAttribute("aria-invalid", "true");
+  await acceptance.uncheck();
   for (const theme of ["light", "dark"] as const) {
     await appearance(page, theme);
     await audit(page, `checkout-${info.project.name}-${theme}`);
