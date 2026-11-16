@@ -72,18 +72,13 @@ export function ActionForm({
     }
   }
   return (
-    <form className={styles.form} onSubmit={run}>
+    // Busy fields stay enabled: disabling them would drop keyboard focus to the page mid-submit, and the lock already rejects a resubmit.
+    <form className={styles.form} onSubmit={run} aria-busy={busy || undefined}>
       {Children.toArray(children).length > 0 && (
-        <fieldset disabled={busy} className={styles.fields}>
-          {children}
-        </fieldset>
+        <fieldset className={styles.fields}>{children}</fieldset>
       )}
       {error !== undefined && <Failure error={error} />}
-      {done && success && (
-        <div role="status">
-          <Alert tone="success" title={success} />
-        </div>
-      )}
+      {done && success && <Alert tone="success" title={success} role="none" />}
       {unavailable && <p id={reasonId}>{unavailable}</p>}
       {secondary ? (
         <div className={styles.formActions}>
@@ -92,7 +87,7 @@ export function ActionForm({
             type="submit"
             variant={danger ? (quiet ? "danger-ghost" : "danger") : "primary"}
             loading={busy}
-            disabled={busy || blocked}
+            disabled={blocked}
             aria-describedby={unavailable ? reasonId : undefined}
           >
             {label}
@@ -103,7 +98,7 @@ export function ActionForm({
           type="submit"
           variant={danger ? (quiet ? "danger-ghost" : "danger") : "primary"}
           loading={busy}
-          disabled={busy || blocked}
+          disabled={blocked}
           aria-describedby={unavailable ? reasonId : undefined}
         >
           {label}

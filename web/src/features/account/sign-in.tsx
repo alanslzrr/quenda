@@ -173,7 +173,8 @@ export function SignIn({ register = false }: { register?: boolean }) {
             </p>
           )}
           {failure !== undefined && <Failure error={failure} />}
-          <Button type="submit" loading={busy} disabled={busy}>
+          {/* Loading keeps the button focusable while it swallows presses; the lock rejects a repeated Enter. */}
+          <Button type="submit" loading={busy}>
             {challenge
               ? t("Verificar", "Verificar")
               : register
