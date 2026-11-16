@@ -401,6 +401,10 @@ function RailGlyph({ collapsed, reduce }: { collapsed: boolean; reduce: boolean 
   );
 }
 
+/** The page region the layout focuses on every route change (it has tabindex="-1"). */
+const pageOf = (node: HTMLElement | null) =>
+  node?.closest<HTMLElement>("main") ?? document.getElementById("content");
+
 /** A product app shell whose sidebar folds into an icon rail and opens as a sheet on narrow widths. */
 export function SidebarRail(props: SidebarRailProps) {
  return <RailContext.Provider value={props}><RailBody /></RailContext.Provider>;
@@ -419,6 +423,10 @@ function RailBody() {
   const [announcement, setAnnouncement] = useState("");
   const shell = useRef<HTMLElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const railToggle = useRef<HTMLButtonElement>(null);
+  // Set when a destination is chosen, so the overlay that closes after it hands focus to the new page instead of its trigger.
+  const chose = useRef(false);
+  const floated = useRef(false);
   const sheet = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const closeTimer = useRef(0);
@@ -489,6 +497,30 @@ function RailBody() {
   useEffect(() => () => window.clearTimeout(closeTimer.current), []);
 
   const floatingSheet = floating && !collapsed;
+  // Floating over the content, the sidebar acts as a drawer: focus moves into it while the page behind is inert, and
+  // returns to the toggle when it folds (or to the page when it folded because a destination was chosen).
+  useEffect(() => {
+    const sidebar = document.getElementById(sidebarId);
+    if (floatingSheet) {
+      floated.current = true;
+      // The current destination first, like the sheet; otherwise the first control.
+      if (sidebar && !sidebar.contains(document.activeElement))
+        [
+          ...Array.from(sidebar.querySelectorAll<HTMLElement>("[aria-current='page']")),
+          ...Array.from(sidebar.querySelectorAll<HTMLElement>("a[href], button")),
+        ]
+          .find((node) => !node.closest("[inert]"))
+          ?.focus({ preventScroll: true });
+      return;
+    }
+    if (!floated.current) return;
+    floated.current = false;
+    // Growing into a docked sidebar keeps focus where it is.
+    if (!floating) return;
+    const target = chose.current ? pageOf(shell.current) : railToggle.current;
+    chose.current = false;
+    target?.focus({ preventScroll: true });
+  }, [floatingSheet, floating, sidebarId]);
   const collapse = () => {
     setCollapsed(true);
     setAnnouncement(labels.collapse);
@@ -497,6 +529,7 @@ function RailBody() {
     if (fromSheet && dragging.current) return;
     onSelect(id);
     if (fromSheet || floatingSheet) {
+      chose.current = true;
       window.clearTimeout(closeTimer.current);
       closeTimer.current = window.setTimeout(
         () => (fromSheet ? setSheetOpen(false) : setCollapsed(true)),
@@ -588,11 +621,12 @@ function RailBody() {
             />
           )}
         </AnimatePresence>
-        <div className={styles.main}>
+        <div className={styles.main} inert={floatingSheet}>
           <header className={styles.topbar}>
             <TooltipPrimitive.Root>
               <TooltipPrimitive.Trigger asChild>
                 <button
+                  ref={railToggle}
                   type="button"
                   className={`${styles.iconButton} ${styles.railToggle}`}
                   aria-label={collapsed ? labels.expand : labels.collapse}
@@ -631,7 +665,7 @@ function RailBody() {
               aria-label={labels.navigation}
               aria-haspopup="dialog"
               aria-expanded={sheetOpen}
-              aria-keyshortcuts="["
+              // No "[" shortcut here: at this width the rail is hidden, and the key only works while focus is inside it.
               onClick={() => setSheetOpen(true)}
             >
               <RailGlyph collapsed={false} reduce={reduce} />
@@ -656,9 +690,15 @@ function RailBody() {
                   aria-describedby={undefined}
                   onCloseAutoFocus={(event) => {
                     event.preventDefault();
-                    menuButton.current?.focus({ preventScroll: true });
+                    // A chosen destination lands on its page, like any route change; dismissing returns to the menu button.
+                    const target = chose.current
+                      ? pageOf(shell.current)
+                      : menuButton.current;
+                    chose.current = false;
+                    target?.focus({ preventScroll: true });
                   }}
                   onOpenAutoFocus={(event) => {
+                    chose.current = false;
                     const current = sheet.current?.querySelector("[aria-current='page']");
                     if (current && !current.closest("[inert]")) {
                       event.preventDefault();
