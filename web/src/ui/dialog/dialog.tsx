@@ -37,7 +37,8 @@ export interface DialogContentProps extends ComponentPropsWithoutRef<typeof Dial
 }
 
 /** Fields a person types into or picks from; checkboxes and radios are choices, not the start of a form. */
-const fields = "input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not(:disabled), select:not(:disabled), textarea:not(:disabled)";
+/* Radix's hidden select mirror is aria-hidden, and a combobox opens its list on focus, so neither starts a form. */
+const fields = ":is(input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]), select, textarea):not(:disabled):not([aria-hidden=\"true\"]):not([role=combobox])";
 
 const fade: Transition = { duration: motionTokens.duration.instant };
 const leave: Transition = { duration: motionTokens.duration.fast, ease: [...motionTokens.ease.standard] };
