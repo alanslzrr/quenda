@@ -65,6 +65,33 @@ const clouds: Record<string, Cloud> = {
     // The security group is only planned: see infra/emulators/aws.
     targets: ["aws_eip.quenda", "aws_route_table_association.public"],
   },
+  azure: {
+    health: "http://azure:4577/_floci/health",
+    // Go adds every certificate in SSL_CERT_DIR to the system bundle.
+    env: { SSL_CERT_DIR: "/work/ca" },
+    targets: [],
+    prepare: async (work) => {
+      await mkdir(path.join(work, "ca"));
+      await docker(
+        [
+          "run",
+          "--rm",
+          "--user",
+          "0",
+          "--network",
+          network,
+          "-v",
+          `${work}:/work`,
+          curlImage,
+          "-fsS",
+          "-o",
+          "/work/ca/floci-az.pem",
+          "http://azure:4577/_floci/tls-cert",
+        ],
+        { quiet: true },
+      );
+    },
+  },
 };
 
 interface Phase {
