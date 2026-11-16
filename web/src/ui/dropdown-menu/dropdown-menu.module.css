@@ -241,3 +241,11 @@
 .trigger.trigger { letter-spacing: inherit; }
 
 .trigger:focus-visible { outline: var(--focus-outline-width, 2px) solid var(--focus-outline, color-mix(in oklab, var(--accent-strong) 72%, transparent)); outline-offset: var(--focus-outline-offset, 2px); }
+
+/* Forced colours drop the highlight's background, so the keyboard position is outlined in the system colour. */
+@media (forced-colors: active) {
+  .item[data-highlighted] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
