@@ -233,7 +233,7 @@ test("an exported catalog loads into an empty municipality as drafts and exports
         (
           await migration.query(
             `SELECT advance_days AS "advanceDays",cancellation_minutes AS "cancellationMinutes",booking_policy_version AS "policyVersion",
-             light_palette AS "lightPalette",dark_palette AS "darkPalette",default_theme AS "defaultTheme",appearance_version AS "appearanceVersion",
+             theme,theme_light AS "light",theme_dark AS "dark",theme_font AS "font",theme_corners AS "corners",default_theme AS "defaultTheme",appearance_version AS "appearanceVersion",
              (SELECT count(*)::int FROM domain.municipal_booking_policy_event e WHERE e.tenant_id=m.id AND e.reason='Importado de quenda.catalog') AS "policyEvents",
              (SELECT count(*)::int FROM domain.municipal_appearance_event e WHERE e.tenant_id=m.id) AS "appearanceEvents"
              FROM domain.municipality m WHERE id=$1`,
@@ -248,6 +248,7 @@ test("an exported catalog loads into an empty municipality as drafts and exports
         advanceDays: 90,
         cancellationMinutes: 120,
       };
+      // Written in the shape exported before the theme catalog, which still imports.
       configured.municipality.appearance = {
         lightPalette: "green",
         darkPalette: "blue",
@@ -280,8 +281,15 @@ test("an exported catalog loads into an empty municipality as drafts and exports
           advanceDays: 90,
           cancellationMinutes: 120,
           policyVersion: 2,
-          lightPalette: "green",
-          darkPalette: "blue",
+          theme: "green",
+          light: {},
+          dark: {
+            background: "#141d2b",
+            foreground: "#f1f5fc",
+            accent: "#aac9ff",
+          },
+          font: "inter",
+          corners: "round",
           defaultTheme: "dark",
           appearanceVersion: 2,
           policyEvents: 1,
@@ -291,10 +299,27 @@ test("an exported catalog loads into an empty municipality as drafts and exports
           await admin.request(`/api/municipalities/${tenant}/exports/catalog`)
         ).json();
         assert.deepEqual(copy.municipality.appearance, {
-          lightPalette: "green",
-          darkPalette: "blue",
+          theme: "green",
+          light: {},
+          dark: {
+            background: "#141d2b",
+            foreground: "#f1f5fc",
+            accent: "#aac9ff",
+          },
+          font: "inter",
+          corners: "round",
           defaultTheme: "dark",
         });
+        // The current shape travels back unchanged into another municipality.
+        const twin = await emptyMunicipality("Gemelo");
+        const back = await withSettings(twin, copy);
+        assert.equal(back.statusCode, 200, back.body);
+        const { appearanceVersion: _a, ...twinSettings } =
+          await settingsOf(twin);
+        const { appearanceVersion: _b, ...ownSettings } =
+          await settingsOf(tenant);
+        assert.equal(twinSettings.theme, ownSettings.theme);
+        assert.deepEqual(twinSettings.dark, ownSettings.dark);
         assert.equal(copy.municipality.bookingPolicy.advanceDays, 90);
         assert.equal(copy.units[0].calendar.advanceDays, 60);
         // The same key replays; the same key without the option is another command.
@@ -329,7 +354,7 @@ test("an exported catalog loads into an empty municipality as drafts and exports
       await test("unknown appearance values are rejected only when settings are applied", async () => {
         const tenant = await emptyMunicipality("Paleta desconocida");
         const odd = structuredClone(document);
-        odd.municipality.appearance.lightPalette = "purple";
+        odd.municipality.appearance.theme = "purple";
         assert.equal((await withSettings(tenant, odd)).statusCode, 400);
         assert.equal(
           (
@@ -340,14 +365,14 @@ test("an exported catalog loads into an empty municipality as drafts and exports
           ).rows[0].n,
           0,
         );
-        assert.equal((await settingsOf(tenant)).lightPalette, "neutral");
+        assert.equal((await settingsOf(tenant)).theme, "neutral");
         const plain = await load(tenant, odd);
         assert.equal(plain.statusCode, 200, plain.body);
         assert.deepEqual(plain.json().settings, {
           bookingPolicy: false,
           appearance: false,
         });
-        assert.equal((await settingsOf(tenant)).lightPalette, "neutral");
+        assert.equal((await settingsOf(tenant)).theme, "neutral");
       });
 
       await test("only the target's administrator with recent MFA and the configured origin can import", async () => {

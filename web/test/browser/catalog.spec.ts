@@ -27,8 +27,11 @@ test.beforeEach(async ({ page }) => {
     else if (url.pathname.endsWith("/appearance"))
       body = {
         version: 1,
-        lightPalette: "blue",
-        darkPalette: "green",
+        theme: "green",
+        light: {},
+        dark: {},
+        font: "inter",
+        corners: "round",
         defaultTheme: "dark",
       };
     else if (url.pathname.endsWith("/booking-durations"))

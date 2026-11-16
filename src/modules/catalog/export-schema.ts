@@ -13,6 +13,16 @@ const interval = {
   },
 } as const;
 
+const themeColors = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    background: { type: "string" },
+    foreground: { type: "string" },
+    accent: { type: "string" },
+  },
+} as const;
+
 export const catalogExportSchema = {
   $schema: "http://json-schema.org/draft-07/schema#",
   title: "Quenda catalog export v1",
@@ -49,15 +59,40 @@ export const catalogExportSchema = {
             cancellationMinutes: { type: "integer", minimum: 0 },
           },
         },
+        // Documents exported before the theme catalog carry two palettes; both shapes import.
         appearance: {
-          type: "object",
-          additionalProperties: false,
-          required: ["lightPalette", "darkPalette", "defaultTheme"],
-          properties: {
-            lightPalette: { type: "string" },
-            darkPalette: { type: "string" },
-            defaultTheme: { type: "string", enum: ["light", "dark"] },
-          },
+          oneOf: [
+            {
+              type: "object",
+              additionalProperties: false,
+              required: [
+                "theme",
+                "light",
+                "dark",
+                "font",
+                "corners",
+                "defaultTheme",
+              ],
+              properties: {
+                theme: { type: "string" },
+                light: themeColors,
+                dark: themeColors,
+                font: { type: "string" },
+                corners: { type: "string" },
+                defaultTheme: { type: "string", enum: ["light", "dark"] },
+              },
+            },
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["lightPalette", "darkPalette", "defaultTheme"],
+              properties: {
+                lightPalette: { type: "string" },
+                darkPalette: { type: "string" },
+                defaultTheme: { type: "string", enum: ["light", "dark"] },
+              },
+            },
+          ],
         },
       },
     },
@@ -170,8 +205,11 @@ export const catalogExportExample = {
     timeZone: "Europe/Madrid",
     bookingPolicy: { version: 1, advanceDays: 30, cancellationMinutes: 1440 },
     appearance: {
-      lightPalette: "neutral",
-      darkPalette: "neutral",
+      theme: "atlantic",
+      light: {},
+      dark: { accent: "#7fdcd3" },
+      font: "inter",
+      corners: "soft",
       defaultTheme: "light",
     },
   },

@@ -1,0 +1,314 @@
+.editor {
+  display: grid;
+  gap: var(--space-8);
+  max-width: 46rem;
+}
+.notice {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.group {
+  display: grid;
+  gap: var(--space-3);
+}
+.groupTitle {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+/* Settings rows inside one bordered card, label on the left and control on the right. */
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-raised);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+  padding: var(--space-4) var(--space-5);
+}
+.row + .row {
+  border-top: 1px solid var(--border-subtle);
+}
+.rowText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+.rowLabel {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.rowHint {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+}
+.rowControl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Mode thumbnails: a small window drawn in each mode's colours. */
+.modes {
+  display: flex;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.thumb {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.window {
+  display: grid;
+  grid-template-columns: 22% 1fr;
+  width: 6.5rem;
+  height: 4.25rem;
+  overflow: hidden;
+  border: 1px solid;
+  border-radius: 10px;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color var(--duration-fast) var(--ease-standard);
+}
+/* The radio covers the thumbnail, invisible, so it keeps focus, naming and arrow keys. */
+.thumbInput {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.thumb:has(.thumbInput:checked) .window {
+  outline-color: var(--accent);
+}
+.thumb:has(.thumbInput:checked) {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.thumb:has(.thumbInput:focus-visible) .window {
+  outline-color: var(--foreground);
+}
+.side {
+  display: block;
+}
+.lines {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 9px 8px;
+}
+.lines span {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+}
+.lines .pill {
+  width: 40%;
+  height: 7px;
+  margin-top: 4px;
+  border-radius: 4px;
+}
+.thumbLabel {
+  line-height: 1.2;
+}
+
+.chip,
+.fontSample {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+}
+.fontSample {
+  border-color: var(--border);
+  font-weight: 500;
+}
+
+/* A colour: the swatch opens the system picker, the text accepts a hexadecimal value. */
+.color {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.colorField {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-height-sm);
+  padding: 0 var(--space-3) 0 var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+}
+.colorField:focus-within {
+  border-color: var(--border-strong);
+}
+.swatch {
+  position: relative;
+  width: 1.625rem;
+  height: 1.625rem;
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 999px;
+}
+.swatch:has(.picker:focus-visible) {
+  outline: 2px solid var(--focus-outline);
+  outline-offset: 2px;
+}
+.picker {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.hex {
+  width: 5.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+}
+.hex:focus {
+  outline: none;
+}
+.reset {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.reset:hover {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}
+.reset:focus-visible {
+  outline: 2px solid var(--focus-outline);
+}
+
+.problems {
+  display: grid;
+  flex: 1 1 18rem;
+  gap: var(--space-1);
+  color: var(--danger);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.problems p {
+  margin: 0;
+}
+.resetRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.savedNote {
+  margin: 0;
+  color: var(--success);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* Unsaved changes stay in reach at the bottom of the screen while the page scrolls. */
+.saveBar {
+  position: sticky;
+  bottom: var(--space-4);
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-floating);
+}
+.saveText {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.saveBar[data-problem] {
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+}
+.saveActions,
+.saveBar form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@media (max-width: 40rem) {
+  .row {
+    padding: var(--space-4);
+  }
+  .rowControl {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .window {
+    transition: none;
+  }
+}

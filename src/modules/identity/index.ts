@@ -10,7 +10,8 @@ export {
   listMunicipalAdministratorInvitations,
   listMunicipalAdministrators,
 } from "./administrator-query.ts";
-export { palettes } from "./appearance.ts";
+export type { AppearanceSettings } from "./appearance.ts";
+export { appearanceFromDocument, writeAppearance } from "./appearance.ts";
 export type {
   AuthConfiguration,
   AuthenticatedAccount,

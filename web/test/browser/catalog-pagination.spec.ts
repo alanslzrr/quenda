@@ -87,8 +87,11 @@ for (const scenario of [
         await route.fulfill({
           json: {
             version: 1,
-            lightPalette: "neutral",
-            darkPalette: "neutral",
+            theme: "neutral",
+            light: {},
+            dark: {},
+            font: "inter",
+            corners: "round",
             defaultTheme: "light",
           },
         });

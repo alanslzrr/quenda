@@ -56,17 +56,45 @@ test("municipal appearance is constrained, isolated, versioned and audited atomi
     const other = await create();
     const defaults = {
       version: 1,
-      lightPalette: "neutral",
-      darkPalette: "neutral",
+      theme: "neutral",
+      light: {},
+      dark: {},
+      font: "inter",
+      corners: "round",
       defaultTheme: "light",
     };
     assert.deepEqual(await publicAppearance(domain, tenantId), defaults);
     const input = {
       expectedVersion: 1,
-      lightPalette: "blue",
-      darkPalette: "green",
+      theme: "atlantic",
+      light: { accent: "#0b5c58" },
+      dark: { background: "#101418", foreground: "#f2f2f2" },
+      font: "geist",
+      corners: "square",
       defaultTheme: "dark",
     } as const;
+    // Outside the catalog, unreadable text, a faint accent or a background of the wrong kind never reach the database.
+    for (const invalid of [
+      { ...input, theme: "sunset" },
+      { ...input, light: { foreground: "#dddddd" } },
+      { ...input, light: { accent: "#f4f4f4" } },
+      { ...input, light: { background: "#202020", foreground: "#ffffff" } },
+      { ...input, dark: { background: "#fafafa", foreground: "#000000" } },
+      { ...input, dark: { accent: "#ABCDEF" } },
+      { ...input, dark: { shadow: "#000000" } },
+      { ...input, font: "comic" },
+      { ...input, corners: "pill" },
+    ])
+      await assert.rejects(
+        saveAppearance(
+          domain,
+          actor("admin"),
+          tenantId,
+          invalid as never,
+          randomUUID(),
+        ),
+        { code: "INVALID_INPUT" },
+      );
     for (const account of [
       actor("operator"),
       actor("outsider"),
@@ -82,7 +110,7 @@ test("municipal appearance is constrained, isolated, versioned and audited atomi
         domain,
         actor("admin"),
         tenantId,
-        { ...input, lightPalette: "green" },
+        { ...input, theme: "green" },
         randomUUID(),
       ),
     ]);
@@ -96,6 +124,21 @@ test("municipal appearance is constrained, isolated, versioned and audited atomi
     assert.deepEqual(await publicAppearance(domain, other), defaults);
     const current = await publicAppearance(domain, tenantId);
     assert.equal(current.version, 2);
+    const event = (
+      await migration.query(
+        "SELECT previous_state,next_state FROM domain.municipal_appearance_event",
+      )
+    ).rows[0];
+    assert.deepEqual(event.previous_state, {
+      theme: "neutral",
+      light: {},
+      dark: {},
+      font: "inter",
+      corners: "round",
+      defaultTheme: "light",
+    });
+    const { version: _, ...saved } = current;
+    assert.deepEqual(event.next_state, saved);
     assert.equal(
       (await migration.query("SELECT * FROM domain.municipal_appearance_event"))
         .rows.length,
@@ -107,10 +150,9 @@ test("municipal appearance is constrained, isolated, versioned and audited atomi
         { code: "42501" },
       );
     await assert.rejects(
-      domain.query(
-        "UPDATE domain.municipality SET light_palette='blue' WHERE id=$1",
-        [tenantId],
-      ),
+      domain.query("UPDATE domain.municipality SET theme='blue' WHERE id=$1", [
+        tenantId,
+      ]),
       { code: "42501" },
     );
     await migration.query(
@@ -154,7 +196,7 @@ test("municipal appearance is constrained, isolated, versioned and audited atomi
           payload,
         });
       assert.equal(
-        (await request({ ...input, expectedVersion: 2, lightPalette: "#000" }))
+        (await request({ ...input, expectedVersion: 2, theme: "#000" }))
           .statusCode,
         400,
       );
@@ -172,12 +214,18 @@ test("municipal appearance is constrained, isolated, versioned and audited atomi
         ).statusCode,
         403,
       );
-      const reset = await request({
-        expectedVersion: 2,
-        lightPalette: "neutral",
-        darkPalette: "neutral",
-        defaultTheme: "light",
-      });
+      assert.equal(
+        (
+          await request({
+            ...input,
+            expectedVersion: 2,
+            light: { accent: "#eeeeee" },
+          })
+        ).statusCode,
+        400,
+      );
+      const { version: __, ...reset_ } = defaults;
+      const reset = await request({ expectedVersion: 2, ...reset_ });
       assert.equal(reset.statusCode, 200);
       assert.deepEqual(reset.json(), { ...defaults, version: 3 });
       assert.equal(

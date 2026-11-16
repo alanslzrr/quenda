@@ -110,6 +110,10 @@
   z-index: 60;
   min-width: min(12rem, var(--radix-dropdown-menu-content-available-width));
   max-width: var(--radix-dropdown-menu-content-available-width);
+  /* A long list (such as the theme catalog on a phone) scrolls inside the menu instead of leaving the screen. */
+  max-height: var(--radix-dropdown-menu-content-available-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 5px;
   border: 1px solid var(--border);
   border-radius: var(--radius-panel);

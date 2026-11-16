@@ -9,6 +9,7 @@ import type { Appearance } from "./api";
 import type { Theme } from "./preferences";
 import { usePreferences } from "./preferences-provider";
 import { defaultAppearance, themeVariables } from "./theme";
+import { isThemeId } from "./themes.ts";
 
 const ThemeContext = createContext<
   ((appearance: Appearance | null) => void) | null
@@ -32,8 +33,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.dataset.theme = mode;
     if (preview) root.dataset.themePreview = "true";
     else delete root.dataset.themePreview;
-    root.dataset.accent =
-      mode === "light" ? current.lightPalette : current.darkPalette;
+    root.dataset.accent = isThemeId(current.theme) ? current.theme : "neutral";
     for (const [key, value] of Object.entries(themeVariables(mode, current)))
       root.style.setProperty(key, value);
     // Commit the complete palette before restoring ordinary control transitions.

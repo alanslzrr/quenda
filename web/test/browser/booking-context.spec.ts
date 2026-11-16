@@ -47,8 +47,11 @@ test.beforeEach(async ({ page }, info) => {
     else if (path.endsWith("/appearance"))
       body = {
         version: 1,
-        lightPalette: "neutral",
-        darkPalette: "neutral",
+        theme: "neutral",
+        light: {},
+        dark: {},
+        font: "inter",
+        corners: "round",
         defaultTheme: "light",
       };
     else if (path.endsWith("/facilities"))
@@ -269,8 +272,11 @@ test("municipal appearance retries on re-entry only after its rate-limit deadlin
           ? {
               json: {
                 version: 1,
-                lightPalette: "blue",
-                darkPalette: "green",
+                theme: "green",
+                light: {},
+                dark: {},
+                font: "inter",
+                corners: "round",
                 defaultTheme: "dark",
               },
             }

@@ -50,8 +50,11 @@ test("a full day suggests the next free slots and links straight to booking them
     else if (url.pathname.endsWith("/appearance"))
       body = {
         version: 1,
-        lightPalette: "neutral",
-        darkPalette: "neutral",
+        theme: "neutral",
+        light: {},
+        dark: {},
+        font: "inter",
+        corners: "round",
         defaultTheme: "light",
       };
     else if (url.pathname.endsWith(`/units/${unit}`))

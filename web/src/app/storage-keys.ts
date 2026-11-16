@@ -114,6 +114,18 @@ export const storageEntries: readonly StorageEntry[] = [
     ],
   },
   {
+    key: "quenda.appearance-draft",
+    store: "session",
+    purpose: [
+      "Borrador de la apariencia de un municipio que aún no se ha guardado, para no perderlo al cambiar de página o recargar.",
+      "Borrador da aparencia dun municipio que aínda non se gardou, para non perdelo ao cambiar de páxina ou recargar.",
+    ],
+    duration: [
+      "Hasta guardarlo o descartarlo, cerrar la pestaña o cerrar sesión",
+      "Ata gardalo ou descartalo, pechar a lapela ou pechar sesión",
+    ],
+  },
+  {
     key: "quenda.chunk-reload",
     store: "session",
     purpose: [

@@ -23,8 +23,11 @@ async function mockPublic(page: Page, notices: Record<string, unknown> = {}) {
       return route.fulfill({
         json: {
           version: 1,
-          lightPalette: "neutral",
-          darkPalette: "neutral",
+          theme: "neutral",
+          light: {},
+          dark: {},
+          font: "inter",
+          corners: "round",
           defaultTheme: "light",
         },
       });

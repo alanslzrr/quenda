@@ -4,9 +4,11 @@ import { defaultIdempotencyRetentionSeconds } from "../../config.ts";
 import { idempotentCommand } from "../../database/idempotency.ts";
 import { HttpError } from "../../http/errors.ts";
 import {
+  type AppearanceSettings,
   type AuthenticatedAccount,
-  palettes,
+  appearanceFromDocument,
   requireAdministrator,
+  writeAppearance,
 } from "../identity/index.ts";
 import { type UnitCalendarInput, validateUnitCalendar } from "./calendar.ts";
 import {
@@ -22,11 +24,7 @@ export interface CatalogDocument {
   version: 1;
   municipality: {
     bookingPolicy: { advanceDays: number; cancellationMinutes: number };
-    appearance: {
-      lightPalette: string;
-      darkPalette: string;
-      defaultTheme: string;
-    };
+    appearance: Record<string, unknown>;
   };
   facilities: {
     id: string;
@@ -60,19 +58,33 @@ function rules(text: string) {
   return text;
 }
 
+function sameAppearance(a: AppearanceSettings, b: AppearanceSettings) {
+  const colors = (value: object) =>
+    JSON.stringify(
+      Object.entries(value).sort(([x], [y]) => x.localeCompare(y)),
+    );
+  return (
+    a.theme === b.theme &&
+    a.font === b.font &&
+    a.corners === b.corners &&
+    a.defaultTheme === b.defaultTheme &&
+    colors(a.light) === colors(b.light) &&
+    colors(a.dark) === colors(b.dark)
+  );
+}
+
 function settingsOf(document: CatalogDocument) {
   const { bookingPolicy, appearance } = document.municipality;
   const bounded = (n: number) =>
     Number.isInteger(n) && n >= 0 && n <= 2147483647;
+  const settings = appearanceFromDocument(appearance);
   if (
     !bounded(bookingPolicy.advanceDays) ||
     !bounded(bookingPolicy.cancellationMinutes) ||
-    !(palettes as readonly string[]).includes(appearance.lightPalette) ||
-    !(palettes as readonly string[]).includes(appearance.darkPalette) ||
-    !["light", "dark"].includes(appearance.defaultTheme)
+    !settings
   )
     throw new HttpError("INVALID_INPUT");
-  return { bookingPolicy, appearance };
+  return { bookingPolicy, appearance: settings };
 }
 
 /**
@@ -156,11 +168,12 @@ export async function importCatalog(
               cancellation_minutes: number;
               booking_policy_version: number;
               appearance_version: number;
-              light_palette: string;
-              dark_palette: string;
-              default_theme: string;
+              appearance: AppearanceSettings;
             }>(
-              "SELECT advance_days,cancellation_minutes,booking_policy_version,appearance_version,light_palette,dark_palette,default_theme FROM domain.municipality WHERE id=$1",
+              `SELECT advance_days,cancellation_minutes,booking_policy_version,appearance_version,
+                jsonb_build_object('theme',theme,'light',theme_light,'dark',theme_dark,'font',theme_font,
+                 'corners',theme_corners,'defaultTheme',default_theme) AS appearance
+               FROM domain.municipality WHERE id=$1`,
               [tenantId],
             )
           ).rows[0];
@@ -191,23 +204,13 @@ export async function importCatalog(
               municipality.advance_days = bookingPolicy.advanceDays;
               applied.bookingPolicy = true;
             }
-            if (
-              appearance.lightPalette !== municipality.light_palette ||
-              appearance.darkPalette !== municipality.dark_palette ||
-              appearance.defaultTheme !== municipality.default_theme
-            ) {
-              const version = (
-                await client.query<{ version: number | null }>(
-                  "SELECT domain.save_municipal_appearance($1,$2,$3,$4,$5) AS version",
-                  [
-                    municipality.appearance_version,
-                    appearance.lightPalette,
-                    appearance.darkPalette,
-                    appearance.defaultTheme,
-                    correlation,
-                  ],
-                )
-              ).rows[0]?.version;
+            if (!sameAppearance(appearance, municipality.appearance)) {
+              const version = await writeAppearance(
+                client,
+                municipality.appearance_version,
+                appearance,
+                correlation,
+              );
               if (version == null) throw new HttpError("CONFLICT");
               applied.appearance = true;
             }

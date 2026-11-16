@@ -3,12 +3,23 @@ import type { Pool } from "pg";
 import { publicRateLimit } from "../../http/public-rate-limit.ts";
 import {
   type AppearanceInput,
-  palettes,
   publicAppearance,
   saveAppearance,
 } from "./appearance.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
 import { createRequestActor } from "./request-actor.ts";
+import { colorKeys, corners, fonts, themes } from "./themes.ts";
+
+const colors = {
+  type: "object",
+  additionalProperties: false,
+  properties: Object.fromEntries(
+    colorKeys.map((key) => [
+      key,
+      { type: "string", pattern: "^#[0-9a-f]{6}$" },
+    ]),
+  ),
+} as const;
 export async function registerAppearanceRoutes(
   app: FastifyInstance,
   pool: Pool,
@@ -17,8 +28,11 @@ export async function registerAppearanceRoutes(
 ) {
   const actor = createRequestActor(pool, auth, config);
   const fields = {
-    lightPalette: { type: "string", enum: palettes },
-    darkPalette: { type: "string", enum: palettes },
+    theme: { type: "string", enum: themes },
+    light: colors,
+    dark: colors,
+    font: { type: "string", enum: fonts },
+    corners: { type: "string", enum: corners },
     defaultTheme: { type: "string", enum: ["light", "dark"] },
   };
   const schema = {
@@ -64,7 +78,7 @@ export async function registerAppearanceRoutes(
         security: [{ quendaSession: [] }],
         operationId: "saveMunicipalAppearance",
         description:
-          "Administrador municipal con MFA reciente. Guarda combinaciones predefinidas y modo predeterminado con control de versión y auditoría. Restaurar utiliza neutral en ambos modos y light como predeterminado. No admite CSS ni colores libres.",
+          "Administrador municipal con MFA reciente. Guarda un tema del catálogo, ajustes opcionales de fondo, texto y acento por modo, tipografía, forma de las esquinas y modo predeterminado, con control de versión y auditoría. Rechaza combinaciones sin contraste suficiente (texto 4,5:1 y acento 3:1 sobre el fondo) y fondos que no correspondan a su modo. No admite CSS libre.",
         body: {
           type: "object",
           additionalProperties: false,

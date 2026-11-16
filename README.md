@@ -59,7 +59,7 @@ El producto se concibe como un **activo público reutilizable**:
 - Agenda diaria, bloqueos por mantenimiento y reubicaciones con motivo y aviso a la persona afectada.
 - Personal y permisos delegados por operación y espacio, con invitaciones, caducidad y retirada inmediata.
 - Indicadores de ocupación, análisis de uso por día y hora y exportación de reservas en JSON y CSV.
-- Apariencia municipal con paletas accesibles y textos legales propios.
+- Apariencia municipal con catálogo de temas, colores propios con contraste verificado y textos legales propios.
 - Convenios intermunicipales con acreditaciones, cuotas conjuntas e informes agregados con control de riesgo.
 
 ### Plataforma

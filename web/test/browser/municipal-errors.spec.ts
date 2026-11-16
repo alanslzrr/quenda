@@ -92,8 +92,11 @@ test("stale appearance retains its draft and expected version until explicit rel
       await route.fulfill({
         json: {
           version,
-          lightPalette: input.lightPalette,
-          darkPalette: input.darkPalette,
+          theme: input.theme,
+          light: input.light,
+          dark: input.dark,
+          font: input.font,
+          corners: input.corners,
           defaultTheme: input.defaultTheme,
         },
       });
@@ -102,47 +105,42 @@ test("stale appearance retains its draft and expected version until explicit rel
     await route.fulfill({
       json: {
         version,
-        lightPalette: "neutral",
-        darkPalette: "neutral",
+        theme: "neutral",
+        light: {},
+        dark: {},
+        font: "inter",
+        corners: "round",
         defaultTheme: "light",
       },
     });
   });
   await page.goto(`/administracion/${tenant}/apariencia`);
-  await page
-    .getByRole("group", { name: "Paleta clara", exact: true })
-    .getByRole("radio", { name: "Azul", exact: true })
-    .check();
+  const chooseBlue = async () => {
+    await page.getByRole("button", { name: /^(Neutro|Azul)$/ }).click();
+    await page.getByRole("menuitem", { name: "Azul", exact: true }).click();
+  };
+  const save = page.getByRole("button", { name: /^(Guardar|Gardar)$/ });
+  await chooseBlue();
   version = 2;
-  await page
-    .getByRole("button", { name: /Guardar apariencia|Gardar aparencia/ })
-    .click();
+  await save.click();
   await expect(
     page.getByText("La versión cambió. Consulta la configuración actual."),
   ).toBeVisible();
+  // The draft stays as it was, ready to retry or discard.
   await expect(
-    page
-      .getByRole("group", { name: "Paleta clara", exact: true })
-      .getByRole("radio", { name: "Azul", exact: true }),
-  ).toBeChecked();
-  await page
-    .getByRole("button", { name: /Guardar apariencia|Gardar aparencia/ })
-    .click();
+    page.getByRole("button", { name: "Azul", exact: true }),
+  ).toBeVisible();
+  await save.click();
   await expect.poll(() => sent.length).toBe(2);
   expect(sent).toEqual([1, 1]);
-  await page
-    .getByRole("button", {
-      name: /Descartar borrador y recargar|Descartar borrador e recargar/,
-    })
-    .click();
+  // Discarding reads the current version again; the next save starts from it.
+  await page.getByRole("button", { name: "Descartar", exact: true }).click();
   await expect(
-    page
-      .getByRole("group", { name: "Paleta clara", exact: true })
-      .getByRole("radio", { name: "Neutro", exact: true }),
-  ).toBeChecked();
-  await page
-    .getByRole("button", { name: /Guardar apariencia|Gardar aparencia/ })
-    .click();
+    page.getByRole("button", { name: "Neutro", exact: true }),
+  ).toBeVisible();
+  await expect(save).toHaveCount(0);
+  await chooseBlue();
+  await save.click();
   await expect.poll(() => sent).toEqual([1, 1, 2]);
 });
 test("a lost block response survives reload and replays the same command into the municipal agenda", async ({
@@ -243,28 +241,25 @@ test("expired MFA preserves the appearance draft and offers verification without
     await route.fulfill({
       json: {
         version: 1,
-        lightPalette: "neutral",
-        darkPalette: "neutral",
+        theme: "neutral",
+        light: {},
+        dark: {},
+        font: "inter",
+        corners: "round",
         defaultTheme: "light",
       },
     });
   });
   await page.goto(`/administracion/${tenant}/apariencia`);
-  await page
-    .getByRole("group", { name: "Paleta clara", exact: true })
-    .getByRole("radio", { name: "Azul", exact: true })
-    .check();
-  await page
-    .getByRole("button", { name: /Guardar apariencia|Gardar aparencia/ })
-    .click();
+  await page.getByRole("button", { name: "Neutro", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Azul", exact: true }).click();
+  await page.getByRole("button", { name: /^(Guardar|Gardar)$/ }).click();
   await expect(
     page.getByText("Verifica de nuevo el segundo factor."),
   ).toBeVisible();
   await expect(
-    page
-      .getByRole("group", { name: "Paleta clara", exact: true })
-      .getByRole("radio", { name: "Azul", exact: true }),
-  ).toBeChecked();
+    page.getByRole("button", { name: "Azul", exact: true }),
+  ).toBeVisible();
   expect(writes).toBe(1);
   await page
     .getByRole("button", { name: /Verificar acceso/ })

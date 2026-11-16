@@ -5,7 +5,6 @@ import {
   readVisitorPreferences,
   saveVisitorPreferences,
 } from "../src/app/preferences.ts";
-import { paletteColors } from "../src/app/theme.ts";
 import {
   calendarDate,
   civilDate,
@@ -53,46 +52,6 @@ test("locale follows supported browser languages and explicit visitor preference
     ),
   );
 });
-function luminance(hex: string) {
-  const bytes = hex.slice(1).match(/../g);
-  assert.ok(bytes);
-  const [r, g, b] = bytes.map((value) => {
-    const n = Number.parseInt(value, 16) / 255;
-    return n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4;
-  });
-  return r * 0.2126 + g * 0.7152 + b * 0.0722;
-}
-function contrast(a: string, b: string) {
-  const values = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (values[0] + 0.05) / (values[1] + 0.05);
-}
-test("all fixed palettes satisfy text, action and focus contrast in both modes", () => {
-  for (const [mode, palettes] of Object.entries(paletteColors))
-    for (const [name, palette] of Object.entries(palettes)) {
-      for (const background of [palette.background, palette.surface]) {
-        assert.ok(
-          contrast(palette.text, background) >= 4.5,
-          `${mode}/${name} text`,
-        );
-        assert.ok(
-          contrast(palette.secondary, background) >= 4.5,
-          `${mode}/${name} secondary`,
-        );
-        assert.ok(
-          contrast(palette.accent, background) >= 3,
-          `${mode}/${name} focus`,
-        );
-        assert.ok(
-          contrast(palette.border, background) >= 3,
-          `${mode}/${name} control border`,
-        );
-      }
-      assert.ok(
-        contrast(palette.onAccent, palette.accent) >= 4.5,
-        `${mode}/${name} button text`,
-      );
-    }
-});
 test("municipal dates and repeated hours are independent of the browser timezone", () => {
   assert.equal(
     municipalToday("Europe/Madrid", new Date("2026-10-22T22:30:00Z")),
@@ -121,26 +80,4 @@ test("calendar labels retain Galician month and weekday names without browser lo
     "xoves, 22 de outubro de 2026",
   );
   assert.equal(calendarLabel(date, "es", "weekday"), "jue");
-});
-
-test("an unknown or missing palette from the server falls back to neutral instead of throwing", async () => {
-  const { themeVariables, defaultAppearance } = await import(
-    "../src/app/theme.ts"
-  );
-  const neutral = themeVariables("light", defaultAppearance);
-  assert.deepEqual(
-    themeVariables("light", {
-      ...defaultAppearance,
-      lightPalette: "magenta" as never,
-    }),
-    neutral,
-  );
-  assert.deepEqual(
-    themeVariables("dark", {
-      ...defaultAppearance,
-      darkPalette: "__proto__" as never,
-    }),
-    themeVariables("dark", defaultAppearance),
-  );
-  assert.doesNotThrow(() => themeVariables("light", {} as never));
 });

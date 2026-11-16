@@ -406,6 +406,7 @@ export function MunicipalForm({
   onSaved,
   resetOnSuccess = false,
   danger = false,
+  secondary,
 }: {
   path: string;
   method?: string;
@@ -415,6 +416,8 @@ export function MunicipalForm({
   onSaved?: (result: unknown) => void | Promise<void>;
   danger?: boolean;
   resetOnSuccess?: boolean;
+  /** Shown beside the submit button, such as a way to discard the draft. */
+  secondary?: ReactNode;
 }) {
   const { locale, t } = usePreferences();
   const client = useQueryClient();
@@ -463,6 +466,7 @@ export function MunicipalForm({
     <>
       <ActionForm
         danger={danger}
+        secondary={secondary}
         disabled={uncertain || readBlocked}
         resetOnSuccess={resetOnSuccess}
         clearOnSuccess={["reason"]}

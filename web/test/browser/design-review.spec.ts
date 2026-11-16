@@ -85,8 +85,11 @@ async function fixture(page: Page) {
     } else if (path.endsWith("/appearance"))
       body = {
         version: 1,
-        lightPalette: "neutral",
-        darkPalette: "neutral",
+        theme: "neutral",
+        light: {},
+        dark: {},
+        font: "inter",
+        corners: "round",
         defaultTheme: "light",
       };
     else if (path === "/api/public/reservation-command-policy")

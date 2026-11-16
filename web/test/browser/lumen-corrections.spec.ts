@@ -36,8 +36,11 @@ async function fixture(page: Page, theme: "light" | "dark" = "dark") {
     if (path.endsWith("/appearance"))
       body = {
         version: 1,
-        lightPalette: "neutral",
-        darkPalette: "neutral",
+        theme: "neutral",
+        light: {},
+        dark: {},
+        font: "inter",
+        corners: "round",
         defaultTheme: "light",
       };
     if (path === `/api/municipalities/${tenant}/facilities`)
@@ -159,34 +162,30 @@ for (const personal of ["light", "dark"] as const) {
   }, info) => {
     const writes = await fixture(page, personal);
     await page.goto(`${base}/apariencia`);
+    const modeLabel = (mode: "light" | "dark") =>
+      mode === "light" ? "Claro" : "Oscuro";
+    // The editor opens in the person's own mode and already shows the municipal draft.
     await expect(
-      page.getByRole("combobox", { name: "Modo de vista previa", exact: true }),
-    ).toBeVisible();
+      page.getByRole("radio", { name: modeLabel(personal), exact: true }),
+    ).toBeChecked();
     await expect(page.locator("html")).toHaveAttribute("data-theme", personal);
-    await expect(page.locator("html")).not.toHaveAttribute(
-      "data-theme-preview",
-    );
-    const preview = personal === "dark" ? "light" : "dark";
-    const modeLabel = preview === "light" ? "Claro" : "Oscuro";
-    const paletteLabel = preview === "light" ? "Paleta clara" : "Paleta oscura";
-    await page
-      .getByRole("group", { name: paletteLabel, exact: true })
-      .getByRole("radio", { name: "Azul", exact: true })
-      .check();
-    await select(page, "Modo de vista previa", modeLabel);
-    await expect(page.locator("html")).toHaveAttribute("data-theme", preview);
     await expect(page.locator("html")).toHaveAttribute(
       "data-theme-preview",
       "true",
     );
+    const preview = personal === "dark" ? "light" : "dark";
+    await page
+      .getByRole("radio", { name: modeLabel(preview), exact: true })
+      .check();
+    await page.getByRole("button", { name: "Neutro", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Azul", exact: true }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", preview);
     await expect(page.locator("html")).toHaveAttribute("data-accent", "blue");
     await expect(page.locator("body")).toHaveCSS(
       "background-color",
       preview === "light" ? "rgb(249, 251, 255)" : "rgb(20, 29, 43)",
     );
-    await expect(
-      page.getByRole("region", { name: "Vista previa pública" }),
-    ).toHaveCount(0);
+    await expect(page.getByText("Cambios sin guardar")).toBeVisible();
     await page.getByRole("button", { name: "Ajustes", exact: true }).click();
     await expect(page.getByRole("menu")).toHaveCSS(
       "color",
@@ -197,10 +196,6 @@ for (const personal of ["light", "dark"] as const) {
     await expect(
       page.getByRole("button", { name: "Ajustes", exact: true }),
     ).toBeFocused();
-    await expect(page.locator('a[href="#content"]')).not.toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
     expect(
       (
         await new AxeBuilder({ page })
@@ -212,38 +207,15 @@ for (const personal of ["light", "dark"] as const) {
       path: `test-results/lumen-preview-${personal}-${info.project.name}.png`,
       fullPage: true,
     });
-    await page
-      .getByRole("button", { name: "Salir de la vista previa", exact: true })
-      .click();
-    await expect(
-      page.getByRole("combobox", { name: "Modo de vista previa", exact: true }),
-    ).toBeFocused();
-    await expect(page.locator("html")).toHaveAttribute("data-theme", personal);
-    await expect(page.locator("html")).not.toHaveAttribute(
-      "data-theme-preview",
+    // Discarding returns to the saved appearance without a request.
+    await page.getByRole("button", { name: "Descartar", exact: true }).click();
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-accent",
+      "neutral",
     );
-    await expect(
-      page
-        .getByRole("group", { name: paletteLabel, exact: true })
-        .getByRole("radio", { name: "Azul", exact: true }),
-    ).toBeChecked();
-    await select(page, "Modo de vista previa", modeLabel);
-    await page
-      .getByRole("button", {
-        name: "Descartar borrador y recargar",
-        exact: true,
-      })
-      .click();
-    await expect(page.locator("html")).toHaveAttribute("data-theme", personal);
-    await expect(
-      page
-        .getByRole("group", { name: paletteLabel, exact: true })
-        .getByRole("radio", { name: "Neutro", exact: true }),
-    ).toBeChecked();
-    await page
-      .getByRole("group", { name: paletteLabel, exact: true })
-      .getByRole("radio", { name: "Azul", exact: true })
-      .check();
+    await expect(page.getByText("Cambios sin guardar")).toHaveCount(0);
+    await page.getByRole("button", { name: "Neutro", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Azul", exact: true }).click();
     await page
       .getByRole("button", {
         name: "Restaurar valores predeterminados",
@@ -251,12 +223,12 @@ for (const personal of ["light", "dark"] as const) {
       })
       .click();
     await expect(
-      page
-        .getByRole("group", { name: paletteLabel, exact: true })
-        .getByRole("radio", { name: "Neutro", exact: true }),
-    ).toBeChecked();
+      page.getByRole("button", { name: "Neutro", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("Cambios sin guardar")).toHaveCount(0);
     expect(writes).toEqual([]);
-    await select(page, "Modo de vista previa", modeLabel);
+    await page.getByRole("button", { name: "Neutro", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Azul", exact: true }).click();
     // SPA navigation proves unmount cleanup; a full reload would mask a leaked preview.
     await page.getByRole("button", { name: "Ajustes", exact: true }).click();
     await page
@@ -267,6 +239,13 @@ for (const personal of ["light", "dark"] as const) {
     await expect(page.locator("html")).not.toHaveAttribute(
       "data-theme-preview",
     );
+    // Coming back recovers the unsaved draft of this tab.
+    await page.goBack();
+    await expect(page.getByText("Cambios sin guardar")).toBeVisible();
+    await expect(
+      page.getByText("Recuperamos los cambios que no llegaste a guardar."),
+    ).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-accent", "blue");
     expect(writes).toEqual([]);
   });
 }
