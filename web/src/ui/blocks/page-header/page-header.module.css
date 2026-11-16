@@ -138,9 +138,7 @@
 /* On a phone the frame is the screen, so it takes most of it rather than stopping short with the body cut mid list. */
 @media (max-width: 560px) { .frame { height: clamp(560px, calc(100svh - 48px), 760px); border-radius: 14px; } }
 
-@media (prefers-reduced-motion: reduce) {
-  .crumb, .compact, .tab, .tab::before, .check, .issueTitle { transition: none; }
-}
+/* These transitions only change colour or opacity, so they stay under reduced motion. */
 .header { --pad:0px; padding:0; }
 /* min-width lets a title too long for the row shrink and wrap instead of overflowing it. */
 .title { min-width:0; font-size:clamp(1.5rem,.5rem + 2vw,1.875rem); letter-spacing:-.035em; text-wrap:balance; }

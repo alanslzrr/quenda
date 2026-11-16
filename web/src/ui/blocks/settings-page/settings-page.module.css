@@ -89,7 +89,8 @@
 @container (max-width: 719px){.settings{height:680px;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}.sidebar{gap:8px;border-right:0;border-bottom:1px solid var(--border);padding:14px 0 8px}.sidebarHead{padding-inline:20px}.headAvatar{display:inline-flex}.navList{flex-direction:row;gap:2px;overflow-x:auto;padding:2px 8px}.navList>li{flex:none}.navItem{min-height:32px;gap:6px;padding:0 12px}.account,.navItem>svg{display:none}.scroller{padding:20px 20px 104px}.paneHead{margin-bottom:20px}.fields{grid-template-columns:minmax(0,1fr);gap:16px}}
 @container (max-width: 460px){.identity{align-items:flex-start;gap:16px}.long,.unsaved{display:none}.barEdit{padding-left:16px}.barCount{margin-right:6px}.dock{bottom:14px;padding-inline:12px}.price{justify-items:start}.row{gap:16px}}
 @container (max-width: 360px){.scroller,.sidebarHead{padding-inline:16px}.navList{padding-inline:4px}.identity{flex-direction:column}.sessionInner{gap:12px}.sessionInner>svg{display:none}.sessionInner{grid-template-columns:minmax(0,1fr) auto}}
-@media (prefers-reduced-motion:reduce){.navItem,.navItem>svg{transition:none}.revertA,.revertB{animation:none}}
+/* Navigation items only ease colour, so they keep it under reduced motion; the revert animations stop. */
+@media (prefers-reduced-motion:reduce){.revertA,.revertB{animation:none}}
 
 /* Scoped values observed in the standalone preview; do not depend on a host heading reset. */
 .root{font-size:var(--text-base);line-height:var(--leading-body)}
