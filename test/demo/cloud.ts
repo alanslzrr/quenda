@@ -4,7 +4,6 @@ import type { Pool } from "pg";
 import sharp from "sharp";
 import { initializeOperator } from "../../scripts/lib/initialize-operator.ts";
 import { saveUnitCalendar } from "../../src/modules/catalog/calendar-store.ts";
-import { saveAppearance } from "../../src/modules/identity/appearance.ts";
 import type { AuthenticatedAccount } from "../../src/modules/identity/auth.ts";
 import {
   renameMunicipality,
@@ -278,13 +277,13 @@ export async function seedCloudDemo(
   } as Parameters<typeof inviteManager>[3])) as { invitationId: string };
   await acceptManager(domain, brais.actor, valdeira.id, invitationId);
 
-  // Municipal identity: display name, theme and logos.
+  // Municipal identity: display name and logos. The appearance keeps the
+  // Quenda default; each administration chooses its theme from Apariencia.
   const identity = [
     {
       seed: valdeira,
       admin: marta,
       name: "Concello de Valdeira",
-      theme: "atlantic",
       light: await emblem("#0f4c81", "V", "#ffffff"),
       dark: await emblem("#e8f1fa", "V", "#0f4c81"),
     },
@@ -292,27 +291,11 @@ export async function seedCloudDemo(
       seed: ribasanta,
       admin: xoan.actor,
       name: "Concello de Ribasanta",
-      theme: "vineyard",
       light: await emblem("#6b1f3a", "R", "#ffffff"),
       dark: null,
     },
   ];
   for (const entry of identity) {
-    await saveAppearance(
-      domain,
-      entry.admin,
-      entry.seed.id,
-      {
-        expectedVersion: 1,
-        theme: entry.theme,
-        light: {},
-        dark: {},
-        font: "inter",
-        corners: "soft",
-        defaultTheme: "light",
-      } as Parameters<typeof saveAppearance>[3],
-      randomUUID(),
-    );
     await renameMunicipality(
       domain,
       entry.admin,

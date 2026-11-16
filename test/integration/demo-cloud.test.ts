@@ -74,6 +74,20 @@ test("the cloud demo seeds every role, eight weeks of history and no pending mai
       });
       assert.equal(branding.statusCode, 200, branding.body);
       assert.match(branding.body, /Concello de Valdeira/);
+      // No theme is preinstalled: each administration configures its own.
+      const { rows: appearance } = await migration.query<{
+        version: number;
+        theme: string;
+      }>(
+        "SELECT appearance_version AS version, theme FROM domain.municipality ORDER BY id",
+      );
+      assert.deepEqual(
+        appearance.map((row) => [row.version, row.theme]),
+        [
+          [1, "neutral"],
+          [1, "neutral"],
+        ],
+      );
     } finally {
       await app.close();
     }
