@@ -32,8 +32,11 @@ async function mockCatalog(page: Page, dark: boolean) {
     else if (url.pathname.endsWith("/appearance"))
       body = {
         version: 1,
-        lightPalette: "neutral",
-        darkPalette: "neutral",
+        theme: "neutral",
+        light: {},
+        dark: {},
+        font: "inter",
+        corners: "round",
         defaultTheme: dark ? "dark" : "light",
       };
     else if (url.pathname.endsWith(`/units/${unit}`))

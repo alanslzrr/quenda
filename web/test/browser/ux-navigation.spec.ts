@@ -28,8 +28,11 @@ async function fixture(page: Page, { expired = false, staff = true } = {}) {
     if (path.endsWith("/appearance"))
       body = {
         version: 1,
-        lightPalette: "neutral",
-        darkPalette: "neutral",
+        theme: "neutral",
+        light: {},
+        dark: {},
+        font: "inter",
+        corners: "round",
         defaultTheme: "light",
       };
     if (path === "/api/me/navigation")

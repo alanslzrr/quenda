@@ -45,8 +45,11 @@ test.beforeEach(async ({ page }, info) => {
     else if (url.pathname.endsWith("/appearance"))
       body = {
         version: 1,
-        lightPalette: "blue",
-        darkPalette: "green",
+        theme: "green",
+        light: {},
+        dark: {},
+        font: "inter",
+        corners: "round",
         defaultTheme: "light",
       };
     else if (url.pathname.endsWith("/reservation-command-policy"))

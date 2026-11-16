@@ -186,49 +186,33 @@ test("municipal appearance saves explicitly while preview temporarily overrides 
       })
       .click();
   await page.getByRole("link", { name: /^Apariencia$|^Aparencia$/ }).click();
-  const rootAccent = await page
-    .locator("html")
-    .evaluate((el) => getComputedStyle(el).getPropertyValue("--accent"));
-  await page
-    .getByRole("group", { name: "Paleta clara", exact: true })
-    .getByRole("radio", { name: "Azul", exact: true })
-    .check();
-  await page
-    .getByRole("group", { name: /Paleta oscura|Paleta escura/ })
-    .getByRole("radio", { name: "Verde", exact: true })
-    .check();
-  await select(page, "Modo de vista previa", "Claro");
+  const theme = (name: RegExp) => page.getByRole("button", { name });
+  await page.getByRole("radio", { name: "Claro", exact: true }).check();
+  await theme(/^Neutro$/).click();
+  await page.getByRole("menuitem", { name: "Azul", exact: true }).click();
+  // Every choice shows at once, before saving.
   await expect(page.locator("body")).toHaveCSS(
     "background-color",
     "rgb(249, 251, 255)",
   );
+  await page.getByRole("radio", { name: /^(Oscuro|Escuro)$/ }).check();
   await page
-    .getByRole("button", {
-      name: /Salir de la vista previa|Saír da vista previa/,
-    })
-    .click();
-  expect(
-    await page
-      .locator("html")
-      .evaluate((el) => getComputedStyle(el).getPropertyValue("--accent")),
-  ).toBe(rootAccent);
-  await page
-    .getByRole("button", { name: /Guardar apariencia|Gardar aparencia/ })
-    .click();
+    .getByLabel(/^Acento en modo (oscuro|escuro), en hexadecimal$/)
+    .fill("#7fb0ff");
+  await page.getByRole("button", { name: /^(Guardar|Gardar)$/ }).click();
   await expect(
-    page.getByText(/Cambios guardados|Cambios gardados/),
+    page.getByText(/Apariencia guardada|Aparencia gardada/),
   ).toBeVisible();
   await page.reload();
-  await expect(
-    page
-      .getByRole("group", { name: "Paleta clara", exact: true })
-      .getByRole("radio", { name: "Azul", exact: true }),
-  ).toBeChecked();
-  await select(page, "Modo de vista previa", /Oscuro|Escuro/);
+  await expect(theme(/^Azul$/)).toBeVisible();
+  await page.getByRole("radio", { name: /^(Oscuro|Escuro)$/ }).check();
   await expect(page.locator("body")).toHaveCSS(
     "background-color",
-    "rgb(21, 37, 29)",
+    "rgb(20, 29, 43)",
   );
+  await expect(
+    page.getByLabel(/^Acento en modo (oscuro|escuro), en hexadecimal$/),
+  ).toHaveValue("#7fb0ff");
   expect(
     (
       await new AxeBuilder({ page })
@@ -244,18 +228,12 @@ test("municipal appearance saves explicitly while preview temporarily overrides 
   await page
     .getByRole("button", { name: "Restaurar valores predeterminados" })
     .click();
-  await page
-    .getByRole("button", { name: /Guardar apariencia|Gardar aparencia/ })
-    .click();
+  await page.getByRole("button", { name: /^(Guardar|Gardar)$/ }).click();
   await expect(
-    page.getByText(/Cambios guardados|Cambios gardados/),
+    page.getByText(/Apariencia guardada|Aparencia gardada/),
   ).toBeVisible();
   await page.reload();
-  await expect(
-    page
-      .getByRole("group", { name: "Paleta clara", exact: true })
-      .getByRole("radio", { name: "Neutro", exact: true }),
-  ).toBeChecked();
+  await expect(theme(/^Neutro$/)).toBeVisible();
 });
 
 test("calendar changes preserve confirmed reservations and withdrawal preserves history", async ({
