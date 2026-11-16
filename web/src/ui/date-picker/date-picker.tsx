@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { ButtonHTMLAttributes, FocusEvent, KeyboardEvent } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Calendar } from "../calendar/calendar";
+import { dateTimeFormat } from "../lib/intl-cache";
 import { motionTokens } from "../lib/motion-tokens";
 import styles from "./date-picker.module.css";
 
@@ -64,7 +65,7 @@ export function DatePicker({
   today,
   locale = "es",
   formatValue = (date) =>
-    new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date),
+    dateTimeFormat(locale, { dateStyle: "medium" }).format(date),
   calendarLabel,
   id,
   className,

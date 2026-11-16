@@ -1,4 +1,5 @@
 import { calendarLabel } from "../../ui/lib/calendar-labels.ts";
+import { numberFormat } from "../../ui/lib/intl-cache.ts";
 
 export type Language = "es" | "gl";
 /** Spanish and Galician text, in that order, as `usePreferences().t` expects. */
@@ -232,7 +233,7 @@ export function periodName(period: Period, locale: Language) {
 export const languageTag = (locale: Language) =>
   locale === "gl" ? ["gl-ES", "es-ES"] : ["es-ES"];
 export function formatNumber(value: number, locale: Language, digits = 0) {
-  return new Intl.NumberFormat(languageTag(locale), {
+  return numberFormat(languageTag(locale), {
     maximumFractionDigits: digits,
     minimumFractionDigits: 0,
   }).format(value);

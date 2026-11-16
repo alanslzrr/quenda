@@ -1,4 +1,5 @@
 import { calendarLabel } from "../lib/calendar-labels.ts";
+import { dateTimeFormat } from "../lib/intl-cache.ts";
 import { pickText, uiLanguage } from "../lib/locale-text.ts";
 
 /** An inclusive range of whole days. */
@@ -21,7 +22,7 @@ function monthWord(date: Date, locale: string) {
 export function formatRangeShort(range: DateRange, locale: string): string {
   const { start, end } = range;
   if (uiLanguage(locale) === "en") {
-    const format = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" });
+    const format = dateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" });
     return sameDay(start, end) ? format.format(start) : format.formatRange(start, end);
   }
   const month = (date: Date) => monthWord(date, locale).slice(0, 3);
@@ -38,7 +39,7 @@ export function formatRangeSpoken(range: DateRange, locale: string): string {
   const { start, end } = range;
   const language = uiLanguage(locale);
   if (language === "en") {
-    const format = new Intl.DateTimeFormat(locale, { dateStyle: "long" });
+    const format = dateTimeFormat(locale, { dateStyle: "long" });
     return sameDay(start, end) ? format.format(start) : format.formatRange(start, end);
   }
   const long = (date: Date) => calendarLabel(date, locale, "long");

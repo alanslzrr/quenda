@@ -1,3 +1,5 @@
+import { dateTimeFormat } from "../../ui/lib/intl-cache.ts";
+
 // Resolve a civil minute in the named municipal zone, not the browser zone.
 // Round-tripping rejects DST gaps; repeated minutes remain two explicit choices.
 export function localInstants(
@@ -11,7 +13,7 @@ export function localInstants(
     new Date(guess).toISOString().slice(0, 16) !== value
   )
     return [];
-  const fmt = new Intl.DateTimeFormat("en-CA", {
+  const fmt = dateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
     month: "2-digit",

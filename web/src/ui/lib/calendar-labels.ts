@@ -1,3 +1,5 @@
+import { dateTimeFormat } from "./intl-cache.ts";
+
 const months = {
   gl: ["xaneiro", "febreiro", "marzo", "abril", "maio", "xuño", "xullo", "agosto", "setembro", "outubro", "novembro", "decembro"],
   es: ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
@@ -22,5 +24,5 @@ export function calendarLabel(date: Date, locale: string, form: "month" | "weekd
     return form === "full" ? `${weekdays[language][date.getDay()]}, ${value}` : value;
   }
   const options: Intl.DateTimeFormatOptions = form === "month" ? {month:"long",year:"numeric"} : form === "weekday" ? {weekday:"short"} : form === "weekdayLong" ? {weekday:"long"} : form === "day" ? {weekday:"long",day:"numeric",month:"long"} : form === "short" ? {weekday:"short",day:"numeric",month:"short"} : {dateStyle:form};
-  return new Intl.DateTimeFormat(locale, options).format(date);
+  return dateTimeFormat(locale, options).format(date);
 }
