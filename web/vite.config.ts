@@ -6,6 +6,11 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // The production CSP's Trusted Types rule, so browser tests fail on any HTML sink write it would block.
+    headers: {
+      "Content-Security-Policy":
+        "require-trusted-types-for 'script'; trusted-types default",
+    },
     proxy: {
       "/api": {
         target: process.env.QUENDA_API ?? "http://127.0.0.1:3000",

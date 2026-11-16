@@ -116,6 +116,8 @@ test("the web image serves the bundle with strict headers and proxies the API", 
       "object-src 'none'",
       "base-uri 'none'",
       "frame-ancestors 'none'",
+      "require-trusted-types-for 'script'",
+      "trusted-types default",
     ])
       assert.ok(policy.includes(directive), directive);
     assert.ok(!policy.includes("unsafe-eval"));
