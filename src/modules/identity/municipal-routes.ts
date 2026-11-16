@@ -5,6 +5,7 @@ import { registerAdministratorQueryRoutes } from "./administrator-query-routes.t
 import { registerAppearanceRoutes } from "./appearance-routes.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
 import { registerBookingPolicyRoutes } from "./booking-policy-routes.ts";
+import { registerBrandingRoutes } from "./branding-routes.ts";
 import { registerConservationRoutes } from "./conservation-routes.ts";
 import { registerDeactivationRoutes } from "./deactivation-routes.ts";
 import { registerEmailChangeRoutes } from "./email-change-routes.ts";
@@ -57,6 +58,7 @@ export async function registerMunicipalIdentity(
   const actor = createRequestActor(pool, auth, config);
   await registerNavigationRoutes(app, pool, auth, config);
   await registerAppearanceRoutes(app, pool, auth, config);
+  await registerBrandingRoutes(app, pool, auth, config);
   await registerLegalNoticeRoutes(app, pool, auth, config);
   await registerPrivacyPermissionRoutes(app, pool, auth, config);
   await registerConservationRoutes(app, pool, auth, config);
