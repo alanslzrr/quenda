@@ -37,6 +37,7 @@
     "source:archive": "node scripts/source-archive.ts",
     "validate": "pnpm check && pnpm --dir web check && pnpm --dir web build && pnpm test:integration && pnpm --dir web test:browser && pnpm image:build quenda-backend:local && pnpm image:build:web && pnpm test:oci && pnpm test:deploy",
     "image:build": "node scripts/build-image.ts",
+    "deploy:host": "node scripts/deploy-host.ts",
     "image:build:web": "docker build --file web/Dockerfile --tag quenda-web:local --build-arg SOURCE_REVISION=$(git rev-parse HEAD) .",
     "test:performance": "node test/performance/run.ts",
     "test:performance:history": "node test/performance/history.ts",
