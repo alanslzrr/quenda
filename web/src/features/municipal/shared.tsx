@@ -26,6 +26,7 @@ import { Button } from "../../ui/button/button";
 import { Input } from "../../ui/input/input";
 import booking from "../catalog/booking.module.css";
 import { Choice, Choices } from "../catalog/journey";
+import { usePublicAppearance } from "../catalog/municipality";
 import { IdempotentAction } from "../reservations/idempotent-action";
 import { municipalityLabel } from "./municipality-label.ts";
 import { ResourceShell } from "./resource-shell";
@@ -279,8 +280,9 @@ function cachedMunicipality(
   }
 }
 export function MunicipalLayout() {
-  useMunicipalTheme(undefined);
   const { tenantId = "" } = useParams();
+  // Management wears the municipality's own theme, as its public pages do.
+  usePublicAppearance(tenantId);
   const { account } = useSession();
   const { pathname } = useLocation();
   const client = useQueryClient();

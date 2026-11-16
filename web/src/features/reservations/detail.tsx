@@ -7,7 +7,6 @@ import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
 import { serverNow } from "../../app/server-clock.ts";
 import { useSession } from "../../app/session";
-import { useMunicipalTheme } from "../../app/theme-provider";
 import { Alert } from "../../ui/alert/alert";
 import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
@@ -19,7 +18,7 @@ import {
 } from "../../ui/dialog/dialog";
 import { BackLink, BookingSummary, RulesText } from "../catalog/booking";
 import booking from "../catalog/booking.module.css";
-import { useMunicipality } from "../catalog/municipality";
+import { useMunicipality, usePublicAppearance } from "../catalog/municipality";
 import { AccessPass } from "./access-code";
 import { accessCodeTarget } from "./access-code-model";
 import styles from "./reservations.module.css";
@@ -31,8 +30,9 @@ import {
 } from "./shared";
 
 export function ReservationDetail() {
-  useMunicipalTheme(undefined);
   const { tenantId = "", reservationId = "" } = useParams();
+  // A reservation is shown in the theme of the municipality it belongs to.
+  usePublicAppearance(tenantId);
   const { locale, t } = usePreferences();
   const { account } = useSession();
   const query = useReservation(tenantId, reservationId);
