@@ -44,16 +44,25 @@ export function trackValidity(form: HTMLFormElement | null) {
   // Set while the browser fires `invalid` on each failing field of one submit attempt.
   let pass: { focus?: HTMLButtonElement } | undefined;
   const sync = (field: NativeField) => {
+    // An aria-invalid="true" the caller set for an explicit error is theirs: it is neither duplicated nor removed.
+    if (field.getAttribute("aria-invalid") === "true" && !flagged.has(field))
+      return;
     if (!field.validity.valid) {
-      // An aria-invalid the caller set for an explicit error is theirs: it is neither duplicated nor removed.
-      if (field.getAttribute("aria-invalid") === "true") return;
       field.setAttribute("aria-invalid", "true");
       flagged.add(field);
-    } else if (flagged.has(field)) {
-      field.removeAttribute("aria-invalid");
+    } else {
+      field.setAttribute("aria-invalid", "false");
       flagged.delete(field);
     }
   };
+  // Fields start as explicitly valid, so screen readers do not announce an untouched required field as invalid.
+  const prime = (field: EventTarget | null) => {
+    if (nativeField(field) && !field.hasAttribute("aria-invalid"))
+      field.setAttribute("aria-invalid", "false");
+  };
+  for (const field of form.elements) prime(field);
+  // Fields mounted later, or whose explicit error was cleared, are primed when they receive focus.
+  const onFocus = (event: Event) => prime(event.target);
   const onInvalid = (event: Event) => {
     const first = !pass;
     if (!pass) {
@@ -95,7 +104,7 @@ export function trackValidity(form: HTMLFormElement | null) {
   };
   const onReset = () => {
     for (const field of form.elements)
-      if (flagged.has(field)) field.removeAttribute("aria-invalid");
+      if (flagged.has(field)) field.setAttribute("aria-invalid", "false");
     edited = new WeakSet();
     flagged = new WeakSet();
   };
@@ -105,7 +114,9 @@ export function trackValidity(form: HTMLFormElement | null) {
   form.addEventListener("change", onChange);
   form.addEventListener("focusout", onBlur);
   form.addEventListener("reset", onReset);
+  form.addEventListener("focusin", onFocus);
   return () => {
+    form.removeEventListener("focusin", onFocus);
     form.removeEventListener("invalid", onInvalid, true);
     form.removeEventListener("input", onInput);
     form.removeEventListener("change", onChange);
