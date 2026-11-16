@@ -47,6 +47,10 @@
 .control:is([aria-invalid="true"], :user-invalid) {
   border-color: var(--danger);
 }
+/* Focused while invalid, the danger border thickens: the colour alone would no longer show focus. */
+.control:is([aria-invalid="true"], :user-invalid):focus-visible {
+  box-shadow: 0 0 0 1px var(--danger);
+}
 .control:disabled {
   cursor: not-allowed;
   background: var(--surface-muted);
