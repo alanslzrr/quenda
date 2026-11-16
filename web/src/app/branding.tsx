@@ -1,8 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { api, type Municipality } from "./api";
+import { type Appearance, api, type Municipality } from "./api";
 import styles from "./branding.module.css";
+import type { Locale } from "./preferences";
 import { usePreferences } from "./preferences-provider";
+import { canRefetch } from "./query";
+import { useMunicipalTheme } from "./theme-provider";
 
 export interface Branding {
   version: number;
@@ -39,9 +42,9 @@ export function normalizeBranding(value: Partial<Branding> | null): Branding {
   };
 }
 
-export function useBranding(tenantId: string | undefined) {
-  const { locale } = usePreferences();
-  return useQuery({
+/** One definition for the public municipality record, so the header, branding and pages always share a request. */
+const municipalityQuery = (tenantId: string | undefined, locale: Locale) =>
+  queryOptions({
     queryKey: municipalityKey(tenantId),
     enabled: !!tenantId,
     queryFn: ({ signal }) =>
@@ -50,6 +53,18 @@ export function useBranding(tenantId: string | undefined) {
         { signal },
         locale,
       ),
+  });
+
+/** Lives here rather than in the catalog pages so the eager layout does not pull those lazy routes into the entry. */
+export function useMunicipality(tenantId: string | undefined) {
+  const { locale } = usePreferences();
+  return useQuery(municipalityQuery(tenantId, locale));
+}
+
+export function useBranding(tenantId: string | undefined) {
+  const { locale } = usePreferences();
+  return useQuery({
+    ...municipalityQuery(tenantId, locale),
     select: (municipality) =>
       normalizeBranding({
         name: municipality?.name,
@@ -116,4 +131,29 @@ export function useMunicipalFavicon(
       link.type = previous.type;
     };
   }, [href]);
+}
+
+/** Applies a municipality's theme and favicon to every page that belongs to it. */
+export function usePublicAppearance(tenantId: string | undefined) {
+  const { locale } = usePreferences();
+  const client = useQueryClient();
+  const queryKey = ["public", tenantId, "appearance"];
+  const appearance = useQuery({
+    queryKey,
+    enabled: !!tenantId,
+    // Every page of a municipality (public, management, reservations) needs it, and it rarely changes; reading it
+    // once every few minutes keeps it from using up the shared public request budget. Saving it refreshes it.
+    staleTime: 5 * 60_000,
+    // Appearance falls back silently, so there is no manual retry control.
+    // Re-entering may recover it, but never before its rate-limit deadline.
+    retryOnMount: canRefetch(client.getQueryState(queryKey)?.error),
+    queryFn: ({ signal }) =>
+      api<Appearance>(
+        `/api/public/municipalities/${tenantId}/appearance`,
+        { signal },
+        locale,
+      ),
+  });
+  useMunicipalTheme(appearance.data);
+  useMunicipalFavicon(tenantId, useBranding(tenantId).data);
 }

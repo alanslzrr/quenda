@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { ApiError, api } from "../../app/api";
+import { useMunicipality, usePublicAppearance } from "../../app/branding";
 import { Failure, Loading } from "../../app/feedback";
 import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
@@ -30,7 +31,6 @@ import {
   municipalityPath,
   useJourneyQuery,
 } from "./journey";
-import { useMunicipality, usePublicAppearance } from "./municipality";
 import { PhotoGallery } from "./photo-gallery";
 import { type CatalogPhoto, publicPhotos } from "./photos";
 import {

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { ApiError, api } from "../../app/api";
+import { useMunicipality, usePublicAppearance } from "../../app/branding";
 import { Failure, Loading } from "../../app/feedback";
 import { isUuid } from "../../app/ids.ts";
 import { usePreferences } from "../../app/preferences-provider";
@@ -21,7 +22,6 @@ import {
   municipalityPath,
   unitPath,
 } from "../catalog/journey";
-import { useMunicipality, usePublicAppearance } from "../catalog/municipality";
 import { UnitUnavailable, usePublicUnit } from "../catalog/unit";
 import type { CommandPolicy } from "./commands";
 import {

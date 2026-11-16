@@ -1,20 +1,12 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Clock3 } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router";
-import {
-  ApiError,
-  type Appearance,
-  api,
-  type Municipality,
-} from "../../app/api";
-import { useBranding, useMunicipalFavicon } from "../../app/branding";
+import { ApiError } from "../../app/api";
+import { useMunicipality, usePublicAppearance } from "../../app/branding";
 import { useFavorite } from "../../app/favorite";
 import { Failure, Loading } from "../../app/feedback";
 import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
-import { canRefetch } from "../../app/query";
-import { useMunicipalTheme } from "../../app/theme-provider";
 import { BackLink } from "./booking";
 import styles from "./booking.module.css";
 import {
@@ -33,43 +25,6 @@ import { PhotoThumb } from "./photo-gallery";
 import { publicPhotos } from "./photos";
 import { addressLine } from "./profile";
 import { AvailabilitySearch, useFacilities } from "./search";
-
-export function useMunicipality(tenantId: string | undefined) {
-  const { locale } = usePreferences();
-  return useQuery({
-    queryKey: ["public", tenantId, "municipality"],
-    enabled: !!tenantId,
-    queryFn: ({ signal }) =>
-      api<Municipality>(
-        `/api/public/municipalities/${tenantId}`,
-        { signal },
-        locale,
-      ),
-  });
-}
-export function usePublicAppearance(tenantId: string | undefined) {
-  const { locale } = usePreferences();
-  const client = useQueryClient();
-  const queryKey = ["public", tenantId, "appearance"];
-  const appearance = useQuery({
-    queryKey,
-    enabled: !!tenantId,
-    // Every page of a municipality (public, management, reservations) needs it, and it rarely changes; reading it
-    // once every few minutes keeps it from using up the shared public request budget. Saving it refreshes it.
-    staleTime: 5 * 60_000,
-    // Appearance falls back silently, so there is no manual retry control.
-    // Re-entering may recover it, but never before its rate-limit deadline.
-    retryOnMount: canRefetch(client.getQueryState(queryKey)?.error),
-    queryFn: ({ signal }) =>
-      api<Appearance>(
-        `/api/public/municipalities/${tenantId}/appearance`,
-        { signal },
-        locale,
-      ),
-  });
-  useMunicipalTheme(appearance.data);
-  useMunicipalFavicon(tenantId, useBranding(tenantId).data);
-}
 
 const missing = (error: unknown) =>
   error instanceof ApiError && error.status === 404;

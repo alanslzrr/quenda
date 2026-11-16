@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { api } from "../../app/api";
+import { useMunicipality, usePublicAppearance } from "../../app/branding";
 import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
 import { storageEntries } from "../../app/storage-keys";
 import { useMunicipalTheme } from "../../app/theme-provider";
-import { useMunicipality, usePublicAppearance } from "../catalog/municipality";
 import styles from "./legal.module.css";
 import {
   conformanceLabel,
