@@ -151,6 +151,8 @@ docker compose --env-file .env.production -f compose.production.example.yaml up 
 
 [compose.production.example.yaml](compose.production.example.yaml) y [.env.production.example](.env.production.example) describen una instancia completa en un único servidor. Es una referencia para adaptar: dimensionamiento, TLS, secretos, copias y monitorización corresponden a la entidad que opera la instancia. La [guía de despliegue y operación](docs/12_operacion.md) cubre la inicialización del primer operador, las actualizaciones, las copias y la recuperación.
 
+Para una VM en OCI, AWS, Azure o GCP, `infra/<nube>/` declara la infraestructura con OpenTofu o Terraform y `pnpm deploy:host` publica la revisión validada por SSH. Cada nube se comprueba antes en local contra su emulador. Detalle en [Despliegue en la nube](docs/13_despliegue_nube.md).
+
 ## Calidad
 
 | Comprobación | Alcance |
@@ -159,7 +161,10 @@ docker compose --env-file .env.production -f compose.production.example.yaml up 
 | `pnpm test:integration` | API y base de datos reales sobre un PostgreSQL temporal: permisos, aislamiento, integridad, privacidad y recuperación |
 | `pnpm --dir web test:browser` | Recorridos completos en escritorio, móvil y tableta, con análisis axe de WCAG 2.0 y 2.1, niveles A y AA |
 | `pnpm test:oci` | Imágenes de API y web: arranque, migraciones, aislamiento entre instancias y disponibilidad ante una caída de la base |
+| `pnpm test:deploy` | Topología de un host en la nube con las imágenes locales: Caddy con TLS, proxy de confianza, migraciones y correo por STARTTLS |
 | `pnpm validate` | Encadena todas las anteriores y la construcción de imágenes; se ejecuta antes de abrir cada pull request |
+| `pnpm test:host` | VM simulada con cloud-init que recibe una revisión confirmada por SSH, con la demostración sembrada |
+| `pnpm infra:validate <nube\|all>` | Infraestructura de OCI, AWS, Azure y GCP contra sus emuladores locales con OpenTofu |
 
 La integración continua de GitHub Actions ejecuta en cada pull request las comprobaciones rápidas de backend y web. Detalle en [Desarrollo y pruebas](docs/11_desarrollo.md#comprobaciones).
 
@@ -180,6 +185,7 @@ La integración continua de GitHub Actions ejecuta en cada pull request las comp
 | [Referencia de la API](docs/10_api.md) | Rutas HTTP por área, permisos y respuestas |
 | [Desarrollo y pruebas](docs/11_desarrollo.md) | Entorno local, aplicación web y comprobaciones |
 | [Despliegue y operación](docs/12_operacion.md) | Imágenes, despliegue, workers, métricas, copias y recuperación |
+| [Despliegue en la nube](docs/13_despliegue_nube.md) | Infraestructura por nube, validación local con emuladores, publicación por SSH y demostración |
 
 El contrato OpenAPI se genera sin base de datos con `pnpm --silent openapi`.
 
