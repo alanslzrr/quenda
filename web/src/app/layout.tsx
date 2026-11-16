@@ -11,6 +11,7 @@ import { useMunicipality } from "../features/catalog/municipality";
 import { kindShort, kinds, noticePath } from "../features/legal/notices";
 import { Announcer } from "./announce";
 import { BookingNavigation } from "./booking-navigation";
+import { MunicipalLogo, useBranding } from "./branding";
 import { Failure } from "./feedback";
 import { hasInvalidIds, isUuid } from "./ids.ts";
 import styles from "./layout.module.css";
@@ -69,6 +70,7 @@ export function Layout() {
   }, [titleRoot]);
   const resource = /^\/administracion\/[^/]+(?:\/|$)/.test(location.pathname);
   const name = tenantId ? municipality.data?.name : undefined;
+  const branding = useBranding(tenantId).data;
   const entry = useBookingEntry();
   const booking =
     location.pathname === "/" ||
@@ -113,6 +115,13 @@ export function Layout() {
                   <span className={styles.divider} aria-hidden="true">
                     /
                   </span>
+                  {tenantId && branding?.logos.light && (
+                    <MunicipalLogo
+                      tenantId={tenantId}
+                      branding={branding}
+                      size="md"
+                    />
+                  )}
                   <span className={styles.place}>{name}</span>
                 </>
               )}
