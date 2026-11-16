@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import { HttpError } from "../../http/errors.ts";
+import { rasterFormat, withImageSlot } from "../../shared/raster.ts";
 
 /** Every catalog photo is shown at 3:2, the usual proportion of a landscape photograph. */
 export const photoRatio = 3 / 2;
@@ -12,47 +13,6 @@ const minimumRatio = 1.3;
 /** About 36 megapixels: any phone photograph, never a decompression bomb. */
 const maximumPixels = 36_000_000;
 export const photoMaximumBytes = 6 * 1024 * 1024;
-
-// Formats are recognised by their signature before any decoder runs, so a file
-// named .jpg that is SVG, HEIC, TIFF or anything else never reaches libvips.
-function format(input: Buffer): "jpeg" | "png" | "webp" | null {
-  if (
-    input.length >= 3 &&
-    input[0] === 0xff &&
-    input[1] === 0xd8 &&
-    input[2] === 0xff
-  )
-    return "jpeg";
-  if (
-    input.length >= 8 &&
-    input
-      .subarray(0, 8)
-      .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
-  )
-    return "png";
-  if (
-    input.length >= 12 &&
-    input.toString("latin1", 0, 4) === "RIFF" &&
-    input.toString("latin1", 8, 12) === "WEBP"
-  )
-    return "webp";
-  return null;
-}
-
-// libvips may use a thread per core for each image; two at a time keeps an
-// upload burst from starving the requests that serve bookings.
-let running = 0;
-const waiting: (() => void)[] = [];
-async function slot<T>(work: () => Promise<T>): Promise<T> {
-  if (running >= 2) await new Promise<void>((resolve) => waiting.push(resolve));
-  running++;
-  try {
-    return await work();
-  } finally {
-    running--;
-    waiting.shift()?.();
-  }
-}
 
 export interface ProcessedPhoto {
   width: number;
@@ -69,9 +29,9 @@ export interface ProcessedPhoto {
 export async function processPhoto(input: Buffer): Promise<ProcessedPhoto> {
   if (input.length > photoMaximumBytes)
     throw new HttpError("PAYLOAD_TOO_LARGE");
-  const detected = format(input);
+  const detected = rasterFormat(input);
   if (!detected) throw new HttpError("PHOTO_INVALID");
-  return slot(async () => {
+  return withImageSlot(async () => {
     const options = {
       limitInputPixels: maximumPixels,
       failOn: "error",
