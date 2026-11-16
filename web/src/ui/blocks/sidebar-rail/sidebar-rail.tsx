@@ -451,7 +451,15 @@ function RailBody() {
       )
         return;
       // A single-character shortcut is active only while focus is inside the navigation (WCAG 2.1.4).
-      if (!target || !document.getElementById(sidebarId)?.contains(target)) return;
+      // The rail toggle that advertises the key counts as part of the navigation.
+      if (
+        !target ||
+        !(
+          document.getElementById(sidebarId)?.contains(target) ||
+          target === railToggle.current
+        )
+      )
+        return;
       const shellNode = shell.current;
       if (!shellNode) return;
       const rect = shellNode.getBoundingClientRect();
@@ -585,6 +593,10 @@ function RailBody() {
             transition={reduce ? instant : motionTokens.spring.smooth}
             data-collapsed={collapsed || undefined}
             data-floating={floatingSheet || undefined}
+            // Floating over an inert page it is a modal drawer, and says so; docked it is plain navigation.
+            {...(floatingSheet
+              ? { role: "dialog", "aria-modal": true, "aria-label": labels.navigation }
+              : {})}
           >
             <Brand collapsed={collapsed} reduce={reduce} />
             <NavSections
@@ -673,10 +685,11 @@ function RailBody() {
             <div className={styles.toolbar}>{toolbar}</div>
           </header>
           <div className={styles.content}>{children}</div>
-          <p className={styles.srOnly} aria-live="polite">
-            {announcement}
-          </p>
         </div>
+        {/* Outside .main, which turns inert while the sidebar floats; an inert live region is never spoken. */}
+        <p className={styles.srOnly} aria-live="polite">
+          {announcement}
+        </p>
         <Dialog.Root open={sheetOpen} onOpenChange={setSheetOpen}>
           <AnimatePresence>
             {sheetOpen && shell.current && (
