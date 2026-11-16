@@ -11,8 +11,8 @@ import { browser, totp } from "../helpers/auth-client.ts";
 // Representative content for visual review. It lives in its own ephemeral
 // database and never shares municipalities or accounts with automated tests.
 
-const timeZone = "Europe/Madrid";
-const password = "Demostracion-quenda-2026";
+export const timeZone = "Europe/Madrid";
+const localPassword = "Demostracion-quenda-2026";
 
 interface Opening {
   days: number[];
@@ -25,7 +25,7 @@ interface PhotoSeed {
   es: string;
   gl: string;
 }
-interface UnitSeed {
+export interface UnitSeed {
   id: string;
   name: string;
   photos?: PhotoSeed[];
@@ -40,7 +40,7 @@ interface FacilitySeed {
   photos?: PhotoSeed[];
   units: UnitSeed[];
 }
-interface MunicipalitySeed {
+export interface MunicipalitySeed {
   id: string;
   name: string;
   rules: string;
@@ -232,7 +232,7 @@ Comunica calquera desperfecto ao persoal da instalación.`,
   ],
 };
 
-async function account(
+export async function account(
   app: FastifyInstance,
   auth: Pool,
   origin: string,
@@ -240,6 +240,7 @@ async function account(
   email: string,
   name: string,
   mfa: boolean,
+  password = localPassword,
 ) {
   const client = browser(app, address, origin);
   const signup = await client.request("/api/auth/sign-up/email", {
@@ -313,7 +314,7 @@ async function municipality(
   );
   // The catalog has been open for 60 days, recorded as the application would:
   // indicators derive offered time from calendar versions and publication events.
-  const since = "now()-interval '60 days'";
+  const since = "now()-interval '70 days'";
   const event = (
     facility: string,
     unit: string | null,
@@ -379,7 +380,7 @@ async function municipality(
   }
 }
 
-async function administrator(
+export async function administrator(
   migration: Pool,
   tenantId: string,
   accountId: string,
@@ -399,7 +400,7 @@ async function administrator(
   );
 }
 
-function localDate(offsetDays: number, from = new Date()) {
+export function localDate(offsetDays: number, from = new Date()) {
   const date = new Date(from.getTime() + offsetDays * 86400000);
   return new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -424,7 +425,7 @@ export function nextWeekdayOffset(
   throw new Error("Unreachable weekday");
 }
 
-function zoned(date: string, hours: number) {
+export function zoned(date: string, hours: number) {
   const guess = new Date(`${date}T${String(hours).padStart(2, "0")}:00:00Z`);
   const offset = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -481,6 +482,7 @@ export async function seedDemo(
   domain: Pool,
   migration: Pool,
   origin: string,
+  password = localPassword,
 ) {
   const admin = await account(
     app,
@@ -490,6 +492,7 @@ export async function seedDemo(
     "administracion@valdeira.demo.test",
     "Marta Couceiro",
     true,
+    password,
   );
   const citizen = await account(
     app,
@@ -499,6 +502,7 @@ export async function seedDemo(
     "lucia.pereira@demo.test",
     "Lucía Pereira Castro",
     false,
+    password,
   );
   await municipality(migration, valdeira, admin.accountId);
   await municipality(migration, ribasanta, admin.accountId);
