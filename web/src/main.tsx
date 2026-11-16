@@ -1,3 +1,5 @@
+// First: the Trusted Types policy must exist before anything renders.
+import "./app/trusted-types";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "motion/react";
 import { lazy, StrictMode, Suspense } from "react";
