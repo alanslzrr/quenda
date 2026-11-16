@@ -175,7 +175,9 @@ test("email change requires two explicit confirmations and then a new session", 
     .getByRole("button", { name: "Autorizar cambio", exact: true })
     .click();
   await expect(
-    page.getByText(/Revisa el nuevo correo|Revisa o novo correo/),
+    page
+      .getByRole("main")
+      .getByText(/Revisa el nuevo correo|Revisa o novo correo/),
   ).toBeVisible();
   await page.goto(await mailLink(next, "email-change/confirm"));
   await page
@@ -222,7 +224,7 @@ test("privacy download, voluntary deactivation and verified reactivation remain 
     })
     .click();
   await expect(
-    page.getByText(/Cuenta reactivada|Conta reactivada/),
+    page.getByRole("main").getByText(/Cuenta reactivada|Conta reactivada/),
   ).toBeVisible();
   await login(page, email);
   await expect(page).toHaveURL(/\/perfil$/);
