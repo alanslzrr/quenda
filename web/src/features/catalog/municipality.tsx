@@ -8,6 +8,7 @@ import {
   api,
   type Municipality,
 } from "../../app/api";
+import { useBranding, useMunicipalFavicon } from "../../app/branding";
 import { useFavorite } from "../../app/favorite";
 import { Failure, Loading } from "../../app/feedback";
 import { LinkButton } from "../../app/link-button";
@@ -67,6 +68,7 @@ export function usePublicAppearance(tenantId: string | undefined) {
       ),
   });
   useMunicipalTheme(appearance.data);
+  useMunicipalFavicon(tenantId, useBranding(tenantId).data);
 }
 
 const missing = (error: unknown) =>
