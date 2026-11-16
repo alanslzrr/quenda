@@ -17,6 +17,7 @@ import {
   acceptAdministratorInvitation,
   createMunicipality,
 } from "../../src/modules/identity/municipality.ts";
+import { publicMunicipalities } from "../../src/modules/identity/navigation.ts";
 import { withDatabase } from "../helpers/postgres.ts";
 
 const image = (width: number, height: number, format: "png" | "jpeg") =>
@@ -205,6 +206,17 @@ test("municipal name and logo are administrator-only, validated, re-encoded, ver
       randomUUID(),
     );
     assert.deepEqual(dark.logos, { light: true, dark: true });
+    // The public municipality record carries the same branding state, so pages need no extra request.
+    assert.deepEqual(
+      (await publicMunicipalities(domain, null, tenantId)).items[0],
+      {
+        id: tenantId,
+        name: "Concello de Valdeira · Turismo",
+        timeZone: "Europe/Madrid",
+        officialName: "Concello de Valdeira",
+        branding: { version: 4, logos: { light: true, dark: true } },
+      },
+    );
     assert.deepEqual((await publicBranding(domain, other)).logos, {
       light: false,
       dark: false,

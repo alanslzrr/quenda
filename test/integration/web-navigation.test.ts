@@ -62,9 +62,12 @@ test("public discovery and own navigation preserve authority boundaries and pagi
     const publicPage = await publicMunicipalities(domain);
     assert.equal(publicPage.items.length, 20);
     assert.ok(publicPage.nextCursor);
+    // Only public presentation data: name, official name, time zone and which logos exist.
     assert.deepEqual(Object.keys(publicPage.items[0] ?? {}).sort(), [
+      "branding",
       "id",
       "name",
+      "officialName",
       "timeZone",
     ]);
     const rest = await publicMunicipalities(domain, publicPage.nextCursor);
