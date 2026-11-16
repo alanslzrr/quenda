@@ -16,7 +16,7 @@ import {
 import { useSession } from "../../app/session";
 import { Button } from "../../ui/button/button";
 import { Dialog, DialogContent } from "../../ui/dialog/dialog";
-import { FactorField, verifyFactor } from "./security";
+import { FactorField, verifyFactor } from "./factor";
 
 export function MfaDialog() {
   const open = useContext(ReauthenticationContext);

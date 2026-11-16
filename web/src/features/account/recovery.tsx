@@ -8,7 +8,7 @@ import { usePreferences } from "../../app/preferences-provider";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Alert } from "../../ui/alert/alert";
 import { Input } from "../../ui/input/input";
-import { FactorField, factorProof } from "./security";
+import { FactorField, factorProof } from "./factor";
 import { PageTitle, SecretField } from "./shared";
 
 // Keep action tokens in component memory; never persist them or mutate by GET.

@@ -10,7 +10,7 @@ import { Alert } from "../../ui/alert/alert";
 import { Button } from "../../ui/button/button";
 import { Input } from "../../ui/input/input";
 import { PasswordField } from "../../ui/password-field/password-field";
-import { FactorField, verifyFactor } from "./security";
+import { FactorField, verifyFactor } from "./factor";
 import { safeReturnPath } from "./shared";
 export function SignIn({ register = false }: { register?: boolean }) {
   useMunicipalTheme(undefined);
