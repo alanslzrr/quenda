@@ -92,7 +92,7 @@
 .sectionText h2 { font:500 14px/1.5 var(--font-body); letter-spacing:-.01em; }
 .block form { max-width:480px; width:100%; gap:16px; }
 .block form>button { justify-self:start; }
-.block form p { font-size:13px; color:var(--text-secondary); }
+.block form p { font-size:.8125rem; color:var(--text-secondary); }
 .block .sessionInner form { width:auto; gap:0; }
 .block .sessionInner { flex-wrap:wrap; padding-block:14px; }
 .block .sessionText { min-width:160px; }
