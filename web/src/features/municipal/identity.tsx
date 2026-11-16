@@ -1,12 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ImageUp, Trash2 } from "lucide-react";
 import { useId, useRef, useState } from "react";
-import { ApiError, api } from "../../app/api";
+import { ApiError, api, type Municipality } from "../../app/api";
 import {
   type Branding,
-  brandingKey,
   type LogoVariant,
   logoUrl,
+  municipalityKey,
   useBranding,
 } from "../../app/branding";
 import { Failure, Loading } from "../../app/feedback";
@@ -39,9 +39,19 @@ export function MunicipalIdentity() {
   const { account } = useSession();
   const client = useQueryClient();
   const branding = useBranding(m.id);
-  // The name also lives in navigation and municipal context; all of them must show the new one.
+  // The public record is updated in place (no extra request); navigation and municipal context are read again
+  // so every screen shows the new name.
   const settle = async (next: Branding) => {
-    client.setQueryData(brandingKey(m.id), next);
+    client.setQueryData<Municipality>(municipalityKey(m.id), (current) =>
+      current
+        ? {
+            ...current,
+            name: next.name,
+            officialName: next.officialName,
+            branding: { version: next.version, logos: next.logos },
+          }
+        : current,
+    );
     await Promise.all(
       ["navigation", "municipal-context"].map((key) =>
         client.invalidateQueries({
@@ -49,7 +59,6 @@ export function MunicipalIdentity() {
         }),
       ),
     );
-    await client.invalidateQueries({ queryKey: ["public", m.id] });
   };
   return (
     <section className={styles.group} aria-labelledby="appearance-identity">

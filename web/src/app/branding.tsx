@@ -1,9 +1,8 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { api } from "./api";
+import { api, type Municipality } from "./api";
 import styles from "./branding.module.css";
 import { usePreferences } from "./preferences-provider";
-import { canRefetch } from "./query";
 
 export interface Branding {
   version: number;
@@ -13,10 +12,11 @@ export interface Branding {
 }
 export type LogoVariant = "light" | "dark";
 
-export const brandingKey = (tenantId: string | undefined) => [
+/** Branding travels with the public municipality record, so it shares that query and its cache. */
+export const municipalityKey = (tenantId: string | undefined) => [
   "public",
   tenantId,
-  "branding",
+  "municipality",
 ];
 /** The version in the address makes a changed logo a new resource, so no cache ever shows the old one. */
 export const logoUrl = (
@@ -41,23 +41,21 @@ export function normalizeBranding(value: Partial<Branding> | null): Branding {
 
 export function useBranding(tenantId: string | undefined) {
   const { locale } = usePreferences();
-  const client = useQueryClient();
-  const queryKey = brandingKey(tenantId);
   return useQuery({
-    queryKey,
+    queryKey: municipalityKey(tenantId),
     enabled: !!tenantId,
-    // Read at most every few minutes, like the appearance; the identity editor updates it itself after saving.
-    staleTime: 5 * 60_000,
-    // Like the appearance, a missing logo falls back silently and retries only after a rate-limit deadline.
-    retryOnMount: canRefetch(client.getQueryState(queryKey)?.error),
-    queryFn: async ({ signal }) =>
-      normalizeBranding(
-        await api<Partial<Branding>>(
-          `/api/public/municipalities/${tenantId}/branding`,
-          { signal },
-          locale,
-        ),
+    queryFn: ({ signal }) =>
+      api<Municipality>(
+        `/api/public/municipalities/${tenantId}`,
+        { signal },
+        locale,
       ),
+    select: (municipality) =>
+      normalizeBranding({
+        name: municipality?.name,
+        officialName: municipality?.officialName,
+        ...municipality?.branding,
+      }),
   });
 }
 

@@ -98,6 +98,8 @@ export interface Municipality {
   id: string;
   name: string;
   timeZone: string;
+  officialName?: string;
+  branding?: { version: number; logos: { light: boolean; dark: boolean } };
 }
 export type ColorOverrides = Partial<
   Record<"background" | "foreground" | "accent", string>
