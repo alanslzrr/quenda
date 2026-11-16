@@ -34,6 +34,7 @@ import { Button } from "../../ui/button/button";
 import { DropdownMenu } from "../../ui/dropdown-menu/dropdown-menu";
 import SegmentedControl from "../../ui/segmented-control/segmented-control";
 import styles from "./appearance.module.css";
+import { MunicipalIdentity } from "./identity";
 import { ManagementPage } from "./page";
 import {
   Denied,
@@ -62,25 +63,28 @@ function AppearanceEditor() {
     <ManagementPage
       title={t("Apariencia", "Aparencia")}
       description={t(
-        "El tema del municipio se aplica a su página pública y a su gestión. Cada cambio se ve al momento en esta pantalla; nadie más lo ve hasta que lo guardes. Cada persona solo elige si lo ve en claro u oscuro.",
-        "O tema do municipio aplícase á súa páxina pública e á súa xestión. Cada cambio vese ao momento nesta pantalla; ninguén máis o ve ata que o gardes. Cada persoa só escolle se o ve en claro ou escuro.",
+        "El nombre, el logo y el tema identifican al municipio en su página pública y en su gestión. El nombre y el logo se publican al guardarlos; el tema se prueba al momento en esta pantalla y nadie más lo ve hasta que lo guardes. Cada persona solo elige si lo ve en claro u oscuro.",
+        "O nome, o logo e o tema identifican o municipio na súa páxina pública e na súa xestión. O nome e o logo publícanse ao gardalos; o tema próbase ao momento nesta pantalla e ninguén máis o ve ata que o gardes. Cada persoa só escolle se o ve en claro ou escuro.",
       )}
     >
-      {q.isPending ? (
-        <Loading />
-      ) : blocksEditor(q) || !q.data ? (
-        <Failure error={q.error} retry={() => void q.refetch()} />
-      ) : (
-        <EditorRecovery
-          error={q.isError ? q.error : null}
-          retry={() => void q.refetch()}
-        >
-          <AppearanceForm
-            saved={q.data}
-            reload={async () => (await q.refetch()).data ?? undefined}
-          />
-        </EditorRecovery>
-      )}
+      <div className={styles.page}>
+        <MunicipalIdentity />
+        {q.isPending ? (
+          <Loading />
+        ) : blocksEditor(q) || !q.data ? (
+          <Failure error={q.error} retry={() => void q.refetch()} />
+        ) : (
+          <EditorRecovery
+            error={q.isError ? q.error : null}
+            retry={() => void q.refetch()}
+          >
+            <AppearanceForm
+              saved={q.data}
+              reload={async () => (await q.refetch()).data ?? undefined}
+            />
+          </EditorRecovery>
+        )}
+      </div>
     </ManagementPage>
   );
 }
