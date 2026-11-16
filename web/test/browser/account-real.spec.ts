@@ -38,7 +38,9 @@ test("personal details, password recovery and accessible settings use the real A
   await page.goto("/recuperar");
   await page.getByLabel("Correo electrónico", { exact: true }).fill(email);
   await page.getByRole("button", { name: /Enviar instru/ }).click();
-  await expect(page.getByText(/Si la solicitud|Se a solicitude/)).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText(/Si la solicitud|Se a solicitude/),
+  ).toBeVisible();
   await page.goto(await mailLink(email, "reset-password"));
   const changed = `${password}-changed`;
   await page.getByLabel(/Nueva contraseña|Novo contrasinal/).fill(changed);
@@ -208,7 +210,9 @@ test("privacy download, voluntary deactivation and verified reactivation remain 
   await page.getByLabel("Correo electrónico", { exact: true }).fill(email);
   await page.getByLabel(/Contraseña actual|Contrasinal actual/).fill(password);
   await page.getByRole("button", { name: /Enviar instru/ }).click();
-  await expect(page.getByText(/Si la solicitud|Se a solicitude/)).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText(/Si la solicitud|Se a solicitude/),
+  ).toBeVisible();
   await page.goto(await mailLink(email, "/account/reactivation"));
   await page.getByLabel(/Contraseña actual|Contrasinal actual/).fill(password);
   await page
