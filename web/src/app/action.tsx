@@ -12,6 +12,7 @@ import { Button } from "../ui/button/button";
 import { announce } from "./announce";
 import { Failure } from "./feedback";
 import styles from "./layout.module.css";
+import { trackValidity } from "./validity";
 
 // Mutations are explicit, single-flight and never retried by the component.
 export function ActionForm({
@@ -80,7 +81,12 @@ export function ActionForm({
   }
   return (
     // Busy fields stay enabled: disabling them would drop keyboard focus to the page mid-submit, and the lock already rejects a resubmit.
-    <form className={styles.form} onSubmit={run} aria-busy={busy || undefined}>
+    <form
+      ref={trackValidity}
+      className={styles.form}
+      onSubmit={run}
+      aria-busy={busy || undefined}
+    >
       {Children.toArray(children).length > 0 && (
         <fieldset className={styles.fields}>{children}</fieldset>
       )}

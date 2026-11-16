@@ -6,6 +6,7 @@ import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
+import { trackValidity } from "../../app/validity";
 import { Alert } from "../../ui/alert/alert";
 import { Button } from "../../ui/button/button";
 import { Input } from "../../ui/input/input";
@@ -129,7 +130,7 @@ export function SignIn({ register = false }: { register?: boolean }) {
           )}
         />
       ) : (
-        <form className={styles.form} onSubmit={submit}>
+        <form ref={trackValidity} className={styles.form} onSubmit={submit}>
           {challenge ? (
             <FactorField focus />
           ) : (

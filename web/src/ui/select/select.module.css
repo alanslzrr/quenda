@@ -32,7 +32,7 @@
     box-shadow var(--duration-fast) var(--ease-standard);
 }
 @media (hover: hover) and (pointer: fine) {
-  .trigger:hover:not([data-disabled]) {
+  .trigger:hover:not([data-disabled], [aria-invalid="true"]) {
     border-color: var(--foreground);
     background: var(--surface-muted);
   }
@@ -44,6 +44,10 @@
 }
 .trigger:focus-visible {
   border-color: var(--border-strong);
+}
+/* A required choice left empty on submit, next to its written error. */
+.trigger[aria-invalid="true"] {
+  border-color: var(--danger);
 }
 .trigger[data-disabled] {
   opacity: 0.5;
@@ -90,6 +94,12 @@
 .hint {
   color: var(--text-muted);
   font-size: var(--text-xs);
+}
+.error {
+  display: block;
+  color: var(--danger);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
 }
 /* Radix holds the animation until the menu is positioned, so it always grows from the trigger edge. */
 .content {

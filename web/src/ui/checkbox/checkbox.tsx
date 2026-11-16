@@ -5,6 +5,8 @@ import type { ComponentPropsWithoutRef, ElementRef } from "react";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { motion, useReducedMotion } from "motion/react";
 import type { Transition } from "motion/react";
+import { FieldMessage } from "../lib/field-message";
+import { useMirrorInvalid } from "../lib/mirror-invalid";
 import { motionTokens } from "../lib/motion-tokens";
 import styles from "./checkbox.module.css";
 
@@ -42,8 +44,11 @@ export const Checkbox = forwardRef<
   );
   const state = checked ?? internal;
   const on = state !== false;
+  const required = useMirrorInvalid("checkbox");
+  const errorId = required.message ? `${controlId}-error` : undefined;
   const change = (next: CheckboxPrimitive.CheckedState) => {
     if (checked === undefined) setInternal(next);
+    required.clear();
     onCheckedChange?.(next);
   };
   const fade: Transition = {
@@ -51,7 +56,7 @@ export const Checkbox = forwardRef<
     ease: [...motionTokens.ease.standard],
   };
   return (
-    <div className={styles.field}>
+    <div ref={required.ref} className={styles.field}>
       <CheckboxPrimitive.Root
         {...props}
         id={controlId}
@@ -63,11 +68,13 @@ export const Checkbox = forwardRef<
           [
             props["aria-describedby"],
             description ? `${controlId}-description` : undefined,
+            errorId,
           ]
             .filter(Boolean)
             .join(" ") || undefined
         }
         aria-label={props["aria-label"] ?? (label ? undefined : "Checkbox")}
+        aria-invalid={required.message ? true : props["aria-invalid"]}
       >
         <span className={styles.visual} aria-hidden="true">
           <motion.span
@@ -111,12 +118,17 @@ export const Checkbox = forwardRef<
           </svg>
         </span>
       </CheckboxPrimitive.Root>
-      {label || description ? (
+      {label || description || required.message ? (
         <div className={styles.copy}>
           {label ? <label htmlFor={controlId}>{label}</label> : null}
           {description ? (
             <span id={`${controlId}-description`}>{description}</span>
           ) : null}
+          <FieldMessage
+            id={errorId}
+            text={required.message}
+            className={styles.error}
+          />
         </div>
       ) : null}
     </div>

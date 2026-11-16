@@ -6,6 +6,8 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { FieldMessage } from "../lib/field-message";
+import { useMirrorInvalid } from "../lib/mirror-invalid";
 import { motionTokens } from "../lib/motion-tokens";
 import styles from "./select.module.css";
 
@@ -84,6 +86,8 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
     const generatedId = useId();
     const controlId = id ?? generatedId;
     const hintId = description ? `${controlId}-description` : undefined;
+    const required = useMirrorInvalid("select");
+    const errorId = required.message ? `${controlId}-error` : undefined;
     const reduceMotion = useReducedMotion();
     const [uncontrolledValue, setUncontrolledValue] = useState(
       rootProps.defaultValue ?? "",
@@ -99,13 +103,14 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
     }
 
     return (
-      <div className={styles.field}>
+      <div ref={required.ref} className={styles.field}>
         <label htmlFor={controlId}>{label}</label>
         <SelectPrimitive.Root
           {...rootProps}
           disabled={disabled}
           onValueChange={(next) => {
             setUncontrolledValue(next);
+            required.clear();
             onValueChange?.(next);
           }}
         >
@@ -114,9 +119,12 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
             ref={ref}
             id={controlId}
             aria-describedby={
-              [triggerProps?.["aria-describedby"], hintId]
+              [triggerProps?.["aria-describedby"], hintId, errorId]
                 .filter(Boolean)
                 .join(" ") || undefined
+            }
+            aria-invalid={
+              required.message ? true : triggerProps?.["aria-invalid"]
             }
             className={[styles.trigger, className].filter(Boolean).join(" ")}
           >
@@ -182,6 +190,11 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
             {description}
           </span>
         )}
+        <FieldMessage
+          id={errorId}
+          text={required.message}
+          className={styles.error}
+        />
       </div>
     );
   },
