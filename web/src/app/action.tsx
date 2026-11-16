@@ -2,12 +2,14 @@ import {
   Children,
   type FormEvent,
   type ReactNode,
+  useEffect,
   useId,
   useRef,
   useState,
 } from "react";
 import { Alert } from "../ui/alert/alert";
 import { Button } from "../ui/button/button";
+import { announce } from "./announce";
 import { Failure } from "./feedback";
 import styles from "./layout.module.css";
 
@@ -46,6 +48,11 @@ export function ActionForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const [done, setDone] = useState(false);
+  // The page announcer speaks the outcome once it is shown: a live region mounted together with its text is not
+  // announced reliably. A form that unmounted meanwhile (its owner moved on) leaves the outcome to its owner.
+  useEffect(() => {
+    if (done && success) announce(success);
+  }, [done, success]);
   async function run(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (lock.current || blocked) return;

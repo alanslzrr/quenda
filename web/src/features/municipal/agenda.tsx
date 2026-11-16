@@ -3,7 +3,11 @@ import { CalendarOff } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ActionForm, textField } from "../../app/action";
-import { announce, restoreFocus } from "../../app/announce";
+import {
+  announce,
+  restoreFocus,
+  useFieldErrorAnnouncement,
+} from "../../app/announce";
 import { ApiError, api, type Municipality } from "../../app/api";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
@@ -820,6 +824,18 @@ function RelocationSlots({
   // The field keeps what is typed; only an admissible value settles into a query, so typing never spends reads.
   const [typed, setTyped] = useState(String(unit.calendar.minimumMinutes));
   const admissible = admissibleDuration(typed, unit.calendar);
+  const durationLabel = t("Duración (minutos)", "Duración (minutos)");
+  const durationError =
+    admissible === null
+      ? t(
+          `Indica entre ${unit.calendar.minimumMinutes} y ${unit.calendar.maximumMinutes} minutos, en múltiplos de ${unit.calendar.stepMinutes}.`,
+          `Indica entre ${unit.calendar.minimumMinutes} e ${unit.calendar.maximumMinutes} minutos, en múltiplos de ${unit.calendar.stepMinutes}.`,
+        )
+      : undefined;
+  const announceDurationError = useFieldErrorAnnouncement(
+    durationLabel,
+    durationError,
+  );
   useEffect(() => {
     if (admissible === null || admissible === duration) return;
     const timer = window.setTimeout(() => {
@@ -849,19 +865,13 @@ function RelocationSlots({
         <Input
           type="number"
           required
-          label={t("Duración (minutos)", "Duración (minutos)")}
+          label={durationLabel}
           value={typed}
           min={unit.calendar.minimumMinutes}
           max={unit.calendar.maximumMinutes}
           step={unit.calendar.stepMinutes}
-          error={
-            admissible === null
-              ? t(
-                  `Indica entre ${unit.calendar.minimumMinutes} y ${unit.calendar.maximumMinutes} minutos, en múltiplos de ${unit.calendar.stepMinutes}.`,
-                  `Indica entre ${unit.calendar.minimumMinutes} e ${unit.calendar.maximumMinutes} minutos, en múltiplos de ${unit.calendar.stepMinutes}.`,
-                )
-              : undefined
-          }
+          error={durationError}
+          onBlur={announceDurationError}
           onChange={(e) => setTyped(e.target.value)}
         />
       </div>

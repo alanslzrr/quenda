@@ -51,7 +51,7 @@ test("a facility profile is edited, audited by version and shown on the public p
   await form.getByLabel(/Teléfono de contacto/).fill("+34 981 000 000");
   await form.getByLabel(/Correo de contacto/).fill("deportes@concello.example");
   await form.getByRole("button", { name: save }).click();
-  await expect(page.getByText(saved)).toBeVisible();
+  await expect(page.getByRole("main").getByText(saved)).toBeVisible();
 
   await page.reload();
   await page.getByRole("tab", { name: "Ficha", exact: true }).click();
@@ -65,7 +65,7 @@ test("a facility profile is edited, audited by version and shown on the public p
   // Clearing a field removes it from the profile.
   await page.getByLabel(/Teléfono de contacto/).fill("");
   await page.getByRole("button", { name: save }).click();
-  await expect(page.getByText(saved)).toBeVisible();
+  await expect(page.getByRole("main").getByText(saved)).toBeVisible();
 
   // The public page shows what was written, in the active language, with a plain map link.
   await page.goto(`/municipios/${f.tenant}/instalaciones/${f.facility}`);
@@ -128,7 +128,7 @@ test("a unit profile shows its type, setting and capacity where citizens choose 
     .click();
   await form.getByLabel(/Aforo máximo/).fill("4");
   await form.getByRole("button", { name: save }).click();
-  await expect(page.getByText(saved)).toBeVisible();
+  await expect(page.getByRole("main").getByText(saved)).toBeVisible();
 
   await page.goto(`/municipios/${f.tenant}/instalaciones/${f.facility}`);
   await expect(

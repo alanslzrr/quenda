@@ -21,7 +21,7 @@ test("personal details, password recovery and accessible settings use the real A
     .getByRole("button", { name: /Guardar nombre|Gardar nome/ })
     .click();
   await expect(
-    page.getByText(/Nombre actualizado|Nome actualizado/),
+    page.getByRole("main").getByText(/Nombre actualizado|Nome actualizado/),
   ).toBeVisible();
   await page.reload();
   await expect(page.getByLabel(/^(Nombre|Nome)$/)).toHaveValue(
@@ -46,7 +46,9 @@ test("personal details, password recovery and accessible settings use the real A
     .getByRole("button", { name: /Guardar contraseña|Gardar contrasinal/ })
     .click();
   await expect(
-    page.getByText(/Contraseña actualizada|Contrasinal actualizado/),
+    page
+      .getByRole("main")
+      .getByText(/Contraseña actualizada|Contrasinal actualizado/),
   ).toBeVisible();
   await login(page, email, changed);
   await expect(page).toHaveURL(/\/perfil$/);
@@ -122,7 +124,9 @@ test("MFA enrollment, backup sign-in and password change retain usable sessions"
     .getByRole("button", { name: /Cambiar contraseña|Cambiar contrasinal/ })
     .click();
   await expect(
-    page.getByText(/Contraseña actualizada|Contrasinal actualizado/),
+    page
+      .getByRole("main")
+      .getByText(/Contraseña actualizada|Contrasinal actualizado/),
   ).toBeVisible();
   await page
     .getByRole("button", {
@@ -130,9 +134,11 @@ test("MFA enrollment, backup sign-in and password change retain usable sessions"
     })
     .click();
   await expect(
-    page.getByText(
-      /Las demás sesiones se han cerrado|As demais sesións pecháronse/,
-    ),
+    page
+      .getByRole("main")
+      .getByText(
+        /Las demás sesiones se han cerrado|As demais sesións pecháronse/,
+      ),
   ).toBeVisible();
 });
 
@@ -148,7 +154,9 @@ test("email change requires two explicit confirmations and then a new session", 
     .getByRole("button", { name: "Solicitar cambio de correo" })
     .click();
   await expect(
-    page.getByText(/Revisa tu correo actual|Revisa o teu correo actual/),
+    page
+      .getByRole("main")
+      .getByText(/Revisa tu correo actual|Revisa o teu correo actual/),
   ).toBeVisible();
   const mutations: string[] = [];
   page.on("request", (request) => {

@@ -1,12 +1,35 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 
 // One persistent live region lets outcomes be announced even when the control that caused them unmounts.
-let message = { text: "", id: 0 };
+let message = { text: "", id: 0, at: 0 };
 const listeners = new Set<() => void>();
 
 export function announce(text: string) {
-  message = { text, id: message.id + 1 };
+  // A form and the action that navigates away from it may both report one outcome; it is spoken once.
+  const at = Date.now();
+  if (text === message.text && at - message.at < 1000) return;
+  message = { text, id: message.id + 1, at };
   for (const listener of listeners) listener();
+}
+
+let delayed: number | undefined;
+
+/**
+ * Field errors are not live regions themselves: one that is shown, rather than changed, is not announced reliably.
+ * The field's owner calls the returned handler on blur; the error is spoken once per appearance, a moment later so it
+ * does not talk over the field that receives focus next. While focused, the field reads it through aria-describedby.
+ */
+export function useFieldErrorAnnouncement(label: string, error?: string) {
+  const spoken = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!error) spoken.current = undefined;
+  }, [error]);
+  return () => {
+    if (!error || spoken.current === error) return;
+    spoken.current = error;
+    window.clearTimeout(delayed);
+    delayed = window.setTimeout(() => announce(`${label}: ${error}`), 500);
+  };
 }
 
 export function Announcer() {

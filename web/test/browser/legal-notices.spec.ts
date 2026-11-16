@@ -210,7 +210,9 @@ test("an administrator publishes versions of the legal texts and the public page
     .first()
     .fill("Ayuntamiento de prueba");
   await publish.click();
-  await expect(page.getByText("Texto publicado.")).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("Texto publicado."),
+  ).toBeVisible();
   await expect(page.getByText(/Versión publicada: 1/)).toBeVisible();
   // A second save from the same page uses the version it just created.
   await form

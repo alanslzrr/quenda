@@ -38,12 +38,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           }
         />
         <FieldMessage id={hintId} text={description} className={styles.hint} />
-        <FieldMessage
-          id={errorId}
-          text={error}
-          className={styles.error}
-          alert
-        />
+        <FieldMessage id={errorId} text={error} className={styles.error} />
       </div>
     );
   },
