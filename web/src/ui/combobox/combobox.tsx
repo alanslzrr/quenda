@@ -165,6 +165,8 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
     const rootRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const composing = useRef(false);
+    // A pointer that focuses the field selects its text on release: the release would otherwise collapse the selection.
+    const selectOnPointerUp = useRef(false);
     const resetRevision = useRef(0);
     const lastControlledValue = useRef(controlledValue);
     const optionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -172,13 +174,14 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
     const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
     const [requestedOpen, setOpen] = useState(false);
     const open = requestedOpen && !disabled;
-    const [query, setQuery] = useState("");
+    // Null until the user types after opening: the field keeps showing the chosen label, and the list is unfiltered.
+    const [query, setQuery] = useState<string | null>(null);
     const [activeValue, setActiveValue] = useState<string | null>(null);
     // Exit animations can retain old option handlers; actions validate current props.
     const actions = useRef({ disabled, options, onValueChange, open });
     useLayoutEffect(() => { actions.current = { disabled, options, onValueChange, open }; });
     useEffect(() => {
-      if (disabled) { setOpen(false); setQuery(""); setActiveValue(null); }
+      if (disabled) { setOpen(false); setQuery(null); setActiveValue(null); }
     }, [disabled]);
     const selectedValue = controlledValue ?? uncontrolledValue;
     const selectedOption = options.find(
@@ -223,7 +226,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
     }, [selectedValue, reduceMotion, open]);
 
     // Grouped options are listed, and stepped through with the arrow keys, under their headings.
-    const sections = useMemo(() => sectionOptions(filterOptions(options, query)), [options, query]);
+    const sections = useMemo(() => sectionOptions(filterOptions(options, query ?? "")), [options, query]);
     const filteredOptions = useMemo(() => orderedOptions(sections), [sections]);
 
     const activeIndex = filteredOptions.findIndex(option => option.value === activeValue && !option.disabled);
@@ -265,7 +268,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
           !rootRef.current.contains(event.target as Node)
         ) {
           setOpen(false);
-          setQuery("");
+          setQuery(null);
         }
       };
       document.addEventListener("pointerdown", handlePointerDown);
@@ -280,7 +283,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
       resetRevision.current++;
       setUncontrolledValue(option.value);
       latest.onValueChange?.(option.value);
-      setQuery("");
+      setQuery(null);
       setOpen(false);
       inputRef.current?.focus();
     };
@@ -291,7 +294,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
       resetRevision.current++;
       setUncontrolledValue("");
       actions.current.onValueChange?.("");
-      setQuery("");
+      setQuery(null);
       setOpen(true);
       inputRef.current?.focus();
     };
@@ -299,8 +302,10 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
     const openMenu = () => {
       if (disabled) return;
       setOpen(true);
-      setQuery("");
+      setQuery(null);
       setActiveIndex(-1);
+      // The whole label is selected, so typing replaces it and filtering starts from the typed text.
+      inputRef.current?.select();
     };
 
     const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -332,12 +337,14 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
       if (event.key === "Escape" && open) {
         event.preventDefault();
         setOpen(false);
-        setQuery("");
+        setQuery(null);
         return;
       }
     };
 
-    const inputValue = open ? query : (selectedOption?.label ?? "");
+    // Escape or leaving without choosing drops the typed text, so the chosen label comes back.
+    const inputValue =
+      open && query !== null ? query : (selectedOption?.label ?? "");
     const activeOption =
       activeIndex >= 0 ? filteredOptions[activeIndex] : undefined;
     const resetState = useRef({
@@ -390,7 +397,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
           }
           resetRevision.current++;
           setUncontrolledValue(state.defaultValue);
-          setQuery("");
+          setQuery(null);
           setOpen(false);
           setActiveValue(null);
           composing.current = false;
@@ -433,8 +440,8 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
             type="text"
             role="combobox"
             value={inputValue}
-            // While searching, the chosen label stays in place as muted placeholder copy instead of vanishing.
-            placeholder={selectedOption?.label ?? placeholder}
+            // A placeholder is not a lasting label, so the chosen label stays as the value and this is only a prompt.
+            placeholder={placeholder}
             disabled={disabled}
             aria-describedby={[describedBy, hintId].filter(Boolean).join(" ") || undefined}
             aria-expanded={open}
@@ -448,6 +455,17 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
             onFocus={(event) => {
               onFocus?.(event);
               openMenu();
+            }}
+            onMouseDown={(event) => {
+              inputProps.onMouseDown?.(event);
+              selectOnPointerUp.current = document.activeElement !== event.currentTarget;
+            }}
+            onMouseUp={(event) => {
+              inputProps.onMouseUp?.(event);
+              if (!selectOnPointerUp.current) return;
+              selectOnPointerUp.current = false;
+              event.preventDefault();
+              event.currentTarget.select();
             }}
             onClick={(event) => {
               onClick?.(event);
@@ -464,7 +482,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
             onBlur={(event) => {
               composing.current = false;
               setOpen(false);
-              setQuery("");
+              setQuery(null);
               setActiveValue(null);
               onBlur?.(event);
             }}
