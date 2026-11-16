@@ -46,6 +46,8 @@ export function useBranding(tenantId: string | undefined) {
   return useQuery({
     queryKey,
     enabled: !!tenantId,
+    // Read at most every few minutes, like the appearance; the identity editor updates it itself after saving.
+    staleTime: 5 * 60_000,
     // Like the appearance, a missing logo falls back silently and retries only after a rate-limit deadline.
     retryOnMount: canRefetch(client.getQueryState(queryKey)?.error),
     queryFn: async ({ signal }) =>
