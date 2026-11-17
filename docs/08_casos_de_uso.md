@@ -17,6 +17,10 @@
 
 Una persona puede ejercer varias funciones, sin que una amplíe los permisos de otra. Better Auth y el worker forman parte del sistema, no sustituyen al actor que autoriza una actuación. Véanse el [glosario](README.md#terminología), la [autorización por operación](05_seguridad_y_cumplimiento.md#autorización-por-operación), las [capacidades del convenio](07_identidad_y_colaboracion.md#capacidades-del-convenio), los [permisos de privacidad](07_identidad_y_colaboracion.md#permisos-de-privacidad) y la [recuperación controlada](05_seguridad_y_cumplimiento.md#reactivación-y-recuperación).
 
+## Guías ilustradas
+
+Este documento es la especificación de cada caso de uso. Para seguirlos en pantalla, paso a paso y con sus alternativas, consulta las guías por perfil: [ciudadanía](guias/ciudadania.md), [personal municipal](guias/personal-municipal.md), [operación de plataforma](guias/plataforma.md) y [privacidad y operación](guias/privacidad-operacion.md).
+
 ## Respuestas comunes
 
 | Situación | Respuesta y consecuencia |

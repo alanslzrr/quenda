@@ -20,6 +20,15 @@ Quenda gestiona la consulta y reserva de instalaciones deportivas municipales. E
 | [12 Despliegue y operación](12_operacion.md) | Imágenes, despliegue de referencia, workers, auditoría, métricas, copias y recuperación. |
 | [13 Despliegue en la nube](13_despliegue_nube.md) | Infraestructura en OCI, AWS, Azure y GCP, validación local con emuladores, publicación y demostración. |
 
+Los casos de uso también se explican paso a paso, con capturas de pantalla, en guías por perfil:
+
+| Guía | Casos de uso |
+|---|---|
+| [Ciudadanía](guias/ciudadania.md) | CU-01, CU-02, CU-03, CU-07, CU-08, CU-09, CU-11, CU-13, CU-14, CU-15 y CU-19. |
+| [Personal municipal](guias/personal-municipal.md) | CU-04, CU-05, CU-10, CU-12, CU-17, CU-18 y CU-23. |
+| [Operación de plataforma](guias/plataforma.md) | CU-06 y CU-16. |
+| [Privacidad y operación](guias/privacidad-operacion.md) | CU-20, CU-21 y CU-22. |
+
 ## Terminología
 
 | Término | Definición |
