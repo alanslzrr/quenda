@@ -4,7 +4,7 @@ import { usePreferences } from "../../app/preferences-provider";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
 import { AgreementSelect } from "../collaboration/agreement-select";
-import { useMunicipality } from "../municipal/shared";
+import { endpoint, useMunicipality } from "../municipal/shared";
 
 /** The calendar month before the current one, as YYYY-MM. */
 function lastMonth(now = new Date()) {
@@ -99,22 +99,25 @@ export function PeriodFields() {
     </>
   );
 }
+/** Agreements with aggregate reports in which the municipality participates, readable with REPORT_READ. */
+export function useReportAgreementsPath() {
+  return `${endpoint(useMunicipality().id)}/report-agreements`;
+}
 export function MonthlyFields() {
-  const m = useMunicipality();
+  const path = useReportAgreementsPath();
   const [agreement, setAgreement] = useState("");
   const { t } = usePreferences();
   return (
     <>
-      {m.administrator ? (
-        <AgreementSelect value={agreement} onChange={setAgreement} />
-      ) : (
-        <Input
-          name="agreementId"
-          label={t("Identificador del convenio", "Identificador do convenio")}
-          required
-          pattern={uuidPattern}
-        />
-      )}
+      <AgreementSelect
+        value={agreement}
+        onChange={setAgreement}
+        path={path}
+        empty={t(
+          "El municipio no participa en ningún convenio activado con informes conjuntos.",
+          "O municipio non participa en ningún convenio activado con informes conxuntos.",
+        )}
+      />
       <MonthField
         name="month"
         required

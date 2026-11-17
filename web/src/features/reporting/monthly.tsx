@@ -2,12 +2,13 @@ import { useState } from "react";
 import { ActionForm, textField } from "../../app/action";
 import { api } from "../../app/api";
 import { localDateTime } from "../../app/dates";
+import { Disclosure } from "../../app/disclosure";
 import { usePreferences } from "../../app/preferences-provider";
 import { MetricCard } from "../../ui/metric-card/metric-card";
 import { useAgreementOptions } from "../collaboration/agreement-select";
 import { ManagementPage } from "../municipal/page";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
-import { MonthlyFields } from "./fields";
+import { MonthlyFields, useReportAgreementsPath } from "./fields";
 import { allowed, type Monthly } from "./model";
 import styles from "./reporting.module.css";
 export function MonthlyReport() {
@@ -20,10 +21,11 @@ function Report() {
   const [result, setResult] = useState<{
     report: Monthly;
     agreement: string;
+    agreementName: string;
     month: string;
   }>();
-  // Administrators choose from the municipality's agreements; others type an identifier.
-  const { none } = useAgreementOptions(m.administrator);
+  // Report readers choose among the agreements with aggregate reports in which the municipality participates.
+  const { none } = useAgreementOptions(true, useReportAgreementsPath());
   return (
     <ManagementPage
       title={t("Informe conjunto mensual", "Informe conxunto mensual")}
@@ -37,23 +39,24 @@ function Report() {
           label={t("Consultar informe", "Consultar informe")}
           resetOnSuccess={false}
           unavailable={
-            m.administrator && none
+            none
               ? t(
-                  "Los informes conjuntos pertenecen a un convenio. Podrás consultarlos cuando el municipio participe en alguno.",
-                  "Os informes conxuntos pertencen a un convenio. Poderás consultalos cando o municipio participe nalgún.",
+                  "Los informes conjuntos pertenecen a un convenio. Podrás consultarlos cuando el municipio participe en alguno activado con informes conjuntos.",
+                  "Os informes conxuntos pertencen a un convenio. Poderás consultalos cando o municipio participe nalgún activado con informes conxuntos.",
                 )
               : undefined
           }
           submit={async (d) => {
             setResult(undefined);
             const agreement = textField(d, "agreementId").trim().toLowerCase(),
+              agreementName = textField(d, "agreementName"),
               month = textField(d, "month");
             const report = await api<Monthly>(
               `${endpoint(m.id)}/agreements/${encodeURIComponent(agreement)}/reports/${encodeURIComponent(month)}`,
               {},
               locale,
             );
-            setResult({ report, agreement, month });
+            setResult({ report, agreement, agreementName, month });
           }}
         >
           <MonthlyFields />
@@ -64,8 +67,13 @@ function Report() {
           aria-label={t("Resultado del informe", "Resultado do informe")}
         >
           <p>
-            {result.agreement} · {result.month}
+            {result.agreementName} · {result.month}
           </p>
+          <Disclosure
+            title={t("Identificador técnico", "Identificador técnico")}
+          >
+            <code>{result.agreement}</code>
+          </Disclosure>
           {result.report.status === "NOT_PUBLISHABLE" ? (
             <h2>{t("No publicable", "Non publicable")}</h2>
           ) : (
