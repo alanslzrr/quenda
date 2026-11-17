@@ -39,6 +39,8 @@ Sirve para dar de alta un municipio nuevo en la instancia y dejar preparada la i
 
    *El formulario recuerda que el alta crea el municipio y su primera invitación a la vez y que la invitación no concede permisos hasta que se acepta. Bajo «Correo del destinatario» explica que solo puede aceptarla la cuenta cuyo correo verificado sea esa dirección. El botón recuadrado envía el alta.*
 
+   Quenda envía a esa dirección un correo que avisa de la invitación: indica el rol, el municipio y el plazo, y explica que se acepta en **Mi cuenta › Invitaciones** tras entrar o crear una cuenta con ese mismo correo y activar la verificación en dos pasos. El correo es igual exista o no la cuenta y no incluye ningún enlace para aceptar.
+
 5. **Comprueba el registro.** Quenda confirma el alta y muestra los identificadores del municipio y de la invitación. Guarda el del municipio: lo necesitarás para cualquier intervención posterior.
 
    ![Confirmación Municipio registrado. Invitación pendiente de aceptación](../capturas/cu-06/05-alta-registrada.webp)
@@ -85,7 +87,7 @@ Quenda no comprueba si existe una cuenta con ese correo, para no revelar quién 
 
 ![Formulario de alta con «sin.cuenta@demo.test» como correo del destinatario y la explicación sobre la aceptación señalada](../capturas/cu-06/11-correo-sin-cuenta.webp)
 
-*El recuadro marca la explicación del formulario: solo puede aceptar la cuenta cuyo correo verificado sea esa dirección, no hace falta que exista todavía y la respuesta es la misma tenga o no cuenta.*
+*El recuadro marca la explicación del formulario: solo puede aceptar la cuenta cuyo correo verificado sea esa dirección, no hace falta que exista todavía y la respuesta es la misma tenga o no cuenta. Quenda envía a la dirección un aviso con el rol, el ámbito y el plazo, igual en ambos casos y sin enlace de aceptación.*
 
 #### La verificación en dos pasos ya no es reciente
 
@@ -171,17 +173,17 @@ Sirve para cortar de inmediato un acceso que puede estar en manos equivocadas y,
 
    *La tabla muestra a Damián Rial Costa con la concesión Aceptada; la pestaña recuadrada lleva al formulario de retirada.*
 
-2. **Retira su acceso municipal.** Escribe el identificador de cuenta y el motivo, marca la confirmación y pulsa **Retirar acceso por seguridad**.
+2. **Retira su acceso municipal.** En **Persona o invitación**, elige a la persona entre quienes administran o gestionan el municipio o tienen una invitación pendiente; escribe el motivo, marca la confirmación y pulsa **Retirar acceso por seguridad**. Una invitación por correo que nadie ha aceptado aparece por su dirección, y retirarla revoca todas las pendientes a esa dirección en el municipio.
 
    ![Formulario Retirar acceso municipal por seguridad completado](../capturas/cu-16/02-retirada-local.webp)
 
-   *El recuadro gris explica el alcance: retira al momento todos los permisos e invitaciones pendientes de la cuenta en este municipio, incluso los del último administrador, sin suspender la cuenta global, afectar a otros municipios ni cancelar reservas. El botón recuadrado ejecuta la retirada.*
+   *El recuadro gris explica el alcance: retira al momento todos los permisos e invitaciones pendientes de la cuenta en este municipio, incluso los del último administrador, sin suspender la cuenta global, afectar a otros municipios ni cancelar reservas. En «Persona o invitación» está elegido «Damián Rial Costa · damian.rial@demo.test — gestión»; su código queda en «Identificador técnico». El botón recuadrado ejecuta la retirada.*
 
 3. **Comprueba la confirmación.** Quenda muestra «Cambios guardados.» y vacía el formulario.
 
    ![Mensaje Cambios guardados tras la retirada por seguridad](../capturas/cu-16/03-retirada-local-registrada.webp)
 
-   *El mensaje recuadrado, sobre el botón Retirar acceso por seguridad, confirma la retirada. El campo Motivo queda vacío y en estado normal, listo para otra retirada.*
+   *El mensaje recuadrado, sobre el botón Retirar acceso por seguridad, confirma la retirada. La persona y el motivo quedan vacíos y en estado normal, listos para otra retirada.*
 
 4. **Verifica que la concesión ya no está vigente.** En **Gestores**, la concesión figura como **Revocada**.
 
@@ -203,11 +205,11 @@ Sirve para cortar de inmediato un acceso que puede estar en manos equivocadas y,
 
    *La opción recuadrada del menú lateral abre el formulario de suspensión.*
 
-7. **Suspende la cuenta comprometida.** Escribe su identificador y el motivo, marca la confirmación y pulsa **Suspender cuenta**. En el ejemplo se suspende a la persona administradora del Concello de Lousadela, cuyas credenciales se han expuesto.
+7. **Suspende la cuenta comprometida.** En **Identificar la cuenta por**, elige el correo de la cuenta (o su identificador) y escríbelo; añade el motivo, marca la confirmación y pulsa **Suspender cuenta**. En el ejemplo se suspende a la persona administradora del Concello de Lousadela, cuyas credenciales se han expuesto.
 
    ![Formulario Suspender identidad global completado](../capturas/cu-16/07-suspender-identidad.webp)
 
-   *El texto explica que la suspensión revoca todas las sesiones y la autoridad administrativa de la cuenta en la instancia, aunque sea el último responsable, y que conserva reservas e historial. El botón recuadrado ejecuta la suspensión.*
+   *El texto explica que la suspensión revoca todas las sesiones y la autoridad administrativa de la cuenta en la instancia, aunque sea el último responsable, y que conserva reservas e historial. La cuenta se identifica por su correo exacto, «iria.souto@demo.test»: no es una búsqueda, y un correo o identificador desconocido responde igual, sin sugerir cuentas. El botón recuadrado ejecuta la suspensión.*
 
 8. **Comprueba la suspensión.** Quenda confirma que la cuenta está suspendida y que las reservas se conservan.
 
