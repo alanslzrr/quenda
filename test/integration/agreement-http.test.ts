@@ -807,7 +807,7 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
           );
           const invitationPath = `/api/municipalities/${tenant}/manager-invitations`;
           const invited = await client.request(invitationPath, {
-            accountId: managerId,
+            email,
             expiresAt: new Date(Date.now() + 86400000).toISOString(),
             permissions: [{ operation: "REPORT_READ", unitId: null }],
           });

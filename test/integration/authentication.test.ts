@@ -650,7 +650,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           const input = {
             name: "Municipio HTTP",
             timezone: "Europe/Madrid",
-            administratorId: accountId,
+            administratorEmail: email,
             invitationExpiresAt: new Date(Date.now() + 3600000).toISOString(),
           };
           assert.equal(
@@ -729,7 +729,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           const replacement = await client.request(
             `/api/municipalities/${tenantId}/initial-administrator-invitation/replace`,
             {
-              accountId,
+              email,
               expiresAt: input.invitationExpiresAt,
               reason: "Reemisión de prueba",
             },
@@ -893,7 +893,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           );
           const delegated = await client.request(
             `/api/municipalities/${tenantId}/administrator-invitations`,
-            { accountId, expiresAt: input.invitationExpiresAt },
+            { email, expiresAt: input.invitationExpiresAt },
           );
           assert.equal(delegated.statusCode, 201, delegated.body);
           const duplicateAccept = `/api/municipalities/${tenantId}/administrator-invitations/${delegated.json().invitationId}/accept`;
@@ -907,7 +907,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           const managerInvitation = await client.request(
             `/api/municipalities/${tenantId}/manager-invitations`,
             {
-              accountId,
+              email,
               expiresAt: input.invitationExpiresAt,
               permissions: [
                 { operation: "UNIT_BLOCK", unitId: unit.json().unitId },
@@ -1072,7 +1072,6 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           const updatedManager = await client.request(
             `/api/municipalities/${tenantId}/manager-invitations`,
             {
-              accountId,
               expiresAt: input.invitationExpiresAt,
               replacesInvitationId: managerInvitation.json().invitationId,
               reason: "Nuevo ámbito",
@@ -1120,7 +1119,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
             (
               await client.request(
                 `/api/municipalities/${tenantId}/administrator-invitations`,
-                { accountId, expiresAt: input.invitationExpiresAt },
+                { email, expiresAt: input.invitationExpiresAt },
               )
             ).statusCode,
             403,
