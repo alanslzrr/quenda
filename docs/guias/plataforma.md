@@ -11,15 +11,15 @@ Esta guía es para el equipo que opera una instancia de Quenda: los operadores d
 
 Sirve para dar de alta un municipio nuevo en la instancia y dejar preparada la invitación de su primera persona administradora. Lo hace un operador de plataforma cuando el municipio ya ha decidido quién lo administrará. El alta no da al operador acceso a los datos del municipio, y la administración solo queda habilitada cuando la persona invitada acepta.
 
-**Antes de empezar:** necesitas una cuenta con permiso de operador y haber completado la verificación en dos pasos en los últimos cinco minutos. La futura persona administradora debe tener una cuenta con el correo verificado y la verificación en dos pasos activada. **Especificación:** [CU-06](../08_casos_de_uso.md#cu-06--incorporar-un-municipio).
+**Antes de empezar:** necesitas una cuenta con permiso de operador y haber completado la verificación en dos pasos en los últimos cinco minutos. Necesitas el correo electrónico de la futura persona administradora. Para aceptar, esa persona necesitará una cuenta de Quenda con ese correo verificado y la verificación en dos pasos activada; puede crearla después del alta. **Especificación:** [CU-06](../08_casos_de_uso.md#cu-06--incorporar-un-municipio).
 
 ### Paso a paso
 
-1. **La persona destinataria facilita su identificador.** Quenda no ofrece un directorio de usuarios: la futura persona administradora entra en **Mi cuenta › Datos personales** y copia su identificador de cuenta, que aparece al final de la página.
+1. **Confirma el correo de la persona destinataria.** La invitación se dirige a un correo electrónico. Si la futura persona administradora ya usa Quenda, conviene que confirme cuál es el correo con el que accede: lo ve en **Mi cuenta › Datos personales**.
 
-   ![Página Datos personales de Nuria Castro con el identificador de cuenta al final](../capturas/cu-06/01-identificador-destinataria.webp)
+   ![Página Datos personales de Nuria Castro con su correo electrónico señalado](../capturas/cu-06/01-correo-destinataria.webp)
 
-   *La página muestra el nombre y el correo de la cuenta; abajo, recuadrada, la línea «Identificador de cuenta, por si te lo pide soporte» con el código que hay que enviar al operador por un canal de confianza.*
+   *El recuadro marca el correo de la cuenta, «nuria.castro@demo.test». Es la dirección que el operador escribirá en el alta; solo la cuenta que tenga ese correo verificado podrá aceptar la invitación.*
 
 2. **Entra en la administración de plataforma.** Con tu cuenta de operador, abre **Gestión** y pulsa **Administración de plataforma**.
 
@@ -33,11 +33,11 @@ Sirve para dar de alta un municipio nuevo en la instancia y dejar preparada la i
 
    *Se abre la plataforma por la lista de Operadores, donde figura tu propia cuenta como habilitada; la opción del menú que hay que pulsar está recuadrada.*
 
-4. **Rellena el alta y regístrala.** Escribe el nombre del municipio, su zona horaria en formato IANA (por ejemplo `Europe/Madrid`), el identificador de cuenta de la persona destinataria y la fecha y hora límite para aceptar. Marca la casilla de confirmación y pulsa **Registrar municipio**.
+4. **Rellena el alta y regístrala.** Escribe el nombre del municipio, su zona horaria en formato IANA (por ejemplo `Europe/Madrid`), el correo de la persona destinataria y la fecha y hora límite para aceptar. Marca la casilla de confirmación y pulsa **Registrar municipio**.
 
    ![Formulario Incorporar municipio completado para el Concello de Toxeira](../capturas/cu-06/04-formulario-alta.webp)
 
-   *El formulario recuerda que el alta crea el municipio y su primera invitación a la vez y que la invitación no concede permisos hasta que se acepta. El botón recuadrado envía el alta.*
+   *El formulario recuerda que el alta crea el municipio y su primera invitación a la vez y que la invitación no concede permisos hasta que se acepta. Bajo «Correo del destinatario» explica que solo puede aceptarla la cuenta cuyo correo verificado sea esa dirección. El botón recuadrado envía el alta.*
 
 5. **Comprueba el registro.** Quenda confirma el alta y muestra los identificadores del municipio y de la invitación. Guarda el del municipio: lo necesitarás para cualquier intervención posterior.
 
@@ -79,13 +79,13 @@ Quenda solo acepta nombres de zona horaria IANA. Si escribes, por ejemplo, «Mad
 
 *Bajo la casilla de confirmación aparece el aviso recuadrado «Indica una zona horaria IANA válida.», justo encima del botón Registrar municipio. Los datos del formulario se conservan: basta con corregir la zona horaria y volver a pulsar el botón.*
 
-#### El identificador de cuenta no existe
+#### El correo todavía no tiene cuenta
 
-Si el identificador está mal copiado o no corresponde a ninguna cuenta, Quenda rechaza la solicitud sin crear el municipio. Pide de nuevo el identificador a la persona destinataria.
+Quenda no comprueba si existe una cuenta con ese correo, para no revelar quién está registrado: el alta se registra igual. La invitación espera a que alguien cree una cuenta con esa dirección, la verifique y active la verificación en dos pasos; entonces aparece en su **Mi cuenta › Invitaciones**. Si el correo estaba mal escrito, nadie podrá aceptarla: sustitúyela como se explica en «La invitación se envió a un correo equivocado».
 
-![Aviso La solicitud contiene datos no válidos con un identificador de cuenta inexistente](../capturas/cu-06/11-cuenta-inexistente.webp)
+![Formulario de alta con «sin.cuenta@demo.test» como correo del destinatario y la explicación sobre la aceptación señalada](../capturas/cu-06/11-correo-sin-cuenta.webp)
 
-*Con «cuenta-inexistente» en el identificador, el aviso recuadrado, sobre el botón Registrar municipio, indica «La solicitud contiene datos no válidos.» y no se registra nada.*
+*El recuadro marca la explicación del formulario: solo puede aceptar la cuenta cuyo correo verificado sea esa dirección, no hace falta que exista todavía y la respuesta es la misma tenga o no cuenta.*
 
 #### La verificación en dos pasos ya no es reciente
 
@@ -101,9 +101,9 @@ Pulsa **Verificar acceso**, escribe el código de tu aplicación de autenticaci�
 
 *La ventana recuadrada explica que la verificación dura cinco minutos y que ninguna operación se ejecutará automáticamente; también permite usar un código de respaldo.*
 
-#### La invitación se envió a la cuenta equivocada
+#### La invitación se envió a un correo equivocado
 
-Mientras nadie haya aceptado la administración del municipio, puedes sustituir la invitación inicial. Abre **Invitación inicial**, indica el identificador del municipio, la cuenta correcta, una nueva fecha límite y el motivo, confirma y pulsa **Sustituir invitación**.
+Mientras nadie haya aceptado la administración del municipio, puedes sustituir la invitación inicial. Abre **Invitación inicial**, indica el identificador del municipio, el correo correcto, una nueva fecha límite y el motivo, confirma y pulsa **Sustituir invitación**.
 
 ![Formulario Sustituir invitación inicial completado](../capturas/cu-06/14-sustituir-invitacion.webp)
 
@@ -113,9 +113,9 @@ Mientras nadie haya aceptado la administración del municipio, puedes sustituir 
 
 *El mensaje recuadrado confirma la nueva invitación e indica los identificadores del municipio y de la invitación.*
 
-La cuenta que recibió la invitación anterior la ve como **Revocada** y ya no puede aceptarla.
+La cuenta del correo al que se envió la invitación anterior la ve como **Revocada** y ya no puede aceptarla.
 
-![Historial de invitaciones de otra cuenta con la invitación del Concello de Augasantas revocada](../capturas/cu-06/16-invitacion-revocada.webp)
+![Historial de invitaciones de la cuenta del correo equivocado con la invitación del Concello de Augasantas revocada](../capturas/cu-06/16-invitacion-revocada.webp)
 
 *En las invitaciones de esa cuenta solo queda la tarjeta recuadrada, en el historial y marcada como Revocada, sin botón para aceptarla.*
 
@@ -123,17 +123,17 @@ La cuenta que recibió la invitación anterior la ve como **Revocada** y ya no p
 
 Una vez que alguien ha aceptado la administración del municipio, la invitación inicial no se puede sustituir. Los cambios de responsable se hacen desde **Personal y permisos** del propio municipio o, si no queda ningún administrador habilitado, con la recuperación descrita en [CU-16](#cu-16--contener-un-compromiso-y-recuperar-acceso).
 
-![Aviso La operación entra en conflicto con el estado actual al sustituir una invitación aceptada](../capturas/cu-06/17-sustitucion-rechazada.webp)
+![Aviso «Este ayuntamiento ya completó su alta inicial…» al sustituir una invitación aceptada](../capturas/cu-06/17-sustitucion-rechazada.webp)
 
-*Al intentar sustituir la invitación del Concello de Toxeira, ya aceptada, aparece sobre el botón Sustituir invitación el aviso recuadrado «La operación entra en conflicto con el estado actual.».*
+*Al intentar sustituir la invitación del Concello de Toxeira, ya aceptada, aparece sobre el botón Sustituir invitación el aviso recuadrado: el ayuntamiento ya completó su alta inicial y, si no queda ningún responsable habilitado, hay que usar la recuperación de responsable.*
 
 #### La invitación ha vencido
 
-Si la persona destinataria no acepta antes de la fecha límite, la invitación deja de poder aceptarse y no concede ningún permiso. Como nadie ha aceptado todavía, el operador puede emitir una nueva con **Invitación inicial**, igual que en el caso de la cuenta equivocada.
+Si la persona destinataria no acepta antes de la fecha límite, la invitación deja de poder aceptarse y no concede ningún permiso. Como nadie ha aceptado todavía, el operador puede emitir una nueva con **Invitación inicial**, igual que en el caso del correo equivocado.
 
 #### La invitación la presenta otra cuenta
 
-Solo puede aceptar la invitación la cuenta a la que va dirigida. Si otra cuenta la presenta, Quenda la rechaza y no le concede ningún permiso.
+Solo puede aceptar la invitación la cuenta cuyo correo verificado coincide con la dirección invitada. Si otra cuenta la presenta, Quenda la rechaza y no le concede ningún permiso.
 
 #### El operador intenta entrar en el municipio
 
@@ -181,7 +181,7 @@ Sirve para cortar de inmediato un acceso que puede estar en manos equivocadas y,
 
    ![Mensaje Cambios guardados tras la retirada por seguridad](../capturas/cu-16/03-retirada-local-registrada.webp)
 
-   *El mensaje recuadrado, sobre el botón Retirar acceso por seguridad, confirma la retirada. El campo Motivo aparece vacío y marcado en rojo porque el formulario queda listo para otra retirada.*
+   *El mensaje recuadrado, sobre el botón Retirar acceso por seguridad, confirma la retirada. El campo Motivo queda vacío y en estado normal, listo para otra retirada.*
 
 4. **Verifica que la concesión ya no está vigente.** En **Gestores**, la concesión figura como **Revocada**.
 
@@ -231,11 +231,11 @@ Si la contención deja a un municipio sin ningún administrador habilitado, como
 
     *La opción recuadrada lleva al formulario de recuperación.*
 
-11. **Invita al sustituto.** Indica el identificador del municipio y la cuenta del sustituto, la fecha límite para aceptar, el motivo y la referencia de la verificación de autoridad. Confirma y pulsa **Invitar a un sustituto**.
+11. **Invita al sustituto.** Indica el identificador del municipio y el correo de la persona sustituta, la fecha límite para aceptar, el motivo y la referencia de la verificación de autoridad. Confirma y pulsa **Invitar a un sustituto**.
 
     ![Formulario Recuperar responsable municipal completado](../capturas/cu-16/11-invitar-sustituta.webp)
 
-    *El texto recuerda que solo sirve para municipios sin administradores habilitados y que no se restauran permisos antiguos. La referencia de verificación (un decreto de alcaldía en el ejemplo) queda registrada; el botón recuadrado envía la invitación.*
+    *El texto recuerda que solo sirve para municipios sin administradores habilitados y que no se restauran permisos antiguos. La invitación va al correo de la persona sustituta («rocio.tella@demo.test»), y solo podrá aceptarla la cuenta con ese correo verificado. La referencia de verificación (un decreto de alcaldía en el ejemplo) queda registrada; el botón recuadrado envía la invitación.*
 
 12. **Comprueba la invitación.** Quenda confirma que la invitación está registrada y que el destinatario debe aceptarla.
 
@@ -279,9 +279,9 @@ Una cuenta suspendida solo vuelve a funcionar con la recuperación asistida, que
 
 La recuperación de responsable solo funciona cuando no queda ningún administrador habilitado. Si ya hay uno, Quenda la rechaza: el relevo se hace desde **Personal y permisos** del municipio.
 
-![Aviso La operación entra en conflicto con el estado actual en Recuperar responsable municipal](../capturas/cu-16/17-recuperacion-rechazada.webp)
+![Aviso «No se puede recuperar el responsable…» en Recuperar responsable municipal](../capturas/cu-16/17-recuperacion-rechazada.webp)
 
-*Tras la aceptación de la persona sustituta, un segundo intento de recuperación muestra, sobre el botón Invitar a un sustituto, el aviso recuadrado «La operación entra en conflicto con el estado actual.».*
+*Tras la aceptación de la persona sustituta, un segundo intento de recuperación muestra, sobre el botón Invitar a un sustituto, el aviso recuadrado: no se puede recuperar el responsable porque el ayuntamiento ya tiene uno habilitado o todavía no ha completado su alta inicial.*
 
 #### Las credenciales comprometidas no se han sustituido
 
