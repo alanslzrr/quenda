@@ -56,7 +56,7 @@ export async function publicLogo(
 const validVersion = (value: number) =>
   Number.isInteger(value) && value >= 1 && value < 2147483647;
 
-/** Runs one branding change as the municipality's administrator; a moved version is a conflict. */
+/** Runs one branding change as the municipality's administrator; a moved version is stale. */
 async function change(
   pool: Pool,
   actor: AuthenticatedAccount,
@@ -69,7 +69,7 @@ async function change(
     async (client) => {
       await requireAdministrator(client, actor);
       const version = await write(client);
-      if (!version) throw new HttpError("CONFLICT");
+      if (!version) throw new HttpError("STALE_VERSION");
       return publicBranding(client, tenantId);
     },
   );
