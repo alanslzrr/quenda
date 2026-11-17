@@ -154,12 +154,13 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 
 **Flujo principal**
 1. El operador registra la configuración municipal y el correo del destinatario de la primera invitación administrativa.
-2. Quenda valida el formato del correo, lo normaliza (sin espacios ni mayúsculas) y persiste el municipio y la invitación, sin conceder todavía el permiso. La respuesta es la misma exista o no una cuenta con ese correo.
+2. Quenda valida el formato del correo, lo normaliza (sin espacios ni mayúsculas) y persiste el municipio y la invitación, sin conceder todavía el permiso. La respuesta es la misma exista o no una cuenta con ese correo. Quenda envía a esa dirección un aviso con el municipio, el rol y el plazo, igual en ambos casos y sin enlace de aceptación.
 3. El destinatario inicia sesión con la cuenta cuyo correo verificado es esa dirección, encuentra la invitación en «Mi cuenta › Invitaciones» y la acepta con MFA. Quenda habilita su administración municipal.
 
 **Alternativas y excepciones**
 - Datos inválidos, incluido un correo mal formado, impiden completar el alta.
-- Si aún no existe una cuenta con ese correo, el destinatario puede crearla y verificarla antes del vencimiento; el alta no lo revela al operador.
+- Si aún no existe una cuenta con ese correo, el destinatario puede crearla y verificarla antes del vencimiento; el alta no lo revela al operador. El aviso explica cómo hacerlo y enlaza a «Mi cuenta › Invitaciones».
+- Si la invitación se sustituye o revoca antes del envío, o vence, el aviso pendiente no se envía.
 - Una invitación vencida, revocada, ya aceptada o presentada por una cuenta cuyo correo verificado no coincide no concede autoridad. Una cuenta con el correo sin verificar no la ve ni puede aceptarla.
 - Si el destinatario cambia de correo antes de aceptar, la invitación sigue a la dirección: la ve y acepta la cuenta que la tenga verificada en ese momento.
 - El alta no concede al operador acceso general a los datos municipales.
@@ -276,7 +277,7 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 - **Precondiciones:** facultad para la operación y MFA reciente, tanto al delegar o retirar permisos como al aceptar una invitación.
 
 **Flujo principal**
-1. El emisor indica el correo del destinatario, los permisos, el ámbito y la vigencia en «Personal y permisos › Invitar». Quenda normaliza y valida el correo y registra la invitación sin activar los permisos. La respuesta es la misma exista o no una cuenta con ese correo.
+1. El emisor indica el correo del destinatario, los permisos, el ámbito y la vigencia en «Personal y permisos › Invitar». Quenda normaliza y valida el correo y registra la invitación sin activar los permisos. La respuesta es la misma exista o no una cuenta con ese correo, y Quenda envía a esa dirección un aviso con el rol, el municipio y el plazo, sin enlace de aceptación.
 2. El destinatario la encuentra en «Mi cuenta › Invitaciones» con la cuenta cuyo correo verificado coincide y la acepta. Quenda comprueba de nuevo el correo verificado, la identidad, el MFA reciente y la vigencia, y concede solo el alcance invitado.
 3. Para un relevo, el responsable solicita la retirada cuando otro está habilitado con permiso indefinido.
 
@@ -284,7 +285,8 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 - Invitación inválida o ajena: no se conceden permisos. Ampliarlos exige nueva aceptación.
 - Una cuenta con otro correo, o con el correo sin verificar, no ve la invitación ni puede aceptarla. Si el correo de una cuenta cambia antes de aceptar, la invitación sigue a la dirección, no a la cuenta.
 - El historial de invitaciones muestra el correo invitado mientras está pendiente y la cuenta que la aceptó después. Las invitaciones anteriores a las invitaciones por correo siguen dirigidas a su cuenta y pueden aceptarse.
-- Sustituir los permisos de un gestor no pide correo: la nueva invitación se dirige al titular de la concesión sustituida.
+- Sustituir los permisos de un gestor no pide correo: la nueva invitación se dirige al titular de la concesión sustituida y no envía aviso por correo.
+- Revocar una invitación antes de que se envíe su aviso lo cancela; una invitación vencida no se avisa.
 - Un operador invita a otro operador o concede privacidad global del mismo modo, por correo: la respuesta es igual exista o no una cuenta con esa dirección y solo la acepta la cuenta con ese correo verificado. Su propio correo se rechaza en la invitación de operador.
 - Si el sustituto ya dispone del permiso adecuado, no necesita otra invitación; uno temporal aceptado puede hacerse indefinido expresamente, con motivo.
 - Retirar al último responsable ordinario se rechaza hasta resolver el relevo. La seguridad se trata en CU-16.
@@ -370,7 +372,7 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 **Alternativas y excepciones**
 - La retirada local no bloquea el uso personal de otros municipios.
 - La seguridad puede dejar temporalmente al ámbito sin responsable; no espera un relevo.
-- Sin administrador habilitado, un operador invita al correo de un sustituto tras verificar autoridad («Invitar a un sustituto»). La respuesta no indica si existe una cuenta con ese correo. Solo la cuenta cuyo correo verificado coincida al aceptar, con MFA, puede aceptarla; el correo del propio operador se rechaza y el operador emisor nunca puede aceptarla.
+- Sin administrador habilitado, un operador invita al correo de un sustituto tras verificar autoridad («Invitar a un sustituto»). La respuesta no indica si existe una cuenta con ese correo. Solo la cuenta cuyo correo verificado coincida al aceptar, con MFA, puede aceptarla; el correo del propio operador se rechaza y el operador emisor nunca puede aceptarla. Quenda envía a esa dirección un aviso de la invitación, el mismo exista o no la cuenta y sin enlace de aceptación; una nueva recuperación que sustituya a la anterior cancela el aviso pendiente.
 - La retirada local por seguridad también revoca las invitaciones pendientes del municipio dirigidas al correo verificado de la cuenta retirada.
 - Una invitación por correo que nadie ha aceptado se retira por su dirección: se revocan con motivo todas las pendientes a esa dirección en el municipio, sin consultar ninguna cuenta.
 - Un correo desconocido en la suspensión global responde igual que un identificador desconocido; no se ofrecen coincidencias parciales ni listados de cuentas. La suspensión también retira las invitaciones pendientes dirigidas al correo verificado de la cuenta.
