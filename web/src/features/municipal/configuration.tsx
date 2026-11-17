@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { textField } from "../../app/action";
 import { ApiError } from "../../app/api";
+import { DateField } from "../../app/date-fields";
 import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
 import { Button } from "../../ui/button/button";
@@ -238,12 +239,11 @@ function CalendarForm({
           <div className={styles.row}>
             {exception ? (
               <>
-                <Input
-                  type="date"
+                <DateField
                   required
                   label={t("Fecha", "Data")}
                   value={r.date}
-                  onChange={(e) => patch({ date: e.target.value })}
+                  onValueChange={(date) => patch({ date })}
                 />
                 <Select
                   placeholder={t(

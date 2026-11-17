@@ -9,6 +9,7 @@ import {
   useFieldErrorAnnouncement,
 } from "../../app/announce";
 import { ApiError, api, type Municipality } from "../../app/api";
+import { DateField, DateTimeField } from "../../app/date-fields";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
 import { BackLink, RowLink } from "../../app/link-button";
@@ -143,13 +144,12 @@ function AgendaDay({
   return (
     <>
       <div className={styles.filters}>
-        <Input
-          type="date"
+        <DateField
           label={t("Fecha de la agenda", "Data da axenda")}
           value={date}
           required
           description={`${t("Hora del municipio", "Hora do municipio")}: ${timeZone}`}
-          onChange={(e) => setDate(e.target.value)}
+          onValueChange={setDate}
         />
         <Select
           placeholder={t("Selecciona una opción", "Selecciona unha opción")}
@@ -357,13 +357,11 @@ function LocalInstant({
   const choices = localInstants(local, timeZone);
   return (
     <>
-      <Input
-        type="datetime-local"
+      <DateTimeField
         required
         label={label}
         value={local}
-        onChange={(e) => {
-          const value = e.target.value;
+        onValueChange={(value) => {
           setLocal(value);
           const options = localInstants(value, timeZone);
           const next = options.length === 1 ? (options[0]?.utc ?? "") : "";
@@ -852,13 +850,12 @@ function RelocationSlots({
   return (
     <>
       <div className={styles.row}>
-        <Input
-          type="date"
+        <DateField
           required
           label={t("Nueva fecha", "Nova data")}
           value={date}
-          onChange={(e) => {
-            setDate(e.target.value);
+          onValueChange={(next) => {
+            setDate(next);
             setSlot("");
           }}
         />
