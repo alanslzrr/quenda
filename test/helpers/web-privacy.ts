@@ -48,7 +48,7 @@ export async function seedPrivacyBrowser(
     domain,
     actor(operator ?? f.accountId),
     {
-      accountId: f.accountId,
+      email: f.email,
       expiresAt,
       permissions: ["PRIVACY_READ", "PRIVACY_EXECUTE"],
       reason: "Synthetic browser grant",
