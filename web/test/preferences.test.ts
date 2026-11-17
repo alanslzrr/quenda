@@ -81,3 +81,23 @@ test("calendar labels retain Galician month and weekday names without browser lo
   );
   assert.equal(calendarLabel(date, "es", "weekday"), "jue");
 });
+
+test("system preference remains distinct from the municipal default", () => {
+  let stored = "";
+  saveVisitorPreferences(
+    {
+      setItem: (_key, value) => {
+        stored = value;
+      },
+    },
+    { locale: "es", theme: "system" },
+  );
+  assert.deepEqual(readVisitorPreferences({ getItem: () => stored }, ["es"]), {
+    locale: "es",
+    theme: "system",
+  });
+  assert.equal(
+    readVisitorPreferences({ getItem: () => "{}" }, ["es"]).theme,
+    null,
+  );
+});
