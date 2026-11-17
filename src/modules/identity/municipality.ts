@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { DatabaseError, type Pool } from "pg";
+import { DatabaseError, type Pool, type PoolClient } from "pg";
 import { defaultIdempotencyRetentionSeconds } from "../../config.ts";
 import { command } from "../../database/command.ts";
 import { idempotentCommand } from "../../database/idempotency.ts";
@@ -7,6 +7,18 @@ import { HttpError } from "../../http/errors.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
 import { requireOperator } from "./operator.ts";
 import { requireRecentMfa } from "./reauthentication.ts";
+
+/** Tells a refused operator command on an unknown municipality from one refused by its state. */
+export async function municipalityExists(
+  client: PoolClient,
+  tenantId: string,
+): Promise<boolean> {
+  const result = await client.query(
+    "SELECT 1 FROM domain.municipality WHERE id=$1",
+    [tenantId],
+  );
+  return Boolean(result.rowCount);
+}
 
 export interface MunicipalityInput {
   name: string;
@@ -194,7 +206,12 @@ export async function replaceInitialAdministratorInvitation(
           "SELECT domain.replace_initial_invitation($1,$2,$3,$4) AS allowed",
           [input.accountId, input.expiresAt, reason, invitationId],
         );
-        if (!result.rows[0]?.allowed) throw new HttpError("CONFLICT");
+        if (!result.rows[0]?.allowed)
+          throw new HttpError(
+            (await municipalityExists(client, tenantId))
+              ? "MUNICIPALITY_ALREADY_INITIALIZED"
+              : "NOT_FOUND",
+          );
         return { tenantId, invitationId };
       },
     );

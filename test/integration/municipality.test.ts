@@ -601,7 +601,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             initial.tenantId,
             replacement,
           ),
-          { code: "CONFLICT" },
+          { code: "MUNICIPALITY_ALREADY_INITIALIZED" },
         );
         await revokeMunicipalAccessForSecurity(
           domain,
@@ -617,7 +617,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             initial.tenantId,
             replacement,
           ),
-          { code: "CONFLICT" },
+          { code: "MUNICIPALITY_ALREADY_INITIALIZED" },
         );
         await assert.rejects(
           transaction(
