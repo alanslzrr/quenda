@@ -153,13 +153,15 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 - **Precondiciones:** operador habilitado y MFA verificado hace menos de cinco minutos.
 
 **Flujo principal**
-1. El operador registra la configuración municipal y el destinatario de la primera invitación administrativa.
-2. Quenda valida y persiste el municipio y la invitación, sin conceder todavía el permiso.
-3. El destinatario se autentica y acepta la invitación vigente con MFA. Quenda habilita su administración municipal.
+1. El operador registra la configuración municipal y el correo del destinatario de la primera invitación administrativa.
+2. Quenda valida el formato del correo, lo normaliza (sin espacios ni mayúsculas) y persiste el municipio y la invitación, sin conceder todavía el permiso. La respuesta es la misma exista o no una cuenta con ese correo.
+3. El destinatario inicia sesión con la cuenta cuyo correo verificado es esa dirección, encuentra la invitación en «Mi cuenta › Invitaciones» y la acepta con MFA. Quenda habilita su administración municipal.
 
 **Alternativas y excepciones**
-- Datos inválidos impiden completar el alta.
-- Una invitación vencida, revocada o presentada por otra cuenta no concede autoridad.
+- Datos inválidos, incluido un correo mal formado, impiden completar el alta.
+- Si aún no existe una cuenta con ese correo, el destinatario puede crearla y verificarla antes del vencimiento; el alta no lo revela al operador.
+- Una invitación vencida, revocada, ya aceptada o presentada por una cuenta cuyo correo verificado no coincide no concede autoridad. Una cuenta con el correo sin verificar no la ve ni puede aceptarla.
+- Si el destinatario cambia de correo antes de aceptar, la invitación sigue a la dirección: la ve y acepta la cuenta que la tenga verificada en ese momento.
 - El alta no concede al operador acceso general a los datos municipales.
 
 **Resultado esperado:** municipio configurado; su primer administrador queda habilitado únicamente tras aceptar.
@@ -274,12 +276,15 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 - **Precondiciones:** facultad para la operación y MFA reciente, tanto al delegar o retirar permisos como al aceptar una invitación.
 
 **Flujo principal**
-1. El emisor identifica cuenta, permisos, ámbito y vigencia. Quenda registra la invitación sin activar los permisos.
-2. El destinatario acepta. Quenda verifica identidad y vigencia y concede solo el alcance invitado.
+1. El emisor indica el correo del destinatario, los permisos, el ámbito y la vigencia en «Personal y permisos › Invitar». Quenda normaliza y valida el correo y registra la invitación sin activar los permisos. La respuesta es la misma exista o no una cuenta con ese correo.
+2. El destinatario la encuentra en «Mi cuenta › Invitaciones» con la cuenta cuyo correo verificado coincide y la acepta. Quenda comprueba de nuevo el correo verificado, la identidad, el MFA reciente y la vigencia, y concede solo el alcance invitado.
 3. Para un relevo, el responsable solicita la retirada cuando otro está habilitado con permiso indefinido.
 
 **Alternativas y excepciones**
 - Invitación inválida o ajena: no se conceden permisos. Ampliarlos exige nueva aceptación.
+- Una cuenta con otro correo, o con el correo sin verificar, no ve la invitación ni puede aceptarla. Si el correo de una cuenta cambia antes de aceptar, la invitación sigue a la dirección, no a la cuenta.
+- El historial de invitaciones muestra el correo invitado mientras está pendiente y la cuenta que la aceptó después. Las invitaciones anteriores a las invitaciones por correo siguen dirigidas a su cuenta y pueden aceptarse.
+- Sustituir los permisos de un gestor no pide correo: la nueva invitación se dirige al titular de la concesión sustituida.
 - Si el sustituto ya dispone del permiso adecuado, no necesita otra invitación; uno temporal aceptado puede hacerse indefinido expresamente, con motivo.
 - Retirar al último responsable ordinario se rechaza hasta resolver el relevo. La seguridad se trata en CU-16.
 - Retirar al administrador invalida las invitaciones pendientes de su concesión; recuperar el rol no las reactiva.
@@ -364,7 +369,8 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 **Alternativas y excepciones**
 - La retirada local no bloquea el uso personal de otros municipios.
 - La seguridad puede dejar temporalmente al ámbito sin responsable; no espera un relevo.
-- Sin administrador habilitado, un operador invita a un sustituto tras verificar autoridad; este acepta con correo verificado y MFA.
+- Sin administrador habilitado, un operador invita al correo de un sustituto tras verificar autoridad («Invitar a un sustituto»). La respuesta no indica si existe una cuenta con ese correo. Solo la cuenta cuyo correo verificado coincida al aceptar, con MFA, puede aceptarla; el correo del propio operador se rechaza y el operador emisor nunca puede aceptarla.
+- La retirada local por seguridad también revoca las invitaciones pendientes del municipio dirigidas al correo verificado de la cuenta retirada.
 - Sin operadores habilitados, la recuperación exige mantenimiento separado. Recuperar una cuenta no restituye permisos antiguos y exige sustituir las credenciales comprometidas.
 
 **Resultado esperado:** acceso comprometido contenido y recuperación trazable, sin ampliar permisos.

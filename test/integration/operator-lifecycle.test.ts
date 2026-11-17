@@ -316,7 +316,7 @@ test("operator invitations, handover and controlled recovery preserve global aut
           const municipal = await createMunicipality(domain, actor("first"), {
             name: "Pending initial delegation",
             timezone: "Europe/Madrid",
-            administratorId: "third",
+            administratorEmail: "third@example.test",
             invitationExpiresAt: expiresAt(),
           });
           await revokeOperator(

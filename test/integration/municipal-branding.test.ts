@@ -58,7 +58,7 @@ test("municipal name and logo are administrator-only, validated, re-encoded, ver
       const item = await createMunicipality(domain, actor("operator"), {
         name,
         timezone: "Europe/Madrid",
-        administratorId: "admin",
+        administratorEmail: "admin@example.test",
         invitationExpiresAt: new Date(Date.now() + 3600000).toISOString(),
       });
       await acceptAdministratorInvitation(

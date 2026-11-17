@@ -18,7 +18,8 @@ export async function listMunicipalManagerInvitations(
       await requireAdministrator(client, actor);
       const result = await client.query<{
         id: string;
-        account_id: string;
+        account_id: string | null;
+        recipient_email: string | null;
         invited_by: string;
         expires_at: Date;
         role_expires_at: Date | null;
@@ -27,7 +28,7 @@ export async function listMunicipalManagerInvitations(
         replaces_invitation_id: string | null;
         permissions: ManagerInvitationInput["permissions"];
       }>(
-        `SELECT i.id,i.account_id,i.invited_by,i.expires_at,i.role_expires_at,i.accepted_at,
+        `SELECT i.id,i.account_id,i.recipient_email,i.invited_by,i.expires_at,i.role_expires_at,i.accepted_at,
       coalesce(g.revoked_at,i.revoked_at) AS revoked_at,i.replaces_invitation_id,
       (SELECT jsonb_agg(jsonb_build_object('operation',p.operation,'unitId',p.unit_id) ORDER BY p.operation,p.unit_id)
         FROM domain.manager_permission p WHERE p.tenant_id=i.tenant_id AND p.invitation_id=i.id) AS permissions
@@ -37,20 +38,22 @@ export async function listMunicipalManagerInvitations(
         [tenantId, after],
       );
       const page = result.rows.slice(0, 20);
+      // An address-only invitation has no account to label until accepted.
       const labels = await accountLabels(
         client,
         page.flatMap((row) => [
-          row.account_id,
-          ...("invited_by" in row && typeof row.invited_by === "string"
-            ? [row.invited_by]
-            : []),
+          ...(row.account_id ? [row.account_id] : []),
+          row.invited_by,
         ]),
       );
       return {
         items: page.map((row) => ({
           invitationId: row.id,
           accountId: row.account_id,
-          accountLabel: labels.get(row.account_id) ?? null,
+          recipientEmail: row.recipient_email,
+          accountLabel: row.account_id
+            ? (labels.get(row.account_id) ?? null)
+            : null,
           invitedBy: row.invited_by,
           invitedByLabel: labels.get(row.invited_by) ?? null,
           expiresAt: row.expires_at.toISOString(),

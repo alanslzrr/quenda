@@ -41,7 +41,7 @@ test("municipal appearance is constrained, isolated, versioned and audited atomi
       const item = await createMunicipality(domain, actor("operator"), {
         name: "Municipio",
         timezone: "Europe/Madrid",
-        administratorId: "admin",
+        administratorEmail: "admin@example.test",
         invitationExpiresAt: new Date(Date.now() + 3600000).toISOString(),
       });
       await acceptAdministratorInvitation(

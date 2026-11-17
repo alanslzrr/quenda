@@ -170,7 +170,7 @@ test("municipal agenda filters before paging, isolates grants and preserves occu
         };
       };
       const invitation = await inviteManager(domain, actor(f.email), f.tenant, {
-        accountId: actor(other.email).accountId,
+        email: other.email,
         expiresAt: new Date(Date.now() + 86400000).toISOString(),
         permissions: [
           { operation: "RESERVATION_READ", unitId: f.unit },

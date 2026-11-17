@@ -5,6 +5,7 @@ import { command } from "../../database/command.ts";
 import { idempotentCommand } from "../../database/idempotency.ts";
 import { HttpError } from "../../http/errors.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
+import { invitationAddress } from "./invitation-address.ts";
 import { requireOperator } from "./operator.ts";
 import { requireRecentMfa } from "./reauthentication.ts";
 
@@ -23,7 +24,7 @@ export async function municipalityExists(
 export interface MunicipalityInput {
   name: string;
   timezone: string;
-  administratorId: string;
+  administratorEmail: string;
   invitationExpiresAt: string;
 }
 
@@ -35,10 +36,11 @@ export async function createMunicipality(
   retentionSeconds = defaultIdempotencyRetentionSeconds,
 ) {
   const name = input.name.trim();
+  // The first administrator is invited by address; no account is looked up.
+  const administratorEmail = invitationAddress(input.administratorEmail);
   if (
     !name ||
     name.length > 200 ||
-    !input.administratorId ||
     !Number.isFinite(Date.parse(input.invitationExpiresAt))
   )
     throw new HttpError("INVALID_INPUT");
@@ -61,6 +63,7 @@ export async function createMunicipality(
         input: {
           ...input,
           name,
+          administratorEmail,
           invitationExpiresAt: new Date(
             input.invitationExpiresAt,
           ).toISOString(),
@@ -80,11 +83,11 @@ export async function createMunicipality(
             [tenantId, name, input.timezone],
           );
           await client.query(
-            "INSERT INTO domain.administrator_invitation (tenant_id, id, account_id, invited_by, expires_at) VALUES ($1, $2, $3, $4, $5)",
+            "INSERT INTO domain.administrator_invitation (tenant_id, id, recipient_email, invited_by, expires_at) VALUES ($1, $2, $3, $4, $5)",
             [
               tenantId,
               invitationId,
-              input.administratorId,
+              administratorEmail,
               actor.accountId,
               input.invitationExpiresAt,
             ],
@@ -94,13 +97,12 @@ export async function createMunicipality(
             "INVITE_ADMINISTRATOR",
           ]) {
             await client.query(
-              "INSERT INTO domain.identity_event (tenant_id, id, actor_id, operation, subject_id, invitation_id) VALUES ($1, $2, $3, $4, $5, $6)",
+              "INSERT INTO domain.identity_event (tenant_id, id, actor_id, operation, subject_id, invitation_id) VALUES ($1, $2, $3, $4, NULL, $5)",
               [
                 tenantId,
                 randomUUID(),
                 actor.accountId,
                 operation,
-                input.administratorId,
                 invitationId,
               ],
             );
@@ -111,12 +113,17 @@ export async function createMunicipality(
       },
     ).then(({ result }) => result);
   } catch (error) {
-    if (error instanceof DatabaseError && error.code === "23503")
+    if (error instanceof DatabaseError && error.code === "23514")
       throw new HttpError("INVALID_INPUT");
     throw error;
   }
 }
 
+/**
+ * Only the account the invitation is addressed to can accept it: the bound
+ * account of an older invitation, or the account whose current verified email
+ * equals the address. The address is compared here, not when it was sent.
+ */
 export async function acceptAdministratorInvitation(
   pool: Pool,
   actor: AuthenticatedAccount,
@@ -134,8 +141,8 @@ export async function acceptAdministratorInvitation(
       );
       if (!authority.rows[0]?.allowed) throw new HttpError("NOT_FOUND");
       const invitation = await client.query<{ valid: boolean }>(
-        "SELECT expires_at > now() AND (role_expires_at IS NULL OR role_expires_at > now()) AND accepted_at IS NULL AND revoked_at IS NULL AS valid FROM domain.administrator_invitation WHERE tenant_id = $1 AND id = $2 AND account_id = $3 FOR UPDATE",
-        [tenantId, invitationId, actor.accountId],
+        "SELECT expires_at > now() AND (role_expires_at IS NULL OR role_expires_at > now()) AND accepted_at IS NULL AND revoked_at IS NULL AS valid FROM domain.administrator_invitation WHERE tenant_id = $1 AND id = $2 AND domain.invitation_addressed_to_current(account_id, recipient_email) FOR UPDATE",
+        [tenantId, invitationId],
       );
       if (!invitation.rows[0]?.valid) throw new HttpError("NOT_FOUND");
       await client.query(
@@ -181,8 +188,9 @@ export async function replaceInitialAdministratorInvitation(
   pool: Pool,
   actor: AuthenticatedAccount,
   tenantId: string,
-  input: { accountId: string; expiresAt: string; reason: string },
+  input: { email: string; expiresAt: string; reason: string },
 ) {
+  const recipient = invitationAddress(input.email);
   const reason = input.reason.trim();
   if (
     !reason ||
@@ -204,7 +212,7 @@ export async function replaceInitialAdministratorInvitation(
         if (!future.rows[0]?.valid) throw new HttpError("INVALID_INPUT");
         const result = await client.query<{ allowed: boolean }>(
           "SELECT domain.replace_initial_invitation($1,$2,$3,$4) AS allowed",
-          [input.accountId, input.expiresAt, reason, invitationId],
+          [recipient, input.expiresAt, reason, invitationId],
         );
         if (!result.rows[0]?.allowed)
           throw new HttpError(
@@ -216,7 +224,10 @@ export async function replaceInitialAdministratorInvitation(
       },
     );
   } catch (error) {
-    if (error instanceof DatabaseError && error.code === "23503")
+    if (
+      error instanceof DatabaseError &&
+      ["22023", "23514"].includes(error.code ?? "")
+    )
       throw new HttpError("INVALID_INPUT");
     throw error;
   }

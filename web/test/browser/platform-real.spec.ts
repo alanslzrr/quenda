@@ -266,8 +266,8 @@ test("municipal onboarding replacement security suspension and recovery preserve
       .getByLabel(/Zona horaria (del municipio|do municipio)/)
       .fill("Europe/Madrid");
     await page
-      .getByLabel(/Identificador de (cuenta|conta)/)
-      .fill(f.recipient.accountId);
+      .getByLabel(/Correo del destinatario|Correo do destinatario/)
+      .fill(f.recipient.email);
     await deadline(page);
     const created = page.waitForResponse(
       (r) =>
@@ -287,8 +287,8 @@ test("municipal onboarding replacement security suspension and recovery preserve
       .getByLabel(/Identificador (del municipio|do municipio)/)
       .fill(tenantId);
     await page
-      .getByLabel(/Identificador de (cuenta|conta)/)
-      .fill(f.recipient.accountId);
+      .getByLabel(/Correo del destinatario|Correo do destinatario/)
+      .fill(f.recipient.email);
     await deadline(page);
     await page
       .getByLabel("Motivo", { exact: true })
@@ -319,8 +319,8 @@ test("municipal onboarding replacement security suspension and recovery preserve
       .getByLabel(/Identificador (del municipio|do municipio)/)
       .fill(tenantId);
     await page
-      .getByLabel(/Identificador de (cuenta|conta)/)
-      .fill(f.recipient.accountId);
+      .getByLabel(/Correo del destinatario|Correo do destinatario/)
+      .fill(f.recipient.email);
     await deadline(page);
     await page
       .getByLabel("Motivo", { exact: true })
@@ -348,8 +348,8 @@ test("municipal onboarding replacement security suspension and recovery preserve
       .getByLabel(/Identificador (del municipio|do municipio)/)
       .fill(tenantId);
     await page
-      .getByLabel(/Identificador de (cuenta|conta)/)
-      .fill(f.replacement.accountId);
+      .getByLabel(/Correo del destinatario|Correo do destinatario/)
+      .fill(f.replacement.email);
     await deadline(page);
     await page
       .getByLabel("Motivo", { exact: true })

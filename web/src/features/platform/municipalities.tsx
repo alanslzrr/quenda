@@ -7,12 +7,12 @@ import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { Reason } from "../municipal/shared";
 import {
-  AccountField,
+  EmailField,
   InvitationDeadline,
   MunicipalityField,
   Receipt,
 } from "./fields";
-import { invitationDates } from "./model";
+import { continuityBody, municipalityBody } from "./model";
 import { PlatformForm } from "./shared";
 
 type Result = { tenantId: string; invitationId: string };
@@ -62,12 +62,7 @@ export function NewMunicipality() {
               ),
             );
           }
-          return {
-            name: textField(d, "name").trim(),
-            timezone,
-            administratorId: textField(d, "accountId").trim(),
-            invitationExpiresAt: invitationDates(d, locale).expiresAt,
-          };
+          return municipalityBody(d, timezone, locale);
         }}
         onResult={setResult}
       >
@@ -87,7 +82,7 @@ export function NewMunicipality() {
           maxLength={100}
           placeholder="Europe/Madrid"
         />
-        <AccountField />
+        <EmailField />
         <InvitationDeadline />
         <Checkbox
           required
@@ -139,23 +134,11 @@ export function MunicipalContinuity({
             ? t("Invitar a un sustituto", "Invitar a un substituto")
             : t("Sustituir invitación", "Substituír invitación")
         }
-        body={(d) => ({
-          accountId: textField(d, "accountId").trim(),
-          ...invitationDates(d, locale),
-          reason: textField(d, "reason").trim(),
-          ...(recovery
-            ? {
-                verificationReference: textField(
-                  d,
-                  "verificationReference",
-                ).trim(),
-              }
-            : {}),
-        })}
+        body={(d) => continuityBody(d, locale, recovery)}
         onResult={setResult}
       >
         <MunicipalityField value={tenant} onChange={setTenant} />
-        <AccountField />
+        <EmailField />
         <InvitationDeadline />
         <Reason />
         {recovery && (

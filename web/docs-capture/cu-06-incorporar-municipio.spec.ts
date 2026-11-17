@@ -29,12 +29,12 @@ async function fillMunicipality(
   page: Page,
   name: string,
   timezone: string,
-  accountId: string,
+  email: string,
 ) {
   await page.goto(`${view}/nuevo-municipio`);
   await page.getByLabel("Nombre del municipio").fill(name);
   await page.getByLabel("Zona horaria del municipio (IANA)").fill(timezone);
-  await page.getByLabel("Identificador de cuenta").fill(accountId);
+  await page.getByLabel("Correo del destinatario").fill(email);
   await pickDateTime(page, "Aceptar antes de", deadline());
   await page.getByRole("checkbox", { name: /Confirmo el municipio/ }).check();
 }
@@ -63,14 +63,19 @@ test("CU-06 incorporar un municipio", async ({ page, browser }) => {
   const other = await otherBrowser(browser);
   const recipient = await other.newPage();
 
-  // Paso 1: la destinataria consulta su identificador de cuenta y lo facilita.
+  // Paso 1: la destinataria comprueba el correo verificado de su cuenta; el
+  // operador escribe ese correo, sin pedirle ningún identificador. La captura
+  // conserva su posición para no renumerar las siguientes.
   await signInAs(recipient, nuria);
   await recipient.goto("/perfil/datos");
-  const reference = recipient.getByText(/Identificador de cuenta, por si/);
-  await expect(reference).toContainText(nuria.accountId);
-  await tallShot(cu, recipient, "identificador-destinataria", {
-    target: reference,
-  });
+  const mailbox = recipient
+    .locator("section")
+    .filter({
+      has: recipient.getByRole("heading", { name: "Correo electrónico" }),
+    })
+    .getByText(nuria.email, { exact: true });
+  await expect(mailbox).toBeVisible();
+  await tallShot(cu, recipient, "correo-destinataria", { target: mailbox });
 
   // Paso 2: el operador entra en la administración de plataforma.
   await signInRole(page, "operator");
@@ -88,12 +93,12 @@ test("CU-06 incorporar un municipio", async ({ page, browser }) => {
   const menu = page.getByRole("link", { name: "Incorporar municipio" });
   await cu.shot(page, "menu-incorporar", { target: menu });
 
-  // Paso 3: datos del municipio y destinataria de la primera invitación.
+  // Paso 3: datos del municipio y correo de la destinataria de la primera invitación.
   await fillMunicipality(
     page,
     "Concello de Toxeira",
     "Europe/Madrid",
-    nuria.accountId,
+    nuria.email,
   );
   await tallShot(cu, page, "formulario-alta", { target: register$(page) });
   const created = page.waitForResponse(
@@ -143,12 +148,7 @@ test("CU-06 incorporar un municipio", async ({ page, browser }) => {
   await cu.shot(recipient, "gestion-municipal", { target: staff });
 
   // Alternativa: datos inválidos (zona horaria que no es IANA).
-  await fillMunicipality(
-    page,
-    "Concello de Augasantas",
-    "Madrid",
-    oscar.accountId,
-  );
+  await fillMunicipality(page, "Concello de Augasantas", "Madrid", oscar.email);
   await register$(page).click();
   const invalid = page
     .locator("form")
@@ -158,18 +158,18 @@ test("CU-06 incorporar un municipio", async ({ page, browser }) => {
   await alongside(register$(page));
   await cu.shot(page, "zona-horaria-invalida", { target: invalid });
 
-  // Alternativa: identificador de cuenta inexistente.
+  // Alternativa: un correo sin cuenta registrada. El alta respondería igual
+  // que con una cuenta existente, así que se muestra la ayuda del campo sin
+  // registrar otro municipio.
   await fillMunicipality(
     page,
     "Concello de Augasantas",
     "Europe/Madrid",
-    "cuenta-inexistente",
+    "sin.cuenta@demo.test",
   );
-  await register$(page).click();
-  const unknown = page.locator("form").getByRole("alert").first();
-  await expect(unknown).toBeVisible();
-  await alongside(register$(page));
-  await cu.shot(page, "cuenta-inexistente", { target: unknown });
+  const unregistered = page.getByText(/La respuesta es la misma tenga o no/);
+  await expect(unregistered).toBeVisible();
+  await tallShot(cu, page, "correo-sin-cuenta", { target: unregistered });
 
   // Alternativa: la verificación en dos pasos ya no es reciente.
   await expireMfa(operator.accountId);
@@ -177,7 +177,7 @@ test("CU-06 incorporar un municipio", async ({ page, browser }) => {
     page,
     "Concello de Augasantas",
     "Europe/Madrid",
-    oscar.accountId,
+    oscar.email,
   );
   await register$(page).click();
   const notice = page.getByRole("status", {
@@ -211,7 +211,7 @@ test("CU-06 incorporar un municipio", async ({ page, browser }) => {
   ).toBeVisible();
   await page.goto(`${view}/invitacion-inicial`);
   await page.getByLabel("Identificador del municipio").fill(augasantas);
-  await page.getByLabel("Identificador de cuenta").fill(nuria.accountId);
+  await page.getByLabel("Correo del destinatario").fill(nuria.email);
   await pickDateTime(page, "Aceptar antes de", deadline());
   await page
     .getByLabel("Motivo", { exact: true })
@@ -242,7 +242,7 @@ test("CU-06 incorporar un municipio", async ({ page, browser }) => {
   // Alternativa: tras la aceptación ya no se sustituye la invitación inicial.
   await page.goto(`${view}/invitacion-inicial`);
   await page.getByLabel("Identificador del municipio").fill(tenantId);
-  await page.getByLabel("Identificador de cuenta").fill(oscar.accountId);
+  await page.getByLabel("Correo del destinatario").fill(oscar.email);
   await pickDateTime(page, "Aceptar antes de", deadline());
   await page
     .getByLabel("Motivo", { exact: true })

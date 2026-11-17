@@ -19,7 +19,7 @@
 
 El usuario crea una cuenta y verifica su correo antes de reservar. Al confirmar una reserva, Quenda crea la relación cuenta–municipio si no existe; el usuario no cumplimenta un perfil municipal adicional. Consultar el catálogo no crea esa relación.
 
-El operador de plataforma crea el municipio e invita a su primer administrador. El administrador municipal configura el catálogo y asigna permisos mediante invitaciones vinculadas a cuenta, municipio, rol, vigencia y unidades reservables, cuando el ámbito esté limitado. La aceptación exige autenticar al destinatario y comprobar que la invitación sigue vigente; no permite ampliar sus permisos.
+El operador de plataforma crea el municipio e invita a su primer administrador. El administrador municipal configura el catálogo y asigna permisos mediante invitaciones dirigidas al correo del destinatario y vinculadas a municipio, rol, vigencia y unidades reservables, cuando el ámbito esté limitado. Crear la invitación no revela si existe una cuenta con ese correo. La aceptación exige autenticar al destinatario, que su correo verificado coincida en ese momento con la dirección invitada y que la invitación siga vigente; no permite ampliar sus permisos.
 
 Los formularios envían datos a la API, que valida las entradas, comprueba los permisos y persiste los cambios en PostgreSQL. El directorio municipal contiene únicamente los perfiles vinculados a ese servicio.
 
@@ -66,9 +66,9 @@ sequenceDiagram
   A->>D: Validar y persistir perfil cuenta-municipio
   D-->>A: Perfil creado o ya existente
   A-->>C: Servicio disponible con sus condiciones
-  M->>A: Invitar personal con rol y ámbito
-  A->>D: Verificar facultad de delegar, guardar invitación
-  Note over A,D: Crear la invitación no concede permisos. La aceptación exige autenticación y validación.
+  M->>A: Invitar a un correo con rol y ámbito
+  A->>D: Verificar facultad de delegar, guardar invitación con el correo normalizado
+  Note over A,D: Crear la invitación no consulta cuentas ni concede permisos. La aceptación exige autenticación, correo verificado coincidente y validación.
   M->>A: Crear o modificar instalación y unidad reservable
   A->>D: Transacción: permisos, configuración, reservas afectadas y auditoría
   alt Datos válidos y sin conflicto

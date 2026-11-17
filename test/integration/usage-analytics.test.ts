@@ -210,7 +210,7 @@ test("usage analytics aggregates cancellations, lead time and arrivals within re
           mfaVerifiedAt: new Date(),
         });
         const invitation = await inviteManager(domain, actor(f), f.tenant, {
-          accountId: reader.accountId,
+          email: reader.email,
           expiresAt: new Date(Date.now() + 86400000).toISOString(),
           permissions: [{ operation: "REPORT_READ", unitId: f.unit }],
         });

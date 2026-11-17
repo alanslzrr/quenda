@@ -32,6 +32,7 @@ import {
   type Administrator,
   canReplace,
   invitationEvent,
+  invitationRecipient,
   type StaffInvitation,
   staffOperations,
 } from "./staff-model";
@@ -315,7 +316,7 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
                       );
                     }}
                   >
-                    <AccountLabel id={r.accountId} label={r.accountLabel} />
+                    <Recipient item={r} />
                   </RowButton>
                 ),
               },
@@ -343,8 +344,7 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
             {t("Identificador", "Identificador")}: {item.invitationId}
           </p>
           <p>
-            {t("Destinatario", "Destinatario")}:{" "}
-            <AccountLabel id={item.accountId} label={item.accountLabel} />
+            {t("Destinatario", "Destinatario")}: <Recipient item={item} />
           </p>
           <p>
             {t("Emisor", "Emisor")}:{" "}
@@ -445,6 +445,31 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
         </section>
       )}
     </section>
+  );
+}
+/**
+ * The invited address until someone accepts; then the account that accepted.
+ * Older invitations were addressed to an account and show it as before.
+ */
+function Recipient({ item }: { item: StaffInvitation }) {
+  const { t } = usePreferences();
+  const recipient = invitationRecipient(item);
+  if (recipient.kind === "account")
+    return <AccountLabel id={recipient.accountId} label={item.accountLabel} />;
+  if (recipient.kind === "address")
+    return (
+      <span style={{ overflowWrap: "anywhere" }}>
+        {recipient.email}{" "}
+        <small>{t("(correo, sin aceptar)", "(correo, sen aceptar)")}</small>
+      </span>
+    );
+  return (
+    <span>
+      {t(
+        "Dirección retirada por conservación",
+        "Enderezo retirado por conservación",
+      )}
+    </span>
   );
 }
 function SecurityWithdrawal() {

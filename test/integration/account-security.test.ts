@@ -62,7 +62,7 @@ test("security suspension revokes global access without releasing bookings and r
         {
           name: "Security municipality",
           timezone: "Europe/Madrid",
-          administratorId: "holder",
+          administratorEmail: "holder@example.test",
           invitationExpiresAt: new Date(Date.now() + 86400000).toISOString(),
         },
       );

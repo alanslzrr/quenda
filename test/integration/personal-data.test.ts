@@ -79,7 +79,7 @@ test("personal data access is self-service or explicitly scoped, bounded and aud
       const municipality = await createMunicipality(domain, actor("operator"), {
         name,
         timezone: "Europe/Madrid",
-        administratorId: "admin",
+        administratorEmail: "admin@example.test",
         invitationExpiresAt: expiry(),
       });
       await acceptAdministratorInvitation(
@@ -145,7 +145,7 @@ test("personal data access is self-service or explicitly scoped, bounded and aud
       }
     }
     const municipalGrant = await inviteManager(domain, actor("admin"), first, {
-      accountId: "reader",
+      email: "reader@example.test",
       expiresAt: expiry(),
       permissions: [{ operation: "PRIVACY_READ", unitId: null }],
     });
@@ -156,7 +156,7 @@ test("personal data access is self-service or explicitly scoped, bounded and aud
       municipalGrant.invitationId,
     );
     const exportGrant = await inviteManager(domain, actor("admin"), first, {
-      accountId: "exporter",
+      email: "exporter@example.test",
       expiresAt: expiry(),
       permissions: [
         { operation: "DATA_EXPORT", unitId: null },

@@ -38,16 +38,16 @@ test("legal texts are versioned, append-only, scoped to their owner and publishe
     } finally {
       owner.release();
     }
-    const create = async (administratorId: string) => {
+    const create = async (administrator: string) => {
       const item = await createMunicipality(domain, actor("operator"), {
         name: "Municipio",
         timezone: "Europe/Madrid",
-        administratorId,
+        administratorEmail: `${administrator}@example.test`,
         invitationExpiresAt: new Date(Date.now() + 3600000).toISOString(),
       });
       await acceptAdministratorInvitation(
         domain,
-        actor(administratorId),
+        actor(administrator),
         item.tenantId,
         item.invitationId,
       );

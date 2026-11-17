@@ -57,19 +57,27 @@ test("CU-12 delegar permisos y relevar responsables", async ({
   const other = await secondBrowser(browser, page);
   try {
     const recipient = await other.newPage();
-    // Paso 1: la persona invitada consulta su identificador de cuenta.
+    // Paso 1: la persona invitada comprueba el correo verificado de su cuenta,
+    // que es lo único que necesita la administradora. La captura conserva su
+    // posición para no renumerar las siguientes.
     await signInAs(recipient, nerea);
     await recipient.goto("/perfil/datos");
-    const identifier = recipient.locator("code").filter({ hasText: nerea.id });
-    await expect(identifier).toBeVisible();
-    await snap(cu, recipient, "identificador-de-cuenta", {
+    const mailbox = recipient
+      .locator("section")
+      .filter({
+        has: recipient.getByRole("heading", { name: "Correo electrónico" }),
+      })
+      .getByText(nerea.email, { exact: true });
+    await expect(mailbox).toBeVisible();
+    await snap(cu, recipient, "correo-de-la-persona", {
       fullPage: true,
-      target: identifier,
+      target: mailbox,
     });
 
-    // Paso 1: la administradora registra la invitación con permisos y plazo.
+    // Paso 2: la administradora registra la invitación, dirigida al correo de
+    // la persona, con permisos y plazo.
     await invite.click();
-    await page.getByLabel("Identificador de cuenta").fill(nerea.id);
+    await page.getByLabel("Correo del destinatario").fill(nerea.email);
     await pickDateTime(page, "Aceptar antes de", localDate(3), "14:00");
     await choose(page, "Operación", "Consultar reservas");
     await choose(page, "Ámbito", "Todo el municipio");
@@ -79,7 +87,7 @@ test("CU-12 delegar permisos y relevar responsables", async ({
     await page.getByRole("button", { name: "Añadir permiso" }).click();
     await page
       .getByRole("checkbox", {
-        name: "Confirmo la cuenta, el alcance y la vigencia",
+        name: "Confirmo el correo, el alcance y la vigencia",
       })
       .check();
     const send = page.getByRole("button", {
@@ -96,7 +104,7 @@ test("CU-12 delegar permisos y relevar responsables", async ({
       target: registered.first(),
     });
 
-    // Paso 2: la destinataria la ve en su perfil y la acepta.
+    // Paso 3: la destinataria la ve en su perfil y la acepta.
     await recipient
       .getByRole("navigation", { name: "Mi cuenta" })
       .getByRole("link", { name: "Invitaciones", exact: true })
@@ -178,7 +186,7 @@ test("CU-12 delegar permisos y relevar responsables", async ({
   // Relevo: invitar a otro administrador con un permiso temporal.
   await page.goto(`${staff}/invitar`);
   await choose(page, "Tipo de invitación", "Administrador municipal");
-  await page.getByLabel("Identificador de cuenta").fill(david.id);
+  await page.getByLabel("Correo del destinatario").fill(david.email);
   await pickDateTime(page, "Aceptar antes de", localDate(3), "14:00");
   await pickDateTime(
     page,
@@ -188,7 +196,7 @@ test("CU-12 delegar permisos y relevar responsables", async ({
   );
   await page
     .getByRole("checkbox", {
-      name: "Confirmo la cuenta, el alcance y la vigencia",
+      name: "Confirmo el correo, el alcance y la vigencia",
     })
     .check();
   const sendAdmin = page.getByRole("button", { name: "Enviar invitación" });
@@ -294,7 +302,7 @@ test("CU-12 delegar permisos y relevar responsables", async ({
     await cookieOf(page),
     `/api/municipalities/${valdeira}/manager-invitations`,
     {
-      accountId: nerea.id,
+      email: nerea.email,
       expiresAt: new Date(Date.now() + 86400000).toISOString(),
       permissions: [{ operation: "RESERVATION_READ", unitId: null }],
     },

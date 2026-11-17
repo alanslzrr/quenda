@@ -28,7 +28,7 @@ export async function seedPrivacyBrowser(
   });
   const expiresAt = new Date(Date.now() + 86400000).toISOString();
   const grant = await inviteManager(domain, actor(f.accountId), f.tenant, {
-    accountId: f.accountId,
+    email: f.email,
     expiresAt,
     permissions: [
       { operation: "PRIVACY_READ", unitId: null },

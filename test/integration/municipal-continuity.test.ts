@@ -66,7 +66,7 @@ test("municipal continuity protects lasting responsibility and separates securit
       const municipality = await createMunicipality(domain, actor("operator"), {
         name: "Synthetic municipality",
         timezone: "Europe/Madrid",
-        administratorId: admin,
+        administratorEmail: `${admin}@example.test`,
         invitationExpiresAt: expiry(),
       });
       await acceptAdministratorInvitation(
@@ -86,7 +86,11 @@ test("municipal continuity protects lasting responsibility and separates securit
         domain,
         actor("a"),
         tenantId,
-        { accountId, expiresAt: expiry(), roleExpiresAt },
+        {
+          email: `${accountId}@example.test`,
+          expiresAt: expiry(),
+          roleExpiresAt,
+        },
       );
       await acceptAdministratorInvitation(
         domain,
@@ -195,7 +199,7 @@ test("municipal continuity protects lasting responsibility and separates securit
           );
         const invite = (roleExpiresAt: string | null) =>
           inviteAdministrator(domain, actor("b"), tenant, {
-            accountId: "c",
+            email: "c@example.test",
             expiresAt: expiry(),
             roleExpiresAt,
           });
@@ -252,7 +256,7 @@ test("municipal continuity protects lasting responsibility and separates securit
         const tenant = await municipality();
         const other = await municipality();
         const manager = await inviteManager(domain, actor("a"), tenant, {
-          accountId: "a",
+          email: "a@example.test",
           expiresAt: expiry(),
           permissions: [{ operation: "RESERVATION_MANAGE", unitId: null }],
         });
@@ -262,7 +266,7 @@ test("municipal continuity protects lasting responsibility and separates securit
           actor("a"),
           tenant,
           {
-            accountId: "manager",
+            email: "manager@example.test",
             expiresAt: expiry(),
             permissions: [{ operation: "RESERVATION_READ", unitId: null }],
           },
@@ -274,7 +278,7 @@ test("municipal continuity protects lasting responsibility and separates securit
           acceptedManager.invitationId,
         );
         const pending = await inviteManager(domain, actor("a"), tenant, {
-          accountId: "pending",
+          email: "pending@example.test",
           expiresAt: expiry(),
           permissions: [{ operation: "RESERVATION_READ", unitId: null }],
         });
@@ -282,7 +286,7 @@ test("municipal continuity protects lasting responsibility and separates securit
           domain,
           actor("a"),
           tenant,
-          { accountId: "pending", expiresAt: expiry() },
+          { email: "pending@example.test", expiresAt: expiry() },
         );
         const lifecycleBefore = (
           await migration.query(
@@ -353,7 +357,7 @@ test("municipal continuity protects lasting responsibility and separates securit
             actor("operator"),
             tenant,
             {
-              accountId: "replacement",
+              email: "replacement@example.test",
               expiresAt: expiry(),
               reason: "No bootstrap reopening",
             },
@@ -362,7 +366,7 @@ test("municipal continuity protects lasting responsibility and separates securit
         );
         await assert.rejects(
           recoverMunicipalAdministrator(domain, actor("b"), tenant, {
-            accountId: "replacement",
+            email: "replacement@example.test",
             expiresAt: expiry(),
             reason: "Recovery",
             verificationReference: "Authority-123",
@@ -371,7 +375,7 @@ test("municipal continuity protects lasting responsibility and separates securit
         );
         await assert.rejects(
           recoverMunicipalAdministrator(domain, actor("operator"), other, {
-            accountId: "replacement",
+            email: "replacement@example.test",
             expiresAt: expiry(),
             reason: "Not orphaned",
             verificationReference: "Authority-123",
@@ -380,7 +384,7 @@ test("municipal continuity protects lasting responsibility and separates securit
         );
         await assert.rejects(
           recoverMunicipalAdministrator(domain, actor("operator"), tenant, {
-            accountId: "operator",
+            email: "operator@example.test",
             expiresAt: expiry(),
             reason: "Recovery",
             verificationReference: "Authority-123",
@@ -394,7 +398,7 @@ test("municipal continuity protects lasting responsibility and separates securit
               [tenant],
             );
             await client.query(
-              "SELECT domain.recover_municipal_administrator('operator',$1,'Recovery','Authority-123',$2)",
+              "SELECT domain.recover_municipal_administrator('Operator@example.test',$1,'Recovery','Authority-123',$2)",
               [expiry(), randomUUID()],
             );
           }),
@@ -405,7 +409,7 @@ test("municipal continuity protects lasting responsibility and separates securit
           actor("operator"),
           tenant,
           {
-            accountId: "replacement",
+            email: "replacement@example.test",
             expiresAt: expiry(),
             reason: "Verified municipal handover",
             verificationReference: "Authority-123",
@@ -551,7 +555,7 @@ test("municipal continuity protects lasting responsibility and separates securit
             url: `/api/municipalities/${tenant}/administrator-recovery-invitations`,
             headers,
             payload: {
-              accountId: "replacement",
+              email: " Replacement@Example.test ",
               expiresAt: expiry(),
               reason: "Verified handover",
               verificationReference: "Recovery-HTTP-123",
@@ -579,11 +583,11 @@ test("municipal continuity protects lasting responsibility and separates securit
         const tenant = await municipality();
         await addAdministrator(tenant, "b");
         const admin = await inviteAdministrator(domain, actor("a"), tenant, {
-          accountId: "c",
+          email: "c@example.test",
           expiresAt: expiry(),
         });
         const manager = await inviteManager(domain, actor("a"), tenant, {
-          accountId: "pending",
+          email: "pending@example.test",
           expiresAt: expiry(),
           permissions: [{ operation: "RESERVATION_READ", unitId: null }],
         });
@@ -638,6 +642,161 @@ test("municipal continuity protects lasting responsibility and separates securit
       },
     );
     await t.test(
+      "security withdrawal also withdraws pending invitations sent to the account's verified address",
+      async () => {
+        const tenant = await municipality();
+        const grant = await inviteManager(domain, actor("a"), tenant, {
+          email: "b@example.test",
+          expiresAt: expiry(),
+          permissions: [{ operation: "RESERVATION_READ", unitId: null }],
+        });
+        await acceptManager(domain, actor("b"), tenant, grant.invitationId);
+        const admin = await inviteAdministrator(domain, actor("a"), tenant, {
+          email: " B@Example.test ",
+          expiresAt: expiry(),
+        });
+        const manager = await inviteManager(domain, actor("a"), tenant, {
+          email: "b@example.test",
+          expiresAt: expiry(),
+          permissions: [{ operation: "UNIT_BLOCK", unitId: null }],
+        });
+        const unrelated = await inviteManager(domain, actor("a"), tenant, {
+          email: "c@example.test",
+          expiresAt: expiry(),
+          permissions: [{ operation: "UNIT_BLOCK", unitId: null }],
+        });
+        await revokeMunicipalAccessForSecurity(
+          domain,
+          actor("a"),
+          tenant,
+          "b",
+          "Compromised mailbox",
+        );
+        await assert.rejects(
+          acceptAdministratorInvitation(
+            domain,
+            actor("b"),
+            tenant,
+            admin.invitationId,
+          ),
+          { code: "NOT_FOUND" },
+        );
+        await assert.rejects(
+          acceptManager(domain, actor("b"), tenant, manager.invitationId),
+          { code: "NOT_FOUND" },
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT subject_id FROM domain.identity_event WHERE tenant_id=$1 AND invitation_id=$2 AND operation='REVOKE_INVITATION'",
+              [tenant, admin.invitationId],
+            )
+          ).rows[0]?.subject_id,
+          "b",
+        );
+        assert.equal(
+          (await listOwnManagerInvitations(domain, actor("c"))).items.find(
+            (row) => row.invitationId === unrelated.invitationId,
+          )?.status,
+          "PENDING",
+        );
+        // An account whose only tie is an invitation to its address is
+        // withdrawn too; the command does not report NOT_FOUND and roll back.
+        const only = await inviteAdministrator(domain, actor("a"), tenant, {
+          email: "pending@example.test",
+          expiresAt: expiry(),
+        });
+        await revokeMunicipalAccessForSecurity(
+          domain,
+          actor("a"),
+          tenant,
+          "pending",
+          "Compromised mailbox",
+        );
+        await assert.rejects(
+          acceptAdministratorInvitation(
+            domain,
+            actor("pending"),
+            tenant,
+            only.invitationId,
+          ),
+          { code: "NOT_FOUND" },
+        );
+      },
+    );
+    await t.test(
+      "a recovery is never addressed to or accepted by the issuing operator",
+      async () => {
+        const tenant = await municipality();
+        await revokeMunicipalAccessForSecurity(
+          domain,
+          actor("a"),
+          tenant,
+          "a",
+          "Emergency containment",
+        );
+        for (const email of [
+          "operator@example.test",
+          " OPERATOR@example.test ",
+        ])
+          await assert.rejects(
+            recoverMunicipalAdministrator(domain, actor("operator"), tenant, {
+              email,
+              expiresAt: expiry(),
+              reason: "Recovery",
+              verificationReference: "Authority-789",
+            }),
+            { code: "INVALID_INPUT" },
+          );
+        const recovery = await recoverMunicipalAdministrator(
+          domain,
+          actor("operator"),
+          tenant,
+          {
+            email: "handover@example.test",
+            expiresAt: expiry(),
+            reason: "Verified handover",
+            verificationReference: "Authority-789",
+          },
+        );
+        // The operator later verifies the invited address on its own account.
+        await migration.query(
+          "UPDATE auth.\"user\" SET email='handover@example.test' WHERE id='operator'",
+        );
+        try {
+          assert.equal(
+            (
+              await listOwnAdministratorInvitations(domain, actor("operator"))
+            ).items.find((row) => row.invitationId === recovery.invitationId)
+              ?.status,
+            "INVALIDATED",
+          );
+          await assert.rejects(
+            acceptAdministratorInvitation(
+              domain,
+              actor("operator"),
+              tenant,
+              recovery.invitationId,
+            ),
+            { code: "NOT_FOUND" },
+          );
+        } finally {
+          await migration.query(
+            "UPDATE auth.\"user\" SET email='operator@example.test' WHERE id='operator'",
+          );
+        }
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT * FROM domain.municipal_administrator WHERE tenant_id=$1 AND account_id='operator'",
+              [tenant],
+            )
+          ).rowCount,
+          0,
+        );
+      },
+    );
+    await t.test(
       "recovery acceptance requires actual MFA and cannot be forged through runtime SQL",
       async () => {
         const tenant = await municipality();
@@ -653,7 +812,7 @@ test("municipal continuity protects lasting responsibility and separates securit
           actor("operator"),
           tenant,
           {
-            accountId: "no-mfa",
+            email: "no-mfa@example.test",
             expiresAt: expiry(),
             reason: "Authority verified; MFA still required",
             verificationReference: "Municipality-ref-456",
@@ -705,7 +864,7 @@ test("municipal continuity protects lasting responsibility and separates securit
         );
         await assert.rejects(
           recoverMunicipalAdministrator(domain, actor("operator"), tenant, {
-            accountId: "c",
+            email: "c@example.test",
             expiresAt: expiry(),
             reason: "Recovery",
             verificationReference: "   ",

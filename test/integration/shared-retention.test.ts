@@ -57,7 +57,7 @@ test("shared retention requires exact unanimous approvals and retains recovery e
       const municipality = await createMunicipality(domain, actor("operator"), {
         name,
         timezone: "Europe/Madrid",
-        administratorId: "admin",
+        administratorEmail: "admin@example.test",
         invitationExpiresAt: future(),
       });
       await acceptAdministratorInvitation(
@@ -71,7 +71,7 @@ test("shared retention requires exact unanimous approvals and retains recovery e
         actor("admin"),
         municipality.tenantId,
         {
-          accountId: "privacy",
+          email: "privacy@example.test",
           expiresAt: future(),
           permissions: [
             { operation: "PRIVACY_EXECUTE", unitId: null },

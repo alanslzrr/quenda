@@ -54,7 +54,7 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
     data: {
       name: "Concello de Lousadela",
       timezone: "Europe/Madrid",
-      administratorId: iria.accountId,
+      administratorEmail: iria.email,
       invitationExpiresAt: future(3).toISOString(),
     },
   });
@@ -73,7 +73,7 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
     `/api/municipalities/${tenantId}/manager-invitations`,
     {
       data: {
-        accountId: damian.accountId,
+        email: damian.email,
         expiresAt: future(3).toISOString(),
         permissions: [
           { operation: "RESERVATION_READ", unitId: null },
@@ -178,7 +178,7 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
   await cu.shot(page, "menu-recuperar", { target: recover });
   await recover.click();
   await page.getByLabel("Identificador del municipio").fill(tenantId);
-  await page.getByLabel("Identificador de cuenta").fill(rocio.accountId);
+  await page.getByLabel("Correo del destinatario").fill(rocio.email);
   await pickDateTime(page, "Aceptar antes de", deadline());
   await page
     .getByLabel("Motivo", { exact: true })
@@ -301,7 +301,7 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
   // Alternativa: con un administrador habilitado no hay recuperación.
   await page.goto(`${view}/recuperar-responsable`);
   await page.getByLabel("Identificador del municipio").fill(tenantId);
-  await page.getByLabel("Identificador de cuenta").fill(damian.accountId);
+  await page.getByLabel("Correo del destinatario").fill(damian.email);
   await pickDateTime(page, "Aceptar antes de", deadline());
   await page
     .getByLabel("Motivo", { exact: true })

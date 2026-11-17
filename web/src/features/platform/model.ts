@@ -29,6 +29,42 @@ export function invitationDates(
     ...(optionalRole ? { roleExpiresAt: roleExpiresAt || null } : {}),
   };
 }
+/** Body of the joint municipality creation with its first invitation. */
+export function municipalityBody(
+  data: FormData,
+  timezone: string,
+  locale: "es" | "gl",
+) {
+  return {
+    name: textField(data, "name").trim(),
+    timezone,
+    administratorEmail: textField(data, "email").trim(),
+    invitationExpiresAt: invitationDates(data, locale).expiresAt,
+  };
+}
+/**
+ * Body of the initial invitation replacement or the recovery invitation. Both
+ * are addressed to an email; the server never looks the address up.
+ */
+export function continuityBody(
+  data: FormData,
+  locale: "es" | "gl",
+  recovery: boolean,
+) {
+  return {
+    email: textField(data, "email").trim(),
+    ...invitationDates(data, locale),
+    reason: textField(data, "reason").trim(),
+    ...(recovery
+      ? {
+          verificationReference: textField(
+            data,
+            "verificationReference",
+          ).trim(),
+        }
+      : {}),
+  };
+}
 export const statuses: Record<string, [string, string]> = {
   PENDING: ["Pendiente", "Pendente"],
   ACCEPTED: ["Aceptada", "Aceptada"],

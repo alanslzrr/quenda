@@ -144,7 +144,7 @@ test("staff record a holder's arrival only within the access window and with aut
           mfaVerifiedAt: new Date(),
         });
         const invitation = await inviteManager(domain, actor(f), f.tenant, {
-          accountId: other.accountId,
+          email: other.email,
           expiresAt: new Date(Date.now() + 86400000).toISOString(),
           permissions: [{ operation: "RESERVATION_READ", unitId: f.unit }],
         });

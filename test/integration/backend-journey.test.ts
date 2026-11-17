@@ -205,7 +205,7 @@ for (const upgrade of [false, true]) {
                 }),
               );
             }
-            return { client, id: user.id as string };
+            return { client, id: user.id as string, email };
           };
           const operator = await register("operator", "192.0.2.201", true);
           const admin = await register("administrator", "192.0.2.202", true);
@@ -227,7 +227,7 @@ for (const upgrade of [false, true]) {
               await operator.client.request("/api/municipalities", {
                 name: "Journey municipality",
                 timezone: "Europe/Madrid",
-                administratorId: admin.id,
+                administratorEmail: admin.email,
                 invitationExpiresAt: new Date(
                   Date.now() + 3600000,
                 ).toISOString(),

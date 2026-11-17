@@ -295,7 +295,7 @@ export async function privacyMunicipality(
       data: {
         name,
         timezone: "Europe/Madrid",
-        administratorId: admin.accountId,
+        administratorEmail: admin.email,
         invitationExpiresAt: future(3).toISOString(),
       },
     }),
@@ -312,7 +312,7 @@ export async function privacyMunicipality(
       `/api/municipalities/${tenantId}/manager-invitations`,
       {
         data: {
-          accountId: privacy.accountId,
+          email: privacy.email,
           expiresAt: future(3).toISOString(),
           permissions: [
             { operation: "PRIVACY_READ", unitId: null },

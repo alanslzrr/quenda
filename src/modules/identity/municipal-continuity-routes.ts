@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
+import { invitationAddressSchema } from "./invitation-address.ts";
 import {
   makeAdministratorIndefinite,
   recoverMunicipalAdministrator,
@@ -88,7 +89,7 @@ export async function registerMunicipalContinuityRoutes(
   app.post<{
     Params: { tenantId: string };
     Body: {
-      accountId: string;
+      email: string;
       expiresAt: string;
       reason: string;
       verificationReference: string;
@@ -99,7 +100,7 @@ export async function registerMunicipalContinuityRoutes(
       schema: {
         operationId: "recoverMunicipalAdministrator",
         description:
-          "Operador con MFA reciente: inicia recuperación únicamente si el municipio ya inicializado no tiene administradores habilitados. Exige motivo y referencia a la verificación externa de autoridad. El destinatario debe aceptar la invitación con identidad verificada y MFA; no concede acceso municipal al operador.",
+          "Operador con MFA reciente: inicia recuperación únicamente si el municipio ya inicializado no tiene administradores habilitados. Exige motivo y referencia a la verificación externa de autoridad. La invitación se dirige a un correo y la respuesta es la misma exista o no una cuenta con él; solo puede aceptarla, con MFA reciente, la cuenta cuyo correo verificado coincida al aceptar. No concede acceso municipal al operador.",
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         params: {
@@ -111,14 +112,9 @@ export async function registerMunicipalContinuityRoutes(
         body: {
           type: "object",
           additionalProperties: false,
-          required: [
-            "accountId",
-            "expiresAt",
-            "reason",
-            "verificationReference",
-          ],
+          required: ["email", "expiresAt", "reason", "verificationReference"],
           properties: {
-            accountId,
+            email: invitationAddressSchema,
             expiresAt: { type: "string", format: "date-time" },
             reason,
             verificationReference: reason,

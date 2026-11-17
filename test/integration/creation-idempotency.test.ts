@@ -37,7 +37,7 @@ test("municipality and catalog creation replay atomically under current authoriz
     const input = {
       name: "Creation",
       timezone: "Europe/Madrid",
-      administratorId: "admin",
+      administratorEmail: "admin@example.test",
       invitationExpiresAt: new Date(Date.now() + 3600000).toISOString(),
     };
     const [first, replayed] = await Promise.all([

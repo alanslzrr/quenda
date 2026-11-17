@@ -87,8 +87,8 @@ export function Invitations() {
     <>
       <PageTitle title={t("Tus invitaciones", "As túas invitacións")}>
         {t(
-          "Invitaciones para gestionar o administrar en Quenda. Consultarlas no concede permisos: solo aceptarlas.",
-          "Invitacións para xestionar ou administrar en Quenda. Consultalas non concede permisos: só aceptalas.",
+          "Invitaciones para gestionar o administrar en Quenda: las enviadas a tu correo verificado y las dirigidas directamente a tu cuenta. Si cambias el correo, verás las enviadas a la nueva dirección y dejarás de ver las pendientes de la anterior. Consultarlas no concede permisos: solo aceptarlas.",
+          "Invitacións para xestionar ou administrar en Quenda: as enviadas ao teu correo verificado e as dirixidas directamente á túa conta. Se cambias o correo, verás as enviadas ao novo enderezo e deixarás de ver as pendentes do anterior. Consultalas non concede permisos: só aceptalas.",
         )}
       </PageTitle>
       {failed && (

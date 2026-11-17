@@ -75,11 +75,11 @@ test("municipal creation and first administrator acceptance are atomic and isola
     const input = (id: string) => ({
       name: `Municipio ${id}`,
       timezone: "Europe/Madrid",
-      administratorId: id,
+      administratorEmail: `${id}@example.test`,
       invitationExpiresAt: new Date(Date.now() + 3600000).toISOString(),
     });
     await t.test(
-      "only MFA operator can create; invalid target rolls back municipality and events",
+      "only MFA operator can create; invalid address rolls back municipality and events",
       async () => {
         await assert.rejects(
           createMunicipality(domain, account("other"), input("admin-a")),
@@ -94,7 +94,10 @@ test("municipal creation and first administrator acceptance are atomic and isola
           { code: "FORBIDDEN" },
         );
         await assert.rejects(
-          createMunicipality(domain, account("operator"), input("missing")),
+          createMunicipality(domain, account("operator"), {
+            ...input("admin-a"),
+            administratorEmail: "not an address",
+          }),
           { code: "INVALID_INPUT" },
         );
         await assert.rejects(
@@ -120,6 +123,45 @@ test("municipal creation and first administrator acceptance are atomic and isola
             .rowCount,
           0,
         );
+        // An address without an account is not rejected: the response cannot
+        // reveal whether anyone is registered with it.
+        const unknown = await createMunicipality(domain, account("operator"), {
+          ...input("admin-a"),
+          administratorEmail: " Missing@Example.TEST ",
+        });
+        assert.deepEqual(Object.keys(unknown).sort(), [
+          "invitationId",
+          "tenantId",
+        ]);
+        const stored = await migration.query(
+          "SELECT account_id,recipient_email FROM domain.administrator_invitation WHERE id=$1",
+          [unknown.invitationId],
+        );
+        assert.deepEqual(stored.rows, [
+          { account_id: null, recipient_email: "missing@example.test" },
+        ]);
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT operation,subject_id FROM domain.identity_event WHERE tenant_id=$1 ORDER BY operation",
+              [unknown.tenantId],
+            )
+          ).rows,
+          [
+            { operation: "CREATE_MUNICIPALITY", subject_id: null },
+            { operation: "INVITE_ADMINISTRATOR", subject_id: null },
+          ],
+        );
+        for (const id of ["admin-a", "other", "operator"])
+          await assert.rejects(
+            acceptAdministratorInvitation(
+              domain,
+              account(id),
+              unknown.tenantId,
+              unknown.invitationId,
+            ),
+            { code: "NOT_FOUND" },
+          );
       },
     );
     const a = await createMunicipality(
@@ -330,7 +372,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
       "municipal delegation and revocation require current authority and preserve tenant scope",
       async () => {
         const input = {
-          accountId: "other",
+          email: "other@example.test",
           expiresAt: new Date(Date.now() + 3600000).toISOString(),
         };
         await assert.rejects(
@@ -396,7 +438,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           domain,
           account("other"),
           a.tenantId,
-          { ...input, accountId: "admin-b" },
+          { ...input, email: "admin-b@example.test" },
         );
         await assert.rejects(
           revokeAdministrator(
@@ -506,7 +548,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
         );
         for (let i = 0; i < 22; i++)
           await inviteAdministrator(domain, account("admin-a"), a.tenantId, {
-            accountId: "admin-b",
+            email: "admin-b@example.test",
             expiresAt: new Date(Date.now() + 3600000).toISOString(),
           });
         const first = await listOwnAdministratorInvitations(
@@ -538,7 +580,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           input("other"),
         );
         const replacement = {
-          accountId: "other",
+          email: "other@example.test",
           expiresAt: new Date(Date.now() + 3600000).toISOString(),
           reason: "Corrección de destinatario",
         };
@@ -556,7 +598,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             domain,
             account("operator"),
             initial.tenantId,
-            { ...replacement, accountId: "missing" },
+            { ...replacement, email: "missing" },
           ),
           { code: "INVALID_INPUT" },
         );
@@ -624,7 +666,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             domain,
             (client) =>
               client.query(
-                "INSERT INTO domain.administrator_invitation (tenant_id,id,account_id,invited_by,expires_at) VALUES ($1,$2,'other','operator',now()+interval '1 hour')",
+                "INSERT INTO domain.administrator_invitation (tenant_id,id,recipient_email,invited_by,expires_at) VALUES ($1,$2,'other@example.test','operator',now()+interval '1 hour')",
                 [initial.tenantId, randomUUID()],
               ),
             { accountId: "operator", tenantId: initial.tenantId },
@@ -653,7 +695,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             account("operator"),
             initial.tenantId,
             {
-              accountId: "admin-b",
+              email: "admin-b@example.test",
               expiresAt: new Date(Date.now() + 3600000).toISOString(),
               reason: "Nuevo destinatario",
             },
@@ -701,7 +743,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           account("admin-a"),
           initial.tenantId,
           {
-            accountId: "other",
+            email: "other@example.test",
             expiresAt: new Date(Date.now() + 7200000).toISOString(),
             roleExpiresAt,
           },
@@ -722,7 +764,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           account("other"),
           initial.tenantId,
           {
-            accountId: "admin-b",
+            email: "admin-b@example.test",
             expiresAt: new Date(Date.now() + 7200000).toISOString(),
             roleExpiresAt,
           },
@@ -733,7 +775,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
         );
         await assert.rejects(
           inviteAdministrator(domain, account("other"), initial.tenantId, {
-            accountId: "admin-b",
+            email: "admin-b@example.test",
             expiresAt: roleExpiresAt,
           }),
           { code: "FORBIDDEN" },
@@ -751,7 +793,11 @@ test("municipal creation and first administrator acceptance are atomic and isola
           domain,
           account("admin-a"),
           initial.tenantId,
-          { accountId: "other", expiresAt: roleExpiresAt, roleExpiresAt },
+          {
+            email: "other@example.test",
+            expiresAt: roleExpiresAt,
+            roleExpiresAt,
+          },
         );
         await acceptAdministratorInvitation(
           domain,
@@ -772,7 +818,11 @@ test("municipal creation and first administrator acceptance are atomic and isola
           domain,
           account("admin-a"),
           initial.tenantId,
-          { accountId: "admin-b", expiresAt: roleExpiresAt, roleExpiresAt },
+          {
+            email: "admin-b@example.test",
+            expiresAt: roleExpiresAt,
+            roleExpiresAt,
+          },
         );
         await migration.query(
           "UPDATE domain.administrator_invitation SET created_at=now()-interval '2 hours',role_expires_at=now()-interval '1 hour' WHERE id=$1",
@@ -917,7 +967,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           { name: "Dos" },
         );
         const payload = {
-          accountId: "manager",
+          email: "manager@example.test",
           expiresAt: new Date(Date.now() + 3600000).toISOString(),
           roleExpiresAt: new Date(Date.now() + 7200000).toISOString(),
           permissions: [
@@ -1025,7 +1075,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
         );
         await assert.rejects(
           inviteAdministrator(domain, account("manager"), tenant.tenantId, {
-            accountId: "manager-other",
+            email: "manager-other@example.test",
             expiresAt: payload.expiresAt,
           }),
           { code: "FORBIDDEN" },
@@ -1107,7 +1157,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           { name: "Unidad" },
         );
         const base = {
-          accountId: "manager-other",
+          email: "manager-other@example.test",
           expiresAt: new Date(Date.now() + 3600000).toISOString(),
           permissions: [
             { operation: "RESERVATION_READ" as const, unitId: unit.unitId },
@@ -1126,7 +1176,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           original.invitationId,
         );
         const replacement = {
-          ...base,
+          expiresAt: base.expiresAt,
           replacesInvitationId: original.invitationId,
           reason: "Cambio de tareas",
           permissions: [
@@ -1219,7 +1269,10 @@ test("municipal creation and first administrator acceptance are atomic and isola
         assert.ok(
           all.every(
             (row) =>
-              row.accountId === "manager-other" && row.invitedBy === "admin-a",
+              (row.accountId === "manager-other" ||
+                (row.accountId === null &&
+                  row.recipientEmail === "manager-other@example.test")) &&
+              row.invitedBy === "admin-a",
           ),
         );
         const old = all.find(
@@ -1306,7 +1359,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             account("admin-a"),
             tenant.tenantId,
             {
-              accountId: "manager",
+              email: "manager@example.test",
               expiresAt: new Date(Date.now() + 3600000).toISOString(),
               permissions: [{ operation: "CATALOG_CREATE", unitId: null }],
             },
@@ -1594,7 +1647,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             account("admin-a"),
             tenant.tenantId,
             {
-              accountId: id,
+              email: `${id}@example.test`,
               expiresAt: new Date(Date.now() + 3600000).toISOString(),
             },
           );
@@ -1664,7 +1717,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           account("admin-a"),
           tenant.tenantId,
           {
-            accountId: "query-admin-00",
+            email: "query-admin-00@example.test",
             expiresAt: new Date(Date.now() + 3600000).toISOString(),
           },
         );
@@ -1775,7 +1828,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           account("admin-a"),
           a.tenantId,
           {
-            accountId: "manager",
+            email: "manager@example.test",
             expiresAt: new Date(Date.now() + 3600000).toISOString(),
             permissions: [{ operation: "CATALOG_MANAGE", unitId: u.unitId }],
           },
@@ -2037,7 +2090,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           account("admin-a"),
           tenant.tenantId,
           {
-            accountId: "manager",
+            email: "manager@example.test",
             expiresAt: new Date(Date.now() + 3600000).toISOString(),
             permissions: permitted.map((unitId) => ({
               operation: "CATALOG_MANAGE" as const,
@@ -2150,7 +2203,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           account("admin-a"),
           tenant.tenantId,
           {
-            accountId: "manager",
+            email: "manager@example.test",
             expiresAt: new Date(Date.now() + 3600000).toISOString(),
             permissions: [{ operation: "CATALOG_CREATE", unitId: null }],
           },
@@ -2439,7 +2492,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           account("admin-a"),
           tenant.tenantId,
           {
-            accountId: "manager",
+            email: "manager@example.test",
             expiresAt: new Date(Date.now() + 3600000).toISOString(),
             permissions: [{ operation: "CATALOG_MANAGE", unitId: u.unitId }],
           },
@@ -2628,7 +2681,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
           account("admin-a"),
           tenant.tenantId,
           {
-            accountId: "manager",
+            email: "manager@example.test",
             expiresAt: new Date(Date.now() + 3600000).toISOString(),
             permissions: [{ operation: "CATALOG_MANAGE", unitId: u.unitId }],
           },

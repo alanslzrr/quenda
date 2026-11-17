@@ -45,7 +45,7 @@ test("municipal booking policy is versioned, scoped and audited atomically", {
       {
         name: "Policy test",
         timezone: "Europe/Madrid",
-        administratorId: "administrator",
+        administratorEmail: "administrator@example.test",
         invitationExpiresAt: new Date(Date.now() + 3600000).toISOString(),
       },
     );

@@ -36,18 +36,20 @@ function tomorrow(days = 1) {
 async function invite(
   page: Page,
   tenant: string,
-  recipient: string,
+  email: string,
   admin = false,
 ) {
   await page.goto(`/administracion/${tenant}/personal/invitar`);
   if (admin)
     await select(page, "Tipo de invitación", "Administrador municipal");
-  await page.getByLabel(/Identificador de (cuenta|conta)/).fill(recipient);
+  await page
+    .getByLabel(/Correo del destinatario|Correo do destinatario/)
+    .fill(email);
   await pickDateTime(page, "Aceptar antes de", tomorrow());
 }
 async function confirmInvitation(page: Page) {
   await page
-    .getByRole("checkbox", { name: /Confirmo (la cuenta|a conta)/ })
+    .getByRole("checkbox", { name: /Confirmo (el correo|o correo)/ })
     .check();
   await page
     .getByRole("button", { name: "Enviar invitación", exact: true })
@@ -98,7 +100,7 @@ test("staff grants require acceptance and replace scope without an authority gap
   try {
     const recipient = await other.newPage();
     await signin(recipient, f.recipient);
-    await invite(page, f.administrator.tenant, f.recipient.accountId);
+    await invite(page, f.administrator.tenant, f.recipient.email);
     await select(page, "Ámbito", "Pista 1");
     await page
       .getByRole("button", { name: /Añadir permiso|Engadir permiso/ })
@@ -235,7 +237,7 @@ test("municipal administrator handover needs an accepted indefinite successor", 
     page.getByText(/Debe quedar (otro|outro) responsable habilitado/),
   ).toBeVisible();
   await expect(page).toHaveURL(base);
-  await invite(page, f.administrator.tenant, f.recipient.accountId, true);
+  await invite(page, f.administrator.tenant, f.recipient.email, true);
   await pickDateTime(page, /Permiso válido (hasta|ata)/, tomorrow(10));
   await confirmInvitation(page);
   const other = await browser.newContext({

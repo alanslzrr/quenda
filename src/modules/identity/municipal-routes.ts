@@ -9,6 +9,7 @@ import { registerBrandingRoutes } from "./branding-routes.ts";
 import { registerConservationRoutes } from "./conservation-routes.ts";
 import { registerDeactivationRoutes } from "./deactivation-routes.ts";
 import { registerEmailChangeRoutes } from "./email-change-routes.ts";
+import { invitationAddressSchema } from "./invitation-address.ts";
 import {
   inviteAdministrator,
   listOwnAdministratorInvitations,
@@ -87,20 +88,20 @@ export async function registerMunicipalIdentity(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Alta conjunta del municipio y su invitación inicial. Idempotency-Key conserva el resultado para el operador dentro del plazo publicado; sin cabecera cada solicitud crea un municipio nuevo. Cada repetición exige permiso de operador y MFA reciente.",
+          "Alta conjunta del municipio y su invitación inicial, dirigida al correo administratorEmail. La respuesta es la misma exista o no una cuenta con ese correo. Idempotency-Key conserva el resultado para el operador dentro del plazo publicado; sin cabecera cada solicitud crea un municipio nuevo. Cada repetición exige permiso de operador y MFA reciente.",
         body: {
           type: "object",
           additionalProperties: false,
           required: [
             "name",
             "timezone",
-            "administratorId",
+            "administratorEmail",
             "invitationExpiresAt",
           ],
           properties: {
             name: { type: "string", minLength: 1, maxLength: 200 },
             timezone: { type: "string", minLength: 1, maxLength: 100 },
-            administratorId: { type: "string", minLength: 1, maxLength: 128 },
+            administratorEmail: invitationAddressSchema,
             invitationExpiresAt: { type: "string", format: "date-time" },
           },
         },
@@ -141,7 +142,7 @@ export async function registerMunicipalIdentity(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Acepta una invitación vigente de la cuenta autenticada con MFA verificado en los últimos cinco minutos. No admite una cuenta ni un rol alternativo en el cuerpo. Origin debe coincidir con AUTH_ORIGIN.",
+          "Acepta una invitación vigente dirigida a la cuenta autenticada (al correo verificado que tiene en ese momento, o a la propia cuenta en invitaciones anteriores) con MFA verificado en los últimos cinco minutos. No admite una cuenta ni un rol alternativo en el cuerpo. Origin debe coincidir con AUTH_ORIGIN.",
         params: {
           type: "object",
           additionalProperties: false,
@@ -171,7 +172,7 @@ export async function registerMunicipalIdentity(
   app.post<{
     Params: { tenantId: string };
     Body: {
-      accountId: string;
+      email: string;
       expiresAt: string;
       roleExpiresAt?: string | null;
     };
@@ -183,7 +184,7 @@ export async function registerMunicipalIdentity(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Administrador municipal con MFA reciente: invita a una cuenta existente, sin conceder permisos hasta su aceptación.",
+          "Administrador municipal con MFA reciente: invita a un correo, sin conceder permisos hasta su aceptación. El correo se normaliza (espacios y mayúsculas) y la respuesta es la misma exista o no una cuenta con él. Solo puede aceptarla la cuenta cuyo correo verificado coincida en el momento de aceptar.",
         params: {
           type: "object",
           additionalProperties: false,
@@ -193,9 +194,9 @@ export async function registerMunicipalIdentity(
         body: {
           type: "object",
           additionalProperties: false,
-          required: ["accountId", "expiresAt"],
+          required: ["email", "expiresAt"],
           properties: {
-            accountId: { type: "string", minLength: 1, maxLength: 128 },
+            email: invitationAddressSchema,
             expiresAt: { type: "string", format: "date-time" },
             roleExpiresAt: {
               type: "string",
@@ -387,7 +388,7 @@ export async function registerMunicipalIdentity(
   );
   app.post<{
     Params: { tenantId: string };
-    Body: { accountId: string; expiresAt: string; reason: string };
+    Body: { email: string; expiresAt: string; reason: string };
   }>(
     "/api/municipalities/:tenantId/initial-administrator-invitation/replace",
     {
@@ -396,7 +397,7 @@ export async function registerMunicipalIdentity(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Operador con MFA reciente: sustituye con motivo la invitación inicial únicamente antes de que el municipio haya tenido un administrador.",
+          "Operador con MFA reciente: sustituye con motivo la invitación inicial únicamente antes de que el municipio haya tenido un administrador. La nueva invitación se dirige a un correo, con la misma respuesta exista o no una cuenta con él.",
         params: {
           type: "object",
           additionalProperties: false,
@@ -406,9 +407,9 @@ export async function registerMunicipalIdentity(
         body: {
           type: "object",
           additionalProperties: false,
-          required: ["accountId", "expiresAt", "reason"],
+          required: ["email", "expiresAt", "reason"],
           properties: {
-            accountId: { type: "string", minLength: 1, maxLength: 128 },
+            email: invitationAddressSchema,
             expiresAt: { type: "string", format: "date-time" },
             reason: { type: "string", minLength: 1, maxLength: 500 },
           },
