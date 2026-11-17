@@ -1,13 +1,20 @@
-import { execFile } from "node:child_process";
-import path from "node:path";
-import { promisify } from "node:util";
+import { readFile } from "node:fs/promises";
 import { access, account, Capture, expect, roles, test } from "./capture";
 import { shot, signInWith } from "./citizen";
 
 // CU-19 — Obtener una copia de datos personales. La vecina descarga su copia
-// y se muestra su contenido con jq.
+// y se muestran dos fragmentos del archivo recibido.
 const cu = new Capture("CU-19");
-const run = promisify(execFile);
+
+type Personal = {
+  format: string;
+  version: number;
+  generatedAt: string;
+  subjectAccountId: string;
+  scope: unknown;
+  completeness: unknown;
+  records: { category: string }[];
+};
 
 test("CU-19 obtener una copia de datos personales", async ({ page }) => {
   const { email } = await account(roles.citizen);
@@ -23,25 +30,55 @@ test("CU-19 obtener una copia de datos personales", async ({ page }) => {
   const download = page.waitForEvent("download");
   await button.click();
   const file = await download;
-  expect(file.suggestedFilename()).toBe("quenda-personal-data.json");
-  const saved = test.info().outputPath(file.suggestedFilename());
+  const name = file.suggestedFilename();
+  expect(name).toBe("quenda-personal-data.json");
+  const saved = test.info().outputPath(name);
   await file.saveAs(saved);
+  const data = JSON.parse(await readFile(saved, "utf8")) as Personal;
 
-  // Paso 2: el archivo declara su alcance parcial y lo que excluye.
-  const show = async (slug: string, filter: string) => {
-    const { stdout } = await run("jq", [filter, path.basename(saved)], {
-      cwd: path.dirname(saved),
-    });
-    await cu.terminal(
-      page,
-      slug,
-      `jq '${filter}' ${path.basename(saved)}`,
-      stdout,
-    );
-  };
-  await show("alcance-de-la-copia", "{format, scope, completeness}");
-  await show(
+  // Paso 2: el principio del archivo declara su alcance y sus exclusiones.
+  const { records, ...header } = data;
+  const opening = JSON.stringify(header, null, 2).replace(/\n}$/, "");
+  await cu.file(
+    page,
+    "alcance-de-la-copia",
+    name,
+    `${opening},\n  "records": [ … ${records.length} registros … ]\n}`,
+  );
+
+  // Paso 3: cada registro indica su categoría; un ejemplo resumido de cada
+  // una, con sus primeros datos legibles.
+  const categories = [...new Set(records.map((record) => record.category))];
+  const examples = categories.map((category) => {
+    const record = records.find((item) => item.category === category) as {
+      category: string;
+      type: string;
+      data: Record<string, unknown>;
+    };
+    const fields = Object.entries(record.data)
+      .filter(
+        ([, value]) =>
+          ["string", "number", "boolean"].includes(typeof value) &&
+          String(value).length <= 40,
+      )
+      .slice(0, 3)
+      .map(([key, value]) => `        "${key}": ${JSON.stringify(value)},`);
+    return [
+      "    {",
+      `      "category": "${category}",`,
+      `      "type": "${record.type}",`,
+      '      "data": {',
+      ...fields,
+      "        …",
+      "      }",
+      "    },",
+      "    …",
+    ].join("\n");
+  });
+  await cu.file(
+    page,
     "registros-por-categoria",
-    "[.records[].category] | group_by(.) | map({(.[0]): length}) | add",
+    name,
+    `{\n  …\n  "records": [\n${examples.join("\n")}\n  ]\n}`,
   );
 });
