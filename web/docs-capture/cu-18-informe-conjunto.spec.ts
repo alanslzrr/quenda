@@ -243,8 +243,8 @@ async function review(
 test("CU-18 consultar un informe conjunto", async ({ page, browser }) => {
   test.setTimeout(300000);
   const cu = new Capture("CU-18");
-  const month = closedMonth(3);
-  const following = closedMonth(2);
+  const month = closedMonth(4);
+  const following = closedMonth(3);
   const agreement = await agreementWithHistory(month);
 
   // Precondición: al cerrarse cada mes, Quenda prepara su agregado.
