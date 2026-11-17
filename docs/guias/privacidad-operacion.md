@@ -56,17 +56,17 @@ Sirve para que Quenda elimine o bloquee automáticamente los datos de una famili
 
    *El mensaje recuadrado «Excepción registrada» incluye el identificador que se usará para levantarla.*
 
-7. **Quenda procesa los vencimientos.** El proceso de segundo plano (el worker) revisa las políticas activas cada minuto, selecciona los registros vencidos y vuelve a comprobar excepciones y dependencias de cada uno antes de actuar. No hay nada que pulsar. Si el equipo de operación necesita forzar una revisión, puede ejecutar un ciclo del worker con su configuración:
+7. **Quenda procesa los vencimientos.** El proceso de segundo plano (el worker) revisa las políticas activas cada minuto, selecciona los registros vencidos y vuelve a comprobar excepciones y dependencias de cada uno antes de actuar. No hay nada que pulsar. Si el equipo de operación necesita forzar una revisión, puede ejecutar un único ciclo del worker con `pnpm -s worker:local --once`, que toma su conexión y su configuración de los secretos del entorno:
 
    ![Terminal con un ciclo del worker que procesa la conservación](../capturas/cu-20/08-worker-conservacion.webp)
 
-   *La línea RETENTION_BATCH resume el ciclo: ha examinado 2 registros vencidos, ha aplicado la actuación a 1 y ha dejado 1 en conflicto. EMAIL_QUEUE_HEALTH indica que no quedaban correos pendientes.*
+   *La línea EMAIL_WORKER_READY indica que el worker ha arrancado y la línea RETENTION_BATCH resume el ciclo: ha examinado 2 registros vencidos, ha aplicado la actuación a 1 y ha dejado 1 en conflicto. EMAIL_QUEUE_HEALTH indica que no quedaban correos pendientes.*
 
 8. **Revisa excepciones y conflictos.** En **Excepciones y conflictos**, el registro protegido aparece como conflicto con su motivo; sus datos no se han tocado. El otro perfil vencido se ha bloqueado.
 
    ![Excepciones activas y Conflictos de conservación del Concello de Riomaior](../capturas/cu-20/09-excepciones-y-conflictos.webp)
 
-   *Arriba, la excepción activa con su interesado, autorización y motivo, y el botón Levantar excepción. Bajo el título recuadrado «Conflictos de conservación», el conflicto de la misma persona con el motivo LEGAL_HOLD (excepción de conservación) y la fecha de la última detección.*
+   *Arriba, la excepción activa con su interesado, autorización y motivo, y el botón Levantar excepción. Debajo, en «Conflictos de conservación», la tarjeta recuadrada muestra el conflicto de la misma persona: la política que lo detectó, el registro, la fecha de la última detección y el motivo LEGAL_HOLD (excepción de conservación).*
 
 ### Si algo no sale como se espera
 
@@ -102,7 +102,7 @@ Una excepción tiene que referirse a un registro o a un interesado existente. Si
 
 ![Aviso No se ha encontrado el recurso al registrar una excepción](../capturas/cu-20/14-excepcion-sin-interesado.webp)
 
-*Con «cuenta-que-no-existe» como identificador, el aviso recuadrado indica «No se ha encontrado el recurso.» y no se registra ninguna excepción.*
+*Con «cuenta-que-no-existe» como identificador, el aviso recuadrado, sobre el botón Registrar excepción, indica «No se ha encontrado el recurso.» y no se registra ninguna excepción.*
 
 #### La aprobación se revoca
 
@@ -114,7 +114,11 @@ Si el responsable revoca la aprobación, retira la política: Quenda deja de act
 
 Indica el motivo, confirma y pulsa **Retirar política**.
 
-![Confirmación Retirada registrada](../capturas/cu-20/16-politica-retirada.webp)
+![Formulario Retirar política completado](../capturas/cu-20/16-formulario-retirada.webp)
+
+*El formulario llega con el identificador de la política ya escrito y recuerda que la retirada detiene nuevas actuaciones sin restaurar datos ni ampliar la conservación de los archivos bloqueados. Con el motivo y la confirmación completados, el botón recuadrado registra la retirada.*
+
+![Confirmación Retirada registrada](../capturas/cu-20/17-politica-retirada.webp)
 
 *El mensaje recuadrado «Retirada registrada» confirma la retirada con el identificador de la política.*
 
@@ -122,7 +126,7 @@ Indica el motivo, confirma y pulsa **Retirar política**.
 
 Administrar el municipio no da permisos de privacidad. Una administradora que abre la dirección de **Conservación y derechos** solo ve un aviso.
 
-![Aviso No tienes permiso para esta operación para la administradora del municipio](../capturas/cu-20/17-administrador-sin-permiso.webp)
+![Aviso No tienes permiso para esta operación para la administradora del municipio](../capturas/cu-20/18-administrador-sin-permiso.webp)
 
 *El menú lateral de la administradora no incluye Conservación y derechos y el contenido es el aviso recuadrado «No tienes permiso para esta operación.».*
 
@@ -226,59 +230,59 @@ Sirve para devolver el servicio a partir de una copia de seguridad sin que vuelv
 
 **Antes de empezar:** necesitas una copia de la base de datos de procedencia confiable con su SHA-256, el checkpoint de privacidad más reciente con su SHA-256, las credenciales administrativas de PostgreSQL y de mantenimiento, el cliente de PostgreSQL 17 y la autorización del procedimiento. El destino debe tener provisionados los roles de Quenda y recibir el mismo `AUTH_SECRET` que el origen, porque cifra los segundos factores. **Especificación:** [CU-22](../08_casos_de_uso.md#cu-22--recuperar-una-instancia-sin-rehabilitar-datos-restringidos).
 
-Los comandos se ejecutan desde la raíz del código de Quenda. Las variables como `$BACKUP_DATABASE_URL` contienen las cadenas de conexión: deben llegar por el mecanismo de secretos del entorno, nunca escritas en el historial de la terminal.
+Los comandos se ejecutan desde la raíz del código de Quenda. `PG_BIN` (la carpeta del cliente de PostgreSQL 17) y las cadenas de conexión que usan los comandos (`BACKUP_DATABASE_URL` para la copia, `MIGRATION_DATABASE_URL` para el checkpoint, `RESTORE_ADMIN_DATABASE_URL` para restaurar y revisar) se cargan en el entorno desde el gestor de secretos; nunca se escriben en la línea de comandos ni quedan en el historial de la terminal. Para restaurar, `RESTORE_ADMIN_DATABASE_URL` apunta al administrador del clúster de destino; a partir del paso 5 apunta a la base restaurada. En las consultas con `psql`, `DOMAIN_DATABASE_URL` es la conexión del rol de la aplicación a esa misma base.
 
 ### Paso a paso
 
-1. **Haz la copia lógica.** Con un rol de copia con lectura íntegra, crea la copia en un directorio privado. El comando devuelve la ruta, el SHA-256 y la duración. Equivale a `pnpm db:backup`.
+1. **Haz la copia lógica.** Con un rol de copia con lectura íntegra, crea la copia en un directorio privado. El comando devuelve la ruta, el SHA-256 y la duración.
 
    ![Terminal con la copia lógica de la base de datos](../capturas/cu-22/01-copia.webp)
 
-   *La salida indica la ruta del archivo, su SHA-256 (guárdalo por un canal confiable: hará falta para restaurar) y la duración en milisegundos.*
+   *La salida de `pnpm -s db:backup` indica la ruta del archivo, su SHA-256 (guárdalo por un canal confiable: hará falta para restaurar) y la duración en milisegundos.*
 
    En el ejemplo, después de esta copia el personal de privacidad suprime el perfil municipal de un vecino ([CU-21](#cu-21--ejecutar-una-actuación-individual-de-privacidad)). La copia ya no refleja esa supresión.
 
-2. **Guarda el checkpoint de privacidad.** Con las credenciales de mantenimiento, exporta el checkpoint a un archivo nuevo, fuera de las copias. Contiene referencias de las supresiones, bloqueos y excepciones, no los datos. Equivale a `pnpm privacy:checkpoint`.
+2. **Guarda el checkpoint de privacidad.** Con las credenciales de mantenimiento, exporta el checkpoint a un archivo nuevo, fuera de las copias. Contiene referencias de las supresiones, bloqueos y excepciones, no los datos.
 
    ![Terminal con la exportación del checkpoint de privacidad](../capturas/cu-22/02-checkpoint.webp)
 
-   *La salida indica la ruta del checkpoint y su SHA-256. El checksum prueba que el archivo no ha cambiado, no que sea el último: su actualidad se comprueba por separado.*
+   *La salida de `pnpm -s privacy:checkpoint` indica la ruta del checkpoint y su SHA-256. El checksum prueba que el archivo no ha cambiado, no que sea el último: su actualidad se comprueba por separado.*
 
-3. **Restaura la copia en una base nueva y cerrada.** Con un administrador de PostgreSQL, indica la copia, su SHA-256 y el nombre de una base que no exista. Equivale a `pnpm db:restore`.
+3. **Restaura la copia en una base nueva y cerrada.** Con un administrador de PostgreSQL, indica la copia, su SHA-256 y el nombre de una base que no exista.
 
-   ![Terminal con la restauración en la base quenda_recuperada](../capturas/cu-22/04-restaurar.webp)
+   ![Terminal con la restauración en la base quenda_recuperada](../capturas/cu-22/03-restaurar.webp)
 
-   *El estado `RESTORED_CLOSED` confirma que la copia se ha cargado en `quenda_recuperada`, que queda cerrada. No autoriza abrirla al tráfico.*
+   *`pnpm -s db:restore` devuelve el estado `RESTORED_CLOSED`: la copia se ha cargado en `quenda_recuperada`, que queda cerrada. No autoriza abrirla al tráfico.*
 
 4. **Comprueba que el destino está cerrado.** El rol de la aplicación no puede conectarse a la base restaurada.
 
-   ![Terminal con la conexión del rol de la aplicación rechazada](../capturas/cu-22/05-destino-cerrado.webp)
+   ![Terminal con la conexión del rol de la aplicación rechazada](../capturas/cu-22/04-destino-cerrado.webp)
 
    *psql termina con «permission denied for database "quenda_recuperada"» y «User does not have CONNECT privilege»: el acceso ordinario está cerrado.*
 
 5. **Revisa lo que contiene la copia antigua.** Con el administrador, consulta la base restaurada. En el ejemplo, el perfil suprimido después de la copia sigue ahí, la barrera de recuperación está activa y la política de conservación restaurada sigue vigente.
 
-   ![Terminal con la consulta de la base restaurada antes de reproducir el checkpoint](../capturas/cu-22/06-copia-antigua.webp)
+   ![Terminal con la consulta de la base restaurada antes de reproducir el checkpoint](../capturas/cu-22/05-copia-antigua.webp)
 
    *perfiles vale 1 (la copia conserva el perfil suprimido), servicio_habilitado vale f (la barrera impide que la API y los workers arranquen) y la política de perfiles municipales figura con retirada en f.*
 
-6. **Reproduce las actuaciones de privacidad posteriores.** Indica el checkpoint, su SHA-256 y la referencia de la autorización de recuperación. Equivale a `pnpm privacy:restore-reconcile`.
+6. **Reproduce las actuaciones de privacidad posteriores.** Indica el checkpoint, su SHA-256 y la referencia de la autorización de recuperación.
 
-   ![Terminal con la reproducción del checkpoint de privacidad](../capturas/cu-22/08-reproducir-privacidad.webp)
+   ![Terminal con la reproducción del checkpoint de privacidad](../capturas/cu-22/06-reproducir-privacidad.webp)
 
-   *El estado `PRIVACY_REPLAYED_REQUIRES_REVIEW` indica que se ha reproducido 1 actuación y `reopeningAuthorized: false` recuerda que esto no autoriza la reapertura.*
+   *`pnpm -s privacy:restore-reconcile` devuelve el estado `PRIVACY_REPLAYED_REQUIRES_REVIEW`: se ha reproducido 1 actuación, y `reopeningAuthorized: false` recuerda que esto no autoriza la reapertura.*
 
 7. **Comprueba el efecto.** Repite la consulta del paso 5.
 
-   ![Terminal con la consulta de la base restaurada después de reproducir el checkpoint](../capturas/cu-22/09-tras-reproducir.webp)
+   ![Terminal con la consulta de la base restaurada después de reproducir el checkpoint](../capturas/cu-22/07-tras-reproducir.webp)
 
    *perfiles vale ahora 0: la supresión posterior a la copia se ha vuelto a aplicar. La barrera sigue activa (servicio_habilitado en f) y la política restaurada queda retirada (retirada en t) hasta que el responsable la revise.*
 
-8. **Concilia la integridad.** Con el administrador, ejecuta la conciliación de solo lectura sobre la base restaurada. Equivale a `pnpm db:reconcile`.
+8. **Concilia la integridad.** Con el administrador, ejecuta la conciliación de solo lectura sobre la base restaurada.
 
-   ![Terminal con la conciliación de la base restaurada](../capturas/cu-22/10-conciliar.webp)
+   ![Terminal con la conciliación de la base restaurada](../capturas/cu-22/08-conciliar.webp)
 
-   *El informe repite el estado de privacidad (revisión pendiente y checkpoint reproducido), confirma que la base sigue con límite de conexiones 0, muestra 0 incoherencias en cada comprobación de reservas, ocupaciones, consumos y sesiones, y resume los correos (ninguno pendiente). El estado `CHECKED_REQUIRES_REVIEW` y `reopeningAuthorized: false` indican que la revisión operativa sigue siendo obligatoria.*
+   *El informe de `pnpm -s db:reconcile` repite el estado de privacidad (revisión pendiente y checkpoint reproducido), confirma que la base sigue con límite de conexiones 0, muestra 0 incoherencias en cada comprobación de reservas, ocupaciones, consumos y sesiones, y resume los correos (ninguno pendiente). El estado `CHECKED_REQUIRES_REVIEW` y `reopeningAuthorized: false` indican que la revisión operativa sigue siendo obligatoria.*
 
 9. **Decide la reapertura.** Ningún comando autoriza la reapertura. Antes, el responsable operativo verifica que el checkpoint es el más reciente, resuelve las diferencias con los responsables del tratamiento, revisa políticas, excepciones, sesiones y envíos pendientes frente al registro del transporte de correo, y contrasta las reservas confirmadas después de la copia con evidencia externa. Solo entonces se retira la barrera de recuperación mediante mantenimiento autorizado y se conceden las conexiones y los permisos mínimos de cada rol.
 
@@ -288,17 +292,17 @@ Los comandos se ejecutan desde la raíz del código de Quenda. Las variables com
 
 La restauración comprueba la copia antes de crear nada. Si el checksum no coincide, se detiene y no crea la base.
 
-![Terminal con la restauración rechazada por un checksum que no coincide](../capturas/cu-22/03-restaurar-checksum-erroneo.webp)
+![Terminal con la restauración rechazada por un checksum que no coincide](../capturas/cu-22/09-restaurar-checksum-erroneo.webp)
 
-*La salida «Restore failed; inspect the isolated destination…» y el código de salida 1 indican que no se ha restaurado. Comprueba el archivo y su checksum por un canal confiable antes de repetir.*
+*Es el comando del paso 3 con un checksum erróneo. La salida «Restore failed; inspect the isolated destination…» y el código de salida 1 indican que no se ha restaurado. Comprueba el archivo y su checksum por un canal confiable antes de repetir.*
 
 #### El checkpoint no coincide
 
 Si el checksum del checkpoint no corresponde al archivo, o el checkpoint no es de esta instancia o es anterior a lo que ya conoce la base, la reproducción se rechaza y el destino permanece cerrado.
 
-![Terminal con la reproducción de privacidad rechazada](../capturas/cu-22/07-checkpoint-no-coincide.webp)
+![Terminal con la reproducción de privacidad rechazada](../capturas/cu-22/10-checkpoint-no-coincide.webp)
 
-*La salida «Privacy reconciliation failed; keep the destination closed and verify the latest external suppression journal» y el código de salida 1 indican que no se ha reproducido nada.*
+*Es el comando del paso 6 con un checksum que no corresponde al checkpoint. La salida «Privacy reconciliation failed; keep the destination closed and verify the latest external suppression journal» y el código de salida 1 indican que no se ha reproducido nada.*
 
 #### No hay un checkpoint actual
 
