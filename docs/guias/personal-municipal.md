@@ -242,7 +242,7 @@ Sin el permiso de exportar datos, la opción no aparece en el menú, y si abres 
 
 Si te concedieron el permiso sobre espacios concretos, solo puedes elegir esos espacios y no ves el total del municipio.
 
-![Pantalla de uso de una gestora con la lista de espacios abierta, que solo contiene «Pista de pádel 1» y «Pista de pádel 2»](../capturas/cu-05/17-gestor-algunos-espacios.webp)
+![Pantalla de uso de una persona gestora con permiso sobre dos espacios y la lista de espacios abierta, que solo contiene «Pista de pádel 1» y «Pista de pádel 2»](../capturas/cu-05/17-gestor-algunos-espacios.webp)
 
 *La lista señalada ofrece únicamente los dos espacios autorizados y no incluye «Todos los espacios».*
 
@@ -306,7 +306,7 @@ Un convenio permite a varios municipios compartir instalaciones con unas condici
 
    ![Versión 1 con la etiqueta «ACTIVADO» señalada](../capturas/cu-10/07-activado.webp)
 
-   *La etiqueta pasa a «ACTIVADO». La página muestra además la referencia de la revisión jurídica.*
+   *La etiqueta pasa a «ACTIVADO». Más abajo, la ficha añade la referencia de la revisión jurídica, como se ve en la imagen siguiente.*
 
 ### Si algo no sale como se espera
 
@@ -328,7 +328,7 @@ Tras suspender o vencer el convenio, cada unidad sigue vinculada a él. Para que
 
 ![Pantalla «Vinculación de la unidad» con el motivo «Reapertura de la pista al público general» y el botón «Retirar vinculación» señalado](../capturas/cu-10/10-vinculacion.webp)
 
-*La pantalla indica el convenio y la versión que vinculan la unidad, y aclara que retirar la vinculación no publica la unidad ni cambia horarios, reservas o bloqueos, y que las reservas confirmadas se mantienen.*
+*La pantalla identifica por su código el convenio y la versión que vinculan la unidad, y aclara que retirar la vinculación no publica la unidad ni cambia horarios, reservas o bloqueos, y que las reservas confirmadas se mantienen.*
 
 ![Pantalla «Vinculación de la unidad» con el mensaje «Sin vinculación restrictiva registrada.» señalado](../capturas/cu-10/11-vinculacion-retirada.webp)
 
@@ -404,7 +404,7 @@ La administración municipal decide quién gestiona el municipio y con qué perm
 
 5. **La persona ya gestiona su ámbito.** Al entrar en **Gestión** solo ve las secciones de sus permisos.
 
-   ![Agenda diaria de la nueva gestora con el menú lateral, que solo contiene «Agenda diaria», señalado](../capturas/cu-12/07-gestora-con-permisos.webp)
+   ![Agenda diaria de la persona recién incorporada con el menú lateral, que solo contiene «Agenda diaria», señalado](../capturas/cu-12/07-gestora-con-permisos.webp)
 
    *El menú señalado solo ofrece «Agenda diaria» y el uso personal; la agenda muestra las reservas que puede consultar.*
 
@@ -414,9 +414,9 @@ La administración municipal decide quién gestiona el municipio y con qué perm
 
 Gestionar el personal es una facultad de la administración. Un gestor que abre esa sección no ve ningún dato.
 
-![Pantalla con el mensaje «No tienes permiso para esta operación.» señalado en la sesión de la gestora](../capturas/cu-12/08-gestora-sin-permiso.webp)
+![Pantalla con el mensaje «No tienes permiso para esta operación.» señalado en la sesión de la persona gestora](../capturas/cu-12/08-gestora-sin-permiso.webp)
 
-*El menú lateral de la gestora sigue mostrando solo «Agenda diaria».*
+*El menú lateral de esa persona sigue mostrando solo «Agenda diaria».*
 
 #### Hay que retirar los permisos de un gestor
 
@@ -440,7 +440,7 @@ Para relevar a quien administra, primero hay que invitar a otro administrador. E
 
 Mientras el otro administrador solo tenga un permiso temporal (o su invitación siga pendiente), tu retirada se rechaza.
 
-![Detalle de la administradora con el motivo «Cambio de destino» y el error «Debe quedar otro responsable habilitado con permiso indefinido antes de retirar esta responsabilidad.» señalado](../capturas/cu-12/12-retirada-sin-relevo.webp)
+![Detalle de la propia cuenta de administración con el motivo «Cambio de destino» y el error «Debe quedar otro responsable habilitado con permiso indefinido antes de retirar esta responsabilidad.» señalado](../capturas/cu-12/12-retirada-sin-relevo.webp)
 
 *La tabla muestra al nuevo administrador habilitado, pero con una fecha de fin en «Vigencia». El texto del detalle recuerda que retirar el rol invalida las invitaciones pendientes que concedió esa persona.*
 
@@ -456,11 +456,11 @@ Si el sustituto ya tiene el permiso adecuado no necesita otra invitación: su pe
 
 #### Completar el relevo
 
-Con otro responsable habilitado sin caducidad, quien se va abre su propia cuenta en la tabla, escribe el motivo, marca **Confirmo la retirada ordinaria** y pulsa **Retirar administración**.
+Con dos responsables habilitados sin caducidad, cualquiera de los dos puede retirarse. Quien se va abre su propia cuenta en la tabla, escribe el motivo, marca **Confirmo la retirada ordinaria** y pulsa **Retirar administración**.
 
 ![Detalle «Administración de la cuenta» de la propia cuenta con el motivo «Fin de la sustitución» y el botón «Retirar administración» señalado](../capturas/cu-12/15-retirada-ordinaria.webp)
 
-*El texto recuerda que se retira el rol y se invalidan sus invitaciones pendientes, pero no se cierra la cuenta ni se borran reservas.*
+*En el ejemplo se retira David Mosquera Gil desde su propia sesión («tu cuenta») y Marta Couceiro sigue como responsable. El texto recuerda que se retira el rol y se invalidan sus invitaciones pendientes, pero no se cierra la cuenta ni se borran reservas.*
 
 ![Pantalla «Gestión municipal» con el mensaje «No tienes permisos municipales vigentes.» señalado](../capturas/cu-12/16-retirada-completada.webp)
 
