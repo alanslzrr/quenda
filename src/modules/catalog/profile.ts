@@ -141,7 +141,7 @@ export async function saveCatalogProfile(
       ).rows[0];
       if (!current) throw new HttpError("NOT_FOUND");
       if (current.profile_version !== input.expectedVersion)
-        throw new HttpError("CONFLICT");
+        throw new HttpError("STALE_VERSION");
       const next = current.profile_version + 1;
       if (facility)
         await client.query(

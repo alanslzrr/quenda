@@ -175,7 +175,7 @@ test("facility and unit profiles are replaced under permission, versioned, audit
             address: "Otra",
           },
         ),
-        { code: "CONFLICT" },
+        { code: "STALE_VERSION" },
       );
       const row = (
         await migration.query(
