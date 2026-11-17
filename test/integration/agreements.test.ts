@@ -851,7 +851,9 @@ test("agreement drafts preserve participant ownership and do not activate capabi
             randomUUID(),
             3600,
           );
-        await assert.rejects(issue(0, "inactive"), { code: "CONFLICT" });
+        await assert.rejects(issue(0, "inactive"), {
+          code: "AGREEMENT_STATE_CONFLICT",
+        });
         await assert.rejects(
           issueAgreementCredential(
             domain,
@@ -920,7 +922,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
             [id, period],
           );
           await assert.rejects(issue(0, "outside-effective-period"), {
-            code: "CONFLICT",
+            code: "AGREEMENT_STATE_CONFLICT",
           });
         }
         assert.equal(
@@ -947,7 +949,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
           [id],
         );
         await assert.rejects(issue(0, "open-access-mode"), {
-          code: "CONFLICT",
+          code: "AGREEMENT_STATE_CONFLICT",
         });
         await migration.query(
           "UPDATE domain.agreement_version SET eligibility='acreditacion_vigente' WHERE agreement_id=$1",
@@ -1053,7 +1055,9 @@ test("agreement drafts preserve participant ownership and do not activate capabi
           randomUUID(),
           3600,
         );
-        await assert.rejects(issue(0, "suspended-issue"), { code: "CONFLICT" });
+        await assert.rejects(issue(0, "suspended-issue"), {
+          code: "AGREEMENT_STATE_CONFLICT",
+        });
         const revoked = await revokeAgreementCredential(
           domain,
           actor(0),
@@ -1115,7 +1119,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
             randomUUID(),
             3600,
           ),
-          { code: "CONFLICT" },
+          { code: "AGREEMENT_STATE_CONFLICT" },
         );
         await migration.query(
           "UPDATE domain.agreement_version SET status='ACTIVADO' WHERE agreement_id=$1",
@@ -1295,7 +1299,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
             )
           ).rows;
         await assert.rejects(suspend(1, 1, "former-participant"), {
-          code: "CONFLICT",
+          code: "AGREEMENT_STATE_CONFLICT",
         });
         await assert.rejects(suspend(1, 2, "former-participant-current"), {
           code: "NOT_FOUND",
