@@ -56,10 +56,15 @@ async function imageArchitecture(tag: string) {
 
 async function main() {
   const args = process.argv.slice(2);
+  const flags = new Set(["--skip-verify", "--demo"]);
   const skipVerify = args.includes("--skip-verify");
-  const [target, ...extra] = args.filter((arg) => arg !== "--skip-verify");
+  // --demo also ships the demo seeder and loads its dataset once.
+  const demo = args.includes("--demo");
+  const [target, ...extra] = args.filter((arg) => !flags.has(arg));
   if (!target || extra.length || !/^[\w.-]+@[\w.:-]+$/.test(target))
-    throw new Error("usage: pnpm deploy:host <user>@<host> [--skip-verify]");
+    throw new Error(
+      "usage: pnpm deploy:host <user>@<host> [--demo] [--skip-verify]",
+    );
   // QUENDA_SSH_CONFIG selects an ssh_config file (ports, keys, jump hosts).
   const config = process.env.QUENDA_SSH_CONFIG;
   const remote = (...command: string[]) => [
@@ -84,6 +89,7 @@ async function main() {
   const platform = `linux/${arch}`;
   const backend = `quenda-backend:${revision}`;
   const web = `quenda-web:${revision}`;
+  const seeder = `quenda-demo:${revision}`;
 
   if ((await imageArchitecture(backend)) !== arch)
     await run("node", ["scripts/build-image.ts", backend], {
@@ -99,6 +105,19 @@ async function main() {
       "web/Dockerfile",
       "--tag",
       web,
+      "--build-arg",
+      `SOURCE_REVISION=${revision}`,
+      ".",
+    ]);
+  if (demo && (await imageArchitecture(seeder)) !== arch)
+    await run("docker", [
+      "build",
+      "--platform",
+      platform,
+      "--file",
+      "deploy/demo/Dockerfile",
+      "--tag",
+      seeder,
       "--build-arg",
       `SOURCE_REVISION=${revision}`,
       ".",
@@ -132,11 +151,13 @@ async function main() {
     ["ssh", ...remote("sudo", "quenda", "receive", revision)],
   );
   // docker load accepts the gzip stream directly.
+  const images = demo ? [backend, web, seeder] : [backend, web];
   await pipe(
-    ["sh", "-c", `docker save "$0" "$1" | gzip -1`, backend, web],
+    ["sh", "-c", 'docker save "$@" | gzip -1', "save", ...images],
     ["ssh", ...remote("sudo", "docker", "load")],
   );
   await run("ssh", remote("sudo", "quenda", "deploy", revision));
+  if (demo) await run("ssh", remote("sudo", "quenda", "demo", "seed"));
 }
 
 main().catch((error: Error) => {

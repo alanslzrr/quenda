@@ -21,10 +21,19 @@ locals {
   ))
 }
 
+locals {
+  user_data = templatefile("${path.module}/cloud-init.yaml.tftpl", {
+    settings = base64encode(local.settings)
+    cli      = base64gzip(file("${path.module}/../../../deploy/host/quenda"))
+  })
+}
+
 output "user_data" {
   description = "cloud-config document for the VM's first boot."
-  value = templatefile("${path.module}/cloud-init.yaml.tftpl", {
-    settings = base64encode(local.settings)
-    cli      = filebase64("${path.module}/../../../deploy/host/quenda")
-  })
+  value       = local.user_data
+  precondition {
+    # The smallest limit among the supported clouds (AWS).
+    condition     = length(local.user_data) <= 16384
+    error_message = "The first-boot document exceeds the 16 KiB user data limit of AWS."
+  }
 }

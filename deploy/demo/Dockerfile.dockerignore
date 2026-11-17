@@ -1,0 +1,12 @@
+*
+!package.json
+!pnpm-lock.yaml
+!.npmrc
+!src/
+!src/**
+!scripts/lib/
+!scripts/lib/**
+!test/helpers/auth-client.ts
+!test/demo/
+!test/demo/**
+!deploy/demo/seed.ts

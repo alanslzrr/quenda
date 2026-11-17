@@ -12,11 +12,13 @@ readonly SETTINGS=$ETC/host.env
 readonly SECRETS=$ETC/secrets.env
 readonly SMTP_PASSWORD_FILE=$ETC/smtp-password
 readonly RUNTIME=$ETC/runtime.env
+readonly DEMO_ACCESS=$ETC/demo-access.json
 
 die() { echo "quenda: $*" >&2; exit 1; }
 need_root() { [[ $EUID -eq 0 ]] || die "run as root (sudo quenda $*)"; }
 # shellcheck source=/dev/null
 setting() { (set -a; . "$SETTINGS"; set +a; printf '%s' "${!1:-}"); }
+runtime() { sed -n "s/^$1=//p" "$RUNTIME" | head -n 1; }
 current() { readlink -e "$STATE/current" 2>/dev/null || true; }
 
 compose() {
@@ -198,6 +200,62 @@ operator() {
   compose run --rm migrate scripts/initialize-operator.ts "$1"
 }
 
+# Seeds the demonstration dataset once, on an installation without data.
+# The access file (accounts, password, TOTP secrets) stays on the host.
+demo_seed() {
+  need_root demo
+  if [[ -f $STATE/demo-seeded ]]; then
+    echo "Demo data already seeded; see: sudo quenda demo access"
+    return 0
+  fi
+  local release revision
+  release=$(current)
+  [[ -n $release ]] || die "no release deployed yet"
+  revision=$(basename "$release")
+  docker image inspect "quenda-demo:$revision" >/dev/null ||
+    die "demo image for $revision not loaded (pnpm deploy:host <target> --demo)"
+  local env access
+  env=$(mktemp "$ETC/demo-env.XXXXXX")
+  access=$(mktemp "$ETC/demo-access.XXXXXX")
+  local db=db:5432/quenda
+  # Values are read literally: runtime.env is not shell-quoted.
+  {
+    echo "AUTH_ORIGIN=$(runtime AUTH_ORIGIN)"
+    echo "AUTH_SECRET=$(runtime AUTH_SECRET)"
+    echo "DOMAIN_DATABASE_URL=postgresql://quenda_domain:$(runtime DOMAIN_DATABASE_PASSWORD)@$db"
+    echo "AUTH_DATABASE_URL=postgresql://quenda_auth:$(runtime AUTH_DATABASE_PASSWORD)@$db"
+    echo "MIGRATION_DATABASE_URL=postgresql://quenda_migrator:$(runtime MIGRATION_DATABASE_PASSWORD)@$db"
+    echo "DEMO_PASSWORD=Quenda-demo-$(openssl rand -hex 4)"
+  } > "$env"
+  # Every seeded booking queues a mail; the worker must not claim any of them
+  # before the seeder marks the queue as history.
+  compose stop worker
+  if docker run --rm --network quenda_data --read-only --tmpfs /tmp \
+    --cap-drop ALL --security-opt no-new-privileges \
+    --env-file "$env" "quenda-demo:$revision" > "$access"; then
+    rm -f "$env"
+    mv "$access" "$DEMO_ACCESS"
+    touch "$STATE/demo-seeded"
+    compose start worker
+    echo "Demo data seeded; see: sudo quenda demo access"
+  else
+    rm -f "$env" "$access"
+    die "demo seeding failed; the email worker stays stopped until the queue is reviewed (sudo quenda compose start worker)"
+  fi
+}
+
+demo() {
+  case ${1:-} in
+    seed) demo_seed ;;
+    access)
+      need_root demo
+      [[ -f $DEMO_ACCESS ]] || die "no demo data seeded"
+      cat "$DEMO_ACCESS"
+      ;;
+    *) die "usage: quenda demo <seed|access>" ;;
+  esac
+}
+
 usage() {
   cat <<'EOF'
 usage: quenda <command>
@@ -206,6 +264,8 @@ usage: quenda <command>
   deploy <revision>     start or upgrade to a received release
   smtp-password         store the SMTP password read from stdin
   operator <account-id> promote the first platform operator
+  demo seed             load the demonstration dataset (once)
+  demo access           show the demo accounts, password and TOTP secrets
   status                list the services
   logs [service]        follow logs
   compose <args>        run docker compose on the current release
@@ -220,6 +280,7 @@ case $command in
   deploy) deploy "$@" ;;
   smtp-password) smtp_password ;;
   operator) operator "$@" ;;
+  demo) demo "$@" ;;
   status) compose ps ;;
   logs) compose logs --tail 200 -f "$@" ;;
   compose) compose "$@" ;;

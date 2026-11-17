@@ -171,7 +171,7 @@ test("a cloud-init host boots from the shared module and serves a shipped releas
     const env = { ...process.env, QUENDA_SSH_CONFIG: sshConfig };
     await run(
       "node",
-      ["scripts/deploy-host.ts", `ubuntu@${name}`, "--skip-verify"],
+      ["scripts/deploy-host.ts", `ubuntu@${name}`, "--demo", "--skip-verify"],
       env,
     );
     // A second deploy of the same revision is an idempotent upgrade.
@@ -251,6 +251,45 @@ test("a cloud-init host boots from the shared module and serves a shipped releas
     const settings = (await docker("exec", name, "cat", "/etc/quenda/host.env"))
       .stdout;
     assert.doesNotMatch(settings, /PASSWORD|SECRET/);
+
+    // The demo was seeded once, with the mail queue left as history.
+    const access = JSON.parse(
+      (await docker("exec", name, "quenda", "demo", "access")).stdout,
+    ) as { accounts: unknown[]; origin: string };
+    assert.equal(access.accounts.length, 13);
+    assert.equal(access.origin, `https://${domain}`);
+    const pending = (
+      await docker(
+        "exec",
+        name,
+        "quenda",
+        "compose",
+        "exec",
+        "-T",
+        "db",
+        "psql",
+        "-U",
+        "quenda_bootstrap",
+        "-d",
+        "quenda",
+        "-tAc",
+        "SELECT count(*) FROM domain.reservation_email WHERE accepted_at IS NULL",
+      )
+    ).stdout.trim();
+    assert.equal(pending, "0");
+    const worker = (
+      await docker(
+        "exec",
+        name,
+        "quenda",
+        "compose",
+        "ps",
+        "--format",
+        "{{.State}}",
+        "worker",
+      )
+    ).stdout.trim();
+    assert.equal(worker, "running");
   } finally {
     await docker("rm", "--force", "--volumes", name).catch(() => {});
     await docker("image", "rm", image).catch(() => {});
