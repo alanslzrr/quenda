@@ -65,7 +65,7 @@ test("privacy permissions are explicit, scoped, accepted and permanently withdra
       const item = await createMunicipality(domain, actor("operator"), {
         name: admin,
         timezone: "Europe/Madrid",
-        administratorId: admin,
+        administratorEmail: `${admin}@example.test`,
         invitationExpiresAt: expiresAt(),
       });
       await acceptAdministratorInvitation(
@@ -101,7 +101,7 @@ test("privacy permissions are explicit, scoped, accepted and permanently withdra
         await assert.rejects(allowed("operator", a), { code: "FORBIDDEN" });
         await assert.rejects(allowed("admin-a", a), { code: "FORBIDDEN" });
         const old = await inviteManager(domain, actor("admin-a"), a, {
-          accountId: "reader",
+          email: "reader@example.test",
           expiresAt: expiresAt(),
           permissions: [{ operation: "DATA_EXPORT", unitId: null }],
         });
@@ -109,7 +109,7 @@ test("privacy permissions are explicit, scoped, accepted and permanently withdra
         await assert.rejects(allowed("reader", a), { code: "FORBIDDEN" });
         await assert.rejects(
           inviteManager(domain, actor("admin-a"), a, {
-            accountId: "reader",
+            email: "reader@example.test",
             expiresAt: expiresAt(),
             permissions: [{ operation: "PRIVACY_READ", unitId: randomUUID() }],
           }),
@@ -122,7 +122,7 @@ test("privacy permissions are explicit, scoped, accepted and permanently withdra
       "municipal acceptance grants only named operations in its exact scope",
       async () => {
         const item = await inviteManager(domain, actor("admin-a"), a, {
-          accountId: "reader",
+          email: "reader@example.test",
           expiresAt: expiresAt(),
           permissions: [{ operation: "PRIVACY_READ", unitId: null }],
         });
@@ -146,7 +146,7 @@ test("privacy permissions are explicit, scoped, accepted and permanently withdra
         );
         assert.equal(cross.rows[0].allowed, false);
         const self = await inviteManager(domain, actor("admin-a"), a, {
-          accountId: "admin-a",
+          email: "admin-a@example.test",
           expiresAt: expiresAt(),
           permissions: [{ operation: "PRIVACY_EXECUTE", unitId: null }],
         });

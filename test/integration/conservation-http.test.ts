@@ -55,7 +55,7 @@ test("retention policy HTTP requires explicit scope authorization and never defa
       const item = await createMunicipality(domain, actor("operator"), {
         name: admin,
         timezone: "Europe/Madrid",
-        administratorId: admin,
+        administratorEmail: `${admin}@example.test`,
         invitationExpiresAt: expiry(),
       });
       await acceptAdministratorInvitation(
@@ -65,7 +65,7 @@ test("retention policy HTTP requires explicit scope authorization and never defa
         item.invitationId,
       );
       const grant = await inviteManager(domain, actor(admin), item.tenantId, {
-        accountId: delegate,
+        email: `${delegate}@example.test`,
         expiresAt: expiry(),
         permissions: [
           { operation: "PRIVACY_READ", unitId: null },
@@ -83,7 +83,7 @@ test("retention policy HTTP requires explicit scope authorization and never defa
     const a = await municipality("admin-a", "privacy-a"),
       b = await municipality("admin-b", "privacy-b");
     const read = await inviteManager(domain, actor("admin-a"), a, {
-      accountId: "reader",
+      email: "reader@example.test",
       expiresAt: expiry(),
       permissions: [{ operation: "PRIVACY_READ", unitId: null }],
     });
