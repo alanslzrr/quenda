@@ -132,8 +132,8 @@ const messages = {
     gl: "Este concello xa completou a súa alta inicial e a súa invitación inicial non se pode substituír. Se non queda ningún responsable habilitado, usa a recuperación de responsable.",
   },
   ADMINISTRATOR_RECOVERY_UNAVAILABLE: {
-    es: "No se puede recuperar el responsable: el ayuntamiento ya tiene un responsable habilitado, todavía no ha completado su alta inicial o la cuenta indicada no está habilitada. Recarga para ver su estado actual.",
-    gl: "Non se pode recuperar o responsable: o concello xa ten un responsable habilitado, aínda non completou a súa alta inicial ou a conta indicada non está habilitada. Recarga para ver o seu estado actual.",
+    es: "No se puede recuperar el responsable: el ayuntamiento ya tiene un responsable habilitado o todavía no ha completado su alta inicial. Recarga para ver su estado actual.",
+    gl: "Non se pode recuperar o responsable: o concello xa ten un responsable habilitado ou aínda non completou a súa alta inicial. Recarga para ver o seu estado actual.",
   },
   EMAIL_ADDRESS_UNAVAILABLE: {
     es: "No se puede cambiar a esta dirección de correo. Solicita el cambio con otra dirección.",
