@@ -93,7 +93,7 @@ test("municipal booking policy is versioned, scoped and audited atomically", {
     assert.equal(competing.filter((r) => r.status === "fulfilled").length, 1);
     assert.equal(
       competing.filter(
-        (r) => r.status === "rejected" && r.reason.code === "CONFLICT",
+        (r) => r.status === "rejected" && r.reason.code === "STALE_VERSION",
       ).length,
       1,
     );
@@ -178,7 +178,7 @@ test("municipal booking policy is versioned, scoped and audited atomically", {
     });
     await assert.rejects(
       save({ ...input, expectedVersion: 2, advanceDays: 5 }),
-      { code: "CONFLICT" },
+      { code: "UNIT_ADVANCE_EXCEEDS_LIMIT" },
     );
     assert.deepEqual(await readBookingPolicy(domain, admin, tenantId), current);
     const clock = { now: () => new Date("2030-01-01T12:00:00Z") };

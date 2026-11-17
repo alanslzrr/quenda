@@ -67,7 +67,7 @@ export async function readMonthlyReviewContext(
     if (error instanceof DatabaseError) {
       if (error.code === "42501") throw new HttpError("FORBIDDEN");
       if (error.code === "P0002") throw new HttpError("NOT_FOUND");
-      if (error.code === "P0001") throw new HttpError("CONFLICT");
+      if (error.code === "P0001") throw new HttpError("STALE_VERSION");
     }
     throw error;
   }

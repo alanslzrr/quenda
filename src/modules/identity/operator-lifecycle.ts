@@ -12,9 +12,11 @@ function outcome(value: string | undefined): void {
       return;
     case "HANDOVER_REQUIRED":
       throw new HttpError("ACCOUNT_HANDOVER_REQUIRED");
+    case "CONFLICT":
+      // The account is already an operator or has a pending invitation.
+      throw new HttpError("ROLE_ALREADY_ACTIVE");
     case "INVALID_INPUT":
     case "NOT_FOUND":
-    case "CONFLICT":
     case "FORBIDDEN":
       throw new HttpError(value);
     default:

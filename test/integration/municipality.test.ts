@@ -601,7 +601,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             initial.tenantId,
             replacement,
           ),
-          { code: "CONFLICT" },
+          { code: "MUNICIPALITY_ALREADY_INITIALIZED" },
         );
         await revokeMunicipalAccessForSecurity(
           domain,
@@ -617,7 +617,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             initial.tenantId,
             replacement,
           ),
-          { code: "CONFLICT" },
+          { code: "MUNICIPALITY_ALREADY_INITIALIZED" },
         );
         await assert.rejects(
           transaction(
@@ -2280,7 +2280,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             f.facilityId,
             { name: "No crear" },
           ),
-          { code: "CONFLICT" },
+          { code: "FACILITY_WITHDRAWN" },
         );
         await assert.rejects(
           transaction(
@@ -2390,7 +2390,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
         );
         assert.equal(
           outcomes.filter(
-            (o) => o.status === "rejected" && o.reason.code === "CONFLICT",
+            (o) => o.status === "rejected" && o.reason.code === "STALE_VERSION",
           ).length,
           1,
         );
@@ -2551,7 +2551,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             u.unitId,
             declaration,
           ),
-          { code: "CONFLICT" },
+          { code: "FACILITY_NOT_PUBLISHED" },
         );
         await publishCatalogResource(
           domain,
@@ -2610,7 +2610,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             u.unitId,
             { ...declaration, calendarVersion: 2 },
           ),
-          { code: "CONFLICT" },
+          { code: "STALE_VERSION" },
         );
         await assert.rejects(
           publishCatalogResource(
@@ -2687,7 +2687,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             u.unitId,
             declaration,
           ),
-          { code: "CONFLICT" },
+          { code: "FACILITY_NOT_PUBLISHED" },
         );
         await publishCatalogResource(
           domain,

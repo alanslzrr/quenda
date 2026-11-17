@@ -132,7 +132,7 @@ test("municipal name and logo are administrator-only, validated, re-encoded, ver
         { expectedVersion: 1, name: "Otro" },
         randomUUID(),
       ),
-      { code: "CONFLICT" },
+      { code: "STALE_VERSION" },
     );
 
     // Logos: raster only, re-encoded as WebP within 512 px, dark only after the main one.
@@ -313,7 +313,7 @@ test("municipal name and logo are administrator-only, validated, re-encoded, ver
     }
     await assert.rejects(
       removeLogo(domain, actor("admin"), tenantId, "light", 4, randomUUID()),
-      { code: "CONFLICT" },
+      { code: "STALE_VERSION" },
     );
 
     const events = (

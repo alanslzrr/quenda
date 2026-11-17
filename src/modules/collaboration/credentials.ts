@@ -7,6 +7,7 @@ import {
   type AuthenticatedAccount,
   requireAdministrator,
 } from "../identity/index.ts";
+import { agreementRejection } from "./conflicts.ts";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function reference(value: string) {
@@ -19,7 +20,8 @@ function translate(error: unknown): never {
   if (error instanceof DatabaseError) {
     if (error.code === "P0002") throw new HttpError("NOT_FOUND");
     if (error.code === "42501") throw new HttpError("FORBIDDEN");
-    if (["23514", "40001", "40P01"].includes(error.code ?? ""))
+    if (error.code === "23514") throw new HttpError(agreementRejection(error));
+    if (["40001", "40P01"].includes(error.code ?? ""))
       throw new HttpError("CONFLICT");
   }
   throw error;

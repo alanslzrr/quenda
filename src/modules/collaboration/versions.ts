@@ -5,6 +5,7 @@ import {
   type AuthenticatedAccount,
   requireAdministrator,
 } from "../identity/index.ts";
+import { agreementRejection } from "./conflicts.ts";
 import {
   type AgreementVersionInput,
   normalizeAgreementVersion,
@@ -70,7 +71,9 @@ export async function createAgreementVersion(
     );
   } catch (error) {
     if (error instanceof DatabaseError) {
-      if (["23514", "40001", "40P01"].includes(error.code ?? ""))
+      if (error.code === "23514")
+        throw new HttpError(agreementRejection(error));
+      if (["40001", "40P01"].includes(error.code ?? ""))
         throw new HttpError("CONFLICT");
       if (["23503", "P0002"].includes(error.code ?? ""))
         throw new HttpError("NOT_FOUND");

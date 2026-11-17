@@ -260,7 +260,7 @@ export async function orderCatalogPhotos(
       current.length !== photoIds.length ||
       current.some((photo) => !photoIds.includes(photo.id))
     )
-      throw new HttpError("CONFLICT");
+      throw new HttpError("STALE_VERSION");
     for (const [index, photoId] of photoIds.entries()) {
       const previous = current.findIndex((photo) => photo.id === photoId) + 1;
       const position = index + 1;

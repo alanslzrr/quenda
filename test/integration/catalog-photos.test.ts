@@ -330,7 +330,7 @@ test("catalog photos are re-encoded, ordered, audited and public only with their
           facilityId,
           reversed.slice(1),
         ),
-        { code: "CONFLICT" },
+        { code: "STALE_VERSION" },
       );
       await assert.rejects(
         orderCatalogPhotos(

@@ -1,7 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import { command } from "../../database/command.ts";
-import type { ErrorCode } from "../../http/errors.ts";
+import { conflictCauses, type ErrorCode } from "../../http/errors.ts";
 
 const actors = new WeakMap<FastifyRequest, string>();
 export function rememberAuditActor(request: FastifyRequest, accountId: string) {
@@ -9,7 +9,9 @@ export function rememberAuditActor(request: FastifyRequest, accountId: string) {
 }
 
 export function accessFailureAudit(pool: Pool) {
-  return async (request: FastifyRequest, code: ErrorCode) => {
+  return async (request: FastifyRequest, rejection: ErrorCode) => {
+    // The response keeps the specific cause; the audit keeps its closed outcome set.
+    const code = conflictCauses.has(rejection) ? "CONFLICT" : rejection;
     const accountId = actors.get(request);
     const operation = request.routeOptions.schema?.operationId;
     if (

@@ -127,10 +127,11 @@ export async function reviewSharedRetention(
         const outcome = result.rows[0]?.outcome;
         if (outcome === "OK")
           return { digest: input.digest, approved: input.approved };
+        // The reviewed digest no longer matches the shared context.
+        if (outcome === "CONFLICT") throw new HttpError("STALE_VERSION");
         if (
           outcome === "FORBIDDEN" ||
           outcome === "NOT_FOUND" ||
-          outcome === "CONFLICT" ||
           outcome === "INVALID_INPUT"
         )
           throw new HttpError(outcome);

@@ -145,7 +145,7 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
     assert.ok(stale);
     assert.equal(stale.code, 1);
     assert.equal(stale.stdout, "");
-    assert.equal(JSON.parse(stale.stderr).code, "CONFLICT");
+    assert.equal(JSON.parse(stale.stderr).code, "STALE_VERSION");
     assert.equal(
       (
         await migration.query(
@@ -161,7 +161,7 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
     assert.equal(corrections.filter((r) => r.status === "fulfilled").length, 1);
     const loser = corrections.find((r) => r.status === "rejected");
     assert.ok(loser && loser.status === "rejected");
-    assert.equal(loser.reason.code, "CONFLICT");
+    assert.equal(loser.reason.code, "STALE_VERSION");
     const saved = (
       await migration.query(
         "SELECT revision,status,reservations,reserved_minutes,source_digest,control_version,participants,cutoff,created_at FROM domain.monthly_assessment WHERE agreement_id=$1 ORDER BY revision",
@@ -390,7 +390,7 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
         randomUUID(),
         3600,
       ),
-      { code: "CONFLICT" },
+      { code: "STALE_VERSION" },
     );
     await assert.rejects(
       reviewMonthlyAssessment(
@@ -716,7 +716,7 @@ test("worker monthly assessment scopes attributed bookings without quota or publ
         randomUUID(),
         3600,
       ),
-      { code: "CONFLICT" },
+      { code: "STALE_VERSION" },
     );
     await migration.query(
       "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1 AND account_id='report-0'",

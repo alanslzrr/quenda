@@ -125,8 +125,11 @@ test("staff record a holder's arrival only within the access window and with aut
       });
 
       await test("outside the access window or for a cancellation the request conflicts", async () => {
-        assert.equal((await arrive(admin, tomorrow)).statusCode, 409);
-        assert.equal((await arrive(admin, cancelled)).statusCode, 409);
+        for (const reservation of [tomorrow, cancelled]) {
+          const rejected = await arrive(admin, reservation);
+          assert.equal(rejected.statusCode, 409);
+          assert.equal(rejected.json().error.code, "ARRIVAL_OUTSIDE_WINDOW");
+        }
         assert.equal(
           (await admin.request(`${base}/${tomorrow}`)).json().arrivedAt,
           null,

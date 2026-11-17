@@ -91,6 +91,54 @@ const messages = {
     es: "La cuenta no está activa.",
     gl: "A conta non está activa.",
   },
+  STALE_VERSION: {
+    es: "Se han guardado otros cambios mientras editabas, quizá desde otra pestaña. Recarga para ver la versión actual y vuelve a aplicar tus cambios.",
+    gl: "Gardáronse outros cambios mentres editabas, quizais desde outra lapela. Recarga para ver a versión actual e volve aplicar os teus cambios.",
+  },
+  SCHEDULE_HAS_RESERVATIONS: {
+    es: "El nuevo horario dejaría fuera reservas confirmadas. Cancela o reubica esas reservas antes de guardarlo, o amplía el horario para cubrirlas.",
+    gl: "O novo horario deixaría fóra reservas confirmadas. Cancela ou reubica esas reservas antes de gardalo, ou amplía o horario para cubrilas.",
+  },
+  UNIT_ADVANCE_EXCEEDS_LIMIT: {
+    es: "Alguna unidad tiene en sus horarios una antelación mayor que el nuevo límite. Redúcela en esos horarios antes de bajar el límite municipal.",
+    gl: "Algunha unidade ten nos seus horarios unha antelación maior que o novo límite. Redúcea neses horarios antes de baixar o límite municipal.",
+  },
+  FACILITY_NOT_PUBLISHED: {
+    es: "La instalación de esta unidad no está publicada. Publícala antes de publicar la unidad.",
+    gl: "A instalación desta unidade non está publicada. Publícaa antes de publicar a unidade.",
+  },
+  FACILITY_WITHDRAWN: {
+    es: "La instalación está retirada y no admite unidades nuevas. Vuelve a publicarla antes de añadir unidades.",
+    gl: "A instalación está retirada e non admite unidades novas. Volve publicala antes de engadir unidades.",
+  },
+  CATALOG_NOT_EMPTY: {
+    es: "La importación solo se admite en un ayuntamiento sin instalaciones. Este ya tiene catálogo: modifícalo desde la gestión del catálogo.",
+    gl: "A importación só se admite nun concello sen instalacións. Este xa ten catálogo: modifícao desde a xestión do catálogo.",
+  },
+  ARRIVAL_OUTSIDE_WINDOW: {
+    es: "Solo se puede registrar la llegada de una reserva confirmada, desde 30 minutos antes de su inicio hasta que termina.",
+    gl: "Só se pode rexistrar a chegada dunha reserva confirmada, desde 30 minutos antes do seu inicio ata que remata.",
+  },
+  AGREEMENT_STATE_CONFLICT: {
+    es: "El convenio no admite esta operación en su estado actual. Recarga para revisar su versión, sus aprobaciones y su vigencia antes de repetirla.",
+    gl: "O convenio non admite esta operación no seu estado actual. Recarga para revisar a súa versión, as súas aprobacións e a súa vixencia antes de repetila.",
+  },
+  ROLE_ALREADY_ACTIVE: {
+    es: "La cuenta ya tiene este rol o una invitación pendiente para él. Recarga para ver su estado actual.",
+    gl: "A conta xa ten este rol ou unha invitación pendente para el. Recarga para ver o seu estado actual.",
+  },
+  MUNICIPALITY_ALREADY_INITIALIZED: {
+    es: "Este ayuntamiento ya completó su alta inicial y su invitación inicial no se puede sustituir. Si no queda ningún responsable habilitado, usa la recuperación de responsable.",
+    gl: "Este concello xa completou a súa alta inicial e a súa invitación inicial non se pode substituír. Se non queda ningún responsable habilitado, usa a recuperación de responsable.",
+  },
+  ADMINISTRATOR_RECOVERY_UNAVAILABLE: {
+    es: "No se puede recuperar el responsable: el ayuntamiento ya tiene un responsable habilitado, todavía no ha completado su alta inicial o la cuenta indicada no está habilitada. Recarga para ver su estado actual.",
+    gl: "Non se pode recuperar o responsable: o concello xa ten un responsable habilitado, aínda non completou a súa alta inicial ou a conta indicada non está habilitada. Recarga para ver o seu estado actual.",
+  },
+  EMAIL_ADDRESS_UNAVAILABLE: {
+    es: "No se puede cambiar a esta dirección de correo. Solicita el cambio con otra dirección.",
+    gl: "Non se pode cambiar a este enderezo de correo. Solicita o cambio con outro enderezo.",
+  },
 
   INVALID_INPUT: {
     es: "La solicitud contiene datos no válidos.",
@@ -122,8 +170,8 @@ const messages = {
     gl: "Non se atopou o recurso.",
   },
   CONFLICT: {
-    es: "La operación entra en conflicto con el estado actual.",
-    gl: "A operación entra en conflito co estado actual.",
+    es: "La situación ha cambiado y la operación no se ha completado. Recarga para ver el estado actual antes de repetirla.",
+    gl: "A situación cambiou e a operación non se completou. Recarga para ver o estado actual antes de repetila.",
   },
   UNAVAILABLE: {
     es: "El servicio no está disponible.",
@@ -159,6 +207,18 @@ const statuses = {
   PHOTO_INVALID: 400,
   LOGO_INVALID: 400,
   PHOTO_LIMIT_REACHED: 409,
+  STALE_VERSION: 409,
+  SCHEDULE_HAS_RESERVATIONS: 409,
+  UNIT_ADVANCE_EXCEEDS_LIMIT: 409,
+  FACILITY_NOT_PUBLISHED: 409,
+  FACILITY_WITHDRAWN: 409,
+  CATALOG_NOT_EMPTY: 409,
+  ARRIVAL_OUTSIDE_WINDOW: 409,
+  AGREEMENT_STATE_CONFLICT: 409,
+  ROLE_ALREADY_ACTIVE: 409,
+  MUNICIPALITY_ALREADY_INITIALIZED: 409,
+  ADMINISTRATOR_RECOVERY_UNAVAILABLE: 409,
+  EMAIL_ADDRESS_UNAVAILABLE: 409,
 
   INVALID_INPUT: 400,
   PAYLOAD_TOO_LARGE: 413,
@@ -173,6 +233,25 @@ const statuses = {
   INTERNAL_ERROR: 500,
 } as const;
 export type ErrorCode = keyof typeof messages;
+
+/**
+ * Specific causes of what used to be a generic `CONFLICT`. The access audit
+ * stores them under that outcome, so its closed vocabulary does not change.
+ */
+export const conflictCauses: ReadonlySet<ErrorCode> = new Set<ErrorCode>([
+  "STALE_VERSION",
+  "SCHEDULE_HAS_RESERVATIONS",
+  "UNIT_ADVANCE_EXCEEDS_LIMIT",
+  "FACILITY_NOT_PUBLISHED",
+  "FACILITY_WITHDRAWN",
+  "CATALOG_NOT_EMPTY",
+  "ARRIVAL_OUTSIDE_WINDOW",
+  "AGREEMENT_STATE_CONFLICT",
+  "ROLE_ALREADY_ACTIVE",
+  "MUNICIPALITY_ALREADY_INITIALIZED",
+  "ADMINISTRATOR_RECOVERY_UNAVAILABLE",
+  "EMAIL_ADDRESS_UNAVAILABLE",
+]);
 
 export class HttpError extends Error {
   readonly code: ErrorCode;
@@ -201,8 +280,9 @@ export const errorSchema = {
   examples: [
     {
       error: {
-        code: "CONFLICT",
-        message: "La operación entra en conflicto con el estado actual.",
+        code: "STALE_VERSION",
+        message:
+          "Se han guardado otros cambios mientras editabas, quizá desde otra pestaña. Recarga para ver la versión actual y vuelve a aplicar tus cambios.",
       },
       requestId: "00000000-0000-4000-8000-000000000002",
     },

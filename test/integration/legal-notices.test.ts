@@ -136,14 +136,14 @@ test("legal texts are versioned, append-only, scoped to their owner and publishe
           expectedVersion: 1,
           body: { es: { controller: "Otro" } },
         }),
-        { code: "CONFLICT" },
+        { code: "STALE_VERSION" },
       );
       await assert.rejects(
         saveNotice(domain, actor("admin"), tenantId, "legal", {
           expectedVersion: 3,
           body: { es: { entity: "X" } },
         }),
-        { code: "CONFLICT" },
+        { code: "STALE_VERSION" },
       );
       assert.equal(
         (
@@ -170,7 +170,7 @@ test("legal texts are versioned, append-only, scoped to their owner and publishe
         outcomes.filter(
           (o) =>
             o.status === "rejected" &&
-            (o.reason as { code?: string }).code === "CONFLICT",
+            (o.reason as { code?: string }).code === "STALE_VERSION",
         ).length,
         3,
       );

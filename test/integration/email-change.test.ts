@@ -445,6 +445,10 @@ test("email change requires current credentials and both mailboxes without prema
               { token: occupiedProof },
             );
             assert.equal(collision.statusCode, 409);
+            assert.equal(
+              collision.json().error.code,
+              "EMAIL_ADDRESS_UNAVAILABLE",
+            );
             assert.equal(await emailOf(entry.id), entry.email);
             assert.equal(await emailOf(occupied.id), occupied.email);
             failDelivery = true;
@@ -472,6 +476,10 @@ test("email change requires current credentials and both mailboxes without prema
               { token },
             );
             assert.equal(conflict.statusCode, 409, conflict.body);
+            assert.equal(
+              conflict.json().error.code,
+              "EMAIL_ADDRESS_UNAVAILABLE",
+            );
             assert.equal(await emailOf(entry.id), entry.email);
             assert.equal(
               (

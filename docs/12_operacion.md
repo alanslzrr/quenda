@@ -100,7 +100,7 @@ pnpm reports:prepare <convenio-uuid> <AAAA-MM> <revision-actual>
 node dist/monthly-report-worker.js <convenio-uuid> <AAAA-MM> <revision-actual>
 ```
 
-El comando utiliza exclusivamente `quenda_worker`. No requiere configuración de correo ni credenciales del migrador. `revision-actual` es `0` para la primera evaluación; una corrección indica la revisión existente y crea la siguiente sin sobrescribirla. Una revisión obsoleta produce `CONFLICT` y código de salida `1`.
+El comando utiliza exclusivamente `quenda_worker`. No requiere configuración de correo ni credenciales del migrador. `revision-actual` es `0` para la primera evaluación; una corrección indica la revisión existente y crea la siguiente sin sobrescribirla. Una revisión obsoleta produce `STALE_VERSION` y código de salida `1`.
 
 El mes debe estar cerrado en la zona del convenio. La evaluación usa su ámbito efectivo, incluye consumos aunque no exista cuota semanal y suprime las métricas si alguna contribución municipal no alcanza diez cuentas distintas. El máximo de procesamiento es 100000 consumos: superar el límite hace fallar la preparación, sin truncar el conjunto ni cambiar el periodo mensual.
 

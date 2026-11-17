@@ -74,7 +74,19 @@ export async function saveBookingPolicy(
         ],
       );
       const version = result.rows[0]?.version;
-      if (version == null) throw new HttpError("CONFLICT");
+      if (version == null) {
+        // The function also refuses a limit below a unit's own advance; only a
+        // moved version means that someone else saved first.
+        const current = await client.query<{ booking_policy_version: number }>(
+          "SELECT booking_policy_version FROM domain.municipality WHERE id=$1",
+          [tenantId],
+        );
+        throw new HttpError(
+          current.rows[0]?.booking_policy_version === input.expectedVersion
+            ? "UNIT_ADVANCE_EXCEEDS_LIMIT"
+            : "STALE_VERSION",
+        );
+      }
       return {
         tenantId,
         version,

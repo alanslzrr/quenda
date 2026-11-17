@@ -113,7 +113,7 @@ test("usage rules preserve immutable versions, scope, publication and atomic con
     assert.equal(competing.filter((r) => r.status === "fulfilled").length, 1);
     assert.equal(
       competing.filter(
-        (r) => r.status === "rejected" && r.reason.code === "CONFLICT",
+        (r) => r.status === "rejected" && r.reason.code === "STALE_VERSION",
       ).length,
       1,
     );

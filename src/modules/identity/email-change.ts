@@ -222,7 +222,7 @@ export function accountEmailChange(
         };
       } catch (error) {
         if (error instanceof DatabaseError && error.code === "23505")
-          throw new HttpError("CONFLICT");
+          throw new HttpError("EMAIL_ADDRESS_UNAVAILABLE");
         if (error instanceof DatabaseError && error.message === "MFA_REQUIRED")
           throw new HttpError("REAUTHENTICATION_REQUIRED");
         throw error;

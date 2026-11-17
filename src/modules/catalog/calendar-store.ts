@@ -81,7 +81,8 @@ export async function saveUnitCalendar(
         limits.advance_days,
       );
       const version = unit.rows[0]?.calendar_version ?? 0;
-      if (version !== input.expectedVersion) throw new HttpError("CONFLICT");
+      if (version !== input.expectedVersion)
+        throw new HttpError("STALE_VERSION");
       // Existing bookings retain their accepted duration/advance policy. A new
       // opening must still cover their complete interval, including ongoing use.
       const covered = openingCoverage(calendar, limits.timezone);
@@ -102,7 +103,7 @@ export async function saveUnitCalendar(
               Temporal.Instant.from(interval.ends_at.toISOString()),
             )
           )
-            throw new HttpError("CONFLICT");
+            throw new HttpError("SCHEDULE_HAS_RESERVATIONS");
         }
         if (intervals.rows.length < 100) break;
         afterStart = intervals.rows.at(-1)?.starts_at.toISOString() ?? null;

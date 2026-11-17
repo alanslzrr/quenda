@@ -48,7 +48,7 @@ export async function publishCatalogResource(
         );
         if (!parent.rows[0]) throw new HttpError("NOT_FOUND");
         if (!parent.rows[0].published_at || parent.rows[0].withdrawn_at)
-          throw new HttpError("CONFLICT");
+          throw new HttpError("FACILITY_NOT_PUBLISHED");
       }
       const result = await client.query<{
         facility_id: string;
@@ -71,8 +71,11 @@ export async function publishCatalogResource(
           [tenantId, id],
         );
         if (!rules.rowCount) throw new HttpError("USAGE_RULES_REQUIRED");
+        // The interface publishes only after a calendar exists; without one
+        // there is no newer version to reload.
+        if (resource.calendar_version === null) throw new HttpError("CONFLICT");
         if (resource.calendar_version !== input.calendarVersion)
-          throw new HttpError("CONFLICT");
+          throw new HttpError("STALE_VERSION");
         const configuration = await client.query(
           `SELECT v.*,m.advance_days AS municipal_advance_days FROM domain.unit_calendar_version v JOIN domain.municipality m ON m.id=v.tenant_id WHERE v.tenant_id=$1 AND v.unit_id=$2 AND v.version=$3`,
           [tenantId, id, resource.calendar_version],

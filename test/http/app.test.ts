@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildApp } from "../../src/app.ts";
-import { HttpError } from "../../src/http/errors.ts";
+import { conflictCauses, HttpError } from "../../src/http/errors.ts";
 
 const database = { check: async () => {}, close: async () => {} };
 
@@ -132,6 +132,55 @@ test("errors use stable codes; unknown routes and internal failures disclose no 
     const broken = await app.inject("/broken");
     assert.equal(broken.statusCode, 500);
     assert.ok(!broken.body.includes("TOPSECRET"));
+  } finally {
+    await app.close();
+  }
+});
+
+test("conflicts keep 409 and explain the specific cause in both languages", async () => {
+  const app = await buildApp({ database, logLevel: "silent" });
+  for (const code of [...conflictCauses, "CONFLICT" as const])
+    app.get(`/conflict/${code}`, async () => {
+      throw new HttpError(code);
+    });
+  try {
+    const messages = new Set<string>();
+    for (const code of [...conflictCauses, "CONFLICT"])
+      for (const locale of ["es", "gl"]) {
+        const reply = await app.inject({
+          url: `/conflict/${code}`,
+          headers: { "accept-language": locale },
+        });
+        assert.equal(reply.statusCode, 409, code);
+        assert.equal(reply.headers["content-language"], locale);
+        const { error } = reply.json();
+        assert.equal(error.code, code);
+        assert.ok(!messages.has(error.message), `${code} repeats a message`);
+        messages.add(error.message);
+      }
+    const message = async (code: string, locale = "es") =>
+      (
+        await app.inject({
+          url: `/conflict/${code}`,
+          headers: { "accept-language": locale },
+        })
+      ).json().error.message;
+    assert.match(
+      await message("STALE_VERSION"),
+      /Recarga para ver la versión actual/,
+    );
+    assert.match(
+      await message("STALE_VERSION", "gl"),
+      /Recarga para ver a versión actual/,
+    );
+    assert.match(
+      await message("SCHEDULE_HAS_RESERVATIONS"),
+      /Cancela o reubica esas reservas/,
+    );
+    assert.match(
+      await message("CONFLICT"),
+      /Recarga para ver el estado actual/,
+    );
   } finally {
     await app.close();
   }

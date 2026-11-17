@@ -4,6 +4,7 @@ import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import { requireAdministrator } from "./administrator.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
+import { municipalityExists } from "./municipality.ts";
 import { requireOperator } from "./operator.ts";
 
 function reason(value: string): string {
@@ -105,7 +106,12 @@ export async function recoverMunicipalAdministrator(
             invitationId,
           ],
         );
-        if (!result.rows[0]?.allowed) throw new HttpError("CONFLICT");
+        if (!result.rows[0]?.allowed)
+          throw new HttpError(
+            (await municipalityExists(client, tenantId))
+              ? "ADMINISTRATOR_RECOVERY_UNAVAILABLE"
+              : "NOT_FOUND",
+          );
         return { tenantId, invitationId };
       },
     );

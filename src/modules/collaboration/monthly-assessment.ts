@@ -88,7 +88,7 @@ async function runAssessment(
     if (error instanceof DatabaseError) {
       if (error.code === "23514" || error.code === "22P02")
         throw new HttpError("INVALID_INPUT");
-      if (error.code === "P0001") throw new HttpError("CONFLICT");
+      if (error.code === "P0001") throw new HttpError("STALE_VERSION");
       if (error.code === "42501") throw new HttpError("FORBIDDEN");
       if (error.code === "P0002") throw new HttpError("NOT_FOUND");
     }

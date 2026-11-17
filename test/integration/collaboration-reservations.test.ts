@@ -1094,7 +1094,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             randomUUID(),
             3600,
           ),
-          { code: "CONFLICT" },
+          { code: "AGREEMENT_STATE_CONFLICT" },
         );
         await approveAgreement(
           domain,
@@ -1143,7 +1143,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             randomUUID(),
             3600,
           ),
-          { code: "CONFLICT" },
+          { code: "AGREEMENT_STATE_CONFLICT" },
         );
         await approveAgreement(
           domain,
@@ -1252,7 +1252,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             randomUUID(),
             3600,
           ),
-          { code: "CONFLICT" },
+          { code: "AGREEMENT_STATE_CONFLICT" },
         );
         assert.equal(
           (
@@ -1304,7 +1304,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             randomUUID(),
             3600,
           ),
-          { code: "CONFLICT" },
+          { code: "AGREEMENT_STATE_CONFLICT" },
         );
         for (const p of definition.participants)
           await approveAgreement(
@@ -1392,7 +1392,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
             randomUUID(),
             3600,
           ),
-          { code: "CONFLICT" },
+          { code: "AGREEMENT_STATE_CONFLICT" },
         );
         await createAgreementVersion(
           domain,
@@ -1814,10 +1814,10 @@ test("real booking commands enforce shared eligibility and quota in one transact
           );
         await assert.rejects(
           release(publicUnit, 4, "wrong-reopening-version"),
-          { code: "CONFLICT" },
+          { code: "AGREEMENT_STATE_CONFLICT" },
         );
         await assert.rejects(release(replacementUnit, 4, "active-reopening"), {
-          code: "CONFLICT",
+          code: "AGREEMENT_STATE_CONFLICT",
         });
         await assert.rejects(
           readUnitAgreementRestriction(domain, actor, tenant, publicUnit),
@@ -1967,7 +1967,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
                 randomUUID(),
                 3600,
               ),
-              { code: "CONFLICT" },
+              { code: "AGREEMENT_STATE_CONFLICT" },
             );
             assert.deepEqual(await snapshot(), beforeConflict);
             assert.equal(

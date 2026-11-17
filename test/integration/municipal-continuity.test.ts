@@ -358,7 +358,7 @@ test("municipal continuity protects lasting responsibility and separates securit
               reason: "No bootstrap reopening",
             },
           ),
-          { code: "CONFLICT" },
+          { code: "MUNICIPALITY_ALREADY_INITIALIZED" },
         );
         await assert.rejects(
           recoverMunicipalAdministrator(domain, actor("b"), tenant, {
@@ -376,7 +376,7 @@ test("municipal continuity protects lasting responsibility and separates securit
             reason: "Not orphaned",
             verificationReference: "Authority-123",
           }),
-          { code: "CONFLICT" },
+          { code: "ADMINISTRATOR_RECOVERY_UNAVAILABLE" },
         );
         await assert.rejects(
           recoverMunicipalAdministrator(domain, actor("operator"), tenant, {

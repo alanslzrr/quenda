@@ -896,11 +896,19 @@ test("reservation confirmation validates real calendars and commits every effect
         };
         await assert.rejects(
           saveUnitCalendar(domain, admin, tenant, unit, {
+            expectedVersion: 0,
+            reason: "Stale closure",
+            calendar: closed,
+          }),
+          { code: "STALE_VERSION" },
+        );
+        await assert.rejects(
+          saveUnitCalendar(domain, admin, tenant, unit, {
             expectedVersion: 1,
             reason: "Closure",
             calendar: closed,
           }),
-          { code: "CONFLICT" },
+          { code: "SCHEDULE_HAS_RESERVATIONS" },
         );
         assert.equal(
           (
@@ -945,7 +953,7 @@ test("reservation confirmation validates real calendars and commits every effect
             reason: "Still occupied",
             calendar: closed,
           }),
-          { code: "CONFLICT" },
+          { code: "SCHEDULE_HAS_RESERVATIONS" },
         );
         await cancelReservation(
           domain,
@@ -1015,7 +1023,11 @@ test("reservation confirmation validates real calendars and commits every effect
           results.some(
             (r) =>
               r.status === "rejected" &&
-              ["CONFLICT", "BOOKING_RULES_CHANGED"].includes(r.reason.code),
+              [
+                "CONFLICT",
+                "SCHEDULE_HAS_RESERVATIONS",
+                "BOOKING_RULES_CHANGED",
+              ].includes(r.reason.code),
           ),
         );
         const version = (

@@ -292,7 +292,7 @@ test("shared retention requires exact unanimous approvals and retains recovery e
     );
     assert.notEqual((await read()).digest, context.digest);
     await assert.rejects(approve(a.tenant, true, context.digest), {
-      code: "CONFLICT",
+      code: "STALE_VERSION",
     });
     assert.equal((await execute()).status, "CONFLICT");
     await approve(a.tenant);

@@ -161,7 +161,7 @@ export async function importCatalog(
             "SELECT 1 FROM domain.facility WHERE tenant_id=$1 LIMIT 1",
             [tenantId],
           );
-          if (existing.rowCount) throw new HttpError("CONFLICT");
+          if (existing.rowCount) throw new HttpError("CATALOG_NOT_EMPTY");
           const municipality = (
             await client.query<{
               advance_days: number;
@@ -200,7 +200,7 @@ export async function importCatalog(
                   ],
                 )
               ).rows[0]?.version;
-              if (version == null) throw new HttpError("CONFLICT");
+              if (version == null) throw new HttpError("STALE_VERSION");
               municipality.advance_days = bookingPolicy.advanceDays;
               applied.bookingPolicy = true;
             }
@@ -211,7 +211,7 @@ export async function importCatalog(
                 appearance,
                 correlation,
               );
-              if (version == null) throw new HttpError("CONFLICT");
+              if (version == null) throw new HttpError("STALE_VERSION");
               applied.appearance = true;
             }
           }
