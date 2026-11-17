@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+# Operates one Quenda installation on a Linux host with Docker.
+# Cloud-init installs this file as /usr/local/sbin/quenda and runs `quenda install`;
+# `pnpm deploy:host` then ships verified images and runs `quenda deploy`.
+set -euo pipefail
+umask 077
+
+readonly ETC=/etc/quenda
+readonly STATE=/var/lib/quenda
+readonly RELEASES=$STATE/releases
+readonly SETTINGS=$ETC/host.env
+readonly SECRETS=$ETC/secrets.env
+readonly SMTP_PASSWORD_FILE=$ETC/smtp-password
+readonly RUNTIME=$ETC/runtime.env
+
+die() { echo "quenda: $*" >&2; exit 1; }
+need_root() { [[ $EUID -eq 0 ]] || die "run as root (sudo quenda $*)"; }
+# shellcheck source=/dev/null
+setting() { (set -a; . "$SETTINGS"; set +a; printf '%s' "${!1:-}"); }
+current() { readlink -e "$STATE/current" 2>/dev/null || true; }
+
+compose() {
+  local release
+  release=$(current)
+  [[ -n $release ]] || die "no release deployed yet"
+  docker compose --project-directory "$release" --env-file "$RUNTIME" \
+    -f "$release/compose.production.example.yaml" \
+    -f "$release/deploy/compose.edge.yaml" "$@"
+}
+
+install_host() {
+  need_root install
+  [[ -f $SETTINGS ]] || die "missing $SETTINGS"
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -q
+  apt-get install -y -q ca-certificates curl openssl docker.io docker-compose-v2
+  # Bounded container logs: the default json-file driver grows without limit.
+  install -d -m 755 /etc/docker
+  if [[ ! -f /etc/docker/daemon.json ]]; then
+    printf '%s\n' '{"log-driver":"json-file","log-opts":{"max-size":"10m","max-file":"5"}}' \
+      > /etc/docker/daemon.json
+    chmod 644 /etc/docker/daemon.json
+  fi
+  systemctl enable --now docker
+  systemctl restart docker
+  open_web_ports
+  install -d -m 700 "$ETC" "$STATE" "$RELEASES"
+  generate_secrets
+  echo "Host ready. Ship a release with: pnpm deploy:host <user>@<host>"
+}
+
+# Some images (OCI Ubuntu) ship iptables rules that reject everything but SSH.
+open_web_ports() {
+  [[ -f /etc/iptables/rules.v4 ]] || return 0
+  local rule
+  for rule in "-p tcp --dport 80" "-p tcp --dport 443" "-p udp --dport 443"; do
+    # shellcheck disable=SC2086
+    iptables -C INPUT $rule -m state --state NEW -j ACCEPT 2>/dev/null ||
+      iptables -I INPUT 1 $rule -m state --state NEW -j ACCEPT
+  done
+  if command -v netfilter-persistent >/dev/null; then
+    netfilter-persistent save >/dev/null
+  fi
+}
+
+generate_secrets() {
+  [[ -f $SECRETS ]] && return 0
+  # AUTH_SECRET encrypts stored TOTP secrets: back it up together with the database.
+  {
+    echo "AUTH_SECRET=$(openssl rand -hex 32)"
+    local role
+    for role in BOOTSTRAP MIGRATION DOMAIN AUTH WORKER; do
+      echo "${role}_DATABASE_PASSWORD=$(openssl rand -hex 24)"
+    done
+  } > "$SECRETS"
+  chmod 600 "$SECRETS"
+}
+
+public_domain() {
+  local domain ip
+  domain=$(setting QUENDA_DOMAIN)
+  if [[ -z $domain ]]; then
+    ip=$(curl -fsS --max-time 10 https://checkip.amazonaws.com | tr -d '[:space:]')
+    [[ $ip =~ ^[0-9]+(\.[0-9]+){3}$ ]] || die "cannot resolve the public IP for sslip.io"
+    domain="${ip//./-}.sslip.io"
+  fi
+  printf '%s' "$domain"
+}
+
+write_runtime() {
+  local revision=$1 domain smtp_password=""
+  domain=$(public_domain)
+  if [[ -f $SMTP_PASSWORD_FILE ]]; then smtp_password=$(<"$SMTP_PASSWORD_FILE"); fi
+  [[ -n $(setting SMTP_HOST) ]] || die "SMTP_HOST is not set in $SETTINGS"
+  [[ -n $(setting ACME_EMAIL) ]] || die "ACME_EMAIL is not set in $SETTINGS"
+  if [[ -n $(setting SMTP_USER) && -z $smtp_password ]]; then
+    die "SMTP password missing: ssh in and run 'sudo quenda smtp-password' (reads stdin)"
+  fi
+  local tmp
+  tmp=$(mktemp "$ETC/runtime.XXXXXX")
+  {
+    cat "$SECRETS"
+    echo "QUENDA_BACKEND_IMAGE=quenda-backend:$revision"
+    echo "QUENDA_WEB_IMAGE=quenda-web:$revision"
+    echo "QUENDA_DOMAIN=$domain"
+    echo "AUTH_ORIGIN=https://$domain"
+    echo "ACME_EMAIL=$(setting ACME_EMAIL)"
+    echo "MAIL_TRANSPORT=smtp"
+    local name
+    for name in SMTP_HOST SMTP_PORT SMTP_TLS SMTP_USER SMTP_FROM SMTP_SERVERNAME EMAIL_LOCALE; do
+      if [[ -n $(setting "$name") ]]; then echo "$name=$(setting "$name")"; fi
+    done
+    if [[ -n $smtp_password ]]; then echo "SMTP_PASSWORD=$smtp_password"; fi
+  } > "$tmp"
+  chmod 600 "$tmp"
+  mv "$tmp" "$RUNTIME"
+}
+
+# stdin: tar of the release files (`git archive`) for one revision.
+receive() {
+  need_root receive
+  local revision=${1:-}
+  [[ $revision =~ ^[a-f0-9]{40}$ ]] || die "invalid revision"
+  local target=$RELEASES/$revision tmp
+  tmp=$(mktemp -d "$RELEASES/.incoming.XXXXXX")
+  # Release files are public configuration; containers read them as non-root.
+  (umask 022; tar -x --no-same-owner -C "$tmp" -f -)
+  [[ -f $tmp/compose.production.example.yaml && -f $tmp/deploy/compose.edge.yaml ]] ||
+    { rm -rf "$tmp"; die "incomplete release"; }
+  chmod -R go-w "$tmp"
+  chmod 755 "$tmp"
+  rm -rf "$target"
+  mv "$tmp" "$target"
+}
+
+deploy() {
+  need_root deploy
+  local revision=${1:-}
+  [[ -d $RELEASES/$revision ]] || die "release $revision not received"
+  docker image inspect "quenda-backend:$revision" "quenda-web:$revision" >/dev/null ||
+    die "images for $revision not loaded"
+  write_runtime "$revision"
+  local previous
+  previous=$(current)
+  ln -sfn "$RELEASES/$revision" "$STATE/current"
+  if ! deploy_current; then
+    if [[ -n $previous && $previous != "$RELEASES/$revision" ]]; then
+      echo "quenda: deployment failed; the previous release stays linked as $previous" >&2
+      echo "quenda: if migrations already ran, follow the failed-upgrade recovery in docs/12_operacion.md" >&2
+      ln -sfn "$previous" "$STATE/current"
+    fi
+    return 1
+  fi
+  install -m 755 "$RELEASES/$revision/deploy/host/quenda" /usr/local/sbin/quenda
+  prune "$revision"
+  echo "Quenda $revision is serving https://$(public_domain)"
+}
+
+deploy_current() {
+  compose up -d --wait db
+  if [[ ! -f $STATE/bootstrapped ]]; then
+    compose --profile setup run --rm bootstrap
+    touch "$STATE/bootstrapped"
+  fi
+  # `migrate` runs before the API is replaced; a failed migration stops here.
+  compose up -d --wait --remove-orphans
+}
+
+# Keeps the running release and the one before it, files and images.
+prune() {
+  local keep=$1 dir name
+  local -a releases
+  # Release directories are 40-character hex names, newest first.
+  # shellcheck disable=SC2010
+  mapfile -t releases < <(ls -1t "$RELEASES" | grep -E '^[a-f0-9]{40}$')
+  for dir in "${releases[@]:2}"; do
+    [[ $dir == "$keep" ]] && continue
+    rm -rf "${RELEASES:?}/$dir"
+    for name in quenda-backend quenda-web quenda-demo; do
+      docker image rm "$name:$dir" >/dev/null 2>&1 || true
+    done
+  done
+}
+
+smtp_password() {
+  need_root smtp-password
+  local value
+  IFS= read -r value || true
+  [[ -n $value ]] || die "provide the password on stdin"
+  printf '%s' "$value" > "$SMTP_PASSWORD_FILE"
+  chmod 600 "$SMTP_PASSWORD_FILE"
+  echo "SMTP password stored; apply it with: sudo quenda deploy $(basename "$(current)")"
+}
+
+operator() {
+  need_root operator
+  [[ -n ${1:-} ]] || die "usage: quenda operator <account-id>"
+  compose run --rm migrate scripts/initialize-operator.ts "$1"
+}
+
+usage() {
+  cat <<'EOF'
+usage: quenda <command>
+  install               prepare the host (Docker, firewall, generated secrets)
+  receive <revision>    unpack release files from stdin
+  deploy <revision>     start or upgrade to a received release
+  smtp-password         store the SMTP password read from stdin
+  operator <account-id> promote the first platform operator
+  status                list the services
+  logs [service]        follow logs
+  compose <args>        run docker compose on the current release
+EOF
+}
+
+command=${1:-}
+shift || true
+case $command in
+  install) install_host ;;
+  receive) receive "$@" ;;
+  deploy) deploy "$@" ;;
+  smtp-password) smtp_password ;;
+  operator) operator "$@" ;;
+  status) compose ps ;;
+  logs) compose logs --tail 200 -f "$@" ;;
+  compose) compose "$@" ;;
+  *) usage; [[ -z $command || $command == help ]] || exit 1 ;;
+esac

@@ -1,0 +1,14 @@
+#cloud-config
+# Prepares a Quenda host: settings, the operations CLI and Docker. Releases
+# arrive afterwards with `pnpm deploy:host`; no secret travels in this file.
+write_files:
+  - path: /etc/quenda/host.env
+    permissions: "0600"
+    encoding: b64
+    content: ${settings}
+  - path: /usr/local/sbin/quenda
+    permissions: "0755"
+    encoding: b64
+    content: ${cli}
+runcmd:
+  - [/usr/local/sbin/quenda, install]
