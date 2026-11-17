@@ -26,6 +26,8 @@ export interface CalendarProps {
   className?: string;
   /** Adds a Today button that slides back to the current month and selects today when it is available. */
   showToday?: boolean;
+  /** First day of the week: 1 is Monday, as in Spain and Galicia; 0 is Sunday. */
+  weekStartsOn?: 0 | 1;
 }
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -40,8 +42,10 @@ const isBefore = (a: Date, b?: Date) => Boolean(b && startOfDay(a).getTime() < s
 const isAfter = (a: Date, b?: Date) => Boolean(b && startOfDay(a).getTime() > startOfDay(b).getTime());
 const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 /** Every month shows six weeks, so the grid keeps one height and never jumps while months change. */
-const makeWeeks = (month: Date) => {
-  const start = addDays(month, -month.getDay());
+/** A date's column in a week that starts on `weekStartsOn`. */
+const column = (date: Date, weekStartsOn: number) => (date.getDay() - weekStartsOn + 7) % 7;
+const makeWeeks = (month: Date, weekStartsOn: number) => {
+  const start = addDays(month, -column(month, weekStartsOn));
   return [0, 1, 2, 3, 4, 5].map((week) => [0, 1, 2, 3, 4, 5, 6].map((day) => addDays(start, week * 7 + day)));
 };
 
@@ -117,6 +121,7 @@ export function Calendar({
   locale = "en-US",
   className,
   showToday = false,
+  weekStartsOn = 1,
 }: CalendarProps) {
   const titleId = useId();
   const browserToday = useToday();
@@ -141,7 +146,7 @@ export function Calendar({
     setShownMonth(monthTime);
     setDirection(shownMonth === undefined || monthTime === undefined ? 0 : monthTime > shownMonth ? 1 : -1);
   }
-  const weeks = useMemo(() => (monthTime === undefined ? [] : makeWeeks(new Date(monthTime))), [monthTime]);
+  const weeks = useMemo(() => (monthTime === undefined ? [] : makeWeeks(new Date(monthTime), weekStartsOn)), [monthTime, weekStartsOn]);
   // The strip position is measured in months. The panes on either side of it render, plus the month being navigated to.
   const target = month ? monthIndex(month) : 0;
   const position = useMotionValue(target);
@@ -166,7 +171,7 @@ export function Calendar({
   const paneIndexes = Array.from(new Set([span[0], span[1], target])).sort((a, b) => a - b);
   const formatter = useMemo(() => ({format: (date: Date) => calendarLabel(date, locale, "month")}), [locale]);
   const weekdayFormatter = useMemo(() => ({format: (date: Date) => calendarLabel(date, locale, "weekday")}), [locale]);
-  const weekdays = useMemo(() => Array.from({ length: 7 }, (_, index) => weekdayFormatter.format(new Date(2024, 0, 7 + index))), [weekdayFormatter]);
+  const weekdays = useMemo(() => Array.from({ length: 7 }, (_, index) => weekdayFormatter.format(new Date(2024, 0, 7 + weekStartsOn + index))), [weekdayFormatter, weekStartsOn]);
   const monthLabel = month ? formatter.format(month) : "";
   // The selected disc glides between days, so each number flips color as the disc actually passes it:
   // the day it leaves waits longer on short hops, the day it lands on waits longer on long ones.
@@ -175,7 +180,7 @@ export function Calendar({
   const [handoff, setHandoff] = useState({ from: "", to: "", distance: 0 });
   if (last.key !== valueKey) {
     const days = last.date && value ? Math.round((startOfDay(value).getTime() - startOfDay(last.date).getTime()) / 864e5) : 0;
-    const columns = last.date && value ? value.getDay() - last.date.getDay() : 0;
+    const columns = last.date && value ? column(value, weekStartsOn) - column(last.date, weekStartsOn) : 0;
     setLast({ key: valueKey, date: value });
     setHandoff({ from: last.key, to: valueKey, distance: Math.hypot(columns, (days - columns) / 7) });
   }
@@ -234,8 +239,8 @@ export function Calendar({
       ArrowRight: [addDays(date, 1), 1],
       ArrowUp: [addDays(date, -7), -1],
       ArrowDown: [addDays(date, 7), 1],
-      Home: [addDays(date, -date.getDay()), 1],
-      End: [addDays(date, 6 - date.getDay()), -1],
+      Home: [addDays(date, -column(date, weekStartsOn)), 1],
+      End: [addDays(date, 6 - column(date, weekStartsOn)), -1],
       PageUp: [shiftMonths(date, event.shiftKey ? -12 : -1), -1],
       PageDown: [shiftMonths(date, event.shiftKey ? 12 : 1), 1],
     };
@@ -256,7 +261,7 @@ export function Calendar({
   // Six fixed weeks per month, so a day's cell is its distance from the first day on the grid.
   const cellOf = (paneMonth: Date) => {
     if (!value) return -1;
-    const first = addDays(paneMonth, -paneMonth.getDay());
+    const first = addDays(paneMonth, -column(paneMonth, weekStartsOn));
     const index = Math.round((startOfDay(value).getTime() - first.getTime()) / 864e5);
     return index >= 0 && index < 42 ? index : -1;
   };
@@ -265,7 +270,7 @@ export function Calendar({
     <SelectionDisc cell={cellOf(paneMonth)} reduced={reducedMotion} />
     {/* biome-ignore lint/a11y/useSemanticElements: This interactive calendar uses roving gridcell focus rather than native table navigation. */}
     <div className={styles.grid} role="grid" aria-label={formatter.format(paneMonth)}>
-    {makeWeeks(paneMonth).map((week) => (
+    {makeWeeks(paneMonth, weekStartsOn).map((week) => (
       // biome-ignore lint/a11y/useSemanticElements lint/a11y/useFocusableInteractive: Only the active day cell participates in the calendar tab order.
       <div key={dateKey(week[0]!)} className={styles.week} role="row">
       {week.map((date) => {
