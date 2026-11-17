@@ -51,6 +51,10 @@ export interface Reservation {
   bookingPolicyVersion: number | null;
   /** Only in the reservation detail. */
   arrivedAt?: string | null;
+  /** Only in the reservation detail, also for a withdrawn space; null only if the space no longer exists. */
+  municipalityName?: string | null;
+  facilityName?: string | null;
+  unitName?: string | null;
 }
 export const reservationPath = (tenant: string, id: string) =>
   `/api/municipalities/${tenant}/reservations/${id}`;
