@@ -133,7 +133,7 @@ En el móvil el recorrido es el mismo, con la cabecera y el calendario adaptados
 
 ![Cabecera del móvil con «Acceder», «Ajustes» (recuadrado) y el botón «Reservar» en una fila propia](../capturas/cu-01/16-movil-cabecera.webp)
 
-*Sin sesión, la cabecera muestra «Acceder» y «Ajustes» (recuadrado) arriba, y «Reservar» en una fila propia. La barra de pasos se reduce a números con el nombre del paso actual debajo.*
+*Sin sesión, la cabecera muestra junto al símbolo de Quenda el escudo y el nombre abreviado del municipio, «Acceder» y «Ajustes» (recuadrado); «Reservar» ocupa una fila propia. La barra de pasos se reduce a números con el nombre del paso actual debajo.*
 
 ![Menú «Ajustes» abierto en el móvil con idiomas y apariencia](../capturas/cu-01/17-movil-menu-ajustes.webp)
 
@@ -359,7 +359,7 @@ Antes del inicio y con un motivo, el personal municipal autorizado puede cancela
 
 ![Lista de avisos con «Reserva cancelada» marcada como «Cambio hecho por la administración» y su motivo, recuadrada](../capturas/cu-03/12-aviso-intervencion-municipal.webp)
 
-*El aviso recuadrado muestra «Cambio hecho por la administración», el nombre de la persona y el motivo («Competición escolar no complexo»). A la derecha de cada aviso figura la fecha en que se produjo; los avisos anteriores se cargan con «Ver más avisos», al final de la lista.*
+*El aviso recuadrado muestra «Cambio hecho por la administración», el nombre de la persona y el motivo («Competición escolar no complexo»). A la derecha se indica hace cuánto se produjo, y el punto rojo marca que todavía no se ha leído. Los avisos anteriores se cargan con «Ver más avisos», al final de la lista.*
 
 ![Página «Reserva cancelada» abierta desde el aviso](../capturas/cu-03/13-reserva-cancelada-por-el-ayuntamiento.webp)
 
@@ -617,9 +617,9 @@ Mientras la cuenta conserve permisos de gestión no se puede desactivar la verif
 
 *El enlace solo sirve una vez: si lo vuelves a abrir, aparece este mensaje. «Solicitar otro enlace» inicia de nuevo la recuperación.*
 
-#### La cuenta está dada de baja o suspendida
+#### La cuenta no está activa
 
-Si diste de baja tu cuenta, Quenda lo indica al intentar entrar (ver [CU-14](#cu-14--dar-de-baja-la-cuenta)) y puedes recuperarla con «Reactivar mi cuenta» ([CU-15](#cu-15--reactivar-una-cuenta)). Una cuenta suspendida por seguridad solo la recupera el equipo que opera Quenda.
+Si la cuenta está dada de baja o suspendida, Quenda no inicia la sesión y avisa de que la cuenta no está activa (ver [CU-14](#cu-14--dar-de-baja-la-cuenta)). Si la diste de baja tú, puedes recuperarla con «Reactivar mi cuenta» ([CU-15](#cu-15--reactivar-una-cuenta)); una cuenta suspendida por seguridad solo la recupera el equipo que opera Quenda.
 
 ### Resultado
 
@@ -811,9 +811,9 @@ Sirve para desactivar voluntariamente tu cuenta en toda la instalación de Quend
 
    *El aviso recuadrado confirma la baja.*
 
-   ![Intento de acceso con el mensaje «La cuenta está dada de baja.»](../capturas/cu-14/04-acceso-tras-la-baja.webp)
+   ![Intento de acceso con el mensaje «La cuenta no está activa…»](../capturas/cu-14/04-acceso-tras-la-baja.webp)
 
-   *Si intentas entrar después, aparece «La cuenta está dada de baja.». Para volver a usarla, sigue [CU-15](#cu-15--reactivar-una-cuenta).*
+   *Si intentas entrar después, el mensaje recuadrado dice que la cuenta no está activa: si la diste de baja, puedes recuperarla con «Reactivar mi cuenta»; si no, hay que contactar con el equipo que opera Quenda. Para volver a usarla, sigue [CU-15](#cu-15--reactivar-una-cuenta).*
 
 ### Si algo no sale como se espera
 
@@ -930,7 +930,7 @@ Sirve para descargar una copia de los datos de tu cuenta que Quenda puede entreg
 
    ![Fragmento de «records» con un registro de ejemplo de cada categoría](../capturas/cu-19/03-registros-por-categoria.webp)
 
-   *El fragmento muestra un registro de cada categoría, abreviado: «AUTHENTICATION» (accesos y seguridad), «COMMUNICATIONS» (avisos y correos), «IDENTITY» (tu nombre, tu correo y tus preferencias), «MUNICIPAL_PROFILE» (cada municipio donde tienes relación) y «RESERVATIONS» (tus reservas, con el espacio y las condiciones aceptadas). Los puntos suspensivos señalan lo que se ha omitido.*
+   *El fragmento muestra un registro de cada categoría, abreviado: «AUTHENTICATION» (accesos y seguridad), «COMMUNICATIONS» (avisos y correos), «IDENTITY» (tu nombre, tu correo y tus preferencias), «MUNICIPAL_PROFILE» (cada municipio donde tienes relación) y «RESERVATIONS» (tus reservas, empezando por el espacio reservado). Los puntos suspensivos señalan lo que se ha omitido.*
 
 ### Si algo no sale como se espera
 
