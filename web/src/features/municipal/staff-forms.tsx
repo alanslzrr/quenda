@@ -11,6 +11,7 @@ import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
+import { AccountLabel } from "./account-label";
 import styles from "./municipal.module.css";
 import {
   endpoint,
@@ -26,6 +27,7 @@ import {
   type Operation,
   type Permission,
   type StaffInvitation,
+  staffInvitationBody,
   staffOperations,
   validPermissions,
 } from "./staff-model";
@@ -163,10 +165,15 @@ export function StaffInvite({
   return (
     <div className={styles.formFlow}>
       <p>
-        {t(
-          "La cuenta debe existir. El destinatario consulta y acepta la invitación desde su perfil con la verificación en dos pasos; enviarla no activa permisos.",
-          "A conta debe existir. O destinatario consulta e acepta a invitación desde o seu perfil coa verificación en dous pasos; enviala non activa permisos.",
-        )}
+        {replacement
+          ? t(
+              "La sustitución se dirige a la cuenta que tiene la concesión. La acepta desde «Mi cuenta › Invitaciones» con la verificación en dos pasos; enviarla no cambia permisos.",
+              "A substitución diríxese á conta que ten a concesión. Acéptaa desde «A miña conta › Invitacións» coa verificación en dous pasos; enviala non cambia permisos.",
+            )
+          : t(
+              "La invitación se dirige a un correo. Solo puede aceptarla, desde «Mi cuenta › Invitaciones» y con la verificación en dos pasos, la cuenta cuyo correo verificado sea esa dirección; no hace falta que la cuenta exista todavía. Enviarla no activa permisos.",
+              "A invitación diríxese a un correo. Só pode aceptala, desde «A miña conta › Invitacións» e coa verificación en dous pasos, a conta cuxo correo verificado sexa ese enderezo; non fai falta que a conta exista aínda. Enviala non activa permisos.",
+            )}
       </p>
       {replacement && (
         <p className={styles.notice}>
@@ -224,19 +231,15 @@ export function StaffInvite({
             (actualKind === "manager" && !validPermissions(permissions))
           )
             throw invalid();
-          return {
-            accountId:
-              replacement?.accountId ?? textField(data, "accountId").trim(),
+          return staffInvitationBody({
+            kind: actualKind === "manager" ? "manager" : "administrator",
+            email: textField(data, "email"),
             expiresAt,
-            roleExpiresAt: roleExpiresAt || null,
-            ...(actualKind === "manager" ? { permissions } : {}),
-            ...(replacement
-              ? {
-                  replacesInvitationId: replacement.invitationId,
-                  reason: textField(data, "reason").trim(),
-                }
-              : {}),
-          };
+            roleExpiresAt,
+            permissions,
+            replacement,
+            reason: textField(data, "reason"),
+          });
         }}
         onSaved={() => {
           setCreated(true);
@@ -247,18 +250,30 @@ export function StaffInvite({
           onSaved?.();
         }}
       >
-        <Input
-          label={t("Identificador de cuenta", "Identificador de conta")}
-          name="accountId"
-          required
-          maxLength={128}
-          defaultValue={replacement?.accountId}
-          readOnly={!!replacement}
-          description={t(
-            "El usuario puede consultar su identificador en los datos de su cuenta. No se busca por correo ni se consulta un directorio global.",
-            "O usuario pode consultar o seu identificador nos datos da súa conta. Non se busca por correo nin se consulta un directorio global.",
-          )}
-        />
+        {replacement ? (
+          <p>
+            {t("Destinatario", "Destinatario")}:{" "}
+            {replacement.accountId && (
+              <AccountLabel
+                id={replacement.accountId}
+                label={replacement.accountLabel}
+              />
+            )}
+          </p>
+        ) : (
+          <Input
+            label={t("Correo del destinatario", "Correo do destinatario")}
+            name="email"
+            type="email"
+            autoComplete="off"
+            required
+            maxLength={320}
+            description={t(
+              "Escribe el correo de la persona. La respuesta es la misma tenga o no una cuenta registrada con esa dirección; no se consulta un directorio de usuarios.",
+              "Escribe o correo da persoa. A resposta é a mesma teña ou non unha conta rexistrada con ese enderezo; non se consulta un directorio de usuarios.",
+            )}
+          />
+        )}
         <p>
           {t("Zona horaria", "Zona horaria")}:{" "}
           {Intl.DateTimeFormat().resolvedOptions().timeZone}
@@ -295,8 +310,12 @@ export function StaffInvite({
         <Checkbox
           required
           label={t(
-            "Confirmo la cuenta, el alcance y la vigencia",
-            "Confirmo a conta, o alcance e a vixencia",
+            replacement
+              ? "Confirmo la cuenta, el alcance y la vigencia"
+              : "Confirmo el correo, el alcance y la vigencia",
+            replacement
+              ? "Confirmo a conta, o alcance e a vixencia"
+              : "Confirmo o correo, o alcance e a vixencia",
           )}
         />
       </MunicipalForm>

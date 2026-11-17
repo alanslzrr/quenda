@@ -36,9 +36,16 @@ export function validPermissions(permissions: Permission[]) {
       .size === permissions.length
   );
 }
+/**
+ * accountId is the account that accepted the invitation, or the account an
+ * older invitation (or a scope replacement) was addressed to. recipientEmail
+ * is the address of an invitation nobody has accepted yet. Both are null once
+ * retention withdraws the address of an invitation that was never accepted.
+ */
 export type StaffInvitation = {
   invitationId: string;
-  accountId: string;
+  accountId: string | null;
+  recipientEmail?: string | null;
   accountLabel?: AccountLabelValue;
   invitedByLabel?: AccountLabelValue;
   invitedBy: string;
@@ -76,4 +83,44 @@ export function canReplace(item: StaffInvitation, now = Date.now()) {
     !item.revokedAt &&
     (!item.roleExpiresAt || Date.parse(item.roleExpiresAt) > now)
   );
+}
+
+/** Who the history names as recipient, without inferring any authority. */
+export function invitationRecipient(
+  item: Pick<StaffInvitation, "accountId" | "recipientEmail">,
+):
+  | { kind: "account"; accountId: string }
+  | { kind: "address"; email: string }
+  | { kind: "withdrawn" } {
+  if (item.accountId) return { kind: "account", accountId: item.accountId };
+  if (item.recipientEmail)
+    return { kind: "address", email: item.recipientEmail };
+  return { kind: "withdrawn" };
+}
+/**
+ * A new invitation is addressed to an email; a scope replacement names no
+ * recipient, because the server addresses it to the holder of the replaced
+ * grant.
+ */
+export function staffInvitationBody(input: {
+  kind: "manager" | "administrator";
+  email: string;
+  expiresAt: string;
+  roleExpiresAt: string;
+  permissions: Permission[];
+  replacement?: Pick<StaffInvitation, "invitationId">;
+  reason?: string;
+}) {
+  return {
+    ...(input.replacement ? {} : { email: input.email.trim() }),
+    expiresAt: input.expiresAt,
+    roleExpiresAt: input.roleExpiresAt || null,
+    ...(input.kind === "manager" ? { permissions: input.permissions } : {}),
+    ...(input.replacement
+      ? {
+          replacesInvitationId: input.replacement.invitationId,
+          reason: (input.reason ?? "").trim(),
+        }
+      : {}),
+  };
 }
