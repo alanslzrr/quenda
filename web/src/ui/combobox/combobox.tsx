@@ -24,7 +24,14 @@ import type {
   KeyboardEvent,
   MouseEvent as ReactMouseEvent,
   ReactNode,
+  RefObject,
 } from "react";
+import {
+  anchorStyle,
+  topLayerProps,
+  useAnchorName,
+  useTopLayerRef,
+} from "../lib/anchored-popover";
 import { pickText } from "../lib/locale-text";
 import { motionTokens } from "../motion-tokens";
 import { filterOptions, orderedOptions, sectionOptions, type ComboboxOption } from "./filter";
@@ -92,14 +99,18 @@ function AutoHeight({
   );
 }
 
-function Popover({ children, reduceMotion }: { children: ReactNode; reduceMotion: boolean | null }) {
+function Popover({ children, reduceMotion, anchor, anchorRef }: { children: ReactNode; reduceMotion: boolean | null; anchor: string; anchorRef: RefObject<HTMLDivElement | null> }) {
   const present = useIsPresent();
+  const ref = useTopLayerRef<HTMLDivElement>(undefined, anchorRef);
+  const layer = topLayerProps(anchor);
   return (
     <motion.div
+      {...layer}
+      ref={ref}
       className={styles.popover}
       aria-hidden={!present || undefined}
       inert={!present || undefined}
-      style={!present ? { pointerEvents: "none" } : undefined}
+      style={{ ...("style" in layer ? layer.style : {}), ...(!present ? { pointerEvents: "none" } : {}) }}
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1, transition: reduceMotion ? { duration: motionTokens.duration.instant } : { ...motionTokens.spring.snappy, opacity: { duration: motionTokens.duration.fast, ease: [...motionTokens.ease.enter] } } }}
       exit={{ opacity: 0, ...(reduceMotion ? {} : { y: -4, scale: 0.98 }), transition: { duration: motionTokens.duration.instant, ease: [...motionTokens.ease.standard] } }}
@@ -163,6 +174,8 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
     const listboxId = `${controlId}-listbox`;
     const hintId = description ? `${controlId}-description` : undefined;
     const rootRef = useRef<HTMLDivElement>(null);
+    const anchor = useAnchorName();
+    const controlRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const composing = useRef(false);
     const resetRevision = useRef(0);
@@ -410,6 +423,8 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
       <div ref={rootRef} className={styles.field}>
         <label htmlFor={controlId}>{label}</label>
         <div
+          ref={controlRef}
+          style={anchorStyle(anchor)}
           className={[
             styles.control,
             open ? styles.open : "",
@@ -499,7 +514,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(
         )}
         <AnimatePresence initial={false}>
           {open && (
-            <Popover reduceMotion={reduceMotion}>
+            <Popover reduceMotion={reduceMotion} anchor={anchor} anchorRef={controlRef}>
               <AutoHeight reduceMotion={reduceMotion}>
                 {filteredOptions.length ? (
                   <div

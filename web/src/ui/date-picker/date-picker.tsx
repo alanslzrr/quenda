@@ -4,6 +4,12 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { ButtonHTMLAttributes, FocusEvent, KeyboardEvent } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Calendar } from "../calendar/calendar";
+import {
+  anchorStyle,
+  topLayerProps,
+  useAnchorName,
+  useTopLayerRef,
+} from "../lib/anchored-popover";
 import { motionTokens } from "../lib/motion-tokens";
 import styles from "./date-picker.module.css";
 
@@ -81,6 +87,8 @@ export function DatePicker({
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const panelRef = useTopLayerRef(popoverRef, triggerRef);
+  const anchor = useAnchorName();
   const closeTimer = useRef<number | undefined>(undefined);
   const reduce = useReducedMotion() ?? false;
   const time = value?.getTime() ?? null;
@@ -177,6 +185,7 @@ export function DatePicker({
           aria-expanded={open}
           aria-describedby={hintId}
           className={styles.trigger}
+          style={anchorStyle(anchor)}
           onClick={() => (open ? close() : show())}
           onKeyDown={onTriggerKeyDown}
         >
@@ -209,7 +218,8 @@ export function DatePicker({
         <AnimatePresence>
           {open && (
             <motion.div
-              ref={popoverRef}
+              {...topLayerProps(anchor)}
+              ref={panelRef}
               className={styles.popover}
               role="dialog"
               aria-label={calendarLabel ?? label}
