@@ -5,6 +5,10 @@ import type { Pool } from "pg";
 import { initializeOperator } from "../../scripts/lib/initialize-operator.ts";
 import { transaction } from "../../src/database/transaction.ts";
 import {
+  inviteAdministrator,
+  revokeAdministratorInvitation,
+} from "../../src/modules/identity/invitations.ts";
+import {
   acceptManager,
   inviteManager,
   revokeManager,
@@ -75,7 +79,7 @@ test("municipal retention respects active responsibility, dependencies, scope an
       const municipality = await createMunicipality(domain, actor("operator"), {
         name,
         timezone: "Europe/Madrid",
-        administratorId: "admin",
+        administratorEmail: "admin@example.test",
         invitationExpiresAt: future(),
       });
       await acceptAdministratorInvitation(
@@ -221,7 +225,7 @@ test("municipal retention respects active responsibility, dependencies, scope an
             actor("admin"),
             tenant,
             {
-              accountId: "manager",
+              email: "manager@example.test",
               expiresAt: future(),
               permissions: [{ operation: "RESERVATION_READ", unitId: null }],
             },
@@ -310,7 +314,7 @@ test("municipal retention respects active responsibility, dependencies, scope an
       "referenced authority histories return a conflict without partial deletion",
       async () => {
         const invitation = await inviteManager(domain, actor("admin"), first, {
-          accountId: "rollback",
+          email: "rollback@example.test",
           expiresAt: future(),
           permissions: [{ operation: "RESERVATION_READ", unitId: null }],
         });
@@ -328,7 +332,7 @@ test("municipal retention respects active responsibility, dependencies, scope an
           "Ended",
         );
         const dependent = await inviteManager(domain, actor("admin"), first, {
-          accountId: "privacy",
+          email: "privacy@example.test",
           expiresAt: future(),
           permissions: [{ operation: "REPORT_READ", unitId: null }],
         });
@@ -362,6 +366,136 @@ test("municipal retention respects active responsibility, dependencies, scope an
             )
           ).rowCount,
           1,
+        );
+      },
+    );
+    await t.test(
+      "an unaccepted invitation address is withdrawn once revoked or expired, keeping its history",
+      async () => {
+        const revoked = await inviteAdministrator(
+          domain,
+          actor("admin"),
+          first,
+          {
+            email: "Nobody@Example.test",
+            expiresAt: future(),
+          },
+        );
+        await revokeAdministratorInvitation(
+          domain,
+          actor("admin"),
+          first,
+          revoked.invitationId,
+        );
+        const expired = await inviteManager(domain, actor("admin"), first, {
+          email: "expired@example.test",
+          expiresAt: future(),
+          permissions: [{ operation: "RESERVATION_READ", unitId: null }],
+        });
+        await migration.query(
+          "UPDATE domain.manager_invitation SET created_at=now()-interval '2 hours',expires_at=now()-interval '1 hour' WHERE tenant_id=$1 AND id=$2",
+          [first, expired.invitationId],
+        );
+        const pending = await inviteManager(domain, actor("admin"), first, {
+          email: "waiting@example.test",
+          expiresAt: future(),
+          permissions: [{ operation: "RESERVATION_READ", unitId: null }],
+        });
+        const administratorKey = `address:administrator:${revoked.invitationId}`,
+          managerKey = `address:manager:${expired.invitationId}`,
+          pendingKey = `address:manager:${pending.invitationId}`;
+        const candidates = (
+          await migration.query<{
+            target_key: string;
+            subject_id: string | null;
+          }>(
+            "SELECT * FROM domain.retention_municipal_candidates($1,'AUTHORITY',$2,1000)",
+            [first, cutoff()],
+          )
+        ).rows;
+        for (const key of [administratorKey, managerKey]) {
+          const found = candidates.find((r) => r.target_key === key);
+          assert.ok(found, key);
+          assert.equal(found.subject_id, null);
+        }
+        assert.equal(
+          candidates.some((r) => r.target_key === pendingKey),
+          false,
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT * FROM domain.retention_municipal_candidates($1,'AUTHORITY',$2,1000) WHERE target_key=$3",
+              [second, cutoff(), administratorKey],
+            )
+          ).rowCount,
+          0,
+        );
+        assert.equal(
+          (await apply(migration, first, "AUTHORITY", pendingKey)).reason,
+          "NOT_DUE",
+        );
+        assert.equal(
+          (await apply(migration, second, "AUTHORITY", administratorKey))
+            .status,
+          "ABSENT",
+        );
+        assert.equal(
+          (await apply(migration, null, "AUTHORITY", administratorKey)).reason,
+          "MUNICIPAL_SCOPE_REQUIRED",
+        );
+        const administrator = await apply(
+          migration,
+          first,
+          "AUTHORITY",
+          administratorKey,
+        );
+        assert.equal(administrator.status, "APPLIED");
+        assert.equal(administrator.subjectId, null);
+        assert.equal(
+          administrator.payload.administratorInvitation.recipient_email,
+          "nobody@example.test",
+        );
+        const manager = await apply(migration, first, "AUTHORITY", managerKey);
+        assert.equal(manager.status, "APPLIED");
+        assert.equal(
+          manager.payload.managerInvitation.recipient_email,
+          "expired@example.test",
+        );
+        const rows = await migration.query<{
+          id: string;
+          account_id: string | null;
+          recipient_email: string | null;
+        }>(
+          "SELECT id,account_id,recipient_email FROM domain.administrator_invitation WHERE id=$1 UNION ALL SELECT id,account_id,recipient_email FROM domain.manager_invitation WHERE id=ANY($2::uuid[]) ORDER BY id",
+          [revoked.invitationId, [expired.invitationId, pending.invitationId]],
+        );
+        assert.equal(rows.rowCount, 3);
+        for (const row of rows.rows)
+          assert.equal(
+            row.recipient_email,
+            row.id === pending.invitationId ? "waiting@example.test" : null,
+          );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT * FROM domain.identity_event WHERE tenant_id=$1 AND invitation_id=$2",
+              [first, revoked.invitationId],
+            )
+          ).rowCount,
+          2,
+        );
+        assert.ok(
+          (
+            await migration.query(
+              "SELECT * FROM domain.manager_event WHERE tenant_id=$1 AND invitation_id=$2",
+              [first, expired.invitationId],
+            )
+          ).rowCount,
+        );
+        assert.equal(
+          (await apply(migration, first, "AUTHORITY", administratorKey)).status,
+          "ABSENT",
         );
       },
     );
