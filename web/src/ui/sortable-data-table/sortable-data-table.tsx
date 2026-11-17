@@ -282,7 +282,7 @@ export function SortableDataTable<T extends Record<string, unknown>>({ rows, col
   }
 
   return <div data-lumen="" className={styles.wrapper}>
-    <div className={styles.scroller} ref={scrollerRef} {...(overflowing ? { tabIndex: 0, role: "group", "aria-label": caption } : {})}>
+    <div className={styles.scroller} ref={scrollerRef} {...(overflowing ? { tabIndex: 0, role: "region", "aria-label": caption } : {})}>
       {band ? <span className={styles.band} style={{ left: band.left, width: band.width }} aria-hidden="true" /> : null}
       <table onKeyDown={onKeyDown} data-static={columns.every(column => column.sortable === false) || undefined} ref={tableRef} className={styles.table} data-fixed={widths ? "" : undefined} data-selectable={selectable || undefined}>
         <caption>{caption}</caption>

@@ -22,7 +22,7 @@
   .popover:popover-open[data-side="top"] { transform-origin: bottom center; }
 }
 .autoHeight { overflow: hidden; }
-.listbox { max-height: min(300px, 40vh); overflow-y: auto; overscroll-behavior: contain; }
+.listbox { max-height: min(300px, 40dvh); overflow-y: auto; overscroll-behavior: contain; }
 /* Arrow keys move the highlight often, so it changes almost instantly. */
 .option { display: flex; min-height: 36px; align-items: center; justify-content: space-between; gap: var(--space-3); border-radius: calc(var(--radius-panel) - 5px); padding: 0 12px; color: var(--foreground); font-size: var(--text-sm); cursor: pointer; outline: none; user-select: none; transition: background-color 80ms var(--ease-standard), color 80ms var(--ease-standard); }
 .optionText { display: flex; min-width: 0; align-items: baseline; gap: var(--space-2); }

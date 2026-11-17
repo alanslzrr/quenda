@@ -195,7 +195,7 @@ export function MunicipalityPage() {
       ) : (
         <div className={styles.sections}>
           <Choices>
-            {items.map((item) => (
+            {items.map((item, index) => (
               <Choice
                 key={item.id}
                 to={
@@ -210,6 +210,7 @@ export function MunicipalityPage() {
                       photo={item.photos?.[0]}
                       source={photoSource}
                       icon={Building2}
+                      eager={index < 3}
                     />
                   )
                 }

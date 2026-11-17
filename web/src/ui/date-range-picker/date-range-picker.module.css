@@ -186,8 +186,7 @@
 /* Compact: one month under a scrolling row of presets. */
 .panel[data-compact] { padding: 8px; }
 .panel[data-compact] .body { flex-direction: column; gap: 8px; }
-.panel[data-compact] .rail { width: auto; flex-direction: row; gap: 2px; margin: 0 -8px; padding: 0 8px 8px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border-subtle); overscroll-behavior-x: contain; scrollbar-width: none; }
-.panel[data-compact] .rail::-webkit-scrollbar { display: none; }
+.panel[data-compact] .rail { width: auto; flex-direction: row; gap: 2px; margin: 0 -8px; padding: 0 8px 8px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border-subtle); overscroll-behavior-x: contain; }
 .panel[data-compact] .preset { padding: 0 11px; }
 .panel[data-compact] .calendars { align-self: center; }
 .panel[data-compact] .footer { flex-wrap: wrap; margin-top: 6px; padding-left: 11px; }

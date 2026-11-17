@@ -20,14 +20,6 @@
   overscroll-behavior-x: contain;
   padding: 3px;
   border-radius: inherit;
-  scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent,
-    #000 var(--fade-start),
-    #000 calc(100% - var(--fade-end)),
-    transparent
-  );
   mask-image: linear-gradient(
     to right,
     transparent,
@@ -35,9 +27,6 @@
     #000 calc(100% - var(--fade-end)),
     transparent
   );
-}
-.track::-webkit-scrollbar {
-  display: none;
 }
 .track[data-fade-start] {
   --fade-start: 20px;
@@ -91,10 +80,5 @@
 @media (max-width: 380px) {
   .button {
     padding: 0 10px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .button {
-    transition: none;
   }
 }

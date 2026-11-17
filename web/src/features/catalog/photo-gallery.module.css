@@ -212,12 +212,26 @@
 }
 .strip {
   display: flex;
-  justify-content: center;
   gap: 8px;
   margin: 0;
   padding: 12px 16px 16px;
   overflow-x: auto;
+  /* A swipe that reaches either end stays on the strip instead of moving the page behind or going back. */
+  overscroll-behavior-x: contain;
   list-style: none;
+}
+/* Centred while the thumbnails fit. Once they overflow the auto margins drop to zero, so the first one
+   stays reachable; justify-content: center would push it past the start, where it cannot be scrolled to. */
+.strip > :first-child {
+  margin-inline-start: auto;
+}
+.strip > :last-child {
+  margin-inline-end: auto;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .strip {
+    scroll-behavior: smooth;
+  }
 }
 .strip button {
   display: block;

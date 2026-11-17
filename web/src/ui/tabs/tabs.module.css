@@ -24,7 +24,6 @@
 .content[data-motion-pop-id] { margin-top: 0; }
 .content[data-state="inactive"] { pointer-events: none; }
 .content:focus-visible { --focus-outline-offset: 3px; border-radius: var(--radius-control); }
-@media (prefers-reduced-motion: reduce) { .trigger { transition: none; } }
 
 /* V15: overflow controls retain native-source metrics in independent hosts. */
 .scrollButton { font: inherit; padding: 0; }

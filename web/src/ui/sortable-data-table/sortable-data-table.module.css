@@ -1,11 +1,12 @@
 /* Cells are opaque so rows passing each other during a sort cover one another cleanly instead of blending text. */
-.wrapper { --column-tint: var(--surface-muted); position: relative; width: 100%; min-width: 0; max-width: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--foreground); font-family: var(--font-body); }
+/* The table folds on its own width, not the viewport's, so it also folds in a narrow column of a wide screen. */
+.wrapper { --column-tint: var(--surface-muted); container: data-table / inline-size; position: relative; width: 100%; min-width: 0; max-width: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--foreground); font-family: var(--font-body); }
 .scroller { position: relative; overflow-x: auto; overscroll-behavior-x: contain; }
 .scroller:focus-visible { --focus-outline-offset: -2px; }
 .band { position: absolute; top: 0; bottom: 0; background: var(--column-tint); pointer-events: none; }
 .table { position: relative; z-index: 1; width: 100%; min-width: 560px; border-collapse: separate; border-spacing: 0; font-size: var(--text-sm); line-height: var(--leading-body); letter-spacing: var(--tracking-body); text-align: left; }
 .table[data-fixed] { table-layout: fixed; }
-.table caption, .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.table caption, .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .selectCol { width: 44px; }
 
 .table th, .table td { --cell-base: var(--surface); --cell-fill: var(--cell-base); background-color: var(--cell-fill); transition: background-color var(--duration-standard) var(--ease-standard), color var(--duration-standard) var(--ease-standard); }
@@ -13,7 +14,9 @@
 .table th { height: 44px; padding: 0 var(--space-4); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: var(--text-sm); font-weight: 500; text-align: left; white-space: nowrap; }
 .table th[data-sortable] { padding: 0; }
 .table th[data-sorted] { color: var(--foreground); }
-.table td { height: 52px; padding: 0 var(--space-4); border-bottom: 1px solid var(--border-subtle); color: var(--foreground); font-weight: 400; vertical-align: middle; overflow-wrap: anywhere; }
+.table td { height: 52px; padding: 0 var(--space-4); border-bottom: 1px solid var(--border-subtle); color: var(--foreground); font-weight: 400; vertical-align: middle; overflow-wrap: break-word; }
+/* Ordinary words wrap whole; links and code may still break anywhere so a long URL cannot widen its column. */
+.table td :where(a, code) { overflow-wrap: anywhere; }
 .table tbody tr:last-child td { border-bottom: 0; }
 .table [data-numeric] { text-align: right; font-variant-numeric: tabular-nums; }
 .table[data-selectable] tbody tr { cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -66,14 +69,13 @@
   .clear:hover { background: var(--surface-muted); }
 }
 
-@media (max-width: 620px) {
+@container data-table (max-width: 620px) {
   .scroller { overflow: visible; }
   .band { display: none; }
   .table { display: block; width: 100%; min-width: 0; max-width: 100%; }
   .table thead { display: block; }
   /* The header becomes a strip of sort controls, so sorting stays one tap away on a phone. */
-  .table thead tr { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); overflow-x: auto; border-bottom: 1px solid var(--border); scrollbar-width: none; }
-  .table thead tr::-webkit-scrollbar { display: none; }
+  .table thead tr { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); overflow-x: auto; border-bottom: 1px solid var(--border); }
   .table th { display: block; flex: none; height: auto; border: 0; padding: 0; background: transparent; }
   /* Select all stays pinned while the sort controls scroll beneath it. */
   .table th.selectCell { position: sticky; left: calc(-1 * var(--space-2)); z-index: 1; width: 40px; margin-left: calc(-1 * var(--space-2)); padding: 0 0 0 var(--space-3); background: var(--surface); }
@@ -105,23 +107,28 @@
   .table .empty { flex: 1 0 100%; height: auto !important; padding: var(--space-6) 0; }
   .table[data-selectable] tbody tr:has(.empty) { padding-left: var(--space-4); }
 }
-@media (max-width: 620px) and (hover: hover) and (pointer: fine) {
-  .table tbody tr:hover { --row-fill: color-mix(in oklab, var(--foreground) 3%, var(--surface)); }
-  .table[data-selectable] tbody tr[data-selected]:hover { --row-fill: color-mix(in oklab, var(--accent) 11%, var(--surface)); }
-  .table tbody tr:hover td { background: transparent; }
+@container data-table (max-width: 620px) {
+  @media (hover: hover) and (pointer: fine) {
+    .table tbody tr:hover { --row-fill: color-mix(in oklab, var(--foreground) 3%, var(--surface)); }
+    .table[data-selectable] tbody tr[data-selected]:hover { --row-fill: color-mix(in oklab, var(--accent) 11%, var(--surface)); }
+    .table tbody tr:hover td { background: transparent; }
+  }
 }
 
+/* Only the checkbox press scale moves; colour, background and opacity keep easing. */
 @media (prefers-reduced-motion: reduce) {
-  .table th, .table td, .table tbody tr, .sortInner, .sortHint, .selectBox, .count, .clear, .table th .sortButton { transition: none !important; }
+  .selectBox, .selectInput:active + .selectBox { transition: border-color var(--duration-fast) var(--ease-standard); }
   .selectInput:active + .selectBox { transform: none; }
 }
 
 @keyframes stripFade { to { opacity: 1; } }
 
 /* Static paged results retain column labels when rows fold into mobile cards. */
-@media (max-width: 620px) {
+@container data-table (max-width: 620px) {
   .table[data-static] thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .table[data-static] thead tr { overflow: visible; }
   .table[data-static] td:not([data-primary]) { flex-basis: 100%; }
   .table[data-static] td:not([data-primary]):not(.empty)::before { content: attr(data-label) ": "; font-weight: 500; }
+  /* Sortable tables keep their header as a strip of sort buttons, which does not name the folded values; each detail carries its column. */
+  .table:not([data-static]) td:not([data-primary]):not(.empty):not(.selectCell)::before { content: attr(data-label) ": "; }
 }

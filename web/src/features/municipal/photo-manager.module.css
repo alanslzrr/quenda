@@ -112,6 +112,8 @@
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  /* The standard property; ignored until supported, the prefixed set does the work meanwhile. */
+  line-clamp: 2;
 }
 .cardFoot {
   display: flex;
@@ -182,7 +184,7 @@
 
 /* The add dialog is wider than the default, so the frame is large enough to judge. */
 .dialog {
-  width: min(680px, calc(100vw - 24px));
+  width: min(680px, calc(100% - 24px));
   max-width: none;
 }
 .compose {

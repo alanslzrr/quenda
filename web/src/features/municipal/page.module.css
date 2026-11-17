@@ -1,10 +1,14 @@
+/* The column has a definite width, so long names and IDs wrap without the page growing; "anywhere" here would
+   also let every nested flex item squeeze ordinary words until they break mid-word. Elements that hold IDs,
+   such as the staff identifier, keep "anywhere" themselves. */
 .page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
   width: min(100%, 64rem);
   min-width: 0;
   align-content: start;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .page[data-width="wide"] {
   width: 100%;

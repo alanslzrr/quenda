@@ -37,9 +37,9 @@
 .metaIcon { display: inline-flex; align-items: center; gap: 6px; }
 .meta strong { color: var(--text-secondary); font-weight: 500; }
 
-/* Tabs bleed to the frame edges so the rule under them spans the page; the first label lines up with the title. */
-.tabs { position: relative; display: flex; gap: 2px; margin: 2px calc(var(--pad) * -1) 0; padding: 0 calc(var(--pad) - 10px); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
-.tabs::-webkit-scrollbar { display: none; }
+/* Tabs bleed to the frame edges so the rule under them spans the page; the first label lines up with the title.
+   The scrollbar stays: the row has no Previous/Next buttons, so it is the pointer's way to reach hidden tabs. */
+.tabs { position: relative; display: flex; gap: 2px; margin: 2px calc(var(--pad) * -1) 0; padding: 0 calc(var(--pad) - 10px); overflow-x: auto; overscroll-behavior-x: contain; }
 .tab { position: relative; display: inline-flex; height: 44px; flex: none; align-items: center; gap: 6px; border: 0; padding: 0 10px; background: none; color: var(--text-secondary); font: inherit; font-weight: 500; letter-spacing: inherit; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard); }
 .tab::before { position: absolute; inset: 8px 0; border-radius: 8px; background: color-mix(in oklab, var(--foreground) 4.5%, transparent); content: ""; opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard); }
 .tab[data-state="active"] { color: var(--foreground); }
@@ -50,7 +50,7 @@
 .count > span { color: inherit; font-family: inherit; font-size: inherit; font-weight: inherit; letter-spacing: inherit; line-height: inherit; }
 .indicator { position: absolute; right: 10px; bottom: 0; left: 10px; height: 2px; border-radius: 2px 2px 0 0; background: var(--accent); }
 
-.scroller { position: relative; flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 28px var(--pad) 84px; scrollbar-color: var(--border-strong) transparent; scrollbar-width: thin; }
+.scroller { position: relative; flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 28px var(--pad) 84px; scrollbar-color: var(--border-strong) transparent; }
 /* Every panel is taller than the condensed viewport, so condensing never clamps the scroll back to the top. */
 .panel { min-height: 600px; }
 .sectionTitle { margin: 0 0 8px; font-size: var(--text-sm); font-weight: 500; }
@@ -100,24 +100,7 @@
 .empty span { color: var(--text-muted); }
 .empty button { margin-top: 14px; }
 
-.toastLayer { position: absolute; z-index: 3; right: 16px; bottom: 16px; left: 16px; display: flex; justify-content: center; pointer-events: none; }
-.toast { display: inline-flex; max-width: 100%; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: var(--radius-control); padding: 9px 14px; background: var(--surface-raised); box-shadow: var(--shadow-floating); color: var(--foreground); font-size: var(--text-sm); }
-.toast > svg { flex: none; color: var(--text-secondary); }
-.toast[data-tone="success"] > svg { color: var(--success); }
-.toast[data-tone="error"] > svg { color: var(--danger); }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-
-/* The menu grows from the overflow button. Transitions, not keyframes, so a quick reopen reverses from where it is. */
-.menu { --menu-y: -5px; position: relative; z-index: 60; min-width: 13rem; border: 1px solid var(--border); border-radius: var(--radius-panel); padding: 5px; background: var(--surface-raised); box-shadow: var(--shadow-floating); color: var(--foreground); font-family: var(--font-body); font-size: var(--text-sm); letter-spacing: var(--tracking-body); transform-origin: var(--radix-dropdown-menu-content-transform-origin); transition: opacity var(--duration-fast) var(--ease-enter), transform var(--duration-spring) var(--ease-spring); }
-.menu[data-side="top"] { --menu-y: 5px; }
-@starting-style { .menu[data-state="open"] { opacity: 0; transform: translateY(var(--menu-y)) scale(.97); } }
-.menu[data-state="closed"] { opacity: 0; transform: translateY(calc(var(--menu-y) * .5)) scale(.985); transition: opacity var(--duration-instant) var(--ease-standard), transform var(--duration-instant) var(--ease-standard); animation: menu-exit var(--duration-instant) linear both; pointer-events: none; }
-@keyframes menu-exit { to { --menu-exit: 1; } }
-.highlight { position: absolute; top: 0; right: 5px; left: 5px; border-radius: calc(var(--radius-panel) - 6px); background: var(--surface-muted); opacity: 0; pointer-events: none; }
-.item { position: relative; display: flex; min-height: 36px; align-items: center; gap: 10px; border-radius: calc(var(--radius-panel) - 6px); padding: 0 11px; outline: none; cursor: pointer; user-select: none; }
-.item > svg { flex: none; color: var(--text-secondary); }
-.item[data-disabled] { opacity: .45; cursor: default; }
-.separator { height: 1px; margin: 4px -5px; background: var(--border-subtle); }
 
 @media (hover: hover) and (pointer: fine) {
   .crumb:hover { color: var(--foreground); }
@@ -155,12 +138,10 @@
 /* On a phone the frame is the screen, so it takes most of it rather than stopping short with the body cut mid list. */
 @media (max-width: 560px) { .frame { height: clamp(560px, calc(100svh - 48px), 760px); border-radius: 14px; } }
 
-@media (prefers-reduced-motion: reduce) {
-  .crumb, .compact, .tab, .tab::before, .check, .issueTitle { transition: none; }
-  .menu, .menu[data-state="closed"] { transform: none; transition: opacity var(--duration-instant) linear; }
-}
+/* These transitions only change colour or opacity, so they stay under reduced motion. */
 .header { --pad:0px; padding:0; }
-.title { font-size:clamp(1.5rem,3vw,1.875rem); letter-spacing:-.035em; }
+/* min-width lets a title too long for the row shrink and wrap instead of overflowing it. */
+.title { min-width:0; font-size:clamp(1.5rem,.5rem + 2vw,1.875rem); letter-spacing:-.035em; text-wrap:balance; }
 .crumbs a { color:var(--text-secondary); text-decoration:none; font-size:13px; }
 .actions { flex-wrap:wrap; gap:8px; }
 @container page-header (max-width:560px) { .bar { gap:8px; } }
