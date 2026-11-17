@@ -324,3 +324,54 @@ test("municipal appearance retries on re-entry only after its rate-limit deadlin
   await expect(page.locator("html")).toHaveAttribute("data-accent", "green");
   expect(attempts).toBeGreaterThan(baseline);
 });
+
+test("the open day calendar paints above the sections that follow it", async ({
+  page,
+}) => {
+  await page.goto(
+    `/municipios/${first}/instalaciones/${facility}${preferences}`,
+  );
+  // Arriving through the journey plays its entrance animation, which used to leave each later section in its own
+  // stacking context and paint the free-times section over the calendar.
+  await page.getByRole("link", { name: /^Pista Valdeira/ }).click();
+  await expect(page).toHaveURL(`${unitPath(first)}${preferences}`);
+  await page.evaluate(() =>
+    Promise.allSettled(
+      document.getAnimations().map((animation) => animation.finished),
+    ),
+  );
+  await page.getByRole("button", { name: /^Día \S+,/ }).click();
+  const calendar = page.getByRole("dialog", {
+    name: /^(Elegir|Escoller) día$/,
+  });
+  await expect(calendar).toBeVisible();
+  await calendar.evaluate((panel) =>
+    Promise.allSettled(
+      panel
+        .getAnimations({ subtree: true })
+        .map((animation) => animation.finished),
+    ),
+  );
+  const uncovered = await calendar.evaluate((panel) => {
+    panel.scrollIntoView({ block: "center" });
+    const box = panel.getBoundingClientRect();
+    const points = [0.2, 0.5, 0.8].flatMap((x) =>
+      [0.2, 0.5, 0.8, 0.95].map((y) => [
+        box.left + box.width * x,
+        box.top + box.height * y,
+      ]),
+    );
+    const visible = points.filter(
+      ([x, y]) => y >= 0 && y < innerHeight && x >= 0 && x < innerWidth,
+    );
+    return {
+      checked: visible.length,
+      covered: visible.filter(([x, y]) => {
+        const hit = document.elementFromPoint(x, y);
+        return !hit || !panel.contains(hit);
+      }).length,
+    };
+  });
+  expect(uncovered.checked).toBeGreaterThan(4);
+  expect(uncovered.covered).toBe(0);
+});
