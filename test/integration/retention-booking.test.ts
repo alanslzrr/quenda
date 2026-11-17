@@ -52,7 +52,7 @@ test("approved retention executes scoped booking and communication policies with
       const municipality = await createMunicipality(domain, actor("operator"), {
         name,
         timezone: "Europe/Madrid",
-        administratorId: "admin",
+        administratorEmail: "admin@example.test",
         invitationExpiresAt: future(),
       });
       await acceptAdministratorInvitation(
@@ -66,7 +66,7 @@ test("approved retention executes scoped booking and communication policies with
         actor("admin"),
         municipality.tenantId,
         {
-          accountId: "privacy",
+          email: "privacy@example.test",
           expiresAt: future(),
           permissions: [
             { operation: "PRIVACY_EXECUTE", unitId: null },
