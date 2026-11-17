@@ -66,16 +66,3 @@ export function RowButton({
     </button>
   );
 }
-/** A text action. `danger` marks one that leads to withdrawing, revoking or removing something. */
-export function ActionLink({
-  danger = false,
-  className = "",
-  ...props
-}: LinkProps & { danger?: boolean }) {
-  return (
-    <Link
-      {...props}
-      className={`${styles.action} ${styles.link} ${danger ? styles.danger : ""} ${className}`}
-    />
-  );
-}
