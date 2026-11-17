@@ -147,7 +147,7 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
   await page.getByLabel("Identificador de cuenta").fill(iria.accountId);
   await page
     .getByLabel("Motivo", { exact: true })
-    .fill("Credenciales de la administradora expuestas");
+    .fill("Credenciales de la persona administradora expuestas");
   await page
     .getByRole("checkbox", { name: /Confirmo la suspensión global/ })
     .check();
@@ -182,7 +182,7 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
   await pickDateTime(page, "Aceptar antes de", deadline());
   await page
     .getByLabel("Motivo", { exact: true })
-    .fill("Relevo tras suspender a la administradora");
+    .fill("Relevo tras suspender a la persona administradora");
   await page
     .getByLabel("Referencia de verificación de autoridad")
     .fill("Decreto de alcaldía 2026/118");
