@@ -413,7 +413,9 @@ test("privacy staff without administration type the exact account and never read
     page.getByRole("combobox", { name: /Cómo indicar la cuenta/ }),
   ).toHaveCount(0);
   await expect(
-    page.getByText(/no da acceso al listado de personas del municipio/),
+    page.getByText(
+      /no da acceso al listado de personas del municipio|non dá acceso á listaxe de persoas do municipio/,
+    ),
   ).toBeVisible();
   await expect(
     page.getByLabel(/Identificador (de la cuenta|da conta)/),
