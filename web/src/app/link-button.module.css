@@ -9,6 +9,92 @@
   flex: none;
 }
 
+/* A label next to an icon wraps instead of stretching the button past a narrow column. */
+.link span {
+  min-width: 0;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height-sm);
+  gap: var(--space-1);
+  margin-inline-start: calc(var(--space-2) * -1);
+  padding: 0 var(--space-3) 0 var(--space-1);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.row {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: var(--space-1);
+  color: var(--foreground);
+  font-weight: 500;
+  text-align: start;
+}
+.rowButton {
+  min-height: var(--control-height-sm);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.rowButton:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+.rowButton[aria-pressed="true"] svg {
+  color: var(--foreground);
+  rotate: 90deg;
+}
+.row svg {
+  color: var(--text-muted);
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    translate var(--duration-fast) var(--ease-standard),
+    rotate var(--duration-fast) var(--ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .back:hover {
+    color: var(--foreground);
+    background: color-mix(in oklab, var(--foreground) 5%, transparent);
+  }
+  .row:hover svg {
+    color: var(--foreground);
+    translate: 2px 0;
+  }
+}
+.back:active {
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--foreground) 7%, transparent);
+}
+
+@media (pointer: coarse) {
+  .back {
+    min-height: 44px;
+  }
+  .row {
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .row svg {
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+  .row:hover svg {
+    translate: none;
+  }
+}
 .action {
   display: inline-flex;
   align-items: center;
