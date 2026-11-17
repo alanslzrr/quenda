@@ -42,8 +42,12 @@ test("CU-03 modificar y cancelar una reserva", async ({ page }) => {
   await page.goto("/reservas");
   const item = page.locator(`a[href="${detail}"]`);
   await expect(item).toBeVisible();
-  await item.evaluate((node) => node.scrollIntoView({ block: "center" }));
+  // Vista más alta: cabecera, filtro y la reserva en la misma imagen.
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(item).toBeInViewport();
   await shot(cu, page, "mis-reservas", { target: item });
+  await page.setViewportSize({ width: 1280, height: 800 });
   await item.click();
   await expect(
     page.getByRole("heading", { name: "Reserva confirmada", exact: true }),
@@ -180,6 +184,12 @@ test("CU-03 cambios que no se aplican", async ({ page }) => {
     .getByRole("link")
     .filter({ hasText: "Cambio hecho por la administración" })
     .first();
+  await expect(page.getByRole("heading", { name: "Avisos" })).toBeVisible();
+  const older = page.getByRole("button", { name: "Ver más avisos" });
+  for (let round = 0; round < 15 && !(await municipal.isVisible()); round++) {
+    await older.click();
+    await page.waitForLoadState("networkidle");
+  }
   await expect(municipal).toBeVisible();
   await shot(cu, page, "aviso-intervencion-municipal", { target: municipal });
   await municipal.click();
