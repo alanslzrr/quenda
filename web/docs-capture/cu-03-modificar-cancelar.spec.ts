@@ -193,6 +193,17 @@ test("CU-03 cambios que no se aplican", async ({ page }) => {
   await expect(municipal).toBeVisible();
   await shot(cu, page, "aviso-intervencion-municipal", { target: municipal });
   await municipal.click();
-  await expect(page.locator("main h1")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Reserva cancelada", exact: true }),
+  ).toBeVisible();
+  // Recorrer muchas páginas de avisos consume el cupo de lecturas de la
+  // cuenta; si el espacio aún no se ha cargado, se espera y se recarga.
+  await expect(async () => {
+    if (await page.getByText("Espacio reservado", { exact: true }).count())
+      await page.reload();
+    await expect(
+      page.getByText("Espacio reservado", { exact: true }),
+    ).toHaveCount(0, { timeout: 5000 });
+  }).toPass({ timeout: 120000, intervals: [10000, 20000, 30000] });
   await shot(cu, page, "reserva-cancelada-por-el-ayuntamiento");
 });
