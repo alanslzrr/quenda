@@ -100,9 +100,9 @@ La unidad se queda en borrador y la ventana de publicación lo explica. Cierra l
 
 Si otra persona del municipio guarda la misma ficha mientras tú la editas, tu guardado se rechaza para no borrar su cambio. Recarga la página para ver la ficha actual y vuelve a aplicar tu cambio.
 
-![Ficha de la instalación con el mensaje «La operación entra en conflicto con el estado actual» señalado sobre el botón «Guardar ficha»](../capturas/cu-04/13-ficha-version-obsoleta.webp)
+![Ficha de la instalación con el mensaje «Se han guardado otros cambios mientras editabas…» señalado sobre el botón «Guardar ficha»](../capturas/cu-04/13-ficha-version-obsoleta.webp)
 
-*La instalación ya está publicada. El mensaje aparece encima de «Guardar ficha» y tu correo de contacto modificado no se guarda. La ficha se guarda completa: si dejas un campo vacío, ese dato desaparece de la ficha pública.*
+*La instalación ya está publicada. El mensaje, encima de «Guardar ficha», explica que se han guardado otros cambios mientras editabas, quizá desde otra pestaña, y pide recargar para ver la versión actual y volver a aplicar tus cambios; tu correo de contacto modificado no se guarda. La ficha se guarda completa: si dejas un campo vacío, ese dato desaparece de la ficha pública.*
 
 #### Necesitas cerrar una unidad unas horas
 
@@ -128,9 +128,9 @@ Quenda no bloquea encima de reservas confirmadas. Si hace falta cerrar ese horar
 
 Si quitas franjas en una unidad que ya tiene reservas confirmadas en esos horarios, el cambio se rechaza entero. Pulsa **Descartar borrador y recargar horarios** para volver al horario guardado y resuelve antes esas reservas.
 
-![Pestaña «Horarios» de una unidad con reservas, sin franjas semanales, y el mensaje «La operación entra en conflicto con el estado actual» señalado](../capturas/cu-04/17-horario-con-reservas.webp)
+![Pestaña «Horarios» de una unidad con reservas, sin franjas semanales, y el mensaje «El nuevo horario dejaría fuera reservas confirmadas…» señalado](../capturas/cu-04/17-horario-con-reservas.webp)
 
-*Se han quitado todas las franjas semanales y solo quedan las excepciones de fechas, cada una con su «Quitar excepción». Al guardar aparece el mensaje señalado y el horario guardado no cambia.*
+*Se han quitado todas las franjas semanales y solo quedan las excepciones de fechas, cada una con su «Quitar excepción». Al guardar, el mensaje señalado explica que el nuevo horario dejaría fuera reservas confirmadas y propone cancelarlas o reubicarlas antes, o ampliar el horario para cubrirlas. El horario guardado no cambia.*
 
 #### Quieres dejar de ofrecer una unidad
 
@@ -328,7 +328,7 @@ Tras suspender o vencer el convenio, cada unidad sigue vinculada a él. Para que
 
 ![Pantalla «Vinculación de la unidad» con el motivo «Reapertura de la pista al público general» y el botón «Retirar vinculación» señalado](../capturas/cu-10/10-vinculacion.webp)
 
-*La pantalla identifica por su código el convenio y la versión que vinculan la unidad, y aclara que retirar la vinculación no publica la unidad ni cambia horarios, reservas o bloqueos, y que las reservas confirmadas se mantienen.*
+*La pantalla indica por su nombre el convenio y la versión que vinculan la unidad («Red deportiva Valdeira–Ribasanta · versión 1»), guarda su código en «Identificador técnico» y aclara que retirar la vinculación no publica la unidad ni cambia horarios, reservas o bloqueos, y que las reservas confirmadas se mantienen.*
 
 ![Pantalla «Vinculación de la unidad» con el mensaje «Sin vinculación restrictiva registrada.» señalado](../capturas/cu-10/11-vinculacion-retirada.webp)
 
@@ -366,7 +366,7 @@ El convenio queda activo solo en la versión aprobada por todos y durante su vig
 
 La administración municipal decide quién gestiona el municipio y con qué permisos. Para hacerlo envía una invitación con permisos, ámbito y plazo; los permisos solo se activan cuando la persona invitada la acepta. Del mismo modo se retira a una persona o se releva a quien administra el municipio.
 
-**Antes de empezar:** necesitas ser administrador del municipio y haber verificado el segundo factor hace poco. La persona invitada necesita una cuenta en Quenda con la verificación en dos pasos activada. **Especificación:** [CU-12](../08_casos_de_uso.md#cu-12--delegar-permisos-y-relevar-responsables).
+**Antes de empezar:** necesitas ser administrador del municipio y haber verificado el segundo factor hace poco. Necesitas el correo de la persona invitada; para aceptar, esa persona necesita una cuenta de Quenda con ese correo verificado y la verificación en dos pasos activada. **Especificación:** [CU-12](../08_casos_de_uso.md#cu-12--delegar-permisos-y-relevar-responsables).
 
 ### Paso a paso
 
@@ -376,17 +376,17 @@ La administración municipal decide quién gestiona el municipio y con qué perm
 
    *La tabla muestra cada responsable con su estado y su vigencia. El texto recuerda que la retirada ordinaria exige otro administrador habilitado sin caducidad.*
 
-2. **Pide el identificador de cuenta.** No se busca a las personas por correo: la persona invitada consulta su identificador en **Mi cuenta → Datos personales** y te lo facilita.
+2. **Confirma el correo de la persona.** La invitación se dirige a un correo. Si la persona ya usa Quenda, conviene que confirme el correo con el que accede, que ve en **Mi cuenta → Datos personales**.
 
-   ![Página «Datos personales» de la persona invitada con el «Identificador de cuenta» señalado al final](../capturas/cu-12/02-identificador-de-cuenta.webp)
+   ![Página «Datos personales» de la persona invitada con su correo electrónico señalado](../capturas/cu-12/02-correo-de-la-persona.webp)
 
-   *El identificador aparece al final de la página, en letra monoespaciada.*
+   *El recuadro marca el correo de la cuenta, «nerea.pazos@valdeira.demo.test». Solo la cuenta con ese correo verificado podrá aceptar la invitación.*
 
-3. **Envía la invitación.** En **Invitar**, elige el tipo (**Gestor municipal** o **Administrador municipal**), pega el identificador e indica hasta cuándo puede aceptarla. Si el permiso debe caducar, rellena **Permiso válido hasta**. Añade cada permiso eligiendo la operación y el ámbito (todo el municipio o una unidad) y pulsando **Añadir permiso**. Marca **Confirmo la cuenta, el alcance y la vigencia** y pulsa **Enviar invitación**.
+3. **Envía la invitación.** En **Invitar**, elige el tipo (**Gestor municipal** o **Administrador municipal**), escribe el correo de la persona en **Correo del destinatario** e indica hasta cuándo puede aceptarla. Si el permiso debe caducar, rellena **Permiso válido hasta**. Añade cada permiso eligiendo la operación y el ámbito (todo el municipio o una unidad) y pulsando **Añadir permiso**. Marca **Confirmo el correo, el alcance y la vigencia** y pulsa **Enviar invitación**.
 
    ![Formulario «Nueva invitación» de gestor con dos permisos añadidos y el botón «Enviar invitación» señalado](../capturas/cu-12/03-invitar-gestora.webp)
 
-   *Se han añadido «Consultar reservas · Todo el municipio» y «Bloquear unidades · Pista central». El formulario recuerda que cada permiso es independiente y que los de privacidad requieren una concesión expresa.*
+   *Se han añadido «Consultar reservas · Todo el municipio» y «Bloquear unidades · Pista central». El formulario recuerda que la invitación se dirige a un correo y que la respuesta es la misma tenga o no cuenta esa dirección, así que no sirve para averiguar quién está registrado. También recuerda que cada permiso es independiente y que los de privacidad requieren una concesión expresa.*
 
    ![Formulario de invitación con el mensaje «Invitación registrada. El destinatario debe aceptarla.» señalado](../capturas/cu-12/04-invitacion-registrada.webp)
 
@@ -569,7 +569,7 @@ El derecho de uso queda registrado (o revocado) con su emisor, su vigencia y su 
 
 Si un convenio tiene habilitados los informes agregados, Quenda prepara automáticamente el informe de cada mes cuando ese mes se cierra, con cifras conjuntas de los municipios participantes. Solo lo recibe una persona con permiso de informes en su municipio y con evaluaciones de privacidad favorables de las administraciones participantes para su cuenta. Las cifras son agregadas y describen reservas, no asistencia.
 
-**Antes de empezar:** la persona que consulta necesita verificación en dos pasos y el permiso de consultar el uso de los espacios en su municipio. Las administraciones que revisan necesitan ser administradoras de un municipio participante. **Especificación:** [CU-18](../08_casos_de_uso.md#cu-18--consultar-un-informe-conjunto).
+**Antes de empezar:** la persona que consulta necesita verificación en dos pasos y el permiso de consultar el uso de los espacios en todo su municipio. Las administraciones que revisan necesitan ser administradoras de un municipio participante. **Especificación:** [CU-18](../08_casos_de_uso.md#cu-18--consultar-un-informe-conjunto).
 
 ### Paso a paso
 
@@ -589,15 +589,15 @@ Si un convenio tiene habilitados los informes agregados, Quenda prepara automát
 
    *La evaluación queda registrada. Si cambia el historial de entregas, hay que actualizar el contexto y revisar de nuevo. La otra administración participante hace lo mismo desde su municipio.*
 
-2. **Escribe el identificador del convenio.** La persona destinataria abre **Gestión → Informes conjuntos** y escribe el identificador del convenio que le facilite la administración municipal.
+2. **Elige el convenio.** La persona destinataria abre **Gestión → Informes conjuntos** y elige el convenio por su nombre en **Convenio**. La lista solo ofrece los convenios activados en los que participa su municipio y que tienen habilitados los informes agregados.
 
-   ![Página «Informe conjunto mensual» con el campo «Identificador del convenio» completado y señalado](../capturas/cu-18/04-identificador-convenio.webp)
+   ![Página «Informe conjunto mensual» con el selector «Convenio» señalado y «Ligas escolares comarcales» elegido](../capturas/cu-18/04-identificador-convenio.webp)
 
-   *La página avisa de que cada entrega se registra y de que no admite filtros adicionales ni selección de revisiones.*
+   *El recuadro marca el convenio elegido, «Ligas escolares comarcales». La página avisa de que cada entrega se registra y de que no admite filtros adicionales ni selección de revisiones.*
 
 3. **Elige el mes y consulta.** En **Mes publicado**, elige el mes y pulsa **Consultar informe**.
 
-   ![Formulario con el identificador del convenio, el mes elegido y el botón «Consultar informe» señalado](../capturas/cu-18/05-solicitar-informe.webp)
+   ![Formulario con el convenio, el mes elegido y el botón «Consultar informe» señalado](../capturas/cu-18/05-solicitar-informe.webp)
 
    *Solo se elige un convenio y un mes cerrado; no hay fechas arbitrarias ni filtros por personas o municipios.*
 
@@ -605,7 +605,7 @@ Si un convenio tiene habilitados los informes agregados, Quenda prepara automát
 
    ![Resultado «Informe autorizado» señalado, con revisión, versión del control, corte, 24 reservas confirmadas y 1440,00 minutos reservados](../capturas/cu-18/06-informe-autorizado.webp)
 
-   *Además de las cifras, el informe muestra la revisión, la versión del control aplicado y el corte, es decir, el momento al que corresponden los datos. Cada entrega queda registrada con su destinatario.*
+   *Encima del resultado se lee el convenio y el mes («Ligas escolares comarcales · 2026-07»), con su código en «Identificador técnico». Además de las cifras, el informe muestra la revisión, la versión del control aplicado y el corte, es decir, el momento al que corresponden los datos. Cada entrega queda registrada con su destinatario.*
 
 ### Si algo no sale como se espera
 
@@ -732,9 +732,9 @@ Para guardar hace falta haber verificado el segundo factor en los últimos cinco
 
 Si otra persona (u otra pestaña) guarda la apariencia mientras tú editas, tu guardado se rechaza para no sobrescribir su cambio. Pulsa **Descartar**: la pantalla vuelve a leer la configuración actual y puedes repetir tus cambios sobre ella.
 
-![Barra inferior con el mensaje «La operación entra en conflicto con el estado actual.» y el botón «Descartar» señalado](../capturas/cu-23/15-revision-obsoleta.webp)
+![Barra inferior con el mensaje «Se han guardado otros cambios mientras editabas…» y el botón «Descartar» señalado](../capturas/cu-23/15-revision-obsoleta.webp)
 
-*Las esquinas «Suaves» elegidas en esta pestaña no se guardan; al descartar se muestran las que guardó la otra pestaña.*
+*El mensaje explica que se han guardado otros cambios mientras editabas, quizá desde otra pestaña. Las esquinas «Suaves» elegidas en esta pestaña no se guardan; al descartar se muestran las que guardó la otra pestaña.*
 
 #### Quieres volver a la apariencia por defecto
 

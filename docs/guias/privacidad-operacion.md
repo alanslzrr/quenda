@@ -60,7 +60,7 @@ Sirve para que Quenda elimine o bloquee automáticamente los datos de una famili
 
    ![Terminal con un ciclo del worker que procesa la conservación](../capturas/cu-20/08-worker-conservacion.webp)
 
-   *La línea EMAIL_WORKER_READY indica que el worker ha arrancado y la línea RETENTION_BATCH resume el ciclo: ha examinado 2 registros vencidos, ha aplicado la actuación a 1 y ha dejado 1 en conflicto. EMAIL_QUEUE_HEALTH indica que no quedaban correos pendientes.*
+   *La imagen muestra el equivalente local. La línea EMAIL_WORKER_READY indica que el worker ha arrancado y la línea RETENTION_BATCH resume el ciclo: ha examinado 2 registros vencidos, ha aplicado la actuación a 1 y ha dejado 1 en conflicto. En el mismo ciclo el worker también envía un correo pendiente (EMAIL_ATTEMPT) y EMAIL_QUEUE_HEALTH resume la cola de correo: 2 pendientes y ninguno agotado.*
 
 8. **Revisa excepciones y conflictos.** En **Excepciones y conflictos**, el registro protegido aparece como conflicto con su motivo; sus datos no se han tocado. El otro perfil vencido se ha bloqueado.
 
@@ -282,7 +282,7 @@ Los comandos se ejecutan desde la raíz del código de Quenda. `PG_BIN` (la carp
 
    ![Terminal con la conciliación de la base restaurada](../capturas/cu-22/08-conciliar.webp)
 
-   *El informe de `pnpm -s db:reconcile` repite el estado de privacidad (revisión pendiente y checkpoint reproducido), confirma que la base sigue con límite de conexiones 0, muestra 0 incoherencias en cada comprobación de reservas, ocupaciones, consumos y sesiones, y resume los correos (ninguno pendiente). El estado `CHECKED_REQUIRES_REVIEW` y `reopeningAuthorized: false` indican que la revisión operativa sigue siendo obligatoria.*
+   *El informe de `pnpm -s db:reconcile` repite el estado de privacidad (revisión pendiente y checkpoint reproducido), confirma que la base sigue con límite de conexiones 0, muestra 0 incoherencias en cada comprobación de reservas, ocupaciones, consumos y sesiones, y resume los correos (2 pendientes de envío y ninguno agotado). El estado `CHECKED_REQUIRES_REVIEW` y `reopeningAuthorized: false` indican que la revisión operativa sigue siendo obligatoria.*
 
 9. **Decide la reapertura.** Ningún comando autoriza la reapertura. Antes, el responsable operativo verifica que el checkpoint es el más reciente, resuelve las diferencias con los responsables del tratamiento, revisa políticas, excepciones, sesiones y envíos pendientes frente al registro del transporte de correo, y contrasta las reservas confirmadas después de la copia con evidencia externa. Solo entonces se retira la barrera de recuperación mediante mantenimiento autorizado y se conceden las conexiones y los permisos mínimos de cada rol.
 
