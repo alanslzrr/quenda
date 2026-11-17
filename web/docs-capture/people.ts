@@ -6,6 +6,7 @@ import {
   type APIRequestContext,
   type Browser,
   expect,
+  type Locator,
   type Page,
   request,
   test,
@@ -341,6 +342,31 @@ export async function profile(
      VALUES($1,$2,now()-make_interval(days=>$3))`,
     [tenantId, accountId, days],
   );
+}
+
+/**
+ * Brings a form's submit button to the middle of the window, so a message
+ * shown just above it and the button itself are both fully in the capture.
+ */
+export async function alongside(button: Locator) {
+  await button.evaluate((node) => {
+    // Scroll only the panel that holds the form, leaving the page frame still.
+    let box = node.parentElement;
+    while (
+      box &&
+      !(
+        /(auto|scroll)/.test(getComputedStyle(box).overflowY) &&
+        box.scrollHeight > box.clientHeight
+      )
+    )
+      box = box.parentElement;
+    const bottom = box ? box.getBoundingClientRect().bottom : innerHeight;
+    const overflow = node.getBoundingClientRect().bottom - bottom + 48;
+    if (box) {
+      if (overflow > 0) box.scrollTop += overflow;
+      document.scrollingElement?.scrollTo(0, 0);
+    } else if (overflow > 0) scrollBy(0, overflow);
+  });
 }
 
 export function future(days: number) {
