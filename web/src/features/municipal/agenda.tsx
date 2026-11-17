@@ -11,7 +11,7 @@ import {
 import { ApiError, api, type Municipality } from "../../app/api";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink as Link } from "../../app/link-button";
+import { BackLink, RowLink } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { useSession } from "../../app/session";
@@ -231,9 +231,9 @@ function ReservationList({
                 sortable: false,
                 label: t("Inicio", "Inicio"),
                 render: (_, r) => (
-                  <Link to={`${municipalPath(m.id)}/reservas/${r.id}`}>
+                  <RowLink to={`${municipalPath(m.id)}/reservas/${r.id}`}>
                     {dateTime(r.startsAt, r.timeZone, locale)}
-                  </Link>
+                  </RowLink>
                 ),
               },
               {
@@ -561,9 +561,9 @@ export function AdministrativeReservation() {
     <ManagementPage
       title={`${t("Reserva", "Reserva")} · ${unitName(r.unitId)}`}
       breadcrumb={
-        <Link to={`${municipalPath(m.id)}/agenda`}>
+        <BackLink to={`${municipalPath(m.id)}/agenda`}>
           {t("Agenda diaria", "Axenda diaria")}
-        </Link>
+        </BackLink>
       }
       status={
         <Badge
