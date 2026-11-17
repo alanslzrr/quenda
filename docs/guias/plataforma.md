@@ -77,7 +77,7 @@ Quenda solo acepta nombres de zona horaria IANA. Si escribes, por ejemplo, «Mad
 
 ![Aviso Indica una zona horaria IANA válida bajo el formulario de alta](../capturas/cu-06/10-zona-horaria-invalida.webp)
 
-*El campo de zona horaria contiene «Madrid» y el aviso recuadrado pide una zona horaria IANA válida. Los demás datos del formulario se conservan.*
+*Bajo la casilla de confirmación aparece el aviso recuadrado «Indica una zona horaria IANA válida.», justo encima del botón Registrar municipio. Los datos del formulario se conservan: basta con corregir la zona horaria y volver a pulsar el botón.*
 
 #### El identificador de cuenta no existe
 
@@ -85,7 +85,7 @@ Si el identificador está mal copiado o no corresponde a ninguna cuenta, Quenda 
 
 ![Aviso La solicitud contiene datos no válidos con un identificador de cuenta inexistente](../capturas/cu-06/11-cuenta-inexistente.webp)
 
-*Con «cuenta-inexistente» en el identificador, el aviso recuadrado indica «La solicitud contiene datos no válidos.» y no se registra nada.*
+*Con «cuenta-inexistente» en el identificador, el aviso recuadrado, sobre el botón Registrar municipio, indica «La solicitud contiene datos no válidos.» y no se registra nada.*
 
 #### La verificación en dos pasos ya no es reciente
 
@@ -125,7 +125,7 @@ Una vez que alguien ha aceptado la administración del municipio, la invitación
 
 ![Aviso La operación entra en conflicto con el estado actual al sustituir una invitación aceptada](../capturas/cu-06/17-sustitucion-rechazada.webp)
 
-*Al intentar sustituir la invitación del Concello de Toxeira, ya aceptada, aparece el aviso recuadrado «La operación entra en conflicto con el estado actual.».*
+*Al intentar sustituir la invitación del Concello de Toxeira, ya aceptada, aparece sobre el botón Sustituir invitación el aviso recuadrado «La operación entra en conflicto con el estado actual.».*
 
 #### La invitación ha vencido
 
@@ -177,7 +177,7 @@ Sirve para cortar de inmediato un acceso que puede estar en manos equivocadas y,
 
    ![Mensaje Cambios guardados tras la retirada por seguridad](../capturas/cu-16/03-retirada-local-registrada.webp)
 
-   *El mensaje recuadrado confirma la retirada. El campo Motivo aparece vacío y marcado en rojo porque el formulario queda listo para otra retirada.*
+   *El mensaje recuadrado, sobre el botón Retirar acceso por seguridad, confirma la retirada. El campo Motivo aparece vacío y marcado en rojo porque el formulario queda listo para otra retirada.*
 
 4. **Verifica que la concesión ya no está vigente.** En **Gestores**, la concesión figura como **Revocada**.
 
@@ -253,21 +253,21 @@ Si la contención deja a un municipio sin ningún administrador habilitado, como
 
 #### Recuperación del acceso personal (personal de operación)
 
-Una cuenta suspendida solo vuelve a funcionar con la recuperación asistida. No hay pantalla para ello y la persona suspendida no puede restablecer su contraseña por correo.
+Una cuenta suspendida solo vuelve a funcionar con la recuperación asistida, que realiza el personal de operación con las credenciales de mantenimiento cargadas desde los secretos del entorno. No hay pantalla para ello y la persona suspendida no puede restablecer su contraseña por correo. En el ejemplo se recupera a la misma administradora suspendida en el paso 7.
 
 15. **Sustituye las credenciales comprometidas.** Antes de levantar la suspensión, la titular cambia, por el procedimiento controlado del equipo de operación, la contraseña y, si los tenía, el segundo factor y los códigos de respaldo. Este paso no tiene pantalla en Quenda y nunca se escriben contraseñas ni secretos en los comandos ni en las referencias.
 
-16. **Ejecuta la recuperación.** Con las credenciales de mantenimiento, lanza el comando de recuperación con el identificador de la cuenta, quién la realiza, la referencia de la verificación de identidad, la referencia de la sustitución de credenciales y el motivo. Equivale a `pnpm account:recover` cuando las credenciales de mantenimiento están en `.env.migration.local`.
+16. **Ejecuta la recuperación.** Lanza `pnpm -s account:recover` con el identificador de la cuenta, quién la realiza, la referencia de la verificación de identidad, la referencia de la sustitución de credenciales y el motivo.
 
-    ![Terminal con la recuperación de cuenta completada](../capturas/cu-16/17-recuperar-cuenta.webp)
+    ![Terminal con la recuperación de la cuenta de la administradora completada](../capturas/cu-16/15-recuperar-cuenta.webp)
 
     *La salida «Personal access recovered; administrative permissions remain revoked» confirma que se recupera solo el acceso personal: los permisos administrativos siguen retirados.*
 
-17. **La titular vuelve a entrar.** Con su nueva contraseña, inicia sesión y llega a su cuenta.
+17. **La titular vuelve a entrar.** Inicia sesión con su nueva contraseña y su nuevo segundo factor. Puede reservar a su nombre, pero ya no administra el municipio: en **Personal y permisos** sigue figurando como «No habilitado» (paso 14). Si vuelve a necesitar el permiso, tendrá que recibir y aceptar una invitación nueva.
 
-    ![Preferencias de la cuenta recuperada tras iniciar sesión](../capturas/cu-16/18-acceso-recuperado.webp)
+    ![Gestión municipal de la administradora recuperada sin permisos vigentes](../capturas/cu-16/16-acceso-recuperado.webp)
 
-    *La página Preferencias de tu cuenta, con el correo de la titular en el menú, muestra que el inicio de sesión ha funcionado.*
+    *Tras iniciar sesión, la página Gestión municipal de la administradora recuperada muestra, recuadrado, «No tienes permisos municipales vigentes.»; en la cabecera sigue disponible Reservar.*
 
 ### Si algo no sale como se espera
 
@@ -275,25 +275,25 @@ Una cuenta suspendida solo vuelve a funcionar con la recuperación asistida. No 
 
 La recuperación de responsable solo funciona cuando no queda ningún administrador habilitado. Si ya hay uno, Quenda la rechaza: el relevo se hace desde **Personal y permisos** del municipio.
 
-![Aviso La operación entra en conflicto con el estado actual en Recuperar responsable municipal](../capturas/cu-16/15-recuperacion-rechazada.webp)
+![Aviso La operación entra en conflicto con el estado actual en Recuperar responsable municipal](../capturas/cu-16/17-recuperacion-rechazada.webp)
 
-*Tras la aceptación de la sustituta, un segundo intento de recuperación muestra el aviso recuadrado «La operación entra en conflicto con el estado actual.».*
+*Tras la aceptación de la sustituta, un segundo intento de recuperación muestra, sobre el botón Invitar a un sustituto, el aviso recuadrado «La operación entra en conflicto con el estado actual.».*
 
 #### Las credenciales comprometidas no se han sustituido
 
-Si la contraseña (y, cuando existían, el segundo factor y los códigos de respaldo) siguen siendo las mismas que en el momento de la suspensión, el comando falla y la cuenta sigue suspendida.
+Si la contraseña (y, cuando existían, el segundo factor y los códigos de respaldo) siguen siendo las mismas que en el momento de la suspensión, el comando se rechaza y la cuenta sigue suspendida. En el ejemplo, es lo que ocurre si se ejecuta la recuperación de la administradora antes del paso 15.
 
-![Terminal con la recuperación de cuenta rechazada](../capturas/cu-16/16-recuperar-sin-credenciales.webp)
+![Terminal con la recuperación de la cuenta de la administradora rechazada](../capturas/cu-16/18-recuperar-sin-credenciales.webp)
 
-*La salida «Recovery failed; verify identity, remediation, replaced compromised credentials and retained inactive account» y el código de salida 1 indican que no se ha cambiado nada.*
+*Es el mismo comando del paso 16. La salida «Recovery failed; verify identity, remediation, replaced compromised credentials and retained inactive account» y el código de salida 1 indican que no se ha cambiado nada.*
 
 #### Se intenta la recuperación excepcional de operadores con un operador habilitado
 
-El comando de recuperación de operadores solo actúa cuando no queda ningún operador habilitado; mientras haya uno, la gestión de operadores se hace desde **Operadores** en la plataforma. La cuenta destino debe estar activa, con correo verificado y verificación en dos pasos.
+`pnpm -s operator:recover` solo actúa cuando no queda ningún operador habilitado; mientras haya uno, la gestión de operadores se hace desde **Operadores** en la plataforma. La cuenta destino debe estar activa, con correo verificado y verificación en dos pasos.
 
 ![Terminal con la recuperación excepcional de operador rechazada](../capturas/cu-16/19-recuperar-operador-rechazado.webp)
 
-*El comando recibe la cuenta destino, quién lo ejecuta, la referencia de la autoridad verificada y el motivo. La salida «Operator recovery failed; verify authority, destination account and absence of enabled operators» indica que sigue habiendo un operador habilitado. Equivale a `pnpm operator:recover`.*
+*El comando recibe la cuenta destino, quién lo ejecuta, la referencia de la autoridad verificada y el motivo. La salida «Operator recovery failed; verify authority, destination account and absence of enabled operators» y el código de salida 1 indican que sigue habiendo un operador habilitado.*
 
 #### La contención deja el ámbito sin responsable
 
