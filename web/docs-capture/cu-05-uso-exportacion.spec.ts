@@ -1,7 +1,5 @@
-import { execFile } from "node:child_process";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
 import { Capture, expect, signIn, test } from "./capture";
 import {
   choose,
@@ -13,11 +11,11 @@ import {
   section,
   signInAs,
   snap,
+  spreadsheet,
   units,
   valdeira,
 } from "./steps";
 
-const run = promisify(execFile);
 const region = (page: import("@playwright/test").Page, name: string) =>
   page.getByRole("region", { name, exact: true });
 
@@ -91,24 +89,68 @@ test("CU-05 consultar el uso de los espacios y exportar reservas", async ({
       .locator("xpath=ancestor::div[.//button][1]"),
   });
 
-  // Alternativa: sin permiso de exportación no aparece «Exportar reservas».
-  const navigation = page.getByRole("navigation", {
-    name: "Gestión municipal",
-  });
-  await expect(
-    navigation.getByRole("link", { name: "Exportar reservas" }),
-  ).toHaveCount(0);
-  await snap(cu, page, "gestor-sin-exportar", { target: navigation });
-  await page.goto(`/administracion/${valdeira}/exportaciones`);
-  const denied = page.getByText("No tienes permiso para esta operación.");
-  await expect(denied).toBeVisible();
-  await snap(cu, page, "exportar-sin-permiso", { target: denied });
-
-  // Alternativa: con permiso sobre algunos espacios no se ve el total municipal.
   const admin = await secondBrowser(browser, page);
   const marta = await admin.newPage();
   try {
+    // Paso 4: exportar las reservas una a una (hoja de cálculo), con permiso.
     await signIn(marta, "administrator");
+    await marta
+      .getByRole("navigation", { name: "Navegación principal" })
+      .getByRole("link", { name: "Gestión", exact: true })
+      .click();
+    await section(marta, "Exportar reservas");
+    await pickDate(marta, "Desde (incluido)", localDate(-14));
+    await pickDate(marta, "Hasta (excluido)", localDate(-7));
+    await choose(marta, "Formato", "Hoja de cálculo");
+    await marta
+      .getByRole("checkbox", {
+        name: "Confirmo la descarga de datos del ámbito autorizado",
+      })
+      .check();
+    const download = marta.getByRole("button", { name: /^Descargar/ });
+    await snap(cu, marta, "exportar-formulario", {
+      tall: true,
+      target: download,
+    });
+    const downloading = marta.waitForEvent("download");
+    await download.click();
+    const file = await downloading;
+    const folder = path.resolve("../.local/capture/descargas");
+    await mkdir(folder, { recursive: true });
+    const name = file.suggestedFilename();
+    await file.saveAs(path.join(folder, name));
+    const notice = marta
+      .getByRole("main")
+      .getByRole("status")
+      .filter({ hasText: /\S/ });
+    await expect(notice.first()).toBeVisible();
+    await snap(cu, marta, "exportar-descargado", {
+      tall: true,
+      target: notice.first(),
+    });
+    // Paso 5: el archivo abierto en una hoja de cálculo.
+    await spreadsheet(
+      cu,
+      marta,
+      "exportar-archivo",
+      name,
+      await readFile(path.join(folder, name), "utf8"),
+    );
+
+    // Alternativa: sin permiso de exportación no aparece «Exportar reservas».
+    const navigation = page.getByRole("navigation", {
+      name: "Gestión municipal",
+    });
+    await expect(
+      navigation.getByRole("link", { name: "Exportar reservas" }),
+    ).toHaveCount(0);
+    await snap(cu, page, "gestor-sin-exportar", { target: navigation });
+    await page.goto(`/administracion/${valdeira}/exportaciones`);
+    const denied = page.getByText("No tienes permiso para esta operación.");
+    await expect(denied).toBeVisible();
+    await snap(cu, page, "exportar-sin-permiso", { target: denied });
+
+    // Alternativa: con permiso sobre algunos espacios no se ve el total municipal.
     const iria = await freshAccount(
       "iria.castro@valdeira.demo.test",
       "Iria Castro Neira",
@@ -139,51 +181,6 @@ test("CU-05 consultar el uso de los espacios y exportar reservas", async ({
     } finally {
       await partial.close();
     }
-
-    // Paso 4: exportar las reservas una a una (hoja de cálculo).
-    await marta
-      .getByRole("navigation", { name: "Navegación principal" })
-      .getByRole("link", { name: "Gestión", exact: true })
-      .click();
-    await section(marta, "Exportar reservas");
-    const from = localDate(-14);
-    const to = localDate(-7);
-    await pickDate(marta, "Desde (incluido)", from);
-    await pickDate(marta, "Hasta (excluido)", to);
-    await choose(marta, "Formato", "Hoja de cálculo");
-    await marta
-      .getByRole("checkbox", {
-        name: "Confirmo la descarga de datos del ámbito autorizado",
-      })
-      .check();
-    const download = marta.getByRole("button", { name: /^Descargar/ });
-    await snap(cu, marta, "exportar-formulario", {
-      tall: true,
-      target: download,
-    });
-    const downloading = marta.waitForEvent("download");
-    await download.click();
-    const file = await downloading;
-    const folder = path.resolve("../.local/capture/descargas");
-    await mkdir(folder, { recursive: true });
-    const name = file.suggestedFilename();
-    await file.saveAs(path.join(folder, name));
-    const notice = marta
-      .getByRole("main")
-      .getByRole("status")
-      .filter({ hasText: /\S/ });
-    await expect(notice.first()).toBeVisible();
-    await snap(cu, marta, "exportar-descargado", {
-      tall: true,
-      target: notice.first(),
-    });
-    const head = await run("head", ["-n", "4", name], { cwd: folder });
-    await cu.terminal(
-      marta,
-      "exportar-archivo",
-      `head -n 4 ${name}`,
-      head.stdout,
-    );
 
     // Alternativa: más de 366 días se rechaza sin generar archivo.
     await pickDate(
