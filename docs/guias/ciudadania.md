@@ -92,7 +92,7 @@ Si el espacio no abre ese día, o ya está todo ocupado, la lista queda vacía. 
 
 ![Sala polivalente un domingo con el mensaje «No quedan horarios libres de 30 min este día»](../capturas/cu-01/11-dia-sin-horarios.webp)
 
-*En el recuadro, la sección «Horarios libres» dice «No quedan horarios libres de 30 min este día» y propone probar otro día u otra duración. En el ejemplo, la sala no abre los domingos.*
+*En el recuadro, la sección «Horarios libres» dice «No quedan horarios libres de 30 min este día» y propone probar otro día u otra duración. Debajo, «Próximos horarios libres» ofrece los primeros huecos de los días siguientes, que se pueden pulsar directamente. En el ejemplo, la sala no abre los domingos.*
 
 #### No puedes elegir un día lejano
 
