@@ -142,6 +142,23 @@ async function agreementWithHistory(month: string) {
         WHERE r.tenant_id=$2`,
       [agreement, tenant],
     );
+    // The bookings carry the same evidence as booked ones, so a later
+    // integrity reconciliation of this database finds them consistent.
+    await sql(
+      "migration",
+      `INSERT INTO domain.reservation_event(tenant_id,id,reservation_id,revision,kind,actor_id,correlation_id,after_state,occurred_at)
+       SELECT r.tenant_id,gen_random_uuid(),r.id,r.revision,'CONFIRMADA',r.account_id,gen_random_uuid(),domain.reservation_snapshot(r),r.created_at
+         FROM domain.reservation r WHERE r.tenant_id=$1 AND r.account_id LIKE $2||'%'`,
+      [tenant, prefix],
+    );
+    await sql(
+      "migration",
+      `INSERT INTO domain.agreement_consumption_event(id,agreement_id,subject_id,tenant_id,reservation_id,version,action,week_start,starts_at,ends_at,actor_id,correlation_id,occurred_at)
+       SELECT gen_random_uuid(),c.agreement_id,c.subject_id,c.tenant_id,c.reservation_id,1,'ATTRIBUTED',c.week_start,c.starts_at,c.ends_at,r.account_id,gen_random_uuid(),r.created_at
+         FROM domain.agreement_consumption c JOIN domain.reservation r ON (r.tenant_id,r.id)=(c.tenant_id,c.reservation_id)
+        WHERE c.agreement_id=$1 AND c.tenant_id=$2`,
+      [agreement, tenant],
+    );
   }
   return agreement;
 }
