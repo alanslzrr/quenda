@@ -1,9 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
 import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import { api } from "../../app/api";
-import { useMunicipality, usePublicAppearance } from "../../app/branding";
+import { usePublicAppearance } from "../../app/branding";
 import { useClockBoundaries } from "../../app/clock-boundaries";
 import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
@@ -22,6 +20,7 @@ import { BackLink, BookingSummary, RulesText } from "../catalog/booking";
 import booking from "../catalog/booking.module.css";
 import { AccessPass } from "./access-code";
 import { accessCodeTarget } from "./access-code-model";
+import { placeContext, placeUnitName } from "./detail-model";
 import styles from "./reservations.module.css";
 import {
   dateTime,
@@ -37,18 +36,6 @@ export function ReservationDetail() {
   const { locale, t } = usePreferences();
   const { account } = useSession();
   const query = useReservation(tenantId, reservationId);
-  const municipality = useMunicipality(tenantId);
-  const unit = useQuery({
-    queryKey: ["public", tenantId, query.data?.unitId, "detail-name"],
-    enabled: !!query.data,
-    queryFn: ({ signal }) =>
-      api<{ name: string; facilityName: string }>(
-        `/api/public/municipalities/${tenantId}/units/${query.data?.unitId}`,
-        { signal },
-        locale,
-      ),
-    retry: false,
-  });
   // The page changes only when the cancellation deadline and the start pass, so it re-renders then
   // rather than every second.
   const startsAt = Date.parse(query.data?.startsAt ?? "");
@@ -72,7 +59,8 @@ export function ReservationDetail() {
     Date.parse(r.startsAt) - r.cancellationMinutes * 60000,
   ).toISOString();
   const editable = future && now <= Date.parse(deadline);
-  const facility = unit.data?.facilityName;
+  const unitName = placeUnitName(r, t("Espacio reservado", "Espazo reservado"));
+  const context = placeContext(r);
   const title =
     r.status === "CONFIRMADA"
       ? t("Reserva confirmada", "Reserva confirmada")
@@ -119,12 +107,8 @@ export function ReservationDetail() {
       </header>
       <div className={booking.split}>
         <BookingSummary
-          context={[municipality.data?.name, facility]
-            .filter(Boolean)
-            .join(" · ")}
-          unitName={
-            unit.data?.name ?? t("Espacio reservado", "Espazo reservado")
-          }
+          context={context}
+          unitName={unitName}
           startsAt={r.startsAt}
           endsAt={r.endsAt}
           timeZone={r.timeZone}
@@ -148,13 +132,8 @@ export function ReservationDetail() {
                       tenantId,
                       reservationId,
                     )}
-                    unitName={
-                      unit.data?.name ??
-                      t("Espacio reservado", "Espazo reservado")
-                    }
-                    context={[municipality.data?.name, facility]
-                      .filter(Boolean)
-                      .join(" · ")}
+                    unitName={unitName}
+                    context={context}
                     startsAt={r.startsAt}
                     endsAt={r.endsAt}
                     timeZone={r.timeZone}
