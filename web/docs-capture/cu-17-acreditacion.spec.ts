@@ -7,6 +7,7 @@ import {
   chooseValue,
   closeAgreement,
   freeSlot,
+  freshAddress,
   localDate,
   pickDateTime,
   secondBrowser,
@@ -106,6 +107,7 @@ test("CU-17 gestionar una acreditación de uso", async ({ page, browser }) => {
     await snap(cu, page, "emitida", { tall: true, target: issued });
 
     // Paso 3: al reservar, la acreditación cubre todo el intervalo.
+    await freshAddress(page);
     const resident = await residents.newPage();
     await signInResident(resident, accredited);
     await resident.goto(
@@ -139,6 +141,7 @@ test("CU-17 gestionar una acreditación de uso", async ({ page, browser }) => {
     await neighbour.context().close();
 
     // Alternativa: el emisor revoca la acreditación.
+    await freshAddress(page);
     await page
       .getByRole("navigation", { name: "Gestión municipal" })
       .getByRole("link", { name: "Acreditaciones de uso", exact: true })
