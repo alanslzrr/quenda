@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import { accessibilityViolations } from "./axe-scan";
 
 const tenant = "00000000-0000-4000-8000-000000000071";
 const facility = "00000000-0000-4000-8000-000000000072";
@@ -150,7 +150,7 @@ test("rate-limited availability waits, resets a new deadline, then recovers with
       );
     }),
   ).toBe(true);
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(await accessibilityViolations(page, { allRules: true })).toEqual([]);
 });
 
 for (const header of [undefined, "invalid"])

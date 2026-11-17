@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { accessibilityViolations } from "./axe-scan";
 
 const tenant = "00000000-0000-4000-8000-000000000081";
 const facility = "00000000-0000-4000-8000-000000000082";
@@ -117,11 +117,5 @@ test("a full day suggests the next free slots and links straight to booking them
     `/municipios/${tenant}/unidades/${unit}/reservar?inicio=${encodeURIComponent(slot("2026-10-27", "10:00").start.utc)}&fin=${encodeURIComponent(slot("2026-10-27", "10:00").end.utc)}`,
   );
   await expect(links.nth(1)).toHaveText(/· 11:30$/);
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
 });
