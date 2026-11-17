@@ -1340,7 +1340,7 @@ test("reservation confirmation validates real calendars and commits every effect
         );
         const scoped = { ...newcomer, mfaVerifiedAt: new Date() };
         const invitation = await inviteManager(domain, admin, tenant, {
-          accountId: newcomer.accountId,
+          email: "newcomer@example.test",
           expiresAt: new Date(Date.now() + 3600000).toISOString(),
           permissions: [{ operation: "RESERVATION_READ", unitId: draft }],
         });
@@ -1428,7 +1428,7 @@ test("reservation confirmation validates real calendars and commits every effect
           { code: "NOT_FOUND" },
         );
         const temporary = await inviteManager(domain, admin, tenant, {
-          accountId: scoped.accountId,
+          email: "newcomer@example.test",
           expiresAt: new Date(Date.now() + 3600000).toISOString(),
           roleExpiresAt: new Date(Date.now() + 5000).toISOString(),
           permissions: [{ operation: "RESERVATION_READ", unitId: draft }],
@@ -1543,7 +1543,7 @@ test("reservation confirmation validates real calendars and commits every effect
         const booking = await create("managed-move-source", source);
         const grant = async (units: string[]) => {
           const invited = await inviteManager(domain, admin, tenant, {
-            accountId: manager.accountId,
+            email: manager.email,
             expiresAt: new Date(Date.now() + 3600000).toISOString(),
             permissions: units.map((unitId) => ({
               operation: "RESERVATION_MANAGE" as const,
