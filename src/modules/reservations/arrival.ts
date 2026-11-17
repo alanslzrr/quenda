@@ -45,7 +45,7 @@ export async function recordReservationArrival(
   } catch (error) {
     if (error instanceof DatabaseError) {
       if (error.code === "P0002") throw new HttpError("NOT_FOUND");
-      if (error.code === "23514") throw new HttpError("CONFLICT");
+      if (error.code === "23514") throw new HttpError("ARRIVAL_OUTSIDE_WINDOW");
       if (error.code === "42501") throw new HttpError("FORBIDDEN");
     }
     throw error;
