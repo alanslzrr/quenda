@@ -58,7 +58,7 @@ export function RulesEditor({ path }: { path: string }) {
           </EditorRecovery>
           <Button
             type="button"
-            variant="ghost"
+            variant="secondary"
             onClick={async () => {
               const r = await q.refetch();
               if (r.isSuccess) setReset((v) => v + 1);
@@ -135,7 +135,7 @@ export function CalendarEditor({ path }: { path: string }) {
           </EditorRecovery>
           <Button
             type="button"
-            variant="ghost"
+            variant="secondary"
             onClick={async () => {
               const r = await q.refetch();
               if (r.isSuccess) setReset((v) => v + 1);
@@ -494,7 +494,7 @@ function PolicyEditor() {
             </EditorRecovery>
             <Button
               type="button"
-              variant="ghost"
+              variant="secondary"
               onClick={async () => {
                 const r = await q.refetch();
                 if (r.isSuccess) setReset((x) => x + 1);
