@@ -1114,6 +1114,10 @@ test("reservation confirmation validates real calendars and commits every effect
         );
         assert.equal(detail.status, "CONFIRMADA");
         assert.equal(detail.accountId, actor.accountId);
+        // A withdrawn space keeps its names in the holder's detail.
+        assert.equal(detail.unitName, "Second unit");
+        assert.equal(detail.facilityName, "Second facility");
+        assert.equal(detail.municipalityName, "Second municipality");
         await assert.rejects(
           readReservation(
             domain,
@@ -1321,6 +1325,14 @@ test("reservation confirmation validates real calendars and commits every effect
           ),
           { code: "42501" },
         );
+        // Place names follow the reservation's audience: without a session context there are none.
+        for (const runtime of [domain, auth, worker])
+          await assert.rejects(
+            runtime.query("SELECT * FROM domain.reservation_place($1)", [
+              page.items[0]?.id,
+            ]),
+            { code: "42501" },
+          );
 
         assert.deepEqual(
           (await listMunicipalReservations(domain, admin, otherTenant)).items,
@@ -1350,10 +1362,17 @@ test("reservation confirmation validates real calendars and commits every effect
         );
         const scopedId = scopedPage.items[0]?.id;
         assert.ok(scopedId);
-        assert.equal(
-          (await readReservation(domain, scoped, tenant, scopedId)).unitId,
-          draft,
+        const scopedDetail = await readReservation(
+          domain,
+          scoped,
+          tenant,
+          scopedId,
         );
+        assert.equal(scopedDetail.unitId, draft);
+        // Staff with authority over the unit read its names without catalog permissions.
+        assert.equal(scopedDetail.unitName, "Unit");
+        assert.equal(scopedDetail.facilityName, "Facility");
+        assert.equal(scopedDetail.municipalityName, "Synthetic");
         await assert.rejects(
           readReservation(
             domain,
