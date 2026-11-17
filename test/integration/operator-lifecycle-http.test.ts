@@ -89,7 +89,7 @@ test("operator handover works through Better Auth email verification and real MF
       }
       const invitation = ok(
         await first.client.request("/api/platform/operator-invitations", {
-          accountId: second.id,
+          email: "next-operator@example.test",
           expiresAt: new Date(Date.now() + 86400000).toISOString(),
         }),
         201,
@@ -208,15 +208,40 @@ test("operator handover works through Better Auth email verification and real MF
               (await second.client.request(url, invalid)).statusCode,
               400,
             );
-          assert.equal(
-            (
-              await second.client.request(
-                "/api/platform/accounts/unknown-account/suspend",
-                body,
-              )
-            ).statusCode,
-            404,
+          const unknownAccount = await second.client.request(
+            "/api/platform/accounts/unknown-account/suspend",
+            body,
           );
+          assert.equal(unknownAccount.statusCode, 404);
+          // An unknown address answers exactly like an unknown identifier.
+          const unknownAddress = await second.client.request(
+            "/api/platform/account-suspensions",
+            { ...body, email: "Nobody@Example.test" },
+          );
+          assert.equal(unknownAddress.statusCode, 404);
+          assert.deepEqual(
+            [
+              unknownAddress.json().error.code,
+              unknownAddress.json().error.message,
+            ],
+            [
+              unknownAccount.json().error.code,
+              unknownAccount.json().error.message,
+            ],
+          );
+          for (const invalid of [
+            { email: "first-operator@example.test" },
+            { ...body, email: "first-operator@example.test", accountId: "x" },
+          ])
+            assert.equal(
+              (
+                await second.client.request(
+                  "/api/platform/account-suspensions",
+                  invalid,
+                )
+              ).statusCode,
+              400,
+            );
           await auth.query(
             'UPDATE auth.session SET "mfaVerifiedAt"=now()-interval \'6 minutes\' WHERE "userId"=$1',
             [second.id],
