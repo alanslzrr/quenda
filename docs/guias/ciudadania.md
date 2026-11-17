@@ -124,7 +124,7 @@ Un espacio retirado, incompleto o sin normas válidas no se ofrece, aunque tenga
 
 #### Hay muchos municipios o se cambia la hora
 
-- Cuando una instalación de Quenda reúne muchos municipios, la primera página ofrece una búsqueda. Una página de resultados sin coincidencias no significa que no haya más: puedes seguir buscando entre los restantes.
+- Cuando un servicio de Quenda reúne muchos municipios, la primera página ofrece una búsqueda. Una página de resultados sin coincidencias no significa que no haya más: puedes seguir buscando entre los restantes.
 - En los días de cambio de hora, las horas que no existen no se ofrecen y las que se repiten se distinguen por su diferencia con la hora universal.
 
 #### Consultar desde el móvil
@@ -133,7 +133,7 @@ En el móvil el recorrido es el mismo, con la cabecera y el calendario adaptados
 
 ![Cabecera del móvil con «Acceder», «Ajustes» (recuadrado) y el botón «Reservar» en una fila propia](../capturas/cu-01/16-movil-cabecera.webp)
 
-*Sin sesión, la cabecera muestra junto al símbolo de Quenda el escudo y el nombre abreviado del municipio, «Acceder» y «Ajustes» (recuadrado); «Reservar» ocupa una fila propia. La barra de pasos se reduce a números con el nombre del paso actual debajo.*
+*Sin sesión, la cabecera muestra junto al símbolo de Quenda el logo y el nombre abreviado del municipio, «Acceder» y «Ajustes» (recuadrado); «Reservar» ocupa una fila propia. La barra de pasos se reduce a números con el nombre del paso actual debajo.*
 
 ![Menú «Ajustes» abierto en el móvil con idiomas y apariencia](../capturas/cu-01/17-movil-menu-ajustes.webp)
 
@@ -203,7 +203,7 @@ Si la reserva empieza dentro del plazo en que ya no se admiten cancelaciones ni 
 
 ![Página «Revisa tu reserva» con el aviso «Esta reserva no se podrá cancelar ni cambiar» recuadrado](../capturas/cu-02/07-aviso-sin-cancelacion.webp)
 
-*El aviso recuadrado explica que la reserva empieza dentro de las 24 h previas al inicio, cuando ya no se admiten cancelaciones ni cambios ordinarios. La lista de condiciones ya no muestra un plazo para cancelar.*
+*El aviso recuadrado explica que la reserva empieza dentro del plazo en que ya no se admiten cancelaciones ni cambios ordinarios (24 h en el ejemplo). La lista de condiciones ya no muestra un plazo para cancelar.*
 
 ![Segunda casilla «Acepto que esta reserva no se podrá cancelar ni cambiar» sin marcar, recuadrada](../capturas/cu-02/08-falta-aceptar-restriccion.webp)
 
@@ -281,7 +281,7 @@ Sirve para cambiar el día, la hora o el espacio de una reserva futura, o para c
 
    ![Página «Mis reservas» con los horarios habituales, el filtro de municipio y la primera reserva de la lista recuadrada](../capturas/cu-03/01-mis-reservas.webp)
 
-   *Bajo «Tus horarios habituales» y el filtro «Municipio» empieza la lista de reservas, de la más lejana a la más cercana. La reserva recuadrada lleva la etiqueta verde «Confirmada».*
+   *Bajo «Tus horarios habituales» y el filtro «Municipio» empieza la lista de reservas, ordenadas por inicio, de la más reciente a la más antigua. La reserva recuadrada lleva la etiqueta verde «Confirmada».*
 
 2. **Pulsa «Cambiar horario».** La página de la reserva indica hasta cuándo puedes cambiarla o cancelarla.
 
@@ -369,7 +369,7 @@ Si el ayuntamiento traslada tu reserva a un espacio con otras normas, la reserva
 
 #### No hay nada que cambiar o la reserva ya empezó
 
-Confirmar el mismo horario que ya tenías no registra ningún cambio. Una reserva que ya ha empezado no se modifica ni se cancela, y nunca se cambia de titular ni de municipio.
+Confirmar el mismo horario que ya tenías no registra ningún cambio, y repetir una cancelación ya hecha no tiene ningún efecto adicional. En una reserva antigua sin aceptación registrada, cambiarla tú exige aceptar las condiciones vigentes; si la cambia el ayuntamiento, puede quedar con normas pendientes que aceptarás desde su detalle. Una reserva que ya ha empezado no se modifica ni se cancela, y nunca se cambia de titular ni de municipio.
 
 ### Resultado
 
@@ -377,7 +377,7 @@ La reserva queda cambiada o cancelada y el cambio consta en su historial y en tu
 
 ## CU-07 — Crear una cuenta y utilizar un servicio municipal
 
-Sirve para tener una cuenta con la que reservar en cualquier municipio que use esta instalación de Quenda. Lo hace cualquier persona con un correo electrónico propio.
+Sirve para tener una cuenta con la que reservar en cualquier municipio que use este servicio de Quenda. Lo hace cualquier persona con un correo electrónico propio.
 
 **Antes de empezar:** necesitas acceso a tu buzón de correo. **Especificación:** [CU-07](../08_casos_de_uso.md#cu-07--crear-una-cuenta-y-utilizar-un-servicio-municipal).
 
@@ -445,15 +445,15 @@ Si el enlace está incompleto, ya se usó o ha caducado, Quenda no verifica la c
 
 #### Ya tienes una cuenta con ese correo
 
-Si ya te registraste antes, usa la misma cuenta en todos los municipios de esta instalación. El registro responde igual tanto si el correo existe como si no, para no revelar qué correos están registrados.
+Si ya te registraste antes, usa la misma cuenta en todos los municipios de este servicio. El registro responde igual tanto si el correo existe como si no, para no revelar qué correos están registrados.
 
 ![Mensaje «Comprueba tu correo para verificar la cuenta.» tras registrar un correo ya existente](../capturas/cu-07/11-correo-ya-registrado.webp)
 
 *La respuesta es la misma que en un registro nuevo. Si ya tenías cuenta, accede con ella o recupera la contraseña ([CU-09](#cu-09--iniciar-o-cerrar-sesión)).*
 
-#### Otra instalación de Quenda
+#### Otro servicio de Quenda
 
-Cada instalación independiente de Quenda tiene sus propias cuentas: si otro organismo usa una instalación distinta, allí necesitas registrarte de nuevo. Consultar el catálogo no crea ningún perfil, y verificar el correo no acredita tu identidad ni tu residencia.
+Cada servicio independiente de Quenda tiene sus propias cuentas: si otro organismo usa un servicio distinto, allí necesitas registrarte de nuevo. Consultar el catálogo no crea ningún perfil, y verificar el correo no acredita tu identidad ni tu residencia.
 
 ### Resultado
 
@@ -481,7 +481,7 @@ Sirve para ver todas tus reservas, pasadas y futuras, y la situación actual de 
 
    ![Lista filtrada por Concello de Ribasanta con reservas Confirmada, Cancelada y Finalizada, y una finalizada recuadrada](../capturas/cu-08/03-reservas-de-ribasanta.webp)
 
-   *Con el filtro en «Concello de Ribasanta», la lista muestra solo reservas de ese municipio, ordenadas de la fecha más lejana a la más antigua. Cada una indica espacio, municipio, fecha y hora, y una etiqueta con su estado: «Confirmada», «Cancelada» o «Finalizada». El recuadro marca una reserva finalizada.*
+   *Con el filtro en «Concello de Ribasanta», la lista muestra solo reservas de ese municipio, ordenadas por inicio, de la más reciente a la más antigua. Cada una indica espacio, municipio, fecha y hora, y una etiqueta con su estado: «Confirmada», «Cancelada» o «Finalizada». El recuadro marca una reserva finalizada.*
 
 3. **Consulta una reserva.** Al abrirla, se ven su estado, el registro de llegada si lo hubo y las normas aceptadas.
 
@@ -697,7 +697,7 @@ Conoces el evento (confirmación, cambio o cancelación) por el aviso y el corre
 
 Sirve para mantener al día tu nombre, tus preferencias de idioma y apariencia, y el correo con el que accedes. Cada persona lo hace desde «Mi cuenta».
 
-**Antes de empezar:** necesitas haber iniciado sesión; para cambiar el correo, tu contraseña actual y acceso a los dos buzones (el actual y el nuevo). **Especificación:** [CU-13](../08_casos_de_uso.md#cu-13--actualizar-datos-personales-y-correo).
+**Antes de empezar:** necesitas haber iniciado sesión; para cambiar el correo, tu contraseña actual, acceso a los dos buzones (el actual y el nuevo) y, si tienes activada la verificación en dos pasos, haberla completado en los últimos cinco minutos. **Especificación:** [CU-13](../08_casos_de_uso.md#cu-13--actualizar-datos-personales-y-correo).
 
 ### Paso a paso
 
@@ -735,7 +735,7 @@ Sirve para mantener al día tu nombre, tus preferencias de idioma y apariencia, 
 
    ![Correo «Autoriza el cambio de correo de Quenda» con el enlace](../capturas/cu-13/07-correo-de-autorizacion.webp)
 
-   *El correo llega al buzón actual con el enlace de autorización. Explica que el enlace solo sirve una vez, caduca a los diez minutos y no debe confirmarse si no pediste el cambio.*
+   *El correo llega al buzón actual con el enlace de autorización. Explica que el enlace solo sirve una vez, caduca a los 10 minutos y no debe confirmarse si no pediste el cambio.*
 
    ![Página «Autorizar cambio de correo» con el botón «Autorizar cambio» recuadrado](../capturas/cu-13/08-autorizar-cambio.webp)
 
@@ -787,7 +787,7 @@ Tus datos quedan actualizados; el correo solo cambia tras completar las dos veri
 
 ## CU-14 — Dar de baja la cuenta
 
-Sirve para desactivar voluntariamente tu cuenta en toda la instalación de Quenda. Lo hace la persona titular desde «Mi cuenta». La baja cierra el acceso, pero no borra automáticamente tus reservas ni las evidencias que deben conservarse.
+Sirve para desactivar voluntariamente tu cuenta en todo el servicio de Quenda. Lo hace la persona titular desde «Mi cuenta». La baja cierra el acceso, pero no borra automáticamente tus reservas ni las evidencias que deben conservarse.
 
 **Antes de empezar:** necesitas haber iniciado sesión, tu contraseña actual y no tener reservas confirmadas futuras o en curso. **Especificación:** [CU-14](../08_casos_de_uso.md#cu-14--dar-de-baja-la-cuenta).
 
