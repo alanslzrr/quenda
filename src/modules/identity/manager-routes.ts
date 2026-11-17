@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { accountLabelSchema } from "./account-labels.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
+import { invitationAddressSchema } from "./invitation-address.ts";
 import {
   acceptManager,
   inviteManager,
@@ -41,7 +42,7 @@ export async function registerManagerRoutes(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Administrador con MFA reciente: invita con operaciones y unidades explícitas. unitId nulo delimita todo el municipio; CATALOG_CREATE, PRIVACY_READ y PRIVACY_EXECUTE solo admiten ámbito municipal. Los permisos de privacidad requieren concesión explícita incluso para administradores.",
+          "Administrador con MFA reciente: invita con operaciones y unidades explícitas. Una invitación nueva se dirige a email, normalizado, y la respuesta es la misma exista o no una cuenta con ese correo; solo puede aceptarla la cuenta cuyo correo verificado coincida al aceptar. Una sustitución de alcance (replacesInvitationId con reason) no lleva email: se dirige al titular actual de la concesión sustituida. unitId nulo delimita todo el municipio; CATALOG_CREATE, PRIVACY_READ y PRIVACY_EXECUTE solo admiten ámbito municipal. Los permisos de privacidad requieren concesión explícita incluso para administradores.",
         params: {
           type: "object",
           additionalProperties: false,
@@ -51,9 +52,9 @@ export async function registerManagerRoutes(
         body: {
           type: "object",
           additionalProperties: false,
-          required: ["accountId", "expiresAt", "permissions"],
+          required: ["expiresAt", "permissions"],
           properties: {
-            accountId: { type: "string", minLength: 1, maxLength: 128 },
+            email: invitationAddressSchema,
             replacesInvitationId: uuid,
             reason: { type: "string", minLength: 1, maxLength: 500 },
             expiresAt: { type: "string", format: "date-time" },
@@ -104,7 +105,7 @@ export async function registerManagerRoutes(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "El destinatario con MFA reciente acepta exactamente los permisos de la invitación vigente.",
+          "El destinatario con MFA reciente acepta exactamente los permisos de la invitación vigente: la cuenta cuyo correo verificado coincide con el de la invitación en ese momento, o la cuenta a la que se dirigía una invitación anterior o una sustitución.",
         params: {
           type: "object",
           additionalProperties: false,
@@ -287,6 +288,7 @@ export async function registerManagerRoutes(
                   required: [
                     "invitationId",
                     "accountId",
+                    "recipientEmail",
                     "invitedBy",
                     "expiresAt",
                     "roleExpiresAt",
@@ -297,7 +299,11 @@ export async function registerManagerRoutes(
                   ],
                   properties: {
                     invitationId: uuid,
-                    accountId: { type: "string" },
+                    accountId: { type: "string", nullable: true },
+                    recipientEmail: {
+                      ...invitationAddressSchema,
+                      nullable: true,
+                    },
                     accountLabel: accountLabelSchema,
                     invitedByLabel: accountLabelSchema,
                     invitedBy: { type: "string" },

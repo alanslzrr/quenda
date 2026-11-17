@@ -4,6 +4,7 @@ import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import { requireAdministrator } from "./administrator.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
+import { invitationAddress } from "./invitation-address.ts";
 import { requireMfaSession, requireRecentMfa } from "./reauthentication.ts";
 
 export const operations = [
@@ -18,8 +19,12 @@ export const operations = [
   "PRIVACY_EXECUTE",
 ] as const;
 export type Operation = (typeof operations)[number];
+/**
+ * A new invitation is addressed to email. A scope replacement has no address:
+ * it goes to the current holder of the replaced grant.
+ */
 export interface ManagerInvitationInput {
-  accountId: string;
+  email?: string;
   replacesInvitationId?: string;
   reason?: string;
   expiresAt: string;
@@ -61,6 +66,11 @@ export async function inviteManager(
     (!input.reason?.trim() || input.reason.trim().length > 500)
   )
     throw new HttpError("INVALID_INPUT");
+  // Exactly one recipient: an address, or the holder of the replaced grant.
+  if ((input.email === undefined) === !input.replacesInvitationId)
+    throw new HttpError("INVALID_INPUT");
+  const recipient =
+    input.email === undefined ? null : invitationAddress(input.email);
   const keys = new Set<string>();
   for (const permission of input.permissions) {
     if (
@@ -86,7 +96,7 @@ export async function inviteManager(
           "SELECT domain.invite_manager($1,$2,$3,$4,$5,$6,$7) AS allowed",
           [
             invitationId,
-            input.accountId,
+            recipient,
             input.expiresAt,
             input.roleExpiresAt ?? null,
             JSON.stringify(input.permissions),
