@@ -190,7 +190,7 @@ test("authorized privacy staff manages policies, holds, scoped copies and all in
     .locator("section")
     .filter({ hasNot: page.getByRole("navigation") })
     .filter({
-      has: page.getByText(`Interesado: ${f.subject}`, { exact: true }),
+      has: page.getByText(f.subject, { exact: true }),
     })
     .getByRole("link", { name: "Levantar excepción", exact: true })
     .click();

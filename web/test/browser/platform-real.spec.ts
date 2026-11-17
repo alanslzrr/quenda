@@ -90,10 +90,7 @@ test("platform operators invite revoke and hand over authority without inheritin
       .getByRole("link", { name: "Administración de plataforma", exact: true })
       .click();
     await expect(
-      page.getByRole("heading", {
-        name: "Administración de plataforma",
-        exact: true,
-      }),
+      page.getByRole("heading", { level: 1, name: "Operadores", exact: true }),
     ).toBeVisible();
     expect(
       (
@@ -108,13 +105,11 @@ test("platform operators invite revoke and hand over authority without inheritin
       ),
     ).toBe(true);
     // Operators see each other by name and identifier, never by e-mail.
-    const own = page.locator("section").filter({
-      has: page.getByRole("heading", {
-        level: 3,
-        name: new RegExp(
-          `^Personal \\d+ \\((?:tu cuenta|a túa conta)\\) ${literal(f.operator.accountId)}$`,
-        ),
-      }),
+    // Each record is a region named by its heading.
+    const own = page.getByRole("region", {
+      name: new RegExp(
+        `^Personal \\d+ \\((?:tu cuenta|a túa conta)\\) ${literal(f.operator.accountId)}$`,
+      ),
     });
     await expect(own).toBeVisible();
     await expect(own).not.toContainText("@");
@@ -134,11 +129,10 @@ test("platform operators invite revoke and hand over authority without inheritin
     );
     expect(invitation).toBeTruthy();
     await page.goto(`${view}/invitaciones`);
-    const card = page.locator("section").filter({
-      has: page.getByText(`Invitación: ${invitation.invitationId}`, {
-        exact: true,
-      }),
-    });
+    const card = page
+      .getByRole("region")
+      .filter({ has: page.getByText(invitation.invitationId, { exact: true }) })
+      .filter({ hasNot: page.getByRole("navigation") });
     await card.getByRole("link", { name: /^Revocar$|^Revogar$/ }).click();
     await revoke(page);
     expect(
@@ -161,7 +155,8 @@ test("platform operators invite revoke and hand over authority without inheritin
     await recipient.goto("/plataforma");
     await expect(
       recipient.getByRole("heading", {
-        name: "Administración de plataforma",
+        level: 1,
+        name: "Operadores",
         exact: true,
       }),
     ).toBeVisible();
@@ -195,10 +190,8 @@ test("platform operators invite revoke and hand over authority without inheritin
       recipient.getByRole("link", { name: "Registrar política", exact: true }),
     ).toHaveCount(0);
     await page.goto(`${view}/privacidad`);
-    const grant = page.locator("section").filter({
-      has: page.getByRole("heading", {
-        name: new RegExp(`^Personal \\d+ ${literal(f.recipient.accountId)}$`),
-      }),
+    const grant = page.getByRole("region", {
+      name: new RegExp(`^Personal \\d+ ${literal(f.recipient.accountId)}$`),
     });
     await expect(grant).not.toContainText("@");
     await grant.getByRole("link", { name: /^Revocar$|^Revogar$/ }).click();
