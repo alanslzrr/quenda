@@ -29,7 +29,7 @@ test("CU-08 consultar el historial de reservas", async ({ page }) => {
   // cabecera, el filtro y las primeras reservas finalizadas; el foco sale del
   // filtro para que no tape el recuadro.
   await filter.evaluate((node) => (node as HTMLElement).blur());
-  await page.setViewportSize({ width: 1280, height: 1200 });
+  await page.setViewportSize({ width: 1280, height: 1400 });
   await page.evaluate(() => window.scrollTo(0, 0));
   const finished = list
     .getByRole("link")
