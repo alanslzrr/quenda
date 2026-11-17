@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, type AnimationPlaybackControls } from "motion/react";
 import { motionTokens } from "../motion-tokens";
 import styles from "./skeleton.module.css";
@@ -45,19 +45,34 @@ function HeightFrame({ className, busy, reduce, children }: { className?: string
     observer.observe(node);
     return () => { observer.disconnect(); controls?.stop(); };
   }, [height, reduce]);
-  return <motion.div data-lumen="" ref={frame} className={className} aria-busy={busy} style={{ height }}>
+  // No aria-busy here: it would silence the loading status inside until loading ends.
+  return <motion.div data-lumen="" ref={frame} className={className} style={{ height }}>
     <div ref={content} className={styles.frame}>{children}</div>
   </motion.div>;
+}
+
+/**
+ * The status region is in the page before its text arrives: screen readers announce changes to a live region, not the
+ * text it is inserted with. The blocks are decoration.
+ */
+function Placeholder({ label, avatar, count, className }: { label: string; avatar: boolean; count: number; className?: string }) {
+  const [text, setText] = useState("");
+  useEffect(() => {
+    const timer = window.setTimeout(() => setText(label), 100);
+    return () => window.clearTimeout(timer);
+  }, [label]);
+  // Each block pulses a beat after the one above it, so the wait reads as one calm wave.
+  return <div data-lumen="" className={[styles.root, className].filter(Boolean).join(" ")} role="status">
+    <span className={styles.srOnly}>{text}</span>
+    {avatar && <span className={styles.avatar} aria-hidden="true" />}
+    <span className={styles.lines} aria-hidden="true">{[0, 1, 2, 3, 4, 5].slice(0, count).map((index) => <span className={styles.line} style={{ "--index": index + (avatar ? 1 : 0) } as CSSProperties} key={index} />)}</span>
+  </div>;
 }
 
 export function Skeleton({ label = "Loading content", lines = 3, avatar = false, className, children, loading = true }: SkeletonProps) {
   const reduce = useReducedMotion();
   const count = Math.min(Math.max(Math.floor(Number.isFinite(lines) ? lines : 3), 1), 6);
-  // Each block pulses a beat after the one above it, so the wait reads as one calm wave.
-  const placeholder = (extra?: string) => <div data-lumen="" className={[styles.root, extra].filter(Boolean).join(" ")} role="status" aria-label={label} aria-busy="true">
-    {avatar && <span className={styles.avatar} aria-hidden="true" />}
-    <span className={styles.lines} aria-hidden="true">{[0, 1, 2, 3, 4, 5].slice(0, count).map((index) => <span className={styles.line} style={{ "--index": index + (avatar ? 1 : 0) } as CSSProperties} key={index} />)}</span>
-  </div>;
+  const placeholder = (extra?: string) => <Placeholder label={label} avatar={avatar} count={count} className={extra} />;
   if (children === undefined) return placeholder(className);
   return <HeightFrame className={className} busy={loading} reduce={reduce}>
     <AnimatePresence mode="popLayout" initial={false}>

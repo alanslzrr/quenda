@@ -290,6 +290,24 @@ test("unit composition preserves drafts across tabs and contextual MFA without r
     await expect(
       page.getByRole("button", { name: "Gestión municipal", exact: true }),
     ).toBeFocused();
+    // Choosing a destination lands on its page, like any route change, instead of returning to the menu button.
+    await page
+      .getByRole("button", { name: "Gestión municipal", exact: true })
+      .click();
+    const sheet = page.getByRole("dialog");
+    await sheet
+      .getByRole("navigation")
+      .locator("a[href]:not([aria-current]), button:not([aria-current])")
+      .first()
+      .click();
+    await expect(sheet).toHaveCount(0);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.activeElement?.matches("main, #content") ?? false,
+        ),
+      )
+      .toBe(true);
   }
 });
 

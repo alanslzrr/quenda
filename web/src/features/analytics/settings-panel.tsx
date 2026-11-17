@@ -10,7 +10,10 @@ import { Dialog, DialogContent } from "../../ui/dialog/dialog";
 import { NumberField } from "../../ui/number-field/number-field";
 import { Select } from "../../ui/select/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs/tabs";
-import { AnchoredTooltip } from "../../ui/tooltip/anchored-tooltip";
+import {
+  AnchoredTooltip,
+  useHoverGrace,
+} from "../../ui/tooltip/anchored-tooltip";
 import { endpoint, MunicipalForm, useMunicipality } from "../municipal/shared";
 import {
   type AnalyticsSettings,
@@ -48,6 +51,7 @@ function ChoiceCards<T extends string>({
   onChange,
   show,
   hide,
+  leave,
   describedBy,
 }: {
   legend: string;
@@ -56,6 +60,8 @@ function ChoiceCards<T extends string>({
   onChange: (value: T) => void;
   show: Show;
   hide: () => void;
+  /** Hides after a short grace, so the pointer can move onto the preview. */
+  leave: () => void;
   describedBy: (anchor: HTMLElement | null) => string | undefined;
 }) {
   const name = useId();
@@ -73,7 +79,7 @@ function ChoiceCards<T extends string>({
               show(event.currentTarget, option.preview)
             }
             onPointerLeave={(event) =>
-              event.pointerType === "mouse" && !focused && hide()
+              event.pointerType === "mouse" && !focused && leave()
             }
           >
             <input
@@ -145,8 +151,15 @@ export function SettingsPanel({
   const tipId = useId();
   const [tab, setTab] = useState("view");
   const [tip, setTip] = useState<{ anchor: HTMLElement; content: ReactNode }>();
-  const show: Show = (anchor, content) => setTip({ anchor, content });
-  const hide = () => setTip(undefined);
+  const grace = useHoverGrace(() => setTip(undefined));
+  const show: Show = (anchor, content) => {
+    grace.stay();
+    setTip({ anchor, content });
+  };
+  const hide = () => {
+    grace.stay();
+    setTip(undefined);
+  };
   const describedBy = (anchor: HTMLElement | null) =>
     anchor && tip?.anchor === anchor ? tipId : undefined;
   const [high, setHigh] = useState(settings.highDemandPercent);
@@ -245,6 +258,13 @@ export function SettingsPanel({
           "A túa vista só cambia como ves os datos neste navegador. Os axustes do municipio afectan a todo o persoal.",
         )}
         closeLabel={t("Cerrar", "Pechar")}
+        onEscapeKeyDown={(event) => {
+          // Escape first dismisses an open preview (WCAG 1.4.13) and keeps the dialog, and its unsaved edits, open.
+          // Radix listens on the document in the capture phase, so cancelling here is what stops the dismissal.
+          if (!tip) return;
+          event.preventDefault();
+          hide();
+        }}
       >
         <Tabs
           value={tab}
@@ -282,6 +302,7 @@ export function SettingsPanel({
                 onChange={(display) => onViewChange({ ...view, display })}
                 show={show}
                 hide={hide}
+                leave={grace.leave}
                 describedBy={describedBy}
                 options={[
                   {
@@ -324,6 +345,7 @@ export function SettingsPanel({
                 }
                 show={show}
                 hide={hide}
+                leave={grace.leave}
                 describedBy={describedBy}
                 options={[
                   {
@@ -373,6 +395,7 @@ export function SettingsPanel({
                 }
                 show={show}
                 hide={hide}
+                leave={grace.leave}
                 describedBy={describedBy}
                 options={[
                   {
@@ -425,6 +448,7 @@ export function SettingsPanel({
                 }
                 show={show}
                 hide={hide}
+                leave={grace.leave}
                 describedBy={describedBy}
                 options={[
                   {
@@ -651,7 +675,15 @@ export function SettingsPanel({
             )}
           </TabsContent>
         </Tabs>
-        <AnchoredTooltip anchor={tip?.anchor ?? null} id={tipId}>
+        <AnchoredTooltip
+          anchor={tip?.anchor ?? null}
+          id={tipId}
+          onPointerEnter={grace.stay}
+          onPointerLeave={() => {
+            // A preview opened by keyboard focus stays while its card holds the focus.
+            if (!tip?.anchor.contains(document.activeElement)) grace.leave();
+          }}
+        >
           {tip?.content}
         </AnchoredTooltip>
       </DialogContent>

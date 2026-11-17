@@ -217,3 +217,11 @@
     opacity: 0;
   }
 }
+
+/* Forced colours drop the highlight's background, so the keyboard position is outlined in the system colour. */
+@media (forced-colors: active) {
+  .item[data-highlighted] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
