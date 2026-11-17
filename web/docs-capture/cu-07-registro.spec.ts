@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import {
   account,
   Capture,
@@ -9,11 +8,13 @@ import {
   test,
 } from "./capture";
 import {
+  around,
   dayLabel,
   madridDate,
   newPassword,
   notice,
   pickDay,
+  residentEmail,
   ribasanta,
   shot,
 } from "./citizen";
@@ -22,9 +23,10 @@ import {
 // nueva se registra, verifica el correo, accede y reserva por primera vez en
 // un municipio.
 const cu = new Capture("CU-07");
+const resident = "Noelia Varela Souto";
 
 test("CU-07 crear una cuenta y reservar por primera vez", async ({ page }) => {
-  const email = `noelia.${randomUUID().slice(0, 8)}@demo.test`;
+  const email = residentEmail(resident);
   const name = page.getByLabel("Nombre", { exact: true });
   const mailbox = page.getByLabel("Correo electrónico", { exact: true });
   const secret = page.getByLabel(/^Contraseña$/);
@@ -45,21 +47,9 @@ test("CU-07 crear una cuenta y reservar por primera vez", async ({ page }) => {
     page.getByRole("heading", { name: "Crea tu cuenta" }),
   ).toBeVisible();
 
-  // Alternativa: la contraseña no cumple el mínimo.
-  await name.fill("Noelia Varela Souto");
+  // Paso 1: nombre, correo y contraseña.
+  await name.fill(resident);
   await mailbox.fill(email);
-  await secret.fill("corta");
-  await create.click();
-  await expect(secret).toBeFocused();
-  await expect(secret).toHaveAttribute("aria-invalid", "true");
-  // El globo nativo del navegador sale en el idioma de su interfaz, no en el
-  // de la página: se retira el foco para que desaparezca y queda el campo
-  // marcado como erróneo junto a su indicación «Mínimo 8 caracteres».
-  await secret.blur();
-  await page.waitForTimeout(1000);
-  // Sin recuadro: el borde rojo del campo es lo que hay que ver.
-  await shot(cu, page, "contrasena-demasiado-corta");
-
   await secret.fill(newPassword);
   await shot(cu, page, "datos-de-registro", { target: create });
   await create.click();
@@ -70,14 +60,6 @@ test("CU-07 crear una cuenta y reservar por primera vez", async ({ page }) => {
   // Paso 2: el correo de verificación.
   const verification = await latestMail(email, "verify-email");
   await cu.mail(page, "correo-de-verificacion", verification);
-
-  // Alternativa: un enlace alterado o caducado no verifica la cuenta.
-  const link1 = new URL(mailUrl(verification));
-  link1.searchParams.set("token", `${link1.searchParams.get("token")}x`);
-  await page.goto(link1.toString());
-  const failed = notice(page, "No se ha podido verificar el enlace");
-  await expect(failed).toBeVisible();
-  await shot(cu, page, "enlace-no-valido", { target: failed });
 
   // Paso 2: abrir el enlace verifica el correo y lleva al acceso (CU-09).
   await page.goto(mailUrl(verification));
@@ -122,6 +104,40 @@ test("CU-07 crear una cuenta y reservar por primera vez", async ({ page }) => {
     page.getByRole("heading", { name: "Reserva confirmada", exact: true }),
   ).toBeVisible();
   await shot(cu, page, "primera-reserva-confirmada");
+});
+
+test("CU-07 contraseña corta y enlace no válido", async ({ page }) => {
+  // Alternativa: la contraseña no cumple el mínimo.
+  await page.goto("/registro");
+  const secret = page.getByLabel(/^Contraseña$/);
+  await page.getByLabel("Nombre", { exact: true }).fill("Carla Rivas Doval");
+  await page
+    .getByLabel("Correo electrónico", { exact: true })
+    .fill(residentEmail("Carla Rivas Doval"));
+  await secret.fill("corta");
+  await page.getByRole("button", { name: "Crear cuenta", exact: true }).click();
+  await expect(secret).toBeFocused();
+  await expect(secret).toHaveAttribute("aria-invalid", "true");
+  // El globo nativo del navegador sale en el idioma de su interfaz, no en el
+  // de la página: se retira el foco para que desaparezca y queda el campo
+  // marcado como erróneo junto a su indicación «Mínimo 8 caracteres».
+  await secret.blur();
+  await page.waitForTimeout(1000);
+  await shot(cu, page, "contrasena-demasiado-corta", {
+    target: around(secret),
+  });
+
+  // Alternativa: un enlace alterado o caducado no verifica la cuenta.
+  const verification = await latestMail(
+    residentEmail(resident),
+    "verify-email",
+  );
+  const link = new URL(mailUrl(verification));
+  link.searchParams.set("token", `${link.searchParams.get("token")}x`);
+  await page.goto(link.toString());
+  const failed = notice(page, "No se ha podido verificar el enlace");
+  await expect(failed).toBeVisible();
+  await shot(cu, page, "enlace-no-valido", { target: failed });
 });
 
 test("CU-07 registro con un correo ya registrado", async ({ page }) => {
