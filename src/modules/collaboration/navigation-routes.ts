@@ -6,7 +6,11 @@ import {
   accountLabelSchema,
   createRequestActor,
 } from "../identity/index.ts";
-import { issuedCredentials, monthlyReviewOptions } from "./navigation.ts";
+import {
+  issuedCredentials,
+  monthlyReviewOptions,
+  reportAgreementOptions,
+} from "./navigation.ts";
 
 export async function registerCollaborationNavigation(
   app: FastifyInstance,
@@ -89,6 +93,49 @@ export async function registerCollaborationNavigation(
     async (request, reply) => {
       reply.header("cache-control", "no-store");
       return issuedCredentials(
+        pool,
+        await actor(request, reply),
+        request.params.tenantId,
+        request.query.after ?? null,
+      );
+    },
+  );
+  app.get<{ Params: { tenantId: string }; Querystring: { after?: string } }>(
+    "/api/municipalities/:tenantId/report-agreements",
+    {
+      schema: {
+        operationId: "listReportAgreements",
+        tags: ["Collaboration"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Convenios cuyo informe mensual puede solicitarse: REPORT_READ municipal y MFA. Solo convenios con una versión activada con informes agregados en la que participa el municipio; nombre y última versión, sin otros participantes, meses, métricas ni revisiones.",
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId"],
+          properties: { tenantId: uuid },
+        },
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          properties: { after: uuid },
+        },
+        response: {
+          ...errors,
+          200: page(
+            {
+              agreementId: uuid,
+              name: { type: "string" },
+              version: { type: "integer", minimum: 1 },
+            },
+            uuid,
+          ),
+        },
+      },
+    },
+    async (request, reply) => {
+      reply.header("cache-control", "no-store");
+      return reportAgreementOptions(
         pool,
         await actor(request, reply),
         request.params.tenantId,
