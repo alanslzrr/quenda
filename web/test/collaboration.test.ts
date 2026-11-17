@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  agreementChoices,
   civilOptions,
   civilValue,
   validParticipants,
@@ -41,4 +42,19 @@ test("participants include the acting municipality without duplicate tenants or 
   assert.equal(validParticipants([a, a], own), false);
   assert.equal(validParticipants([a, { ...b, unitIds: [unit] }], own), false);
   assert.equal(validParticipants([{ ...a, unitIds: ["invalid"] }], own), false);
+});
+test("agreement selectors name each agreement and show the identifier only when names collide", () => {
+  assert.deepEqual(
+    agreementChoices([
+      { agreementId: own, name: "Rede deportiva" },
+      { agreementId: other, name: "Piscinas" },
+      { agreementId: unit, name: "Piscinas" },
+    ]),
+    [
+      { value: own, label: "Rede deportiva" },
+      { value: other, label: `Piscinas · ${other}` },
+      { value: unit, label: `Piscinas · ${unit}` },
+    ],
+  );
+  assert.deepEqual(agreementChoices([]), []);
 });

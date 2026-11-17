@@ -1794,6 +1794,7 @@ test("real booking commands enforce shared eligibility and quota in one transact
         );
         assert.deepEqual(binding.restriction, {
           agreementId: id,
+          agreementName: "Reconciliation",
           version: 3,
           hasRemainingAssignment: false,
         });

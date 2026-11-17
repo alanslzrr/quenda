@@ -325,6 +325,7 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       assert.equal(restricted.statusCode, 200, restricted.body);
       assert.deepEqual(restricted.json().restriction, {
         agreementId: id,
+        agreementName: "Joint programme",
         version: 2,
         hasRemainingAssignment: true,
       });
@@ -563,6 +564,79 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
           [monthlyAgreement, "a".repeat(64), [tenant]],
         );
       });
+      // Report agreements list only activated versions with aggregate reports in which this municipality participates.
+      const foreignTenant = randomUUID(),
+        foreignAgreement = randomUUID(),
+        draftAgreement = randomUUID();
+      await transaction(migration, async (c) => {
+        await c.query(
+          "INSERT INTO domain.municipality(id,name,timezone) VALUES($1,'Foreign','Europe/Madrid')",
+          [foreignTenant],
+        );
+        for (const [agreement, owner, status] of [
+          [foreignAgreement, foreignTenant, "ACTIVADO"],
+          [draftAgreement, tenant, "BORRADOR"],
+        ] as const) {
+          await c.query(
+            "INSERT INTO domain.agreement(id,name,timezone,created_by,created_by_tenant) VALUES($1,'Hidden fixture','Europe/Madrid',$2,$3)",
+            [agreement, accountId, owner],
+          );
+          await c.query(
+            "INSERT INTO domain.agreement_version(agreement_id,version,status,starts_at,ends_at,purpose,legal_basis,responsibilities,retention_policy,eligibility,aggregate_reports,created_by,correlation_id) VALUES($1,1,$2,'2024-01-01T00:00:00Z','2040-01-01T00:00:00Z','Purpose','Basis','Responsibility','Policy','acceso_abierto',true,$3,$4)",
+            [agreement, status, accountId, randomUUID()],
+          );
+          await c.query(
+            "INSERT INTO domain.agreement_participant VALUES($1,1,$2,false)",
+            [agreement, owner],
+          );
+        }
+        await c.query(
+          "INSERT INTO domain.agreement_activation(agreement_id,version,effective_period,activated_by,correlation_id) VALUES($1,1,'[2024-01-01T00:00:00Z,2040-01-01T00:00:00Z)',$2,$3)",
+          [foreignAgreement, accountId, randomUUID()],
+        );
+      });
+      const reportAgreementsUrl = `/api/municipalities/${tenant}/report-agreements`;
+      const reportAgreements = {
+        items: [
+          {
+            agreementId: monthlyAgreement,
+            name: "Monthly fixture",
+            version: 1,
+          },
+        ],
+        nextCursor: null,
+      };
+      const listed = await client.request(reportAgreementsUrl);
+      assert.equal(listed.statusCode, 200, listed.body);
+      assert.equal(listed.headers["cache-control"], "no-store");
+      assert.deepEqual(listed.json(), reportAgreements);
+      assert.ok(!listed.body.includes(foreignTenant));
+      assert.deepEqual(
+        (
+          await client.request(
+            `${reportAgreementsUrl}?after=${monthlyAgreement}`,
+          )
+        )
+          .json()
+          .items.filter(
+            (item: { agreementId: string }) =>
+              item.agreementId === monthlyAgreement,
+          ),
+        [],
+      );
+      assert.equal(
+        (await client.request(`${reportAgreementsUrl}?after=unknown`))
+          .statusCode,
+        400,
+      );
+      assert.equal(
+        (
+          await client.request(
+            `/api/municipalities/${foreignTenant}/report-agreements`,
+          )
+        ).statusCode,
+        403,
+      );
       const monthlyUrl = `${url}/${monthlyAgreement}/reports/2024-03`;
       const contextUrl = `${monthlyUrl}/review-context?revision=1&recipientTenantId=${tenant}&recipientAccountId=${encodeURIComponent(accountId)}`;
       const unpublished = await client.request(monthlyUrl);
@@ -727,6 +801,10 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
             200,
           );
           assert.equal((await manager.request(monthlyUrl)).statusCode, 403);
+          assert.equal(
+            (await manager.request(reportAgreementsUrl)).statusCode,
+            403,
+          );
           const invitationPath = `/api/municipalities/${tenant}/manager-invitations`;
           const invited = await client.request(invitationPath, {
             accountId: managerId,
@@ -746,6 +824,18 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
               )
             ).rowCount,
             0,
+          );
+          const managerAgreements = await manager.request(reportAgreementsUrl);
+          assert.equal(
+            managerAgreements.statusCode,
+            200,
+            managerAgreements.body,
+          );
+          assert.deepEqual(managerAgreements.json(), reportAgreements);
+          assert.equal(
+            (await manager.request(`${url}/${monthlyAgreement}/review-options`))
+              .statusCode,
+            403,
           );
           const unreviewed = await manager.request(monthlyUrl);
           assert.equal(unreviewed.statusCode, 200, unreviewed.body);
@@ -795,6 +885,10 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
           assert.equal(denied.json().error.code, "FORBIDDEN");
           assert.deepEqual((await deliveries()).rows, beforeRevocation);
           assert.equal(
+            (await manager.request(reportAgreementsUrl)).statusCode,
+            403,
+          );
+          assert.equal(
             (await manager.request("/api/auth/get-session")).json().user.id,
             managerId,
           );
@@ -828,6 +922,7 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         [tenant, accountId],
       );
       assert.equal((await client.request(reviewOptionsUrl)).statusCode, 403);
+      assert.equal((await client.request(reportAgreementsUrl)).statusCode, 403);
       assert.equal((await client.request(credentialUrl)).statusCode, 403);
       assert.equal((await client.request(url, input, headers)).statusCode, 403);
       assert.equal(
@@ -881,6 +976,7 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
       assert.equal((await client.request(detailUrl)).statusCode, 401);
       assert.equal((await client.request(monthlyUrl)).statusCode, 401);
       assert.equal((await client.request(reviewOptionsUrl)).statusCode, 401);
+      assert.equal((await client.request(reportAgreementsUrl)).statusCode, 401);
       assert.equal((await client.request(credentialUrl)).statusCode, 401);
       const spec = app.swagger() as { paths: Record<string, unknown> };
       for (const path of [
@@ -896,6 +992,7 @@ test("agreement HTTP requires real sessions, MFA and version-specific approvals 
         "/api/municipalities/{tenantId}/units/{unitId}/agreement-restriction/release",
         "/api/municipalities/{tenantId}/credentials",
         "/api/municipalities/{tenantId}/credentials/{credentialId}/revoke",
+        "/api/municipalities/{tenantId}/report-agreements",
       ])
         assert.ok(spec.paths[path]);
     } finally {

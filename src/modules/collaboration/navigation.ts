@@ -4,6 +4,7 @@ import {
   type AuthenticatedAccount,
   accountLabels,
   requireAdministrator,
+  requirePermission,
 } from "../identity/index.ts";
 
 export async function issuedCredentials(
@@ -72,6 +73,36 @@ export async function monthlyReviewOptions(
         items,
         nextCursor:
           result.rows.length > 20 ? (items.at(-1)?.month ?? null) : null,
+      };
+    },
+  );
+}
+/** Agreements whose monthly report a municipal REPORT_READ holder can request; names only, no other participants. */
+export async function reportAgreementOptions(
+  pool: Pool,
+  actor: AuthenticatedAccount,
+  tenantId: string,
+  after: string | null,
+) {
+  return command(
+    pool,
+    { accountId: actor.accountId, tenantId },
+    async (client) => {
+      await requirePermission(client, actor, "REPORT_READ");
+      const result = await client.query<{
+        agreement_id: string;
+        name: string;
+        version: number;
+      }>("SELECT * FROM domain.report_agreement_options($1::uuid)", [after]);
+      const page = result.rows.slice(0, 20);
+      return {
+        items: page.map((row) => ({
+          agreementId: row.agreement_id,
+          name: row.name,
+          version: row.version,
+        })),
+        nextCursor:
+          result.rows.length > 20 ? (page.at(-1)?.agreement_id ?? null) : null,
       };
     },
   );

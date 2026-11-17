@@ -7,13 +7,18 @@ import {
   useMunicipality,
   useMunicipalPages,
 } from "../municipal/shared";
-import type { AgreementSummary } from "./model";
+import { agreementChoices } from "./model";
 
-/** Agreements of the municipality; `none` only once every page has loaded empty. */
-export function useAgreementOptions(enabled = true) {
+type AgreementOption = { agreementId: string; name: string; version: number };
+
+/**
+ * Agreements of the municipality; `none` only once every page has loaded empty. `path` narrows the source, such as
+ * the agreements whose monthly report a REPORT_READ holder can request; it defaults to the administrator listing.
+ */
+export function useAgreementOptions(enabled = true, path?: string) {
   const m = useMunicipality();
-  const query = useMunicipalPages<AgreementSummary>(
-    `${endpoint(m.id)}/agreements`,
+  const query = useMunicipalPages<AgreementOption>(
+    path ?? `${endpoint(m.id)}/agreements`,
     enabled,
   );
   const agreements = [
@@ -33,12 +38,18 @@ export function useAgreementOptions(enabled = true) {
 export function AgreementSelect({
   value,
   onChange,
+  path,
+  empty,
 }: {
   value: string;
   onChange: (value: string) => void;
+  /** Source listing; see useAgreementOptions. */
+  path?: string;
+  /** Shown when the source lists no agreement. */
+  empty?: string;
 }) {
   const { t } = usePreferences();
-  const { query, agreements } = useAgreementOptions();
+  const { query, agreements } = useAgreementOptions(true, path);
   return (
     <>
       <input
@@ -68,7 +79,7 @@ export function AgreementSelect({
                 },
               ]
             : []),
-          ...agreements.map((a) => ({ value: a.agreementId, label: a.name })),
+          ...agreementChoices(agreements),
         ]}
       />
       {query.isPending ? (
@@ -80,10 +91,11 @@ export function AgreementSelect({
           <More query={query} />
           {!agreements.length && (
             <p>
-              {t(
-                "No hay convenios disponibles en este municipio.",
-                "Non hai convenios dispoñibles neste municipio.",
-              )}
+              {empty ??
+                t(
+                  "No hay convenios disponibles en este municipio.",
+                  "Non hai convenios dispoñibles neste municipio.",
+                )}
             </p>
           )}
         </>

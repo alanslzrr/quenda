@@ -294,7 +294,7 @@ Las reservas de unidades adscritas comprueban, en su misma transacción, la vige
 
 ### Reapertura municipal de unidades
 
-- `GET /api/municipalities/{tenantId}/units/{unitId}/agreement-restriction`: devuelve la vinculación persistente o `null`. `hasRemainingAssignment` indica si existen adscripciones actuales o programadas; no representa disponibilidad para reservar.
+- `GET /api/municipalities/{tenantId}/units/{unitId}/agreement-restriction`: devuelve la vinculación persistente o `null`, con `agreementId`, `agreementName` y `version`. `agreementName` es `null` solo si el convenio no es visible para el municipio. `hasRemainingAssignment` indica si existen adscripciones actuales o programadas; no representa disponibilidad para reservar.
 - `POST /api/municipalities/{tenantId}/units/{unitId}/agreement-restriction/release`: recibe `expectedAgreementId`, `expectedVersion` y `reason`. Retira la restricción únicamente si coincide la vinculación esperada y no quedan adscripciones actuales ni programadas. Conserva publicación, calendario, reservas y consumos; registra actor, motivo y correlación. Devuelve `removed: false` si ya no existe restricción.
 
 Ambos endpoints exigen administrador municipal y MFA reciente. El comando exige `Origin` autorizado e `Idempotency-Key`; revalida permisos antes del replay. Retirar la restricción no publica la unidad ni libera ocupaciones.
@@ -369,6 +369,8 @@ node scripts/export-schema.ts --example > /tmp/quenda-export-example.json
 Ambos archivos pueden validarse con herramientas independientes compatibles con Draft 7 y comprobación de formatos. El esquema valida la estructura; los permisos, el solape temporal y la pertenencia al municipio se comprueban en el sistema.
 
 ### Revisión y entrega de informes mensuales
+
+`GET /api/municipalities/{tenantId}/report-agreements` lista los convenios cuyo informe puede solicitar el municipio. Exige `REPORT_READ` municipal y MFA; un permiso limitado a unidades no basta. Incluye cada convenio con una versión `ACTIVADO` con informes agregados en la que participa el municipio y devuelve solo `agreementId`, `name` y `version`, la última de esas versiones. No incluye otros participantes, unidades, meses, métricas ni revisiones. Páginas de 20 ordenadas por convenio; `after` recibe el último `agreementId`. Usa `Cache-Control: no-store`. Figurar en la lista no garantiza que un mes sea publicable.
 
 Base: `/api/municipalities/{tenantId}/agreements/{agreementId}/reports/{AAAA-MM}`.
 

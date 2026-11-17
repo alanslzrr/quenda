@@ -44,7 +44,7 @@ export async function registerAgreementReopeningRoutes(
         security: [{ quendaSession: [] }],
         params,
         description:
-          "Consulta la restricción persistente de una unidad municipal. Exige administrador y MFA reciente. hasRemainingAssignment incluye adscripciones actuales o programadas; no expresa disponibilidad para reservar.",
+          "Consulta la restricción persistente de una unidad municipal y el nombre del convenio. Exige administrador y MFA reciente. hasRemainingAssignment incluye adscripciones actuales o programadas; no expresa disponibilidad para reservar.",
         response: {
           ...errors,
           200: {
@@ -57,9 +57,15 @@ export async function registerAgreementReopeningRoutes(
                 type: "object",
                 nullable: true,
                 additionalProperties: false,
-                required: ["agreementId", "version", "hasRemainingAssignment"],
+                required: [
+                  "agreementId",
+                  "agreementName",
+                  "version",
+                  "hasRemainingAssignment",
+                ],
                 properties: {
                   agreementId: uuid,
+                  agreementName: { type: "string", nullable: true },
                   version: integer,
                   hasRemainingAssignment: { type: "boolean" },
                 },

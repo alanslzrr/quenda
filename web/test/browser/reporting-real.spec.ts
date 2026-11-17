@@ -44,18 +44,8 @@ async function report(
   month: string,
 ) {
   await page.goto(`/administracion/${tenant}/informes`);
-  const selector = page.getByRole("combobox", {
-    name: "Convenio",
-    exact: true,
-  });
-  const reference = page.getByLabel(/Identificador (del convenio|do convenio)/);
-  await expect(selector.or(reference)).toBeVisible();
-  if (await selector.count())
-    await selectValue(page, "agreementId", "Convenio", agreement);
-  else
-    await page
-      .getByLabel(/Identificador (del convenio|do convenio)/)
-      .fill(agreement);
+  // Administrators and report readers choose among the agreements with aggregate reports.
+  await selectValue(page, "agreementId", "Convenio", agreement);
   await pickMonth(page, "Mes publicado", month);
   const submit = page.getByRole("button", {
     name: "Consultar informe",
