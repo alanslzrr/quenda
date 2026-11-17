@@ -4,17 +4,23 @@ import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import { requireAdministrator } from "./administrator.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
+import { invitationAddress } from "./invitation-address.ts";
 
+/**
+ * The invitation is addressed to an email address. No account is looked up,
+ * so the response is the same whether or not one uses that address.
+ */
 export async function inviteAdministrator(
   pool: Pool,
   actor: AuthenticatedAccount,
   tenantId: string,
   input: {
-    accountId: string;
+    email: string;
     expiresAt: string;
     roleExpiresAt?: string | null;
   },
 ) {
+  const recipient = invitationAddress(input.email);
   const invitationId = randomUUID();
   try {
     return await command(
@@ -41,31 +47,25 @@ export async function inviteAdministrator(
         );
         if (!bounded.rows[0]?.allowed) throw new HttpError("FORBIDDEN");
         await client.query(
-          "INSERT INTO domain.administrator_invitation (tenant_id,id,account_id,invited_by,expires_at,grant_source,role_expires_at,issuer_invitation_id) VALUES ($1,$2,$3,$4,$5,'MUNICIPAL',$6,(SELECT invitation_id FROM domain.municipal_administrator WHERE tenant_id=$1 AND account_id=$4))",
+          "INSERT INTO domain.administrator_invitation (tenant_id,id,recipient_email,invited_by,expires_at,grant_source,role_expires_at,issuer_invitation_id) VALUES ($1,$2,$3,$4,$5,'MUNICIPAL',$6,(SELECT invitation_id FROM domain.municipal_administrator WHERE tenant_id=$1 AND account_id=$4))",
           [
             tenantId,
             invitationId,
-            input.accountId,
+            recipient,
             actor.accountId,
             input.expiresAt,
             input.roleExpiresAt ?? null,
           ],
         );
         await client.query(
-          "INSERT INTO domain.identity_event (tenant_id,id,actor_id,operation,subject_id,invitation_id) VALUES ($1,$2,$3,'INVITE_ADMINISTRATOR',$4,$5)",
-          [
-            tenantId,
-            randomUUID(),
-            actor.accountId,
-            input.accountId,
-            invitationId,
-          ],
+          "INSERT INTO domain.identity_event (tenant_id,id,actor_id,operation,subject_id,invitation_id) VALUES ($1,$2,$3,'INVITE_ADMINISTRATOR',NULL,$4)",
+          [tenantId, randomUUID(), actor.accountId, invitationId],
         );
         return { tenantId, invitationId };
       },
     );
   } catch (error) {
-    if (error instanceof DatabaseError && error.code === "23503")
+    if (error instanceof DatabaseError && error.code === "23514")
       throw new HttpError("INVALID_INPUT");
     throw error;
   }
@@ -82,16 +82,12 @@ export async function revokeAdministratorInvitation(
     { accountId: actor.accountId, tenantId },
     async (client) => {
       await requireAdministrator(client, actor);
-      const result = await client.query<{ subject: string | null }>(
-        "SELECT domain.revoke_administrator_invitation($1) AS subject",
+      // The function records the revocation event in the same transaction.
+      const result = await client.query<{ revoked: boolean }>(
+        "SELECT domain.revoke_administrator_invitation($1) AS revoked",
         [invitationId],
       );
-      const subject = result.rows[0]?.subject;
-      if (!subject) throw new HttpError("NOT_FOUND");
-      await client.query(
-        "INSERT INTO domain.identity_event (tenant_id,id,actor_id,operation,subject_id,invitation_id) VALUES ($1,$2,$3,'REVOKE_INVITATION',$4,$5)",
-        [tenantId, randomUUID(), actor.accountId, subject, invitationId],
-      );
+      if (!result.rows[0]?.revoked) throw new HttpError("NOT_FOUND");
       return { tenantId, invitationId };
     },
   );
