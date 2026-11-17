@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 
 const view = "/plataforma/gestion";
@@ -25,9 +26,11 @@ async function fixture(index: number) {
   )[index];
 }
 async function deadline(page: Page) {
-  await page
-    .getByLabel("Aceptar antes de", { exact: true })
-    .fill(new Date(Date.now() + 86400000).toISOString().slice(0, 16));
+  await pickDateTime(
+    page,
+    "Aceptar antes de",
+    new Date(Date.now() + 86400000).toISOString().slice(0, 16),
+  );
 }
 async function confirm(page: Page, label: string | RegExp) {
   await page.getByRole("checkbox", { name: /Confirmo/ }).check();
