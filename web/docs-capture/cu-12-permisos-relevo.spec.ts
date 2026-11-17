@@ -3,6 +3,8 @@ import { Capture, expect, signIn, test } from "./capture";
 import {
   ageMfaProof,
   choose,
+  command,
+  cookieOf,
   formWith,
   freshAccount,
   freshCode,
@@ -109,32 +111,6 @@ test("CU-12 delegar permisos y relevar responsables", async ({
       target: accept,
     });
 
-    // Alternativa: la verificación en dos pasos ya no es reciente.
-    await ageMfaProof(nerea.email);
-    await accept.click();
-    const notice = recipient.getByText(
-      "Vuelve a verificar el segundo factor para realizar esta operación.",
-    );
-    await expect(notice).toBeVisible();
-    const reverify = recipient
-      .getByRole("status", { name: "Verificación de seguridad" })
-      .getByRole("button", { name: "Verificar acceso" });
-    await snap(cu, recipient, "verificacion-caducada", {
-      tall: true,
-      target: reverify,
-    });
-    await reverify.click();
-    const verify = recipient.getByRole("dialog");
-    await verify
-      .getByLabel("Código de autenticación", { exact: true })
-      .fill(await freshCode(nerea));
-    const confirm = verify.getByRole("button", {
-      name: "Verificar acceso",
-      exact: true,
-    });
-    await snap(cu, recipient, "verificar-de-nuevo", { target: confirm });
-    await confirm.click();
-    await expect(verify).toHaveCount(0);
     await accept.click();
     await expect(accept).toHaveCount(0);
     const accepted = recipient
@@ -311,5 +287,56 @@ test("CU-12 delegar permisos y relevar responsables", async ({
     await snap(cu, davidPage, "retirada-completada", { target: without });
   } finally {
     await successor.close();
+  }
+
+  // Alternativa: la verificación en dos pasos ya no es reciente al aceptar.
+  await command(
+    await cookieOf(page),
+    `/api/municipalities/${valdeira}/manager-invitations`,
+    {
+      accountId: nerea.id,
+      expiresAt: new Date(Date.now() + 86400000).toISOString(),
+      permissions: [{ operation: "RESERVATION_READ", unitId: null }],
+    },
+  );
+  const again = await secondBrowser(browser, page);
+  try {
+    const recipient = await again.newPage();
+    await signInAs(recipient, nerea);
+    await recipient.goto("/perfil/invitaciones");
+    const accept = recipient.getByRole("button", {
+      name: "Aceptar invitación",
+      exact: true,
+    });
+    await expect(accept).toHaveCount(1);
+    await ageMfaProof(nerea.email);
+    await accept.click();
+    const notice = recipient.getByText(
+      "Vuelve a verificar el segundo factor para realizar esta operación.",
+    );
+    await expect(notice).toBeVisible();
+    const reverify = recipient
+      .getByRole("status", { name: "Verificación de seguridad" })
+      .getByRole("button", { name: "Verificar acceso" });
+    await snap(cu, recipient, "verificacion-caducada", {
+      tall: true,
+      target: reverify,
+    });
+    await reverify.click();
+    const verify = recipient.getByRole("dialog");
+    await verify
+      .getByLabel("Código de autenticación", { exact: true })
+      .fill(await freshCode(nerea));
+    const confirm = verify.getByRole("button", {
+      name: "Verificar acceso",
+      exact: true,
+    });
+    await snap(cu, recipient, "verificar-de-nuevo", { target: confirm });
+    await confirm.click();
+    await expect(verify).toHaveCount(0);
+    await accept.click();
+    await expect(accept).toHaveCount(0);
+  } finally {
+    await again.close();
   }
 });
