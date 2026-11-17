@@ -152,7 +152,7 @@ export async function saveNotice(
           ],
         )
       ).rows[0];
-      if (!row?.version) throw new HttpError("CONFLICT");
+      if (!row?.version) throw new HttpError("STALE_VERSION");
       return { kind, version: row.version };
     },
   );
