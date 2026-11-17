@@ -25,28 +25,19 @@ test("CU-08 consultar el historial de reservas", async ({ page }) => {
   await option.click();
   await expect(filter).toContainText("Ribasanta");
   await expect(list.getByRole("link").first()).toContainText("Ribasanta");
-  await filter.evaluate((node) => node.scrollIntoView({ block: "start" }));
-  await page.mouse.wheel(0, -120);
-  await shot(cu, page, "reservas-de-ribasanta", { target: filter });
-
-  // Paso 2: las páginas siguientes se cargan bajo demanda, de la más
-  // reciente a la más antigua.
-  await filter.click();
-  await page.getByRole("option", { name: "Todos los municipios" }).click();
-  await expect(filter).toContainText("Todos los municipios");
-  const more = page.getByRole("button", { name: "Ver más reservas" });
-  await expect(more).toBeVisible();
-  await shot(cu, page, "ver-mas-reservas", { target: more });
+  // Paso 2: cada reserva lleva su estado. Vista más alta para ver la
+  // cabecera, el filtro y las primeras reservas finalizadas; el foco sale del
+  // filtro para que no tape el recuadro.
+  await filter.evaluate((node) => (node as HTMLElement).blur());
+  await page.setViewportSize({ width: 1280, height: 1200 });
+  await page.evaluate(() => window.scrollTo(0, 0));
   const finished = list
     .getByRole("link")
     .filter({ hasText: "Finalizada" })
     .first();
-  for (let page_ = 0; page_ < 12 && !(await finished.isVisible()); page_++) {
-    await more.click();
-    await page.waitForLoadState("networkidle");
-  }
-  await expect(finished).toBeVisible();
-  await shot(cu, page, "reservas-pasadas", { target: finished });
+  await expect(finished).toBeInViewport();
+  await shot(cu, page, "reservas-de-ribasanta", { target: finished });
+  await page.setViewportSize({ width: 1280, height: 800 });
 
   // Paso 3: el detalle muestra el estado y las normas aceptadas.
   await finished.click();
@@ -70,4 +61,12 @@ test("CU-08 consultar el historial de reservas", async ({ page }) => {
     page.getByRole("heading", { name: "Reserva cancelada", exact: true }),
   ).toBeVisible();
   await shot(cu, page, "detalle-cancelada");
+
+  // Paso 4: las páginas siguientes se cargan bajo demanda, de la más
+  // reciente a la más antigua.
+  await page.goto("/reservas");
+  await expect(list.getByRole("link").first()).toBeVisible();
+  const more = page.getByRole("button", { name: "Ver más reservas" });
+  await expect(more).toBeVisible();
+  await shot(cu, page, "ver-mas-reservas", { target: more });
 });
