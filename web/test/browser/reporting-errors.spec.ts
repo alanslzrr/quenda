@@ -36,7 +36,7 @@ async function fixture(
         },
         platform: { operator: false, permissions: [] },
       };
-    if (path === `${base}/agreements`)
+    if (path === `${base}/agreements` || path === `${base}/report-agreements`)
       body = {
         items: [
           { agreementId: agreement, name: "Convenio de pruebas", version: 1 },
@@ -351,6 +351,39 @@ test("monthly delivery requires an explicit action and suppression renders no me
     page.getByRole("heading", { name: /No publicable|Non publicable/ }),
   ).toHaveCount(0);
   expect(calls).toBe(2);
+});
+test("report readers choose the agreement by name without the administrator listing", async ({
+  page,
+}) => {
+  await fixture(page, false, [{ operation: "REPORT_READ", unitId: null }]);
+  const listings: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path === `${base}/agreements` || path === `${base}/report-agreements`)
+      listings.push(path);
+  });
+  await page.route(
+    `**${base}/agreements/${agreement}/reports/2024-03`,
+    async (r) => r.fulfill({ json: { status: "NOT_PUBLISHABLE" } }),
+  );
+  await page.goto(`${view}/informes`);
+  await expect(
+    page.getByLabel(/Identificador (del convenio|do convenio)/),
+  ).toHaveCount(0);
+  await selectValue(page, "agreementId", "Convenio", agreement);
+  await expect(
+    page.getByRole("combobox", { name: "Convenio", exact: true }),
+  ).toContainText("Convenio de pruebas");
+  await pickMonth(page, "Mes publicado", "2024-03");
+  await page
+    .getByRole("button", { name: "Consultar informe", exact: true })
+    .click();
+  await expect(
+    page.getByText("Convenio de pruebas · 2024-03", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(agreement, { exact: true })).toBeHidden();
+  expect(listings).not.toContain(`${base}/agreements`);
+  expect(listings).toContain(`${base}/report-agreements`);
 });
 async function context(page: Page, revision = "2") {
   await page.route("**/review-options", (route) =>

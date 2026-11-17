@@ -62,7 +62,10 @@ async function fixture(page: Page, initial: Partial<State> = {}) {
         },
         platform: { operator: false, permissions: [] },
       };
-    } else if (path === `${root}/agreements`)
+    } else if (
+      path === `${root}/agreements` ||
+      path === `${root}/report-agreements`
+    )
       body = { items: state.agreements, nextCursor: null };
     else if (path === `${root}/credentials`)
       body = {
