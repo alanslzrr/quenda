@@ -66,7 +66,7 @@ Requisitos del operador: Docker, Node.js 24 y pnpm (los del proyecto), OpenTofu 
    tofu output
    ```
 
-   `ssh_source_cidr` limita SSH a la dirección del operador. Con `domain` vacío la instancia se publica en `https://<ip>.sslip.io`; con un dominio propio, crear antes de desplegar un registro `A` hacia `public_ip`, porque Caddy pide el certificado en el primer arranque.
+   `ssh_source_cidr` limita SSH a la dirección del operador. Con `domain` vacío la instancia se publica en `https://<ip>.sslip.io`; con un dominio propio, crear antes de desplegar un registro `A` hacia `public_ip`, porque Caddy pide el certificado en el primer arranque. No consultar el nombre antes de que exista el registro: los resolutores guardan la respuesta negativa (NXDOMAIN) durante el TTL negativo de la zona, a menudo una hora. Si Caddy arrancó antes de que el registro fuera visible, `ssh ubuntu@IP 'sudo quenda compose restart caddy'` vuelve a pedir el certificado en cuanto el nombre resuelve.
 
 2. **Contraseña SMTP**, si el servidor la exige (una sola vez):
 
@@ -97,7 +97,7 @@ Operación diaria en el host: `sudo quenda status`, `sudo quenda logs [servicio]
 
 ### OCI Always Free
 
-La configuración por defecto cabe en la capa Always Free: una VM Ampere A1 de 2 OCPU y 12 GB (la asignación A1 se comparte entre todas las VM A1 de la cuenta), 50 GB de los 200 GB de almacenamiento en bloque, una VCN de las dos permitidas y como máximo cinco copias de volumen. La capacidad A1 solo existe en la región principal de la cuenta; si `apply` devuelve `Out of host capacity`, cambiar `availability_domain_number` o reintentar más tarde. La lista de seguridad abre 22/TCP solo para `ssh_source_cidr` y 80/TCP, 443/TCP y 443/UDP para todos; las imágenes Ubuntu de OCI traen reglas `iptables` que solo admiten SSH, y `quenda install` añade y persiste las de 80 y 443.
+La configuración por defecto cabe en la capa Always Free: una VM Ampere A1 de 2 OCPU y 12 GB (la asignación A1 se comparte entre todas las VM A1 de la cuenta), 50 GB de los 200 GB de almacenamiento en bloque, una VCN de las dos permitidas y como máximo cinco copias de volumen. La capacidad A1 solo existe en la región principal de la cuenta; si `apply` devuelve `Out of host capacity`, cambiar `availability_domain_number` o reintentar más tarde. Si la capacidad A1 sigue sin estar disponible, otra forma flexible sirve sin cambiar nada más, por ejemplo `shape = "VM.Standard.E5.Flex"` con `ocpus = 1` y `memory_in_gbs = 4` (x86, fuera de la capa Always Free: consume créditos o se factura). `VM.Standard.E2.1.Micro` no existe en todas las regiones; en `eu-madrid-3`, por ejemplo, no está disponible. La demostración pública se ejecuta en una E5.Flex por esta razón. La lista de seguridad abre 22/TCP solo para `ssh_source_cidr` y 80/TCP, 443/TCP y 443/UDP para todos; las imágenes Ubuntu de OCI traen reglas `iptables` que solo admiten SSH, y `quenda install` añade y persiste las de 80 y 443.
 
 Las copias del volumen de arranque son consistentes ante caídas: PostgreSQL se recupera con su WAL, pero no sustituyen a la [copia lógica](12_operacion.md#copia-lógica-de-postgresql) ni conservan `AUTH_SECRET` fuera de la VM.
 
@@ -114,7 +114,7 @@ smtp = {
 }
 ```
 
-La contraseña es la clave de API y se entrega con `quenda smtp-password`. El remitente debe pertenecer al dominio verificado en el proveedor.
+La contraseña es la clave de API y se entrega con `quenda smtp-password`; basta una clave restringida a enviar correo. El remitente debe pertenecer al dominio verificado en el proveedor. En Resend, la verificación del dominio publica tres registros en el DNS del remitente: un `TXT` DKIM en `resend._domainkey.<dominio>` y, en `send.<dominio>`, un `MX` y un `TXT` SPF para los rebotes. Mientras el dominio no esté verificado, el proveedor rechaza los envíos y el worker los reintenta hasta agotarlos (`EMAIL_QUEUE_ATTENTION`). DMARC en el dominio raíz es recomendable pero lo decide quien gestiona ese dominio.
 
 ## Demostración
 
