@@ -18,7 +18,7 @@ El comando:
 2. Arranca la API en `127.0.0.1:3200` y la web en `127.0.0.1:5175` (se pueden cambiar con `QUENDA_CAPTURE_API_PORT` y `QUENDA_CAPTURE_WEB_PORT`). Los correos se guardan en `.local/capture/mail`; nada sale de la máquina.
 3. Recorre los escenarios de `web/docs-capture/` en orden, en escritorio (1280 × 800), tema claro y castellano, y sustituye por completo la carpeta de cada caso de uso que recorre.
 
-Para regenerar solo un caso: `pnpm docs:capture -- cu-09`.
+Para regenerar solo un caso, indica su escenario desde `web/`: `PG_BIN=/ruta/a/postgresql@17/bin pnpm exec playwright test --config playwright.docs.config.ts docs-capture/cu-09-sesion.spec.ts`. Los escenarios comparten la base efímera de una ejecución completa, así que un caso regenerado por separado puede mostrar otros datos de contexto (por ejemplo, menos municipios) que en la ejecución completa.
 
 Nunca se ejecuta contra la demostración pública: varios escenarios dan de baja cuentas, suspenden identidades o aplican políticas de conservación, y esos cambios no se pueden deshacer. Las fechas de las capturas dependen del día en que se generan, porque el sembrado es relativo a la fecha actual.
 
