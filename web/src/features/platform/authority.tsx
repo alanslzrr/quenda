@@ -8,6 +8,7 @@ import { useSession } from "../../app/session";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { Reason } from "../municipal/shared";
+import staff from "../municipal/staff.module.css";
 import { PlatformAccount } from "./account";
 import { AccountField, InvitationDeadline, Receipt } from "./fields";
 import { invitationDates } from "./model";
@@ -68,7 +69,7 @@ export function Invite({ privacy = false }: { privacy?: boolean }) {
         <InvitationDeadline role={privacy} />
         {privacy && (
           <>
-            <fieldset>
+            <fieldset className={staff.permissions}>
               <legend>{t("Permisos", "Permisos")}</legend>
               <Checkbox
                 name="PRIVACY_READ"
