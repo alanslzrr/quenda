@@ -497,7 +497,9 @@ test("operator and global privacy invitations follow a verified email and never 
           );
         assert.ok(!candidates.some((row) => row.target_key === keys.pending));
         // Address-only invitations never surface as an account set.
-        assert.ok(candidates.every((row) => typeof row.target_key === "string"));
+        assert.ok(
+          candidates.every((row) => typeof row.target_key === "string"),
+        );
         assert.equal(
           (await retention(migration, keys.pending, null)).reason,
           "NOT_DUE",
@@ -522,7 +524,10 @@ test("operator and global privacy invitations follow a verified email and never 
           (
             await migration.query(
               "SELECT recipient_email FROM domain.platform_operator_invitation WHERE id=$1 UNION ALL SELECT recipient_email FROM domain.global_privacy_invitation WHERE id=ANY($2::uuid[]) ORDER BY 1",
-              [ended.invitationId, [expired.invitationId, pending.invitationId]],
+              [
+                ended.invitationId,
+                [expired.invitationId, pending.invitationId],
+              ],
             )
           ).rows.map((row) => row.recipient_email),
           ["waiting@example.test", null, null],
@@ -694,8 +699,9 @@ test("operator and global privacy invitations follow a verified email and never 
         assert.equal(
           (
             await listOwnAdministratorInvitations(domain, actor("suspicious"))
-          ).items.find((item) => item.invitationId === administrator.invitationId)
-            ?.status,
+          ).items.find(
+            (item) => item.invitationId === administrator.invitationId,
+          )?.status,
           "REVOKED",
         );
         assert.ok(
