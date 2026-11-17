@@ -405,6 +405,11 @@ export async function snap(
       ),
     )
     .toBe(true);
+  // A focused field draws its own focus ring over the highlight.
+  if (options.target)
+    await options.target.evaluate((element) => {
+      if (element === document.activeElement) (element as HTMLElement).blur();
+    });
   const size = page.viewportSize() ?? { width: 1280, height: 800 };
   if (tall) {
     const extra = await page.evaluate(() => {
@@ -433,6 +438,61 @@ export async function snap(
     return await cu.shot(page, slug, options);
   } finally {
     if (tall) await page.setViewportSize(size);
+  }
+}
+
+const escapeHtml = (value: string) =>
+  value.replace(
+    /[&<>"]/g,
+    (char) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char] ?? char,
+  );
+
+/**
+ * A downloaded spreadsheet as a person sees it when opening it: the file name,
+ * lettered columns, numbered rows and cells cut to their column width. Only
+ * the first rows are drawn; columns beyond the window stay out of sight.
+ */
+export async function spreadsheet(
+  cu: Capture,
+  page: Page,
+  slug: string,
+  name: string,
+  csv: string,
+  rows = 5,
+) {
+  const lines = csv
+    .trim()
+    .split(/\r?\n/)
+    .slice(0, rows + 1)
+    .map((line) => line.split(","));
+  const letter = (index: number) => String.fromCharCode(65 + index);
+  const columns = lines[0]?.length ?? 0;
+  const head = `<tr><th></th>${Array.from({ length: columns }, (_, index) => `<th>${letter(index)}</th>`).join("")}</tr>`;
+  const body = lines
+    .map(
+      (cells, row) =>
+        `<tr${row === 0 ? ' class="names"' : ""}><th>${row + 1}</th>${cells.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`,
+    )
+    .join("");
+  const scratch = await page.context().newPage();
+  try {
+    await scratch.setViewportSize({ width: 1240, height: 400 });
+    await scratch.setContent(`<!doctype html>
+<style>
+  body { margin: 0; padding: 24px; background: #e9ecef; font: 13px/1.4 system-ui, sans-serif; color: #1f2328; }
+  main { width: 1190px; overflow: hidden; border-radius: 10px; background: #fff; box-shadow: 0 8px 24px rgb(0 0 0 / .12); }
+  h1 { margin: 0; padding: 10px 16px; font: 600 13px/1.4 system-ui, sans-serif; color: #57606a; background: #f6f8fa; border-bottom: 1px solid #d0d7de; }
+  table { border-collapse: collapse; table-layout: fixed; }
+  th, td { border: 1px solid #d0d7de; padding: 5px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 150px; max-width: 150px; }
+  th { background: #f6f8fa; color: #57606a; font-weight: 500; text-align: center; }
+  tr th:first-child { width: 36px; max-width: 36px; }
+  tr.names td { font-weight: 600; background: #f6f8fa; }
+</style>
+<main><h1>${escapeHtml(name)}</h1><table>${head}${body}</table></main>`);
+    return await cu.shot(scratch, slug, { clip: scratch.locator("main") });
+  } finally {
+    await scratch.close();
   }
 }
 
