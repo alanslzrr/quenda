@@ -50,13 +50,13 @@ Sirve para que Quenda elimine o bloquee automáticamente los datos de una famili
 
    ![Formulario Registrar excepción para un interesado](../capturas/cu-20/06-formulario-excepcion.webp)
 
-   *El formulario recuerda que la excepción impide destruir los datos afectados, pero no suspende el tratamiento ordinario ni bloquea la cuenta. En el ejemplo protege el perfil de una vecina por un requerimiento judicial.*
+   *El formulario recuerda que la excepción impide destruir los datos afectados, pero no suspende el tratamiento ordinario ni bloquea la cuenta. En el ejemplo protege el perfil de una persona vecina por un requerimiento judicial.*
 
    ![Confirmación Excepción registrada](../capturas/cu-20/07-excepcion-registrada.webp)
 
    *El mensaje recuadrado «Excepción registrada» incluye el identificador que se usará para levantarla.*
 
-7. **Quenda procesa los vencimientos.** El proceso de segundo plano (el worker) revisa las políticas activas cada minuto, selecciona los registros vencidos y vuelve a comprobar excepciones y dependencias de cada uno antes de actuar. No hay nada que pulsar. Si el equipo de operación necesita forzar una revisión, puede ejecutar un único ciclo del worker con `pnpm -s worker:local --once`, que toma su conexión y su configuración de los secretos del entorno:
+7. **Quenda procesa los vencimientos.** El proceso de segundo plano (el worker) revisa las políticas activas cada minuto, selecciona los registros vencidos y vuelve a comprobar excepciones y dependencias de cada uno antes de actuar. No hay nada que pulsar. Si el equipo de operación necesita forzar una revisión, puede ejecutar un único ciclo del worker con la configuración del propio worker: `node dist/email-worker.js --once` en la instancia (en un entorno local, `pnpm -s worker:local --once`):
 
    ![Terminal con un ciclo del worker que procesa la conservación](../capturas/cu-20/08-worker-conservacion.webp)
 
@@ -124,11 +124,11 @@ Indica el motivo, confirma y pulsa **Retirar política**.
 
 #### Una persona sin permisos de privacidad abre estos controles
 
-Administrar el municipio no da permisos de privacidad. Una administradora que abre la dirección de **Conservación y derechos** solo ve un aviso.
+Administrar el municipio no da permisos de privacidad. Una persona administradora que abre la dirección de **Conservación y derechos** solo ve un aviso.
 
-![Aviso No tienes permiso para esta operación para la administradora del municipio](../capturas/cu-20/18-administrador-sin-permiso.webp)
+![Aviso No tienes permiso para esta operación para la persona administradora del municipio](../capturas/cu-20/18-administrador-sin-permiso.webp)
 
-*El menú lateral de la administradora no incluye Conservación y derechos y el contenido es el aviso recuadrado «No tienes permiso para esta operación.».*
+*El menú lateral de la persona administradora no incluye Conservación y derechos y el contenido es el aviso recuadrado «No tienes permiso para esta operación.».*
 
 #### Un conflicto no detiene el resto
 
@@ -194,7 +194,7 @@ Si el registro o el interesado tienen una excepción vigente, Quenda no actúa y
 
 #### Hay dependencias vigentes
 
-Las reservas, los permisos, las invitaciones o las acreditaciones que la persona conserva en el municipio impiden suprimir su perfil por separado. En el ejemplo, el perfil es el de la administradora del municipio.
+Las reservas, los permisos, las invitaciones o las acreditaciones que la persona conserva en el municipio impiden suprimir su perfil por separado. En el ejemplo, el perfil es el de la persona administradora del municipio.
 
 ![Resultado Conflicto: actuación no aplicada con el motivo RETAINED_SERVICE_DEPENDENCIES](../capturas/cu-21/07-conflicto-dependencias.webp)
 
@@ -240,7 +240,7 @@ Los comandos se ejecutan desde la raíz del código de Quenda. `PG_BIN` (la carp
 
    *La salida de `pnpm -s db:backup` indica la ruta del archivo, su SHA-256 (guárdalo por un canal confiable: hará falta para restaurar) y la duración en milisegundos.*
 
-   En el ejemplo, después de esta copia el personal de privacidad suprime el perfil municipal de un vecino ([CU-21](#cu-21--ejecutar-una-actuación-individual-de-privacidad)). La copia ya no refleja esa supresión.
+   En el ejemplo, después de esta copia el personal de privacidad suprime el perfil municipal de una persona vecina ([CU-21](#cu-21--ejecutar-una-actuación-individual-de-privacidad)). La copia ya no refleja esa supresión.
 
 2. **Guarda el checkpoint de privacidad.** Con las credenciales de mantenimiento, exporta el checkpoint a un archivo nuevo, fuera de las copias. Contiene referencias de las supresiones, bloqueos y excepciones, no los datos.
 
