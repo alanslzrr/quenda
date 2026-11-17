@@ -6,6 +6,8 @@ import {
   invitationRecipient,
   municipalOnly,
   type StaffInvitation,
+  securityCandidates,
+  securityWithdrawalRequest,
   staffInvitationBody,
   validPermissions,
 } from "../src/features/municipal/staff-model.ts";
@@ -196,4 +198,105 @@ test("a new staff invitation is addressed to the trimmed email and a replacement
   });
   assert.equal("email" in replacement, false);
   assert.equal("accountId" in replacement, false);
+});
+test("security withdrawal offers current holders, pending accounts and pending addresses only", () => {
+  const label = (email: string) => ({ name: "", email });
+  const later = "2026-10-30T10:00:00Z",
+    past = "2026-10-20T10:00:00Z";
+  const candidates = securityCandidates(
+    {
+      administrators: [
+        {
+          accountId: "admin",
+          accountLabel: label("admin@example.test"),
+          invitationId: "a1",
+          grantedAt: past,
+          expiresAt: null,
+          revokedAt: null,
+          active: true,
+        },
+        {
+          accountId: "former",
+          invitationId: "a2",
+          grantedAt: past,
+          expiresAt: null,
+          revokedAt: past,
+          active: false,
+        },
+        {
+          accountId: "lapsed",
+          invitationId: "a3",
+          grantedAt: past,
+          expiresAt: past,
+          revokedAt: null,
+          active: false,
+        },
+      ],
+      administratorInvitations: [
+        // The accepted invitation of the administrator listed above.
+        { ...invitation, accountId: "admin", acceptedAt: past },
+        { ...invitation, accountId: null, recipientEmail: "new@example.test" },
+        {
+          ...invitation,
+          accountId: null,
+          recipientEmail: "late@example.test",
+          expiresAt: past,
+        },
+        {
+          ...invitation,
+          accountId: null,
+          recipientEmail: "gone@example.test",
+          revokedAt: past,
+        },
+        { ...invitation, accountId: null, recipientEmail: null },
+      ],
+      managerInvitations: [
+        {
+          ...invitation,
+          accountId: "manager",
+          accountLabel: label("manager@example.test"),
+          acceptedAt: past,
+          roleExpiresAt: later,
+          permissions: [{ operation: "REPORT_READ", unitId: null }],
+        },
+        {
+          ...invitation,
+          accountId: "admin",
+          acceptedAt: past,
+          permissions: [{ operation: "PRIVACY_READ", unitId: null }],
+        },
+        {
+          ...invitation,
+          accountId: "expired-grant",
+          acceptedAt: past,
+          roleExpiresAt: past,
+        },
+        { ...invitation, accountId: "legacy" },
+        { ...invitation, accountId: null, recipientEmail: "new@example.test" },
+      ],
+    },
+    now,
+  );
+  assert.deepEqual(
+    candidates.map((c) =>
+      c.kind === "account" ? [c.value, c.roles] : [c.value],
+    ),
+    [
+      ["account:admin", ["administrator", "manager"]],
+      ["account:legacy", ["pending"]],
+      ["account:manager", ["manager"]],
+      ["address:new@example.test"],
+    ],
+  );
+  const [admin] = candidates;
+  const address = candidates.at(-1);
+  assert.ok(admin && address);
+  assert.deepEqual(securityWithdrawalRequest("/api/m/t", admin, " Robo "), {
+    path: "/api/m/t/accounts/admin/revoke-access-for-security",
+    body: { reason: "Robo" },
+  });
+  assert.deepEqual(securityWithdrawalRequest("/api/m/t", address, "Robo"), {
+    path: "/api/m/t/invitation-addresses/revoke-for-security",
+    body: { email: "new@example.test", reason: "Robo" },
+  });
 });
