@@ -11,15 +11,18 @@ import {
   type Locale,
   readVisitorPreferences,
   saveVisitorPreferences,
-  type Theme,
+  type ThemePreference,
 } from "./preferences";
 import { useSession } from "./session";
 import { browserStorage } from "./storage.ts";
 
 interface Preferences {
   locale: Locale;
-  theme: Theme | null;
-  save: (patch: { locale?: Locale; theme?: Theme }) => Promise<void>;
+  theme: ThemePreference | null;
+  save: (patch: {
+    locale?: Locale;
+    theme?: ThemePreference | null;
+  }) => Promise<void>;
   pending: boolean;
   t: (es: string, gl: string) => string;
 }
@@ -42,7 +45,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
           { signal },
           visitor.locale,
         ),
-        api<{ theme: Theme | null }>(
+        api<{ theme: ThemePreference | null }>(
           "/api/me/theme",
           { signal },
           visitor.locale,
@@ -54,6 +57,25 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
+  useEffect(() => {
+    const sync = (event: StorageEvent) => {
+      if (
+        event.storageArea !== browserStorage("local") ||
+        (event.key !== null && event.key !== "quenda.preferences")
+      )
+        return;
+      if (id)
+        void client.invalidateQueries({
+          queryKey: ["private", id, "preferences"],
+        });
+      else
+        setVisitor(
+          readVisitorPreferences(browserStorage("local"), navigator.languages),
+        );
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, [id, client]);
   // Until the account's preferences arrive, or when they cannot be read (rate limit, network), the last ones seen in
   // this browser apply, so the page never flashes into the other theme or language.
   const known = id ? query.data : undefined;
@@ -69,7 +91,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
-  async function save(patch: { locale?: Locale; theme?: Theme }) {
+  async function save(patch: {
+    locale?: Locale;
+    theme?: ThemePreference | null;
+  }) {
     if (pending) return;
     setPending(true);
     try {
@@ -80,7 +105,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
             { method: "PUT", body: JSON.stringify({ locale: patch.locale }) },
             locale,
           );
-        if (patch.theme)
+        if (patch.theme !== undefined)
           await api(
             "/api/me/theme",
             { method: "PUT", body: JSON.stringify({ theme: patch.theme }) },

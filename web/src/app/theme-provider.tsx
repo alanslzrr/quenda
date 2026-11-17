@@ -8,6 +8,7 @@ import {
 import type { Appearance } from "./api";
 import type { Theme } from "./preferences";
 import { usePreferences } from "./preferences-provider";
+import { useSystemTheme } from "./system-theme";
 import { defaultAppearance, themeVariables } from "./theme";
 import { isThemeId } from "./themes.ts";
 
@@ -20,7 +21,7 @@ const PreviewContext = createContext<
 >(null);
 
 /**
- * The mode is the account's or the municipality's, never the OS's, so the toolbar and canvas hints in index.html
+ * The resolved mode includes an explicit system preference, so the toolbar and canvas hints in index.html
  * (and public/theme-boot.js) are pointed at what is actually rendered: one theme-color with the painted background,
  * and a color-scheme matching the one foundation.css sets for `data-theme`.
  */
@@ -43,7 +44,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const { theme } = usePreferences();
   // Preview is local to the mounted editor; it never writes account preferences.
   const current = preview?.appearance ?? appearance ?? defaultAppearance;
-  const mode = preview?.mode ?? theme ?? current.defaultTheme;
+  const systemTheme = useSystemTheme();
+  const mode =
+    preview?.mode ??
+    (theme === "system" ? systemTheme : theme) ??
+    current.defaultTheme;
   useLayoutEffect(() => {
     const root = document.documentElement;
     const swap = document.createElement("style");
