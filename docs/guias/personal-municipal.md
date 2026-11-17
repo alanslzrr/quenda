@@ -66,7 +66,7 @@ El catálogo es lo que la ciudadanía puede reservar. Cada **instalación** (un 
 
    ![Pestaña «Horarios» con duraciones, antelación de 21 días, tres franjas semanales, una excepción cerrada el 25 de diciembre y «Guardar horarios» señalado](../capturas/cu-04/08-horarios.webp)
 
-   *Hay franjas los lunes y miércoles de 16:00 a 22:00 y los sábados de 10:00 a 14:00, y una excepción que cierra todo el día de Navidad. Las horas son las locales del municipio; una excepción sustituye el horario semanal de su fecha.*
+   *Hay franjas los lunes y miércoles de 16:00 a 22:00 y los sábados de 10:00 a 14:00, y una excepción que cierra todo el día de Navidad. Cada franja se quita con «Quitar franja» y cada excepción con «Quitar excepción». Las horas son las locales del municipio; una excepción sustituye el horario semanal de su fecha.*
 
 9. **Publica la unidad.** Pulsa **Publicar unidad**, escribe el motivo, marca la casilla que confirma que la unidad es independiente y no se solapa con otro espacio reservable, y pulsa **Publicar unidad**.
 
@@ -84,7 +84,7 @@ El catálogo es lo que la ciudadanía puede reservar. Cada **instalación** (un 
 
     ![Página pública «Elige una instalación» del Concello de Valdeira con «Centro Deportivo O Souto» señalado](../capturas/cu-04/11-catalogo-publico.webp)
 
-    *La tarjeta de la instalación muestra la dirección de su ficha y «1 espacio reservable». Desde aquí la ciudadanía sigue el recorrido de reserva.*
+    *La cabecera muestra el escudo y el nombre del municipio. La tarjeta de la instalación muestra la dirección de su ficha y «1 espacio reservable»; desde aquí la ciudadanía sigue el recorrido de reserva.*
 
 ### Si algo no sale como se espera
 
@@ -130,7 +130,7 @@ Si quitas franjas en una unidad que ya tiene reservas confirmadas en esos horari
 
 ![Pestaña «Horarios» de una unidad con reservas, sin franjas semanales, y el mensaje «La operación entra en conflicto con el estado actual» señalado](../capturas/cu-04/17-horario-con-reservas.webp)
 
-*Se han quitado todas las franjas semanales y solo quedan las excepciones de fechas. Al guardar aparece el mensaje señalado y el horario guardado no cambia.*
+*Se han quitado todas las franjas semanales y solo quedan las excepciones de fechas, cada una con su «Quitar excepción». Al guardar aparece el mensaje señalado y el horario guardado no cambia.*
 
 #### Quieres dejar de ofrecer una unidad
 
@@ -160,7 +160,7 @@ La instalación y su unidad quedan en el catálogo con su ficha, sus normas y su
 
    ![Pantalla «Uso de los espacios» con el selector de periodo señalado y la sección «Lo más destacado»](../capturas/cu-05/01-uso-inicial.webp)
 
-   *Arriba están el periodo, el espacio, los ajustes de la analítica y «Descargar resumen». Debajo, «Lo más destacado» resume en frases la ocupación, el espacio y la franja con más demanda y el número de reservas.*
+   *Arriba están el periodo, el espacio, los ajustes de la analítica y «Descargar resumen». Debajo, «Lo más destacado» resume en frases cómo cambió la ocupación frente al periodo anterior de la misma duración, el espacio y la franja con más demanda y el número de reservas.*
 
 2. **Cambia el periodo.** Pulsa el selector de periodo. Puedes elegir un atajo (esta semana, este mes, el mes pasado, los últimos 30 días) o marcar el primer y el último día en el calendario.
 
@@ -174,13 +174,13 @@ La instalación y su unidad quedan en el catálogo con su ficha, sus normas y su
 
    ![Pantalla de uso con el periodo del mes pasado y la línea que lo confirma señalada](../capturas/cu-05/04-periodo-mes-pasado.webp)
 
-   *La pantalla se actualiza sola: la línea señalada confirma el periodo y la hora de los datos, y «Lo más destacado» compara ahora con el mes anterior a ese.*
+   *La pantalla se actualiza sola: la línea señalada confirma el periodo y la hora de los datos, y «Lo más destacado» compara ahora con el mes anterior completo.*
 
 3. **Lee el resumen y las secciones.** Desplázate por la pantalla. Cada sección compara con el periodo anterior cuando tiene sentido.
 
    ![Sección «Resumen» con ocupación, horas reservadas, reservas, cancelaciones y llegadas registradas](../capturas/cu-05/05-resumen.webp)
 
-   *Cada tarjeta muestra una cifra y, debajo, el cambio frente al periodo anterior, en verde si sube y en rojo si empeora. Las horas reservadas se acompañan de las horas ofertadas.*
+   *Cada tarjeta muestra una cifra y, debajo, el cambio frente al mes anterior: en verde si mejora y en rojo si empeora. Las horas reservadas se acompañan de las horas ofertadas y las llegadas, de las reservas ya finalizadas.*
 
    ![Sección «Evolución de la ocupación» con el gráfico del periodo y del periodo anterior](../capturas/cu-05/06-evolucion.webp)
 
@@ -188,25 +188,25 @@ La instalación y su unidad quedan en el catálogo con su ficha, sus normas y su
 
    ![Sección «Espacios» con la ocupación, horas, reservas, cancelaciones y tendencia de cada espacio por instalación](../capturas/cu-05/07-espacios.webp)
 
-   *Los espacios se agrupan por instalación. El texto superior explica los umbrales de «alta demanda» y «poco uso», y la nota final avisa de que un espacio sin horario ni reservas en el periodo no aparece en la tabla.*
+   *Los espacios se agrupan por instalación, cada uno con su ocupación, horas, reservas, cancelaciones y una pequeña línea de tendencia. El texto superior explica los umbrales de «alta demanda» y «poco uso», y la nota final avisa de que los espacios sin horario ni reservas en el periodo no aparecen en la tabla.*
 
    ![Sección «Cuándo hay más demanda» con la ocupación por día de la semana y hora](../capturas/cu-05/08-demanda.webp)
 
-   *Cuanto más oscura la casilla, más ocupada esa hora; «—» significa que no hubo horario ofertado, no que la ocupación fuera cero.*
+   *Cuanto más oscura la casilla, más ocupada esa hora. «—» significa que no hubo horario ofertado, no que la ocupación fuera cero.*
 
    ![Sección «¿Se cumplen las reservas?» con cancelaciones, antelación y llegadas registradas](../capturas/cu-05/09-cumplimiento.webp)
 
-   *La barra separa las reservas no canceladas, las canceladas por la persona y las canceladas por el ayuntamiento. La tarjeta de llegadas recuerda que mide lo que registra el personal, no la asistencia real.*
+   *La barra separa las reservas no canceladas, las canceladas por la persona y las canceladas por el ayuntamiento. La tabla de antelación muestra con cuánto tiempo se reservó, y la tarjeta de llegadas recuerda que mide lo que registra el personal con el código QR, no la asistencia real.*
 
-4. **Elige un espacio por su nombre.** Pulsa el campo **Espacio** y elige uno de la lista.
+4. **Elige un espacio por su nombre.** Pulsa el campo **Espacio**, escribe parte del nombre y elige el espacio en la lista.
 
-   ![Lista de espacios abierta, agrupada por instalación, con «Pista de tenis» señalada](../capturas/cu-05/10-elegir-espacio.webp)
+   ![Campo «Espacio» señalado con «tenis» escrito y la lista reducida a «Pista de tenis»](../capturas/cu-05/10-elegir-espacio.webp)
 
-   *La lista agrupa los espacios por instalación. Un espacio retirado del catálogo aparece con la marca «retirado».*
+   *Al escribir «tenis» la lista se reduce a los espacios cuyo nombre coincide, agrupados por instalación: aquí, «Pista de tenis» bajo «Complejo Deportivo A Fontela». Sin escribir nada, la lista muestra todos los espacios.*
 
    ![Pantalla de uso con el campo «Espacio» mostrando «Pista de tenis» señalado](../capturas/cu-05/11-un-espacio.webp)
 
-   *Toda la pantalla pasa a describir solo ese espacio, sin pulsar ningún otro botón. Para volver a todos, usa la «×» del campo.*
+   *Toda la pantalla pasa a describir solo ese espacio, sin pulsar ningún otro botón: las cifras de «Lo más destacado» son ya solo las de esa pista. Para volver a todos, usa la «×» del campo.*
 
 5. **Exporta las reservas.** Abre **Exportar reservas**. Elige el ámbito (todo el municipio o una unidad), el día inicial (incluido) y el final (excluido) y el formato: **Hoja de cálculo** o **Datos completos para otros sistemas**. Marca **Confirmo la descarga de datos del ámbito autorizado** y pulsa el botón de descarga.
 
@@ -280,13 +280,13 @@ Un convenio permite a varios municipios compartir instalaciones con unas condici
 
    ![Formulario «Nuevo convenio» completo con dos participantes, una unidad por municipio y el botón «Crear borrador» señalado](../capturas/cu-10/02-nuevo-convenio.webp)
 
-   *El convenio tiene acceso abierto y un máximo de 2 reservas por cuenta y semana. El texto bajo ese campo recuerda que cambiar de versión no reinicia los consumos; los datos de otros municipios se indican por su identificador, sin consultar sus datos privados.*
+   *El convenio tiene acceso abierto y un máximo de 2 reservas por cuenta y semana. El texto bajo ese campo recuerda que cambiar de versión no reinicia los consumos. Cada participante se indica por su identificador y, al escribirlo, el formulario muestra el nombre del municipio y, bajo las unidades, sus nombres («Pista de tenis», «Pista polideportiva · Polideportivo do Porto»).*
 
 3. **Aprueba tu parte.** El borrador se abre en su página. Al final, marca **Confirmo esta versión y mis unidades** y pulsa **Aprobar versión**.
 
    ![Página de la versión 1 en «BORRADOR», con el bloque «Aprobar participación» y el botón «Aprobar versión» señalado](../capturas/cu-10/03-aprobar-valdeira.webp)
 
-   *La página resume las condiciones y los participantes; ninguno tiene aún aprobación registrada. El texto aclara que la aprobación comprende esta versión y las unidades de tu municipio, y que no activa el convenio.*
+   *La página resume las condiciones y los participantes, cada uno con su nombre y sus unidades («Pista de tenis», «Pista polideportiva · Polideportivo do Porto»); ninguno tiene aún aprobación registrada. El texto aclara que la aprobación comprende esta versión y las unidades de tu municipio, y que no activa el convenio.*
 
 4. **El otro municipio aprueba la misma versión.** Su administración ve el convenio en su lista, lo abre y aprueba su parte del mismo modo.
 
@@ -296,13 +296,13 @@ Un convenio permite a varios municipios compartir instalaciones con unas condici
 
    ![Versión 1 vista desde Ribasanta, con la aprobación de Valdeira registrada y el botón «Aprobar versión» señalado](../capturas/cu-10/05-aprobar-ribasanta.webp)
 
-   *En la ficha ya consta «Aprobada» para el primer municipio; el segundo confirma su unidad y pulsa el botón señalado.*
+   *Vista desde Ribasanta, la ficha muestra «Aprobada» con la fecha para el Concello de Valdeira; Ribasanta confirma su «Pista polideportiva» y pulsa el botón señalado.*
 
 5. **Activa el convenio.** Con todas las aprobaciones, la versión pasa a **APROBADO** y aparece **Activar convenio**. Escribe la **Referencia de revisión jurídica**, marca **Confirmo la activación de esta versión** y pulsa **Activar versión**.
 
    ![Versión 1 en «APROBADO» con las dos aprobaciones, la referencia «Informe de Secretaría 2026/114» y el botón «Activar versión» señalado](../capturas/cu-10/06-activar.webp)
 
-   *El texto explica que la activación concilia las reservas existentes sin cancelarlas ni reiniciar la cuota, y que la referencia identifica una revisión ya hecha, no la sustituye.*
+   *Las dos participaciones están aprobadas: la propia figura como «Aprobada por Marta Couceiro». El texto explica que la activación concilia las reservas existentes sin cancelarlas ni reiniciar la cuota, y que la referencia identifica una revisión ya hecha, no la sustituye.*
 
    ![Versión 1 con la etiqueta «ACTIVADO» señalada](../capturas/cu-10/07-activado.webp)
 
@@ -316,7 +316,7 @@ Cualquier participante puede suspenderlo con un motivo. En la versión activa, e
 
 ![Versión activa vista desde Ribasanta con el motivo «Obras en el polideportivo durante el invierno» y el botón «Suspender convenio» señalado](../capturas/cu-10/08-suspender.webp)
 
-*El texto avisa de que la suspensión afecta a todo el convenio: impide nuevas reservas y reprogramaciones, conserva las confirmadas y no reabre las unidades al público.*
+*La página muestra la referencia de la revisión jurídica y quién aprobó por Ribasanta. El texto avisa de que la suspensión afecta a todo el convenio: impide nuevas reservas y reprogramaciones, conserva las confirmadas y no reabre las unidades al público.*
 
 ![Versión 1 con la etiqueta «SUSPENDIDO» señalada y el aviso para reactivar](../capturas/cu-10/09-suspendido.webp)
 
@@ -328,7 +328,7 @@ Tras suspender o vencer el convenio, cada unidad sigue vinculada a él. Para que
 
 ![Pantalla «Vinculación de la unidad» con el motivo «Reapertura de la pista al público general» y el botón «Retirar vinculación» señalado](../capturas/cu-10/10-vinculacion.webp)
 
-*La pantalla aclara que retirar la vinculación no publica la unidad ni cambia horarios, reservas o bloqueos, y que las reservas confirmadas se mantienen.*
+*La pantalla indica el convenio y la versión que vinculan la unidad, y aclara que retirar la vinculación no publica la unidad ni cambia horarios, reservas o bloqueos, y que las reservas confirmadas se mantienen.*
 
 ![Pantalla «Vinculación de la unidad» con el mensaje «Sin vinculación restrictiva registrada.» señalado](../capturas/cu-10/11-vinculacion-retirada.webp)
 
@@ -340,7 +340,7 @@ Una versión aprobada no se edita: se crea otra. En la versión, pulsa **Crear n
 
 ![Formulario «Nueva versión del convenio» con los datos de la versión 1 y el botón «Crear versión» señalado](../capturas/cu-10/12-nueva-version.webp)
 
-*El aviso superior indica la versión de partida y que la nueva no hereda aprobaciones ni activa capacidades. El nombre y la zona no cambian.*
+*El formulario parte de los datos de la versión 1, con las horas de vigencia, los participantes por su nombre y los nombres de sus unidades. El aviso superior indica que la nueva versión no hereda aprobaciones ni activa capacidades; el nombre y la zona no cambian.*
 
 ![Versión 2 en «BORRADOR» sin aprobaciones registradas](../capturas/cu-10/13-version-2-borrador.webp)
 
@@ -356,7 +356,7 @@ Aprobar no activa: hacen falta las aprobaciones de todos los participantes. Mien
 
 ![Versión 2 en «BORRADOR» con la aprobación de Valdeira registrada y «Sin aprobación registrada.» señalado en el otro municipio](../capturas/cu-10/15-falta-aprobacion.webp)
 
-*Valdeira ya ha aprobado la versión 2; el recuadro marca el participante que aún no lo ha hecho. La sección de activación no aparece hasta que apruebe.*
+*Valdeira ya ha aprobado la versión 2 («Aprobada por Marta Couceiro»); el recuadro marca el participante que aún no lo ha hecho. La sección de activación no aparece hasta que apruebe.*
 
 ### Resultado
 
@@ -424,11 +424,11 @@ En **Gestores**, pulsa sobre la persona para ver el detalle de su concesión. Es
 
 ![Pestaña «Gestores» con el detalle de la concesión de Nerea Pazos Rey, el motivo escrito y el botón «Revocar concesión» señalado](../capturas/cu-12/09-revocar-concesion.webp)
 
-*El detalle muestra quién invitó, cuándo se aceptó y los permisos concedidos. «Sustituir permisos» permite cambiarlos; la persona debe aceptar la nueva invitación.*
+*El detalle muestra quién invitó, cuándo se aceptó y los permisos concedidos, con el nombre de la unidad cuando el permiso se limita a una («Unidad: Pista central»). «Sustituir permisos» permite cambiarlos; la persona debe aceptar la nueva invitación.*
 
-![Pantalla con el mensaje «No tienes acceso a este municipio.» señalado y los botones «Reintentar» y «Volver a Gestión»](../capturas/cu-12/10-acceso-retirado.webp)
+![Pantalla «Gestión municipal» con el mensaje «No tienes acceso a este municipio.» señalado y el botón «Volver a Gestión»](../capturas/cu-12/10-acceso-retirado.webp)
 
-*Después de la revocación, la persona ya no puede abrir la gestión del municipio.*
+*Después de la revocación, la persona ya no puede abrir la gestión del municipio: su menú solo conserva el uso personal y la pantalla ofrece volver a Gestión.*
 
 #### Quieres dejar la administración, pero eres el único responsable
 
@@ -645,7 +645,7 @@ La administración municipal da al municipio su nombre visible, su logo y su ide
 
    ![Pantalla «Apariencia» con el nombre visible «Ribasanta do Mar» escrito y el botón «Guardar nombre» señalado](../capturas/cu-23/01-nombre-visible.webp)
 
-   *La sección «Identidad» indica el nombre oficial de alta y que el nombre visible aparece en toda la aplicación. El texto de la página recuerda que cada persona solo elige si lo ve en claro u oscuro.*
+   *La sección «Identidad» indica el nombre oficial de alta y que el nombre visible aparece en toda la aplicación; debajo se ve el logo actual dentro de su marco. El texto de la página recuerda que cada persona solo elige si lo ve en claro u oscuro.*
 
    ![Pantalla «Apariencia» con el nuevo nombre ya visible en el menú lateral y en la barra superior](../capturas/cu-23/02-nombre-guardado.webp)
 
@@ -655,7 +655,7 @@ La administración municipal da al municipio su nombre visible, su logo y su ide
 
    ![Fila «Logo para fondo oscuro» con la imagen subida y los botones «Cambiar» y «Quitar» señalados](../capturas/cu-23/03-logo-oscuro.webp)
 
-   *La vista previa sobre fondo oscuro confirma que el logo se ha guardado. Si no se sube, en modo oscuro se usa el logo principal.*
+   *La vista previa sobre fondo oscuro, ajustada a su marco, confirma que el logo se ha guardado. Si no se sube, en modo oscuro se usa el logo principal.*
 
 3. **Elige un tema del catálogo.** En **Tema**, pulsa el tema actual y elige otro de la lista.
 
@@ -687,7 +687,7 @@ La administración municipal da al municipio su nombre visible, su logo y su ide
 
    ![Página pública «Elige una instalación» de Ribasanta do Mar con el tema azul aplicado](../capturas/cu-23/09-pagina-publica.webp)
 
-   *Una persona sin sesión ya ve el nuevo nombre en la cabecera y en el recorrido de reserva, y el fondo y los botones del tema elegido.*
+   *Una persona sin sesión ya ve el escudo y el nuevo nombre en la cabecera y en el recorrido de reserva, y el fondo y los botones del tema elegido.*
 
 ### Si algo no sale como se espera
 
