@@ -116,11 +116,14 @@ test("the web image serves the bundle with strict headers and proxies the API", 
       "object-src 'none'",
       "base-uri 'none'",
       "frame-ancestors 'none'",
+      "require-trusted-types-for 'script'",
+      "trusted-types default",
     ])
       assert.ok(policy.includes(directive), directive);
     assert.ok(!policy.includes("unsafe-eval"));
     assert.ok(!/script-src[^;]*unsafe-inline/.test(policy));
     assert.equal(index.headers.get("x-content-type-options"), "nosniff");
+    assert.equal(index.headers.get("x-frame-options"), "DENY");
     assert.equal(index.headers.get("referrer-policy"), "no-referrer");
     assert.equal(
       index.headers.get("cross-origin-opener-policy"),
@@ -225,6 +228,10 @@ test("the web image serves the bundle with strict headers and proxies the API", 
       "default-src 'none'; frame-ancestors 'none'",
     );
     assert.equal(health.headers.get("x-content-type-options"), "nosniff");
+    assert.equal(
+      health.headers.get("cross-origin-resource-policy"),
+      "same-origin",
+    );
     const forwarded = (await health.json()) as {
       url: string;
       forwardedFor: string | null;
