@@ -331,9 +331,17 @@ test("municipal security withdrawal bypasses handover without closing the global
   await page.goto(
     `/administracion/${f.administrator.tenant}/personal/seguridad`,
   );
+  // The administrator chooses its own account among the municipal staff.
   await page
-    .getByLabel(/Identificador de (cuenta|conta)/)
-    .fill(f.administrator.accountId);
+    .getByRole("combobox", {
+      name: /Persona o invitación|Persoa ou invitación/,
+    })
+    .click();
+  await page
+    .getByRole("option")
+    .filter({ hasText: f.administrator.email })
+    .filter({ hasText: /\((tu cuenta|a túa conta)\)/ })
+    .click();
   expect(await accessibilityViolations(page)).toEqual([]);
   await page.screenshot({
     path: `test-results/staff-security-${info.project.name}.png`,

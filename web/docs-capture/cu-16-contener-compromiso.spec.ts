@@ -103,7 +103,15 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
   const tab = admin.getByRole("link", { name: "Retirada por seguridad" });
   await cu.shot(admin, "gestor-habilitado", { target: tab });
   await tab.click();
-  await admin.getByLabel("Identificador de cuenta").fill(damian.accountId);
+  // The administrator picks the manager among the municipal staff.
+  await admin
+    .getByRole("combobox", { name: "Persona o invitación", exact: true })
+    .click();
+  await admin
+    .getByRole("option")
+    .filter({ hasText: "Damián Rial Costa" })
+    .filter({ hasText: "gestión" })
+    .click();
   await admin
     .getByLabel("Motivo", { exact: true })
     .fill("Sesión iniciada desde un equipo desconocido");
@@ -144,7 +152,10 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
   const suspendLink = page.getByRole("link", { name: "Suspender identidad" });
   await cu.shot(page, "menu-suspender", { target: suspendLink });
   await suspendLink.click();
-  await page.getByLabel("Identificador de cuenta").fill(iria.accountId);
+  // The operator names the compromised account by its exact email.
+  await page
+    .getByRole("textbox", { name: "Correo de la cuenta", exact: true })
+    .fill(iria.email);
   await page
     .getByLabel("Motivo", { exact: true })
     .fill("Credenciales de la persona administradora expuestas");

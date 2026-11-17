@@ -3,13 +3,15 @@ import { DatabaseError, type Pool, type PoolClient } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
+import { invitationAddress } from "./invitation-address.ts";
 import { platformAccountNames } from "./platform-account-names.ts";
 import { requireRecentMfa } from "./reauthentication.ts";
 
 export const privacyOperations = ["PRIVACY_READ", "PRIVACY_EXECUTE"] as const;
 export type PrivacyOperation = (typeof privacyOperations)[number];
+/** A global privacy invitation is addressed to an email, never looked up. */
 export interface GlobalPrivacyInvitationInput {
-  accountId: string;
+  email: string;
   permissions: PrivacyOperation[];
   expiresAt: string;
   roleExpiresAt?: string | null;
@@ -55,10 +57,9 @@ export async function inviteGlobalPrivacy(
   input: GlobalPrivacyInvitationInput,
 ) {
   requireRecentMfa(actor);
+  const recipient = invitationAddress(input.email);
   const rationale = reason(input.reason);
   if (
-    !input.accountId ||
-    input.accountId.length > 128 ||
     !Number.isFinite(Date.parse(input.expiresAt)) ||
     (input.roleExpiresAt != null &&
       !Number.isFinite(Date.parse(input.roleExpiresAt))) ||
@@ -71,25 +72,31 @@ export async function inviteGlobalPrivacy(
   )
     throw new HttpError("INVALID_INPUT");
   const invitationId = randomUUID();
-  return command(
-    pool,
-    { accountId: actor.accountId, tenantId: null },
-    async (client) => {
-      const result = await client.query<{ outcome: string }>(
-        "SELECT domain.invite_global_privacy($1,$2,$3,$4,$5,$6) AS outcome",
-        [
-          input.accountId,
-          input.expiresAt,
-          input.roleExpiresAt ?? null,
-          input.permissions,
-          rationale,
-          invitationId,
-        ],
-      );
-      outcome(result.rows[0]?.outcome);
-      return { invitationId };
-    },
-  );
+  try {
+    return await command(
+      pool,
+      { accountId: actor.accountId, tenantId: null },
+      async (client) => {
+        const result = await client.query<{ outcome: string }>(
+          "SELECT domain.invite_global_privacy($1,$2,$3,$4,$5,$6) AS outcome",
+          [
+            recipient,
+            input.expiresAt,
+            input.roleExpiresAt ?? null,
+            input.permissions,
+            rationale,
+            invitationId,
+          ],
+        );
+        outcome(result.rows[0]?.outcome);
+        return { invitationId };
+      },
+    );
+  } catch (error) {
+    if (error instanceof DatabaseError && error.code === "23514")
+      throw new HttpError("INVALID_INPUT");
+    throw error;
+  }
 }
 
 export async function acceptGlobalPrivacy(
@@ -148,7 +155,8 @@ export async function listGlobalPrivacyInvitations(
       async (client) => {
         const result = await client.query<{
           id: string;
-          account_id: string;
+          account_id: string | null;
+          recipient_email: string | null;
           invited_by: string;
           permissions: PrivacyOperation[];
           reason: string;
@@ -173,7 +181,10 @@ export async function listGlobalPrivacyInvitations(
               ? {}
               : {
                   accountId: row.account_id,
-                  accountName: names.get(row.account_id) ?? null,
+                  recipientEmail: row.recipient_email,
+                  accountName: row.account_id
+                    ? (names.get(row.account_id) ?? null)
+                    : null,
                   invitedBy: row.invited_by,
                   invitedByName: names.get(row.invited_by) ?? null,
                 }),

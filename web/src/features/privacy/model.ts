@@ -63,6 +63,22 @@ export const families: {
     municipal: false,
   },
 ];
+/**
+ * Families whose record reference in the municipal scope is the account
+ * identifier itself: the municipal profile and the authority set of a person.
+ */
+export const accountKeyedFamily = (category: string) =>
+  category === "MUNICIPAL_PROFILE" || category === "AUTHORITY";
+/**
+ * Privacy permissions never open the municipal directory: listing linked
+ * people requires a current administrator of that municipality. Only when the
+ * same actor already has that role can a privacy form offer the list, and the
+ * global scope has no directory at all.
+ */
+export const directoryAvailable = (scope: {
+  global: boolean;
+  administrator: boolean;
+}) => !scope.global && scope.administrator;
 export const explicitPrivacy = (
   permissions: { operation: string; unitId: string | null }[],
   operation: string,

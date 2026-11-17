@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
+import { invitationAddressSchema } from "./invitation-address.ts";
 import {
   acceptOperatorInvitation,
   inviteOperator,
@@ -54,7 +55,7 @@ export async function registerOperatorLifecycleRoutes(
   config: AuthConfiguration,
 ) {
   const actor = createRequestActor(pool, auth, config);
-  app.post<{ Body: { accountId: string; expiresAt: string } }>(
+  app.post<{ Body: { email: string; expiresAt: string } }>(
     "/api/platform/operator-invitations",
     {
       schema: {
@@ -62,13 +63,13 @@ export async function registerOperatorLifecycleRoutes(
         tags: ["Identity"],
         security,
         description:
-          "Operador con MFA reciente: invita a una cuenta activa y verificada. No concede el permiso hasta que el destinatario acepte con MFA. Origin debe coincidir con AUTH_ORIGIN.",
+          "Operador con MFA reciente: invita a un correo, normalizado, sin buscar cuentas; la respuesta es la misma exista o no una cuenta con él. Rechaza el correo del propio operador y un correo con otra invitación pendiente. Solo puede aceptarla, con MFA reciente, la cuenta cuyo correo verificado coincida al aceptar; no concede el permiso hasta entonces. Origin debe coincidir con AUTH_ORIGIN.",
         body: {
           type: "object",
           additionalProperties: false,
-          required: ["accountId", "expiresAt"],
+          required: ["email", "expiresAt"],
           properties: {
-            accountId,
+            email: invitationAddressSchema,
             expiresAt: { type: "string", format: "date-time" },
           },
         },
@@ -90,7 +91,7 @@ export async function registerOperatorLifecycleRoutes(
         tags: ["Identity"],
         security,
         description:
-          "El destinatario acepta su invitación vigente con MFA reciente. El permiso es indefinido. No admite otro titular ni un rol elegido por el cliente.",
+          "El destinatario acepta su invitación vigente con MFA reciente: la cuenta cuyo correo verificado coincide con el de la invitación en ese momento, o la cuenta a la que se dirigía una invitación anterior a las invitaciones por correo. El permiso es indefinido. No admite otro titular ni un rol elegido por el cliente.",
         params: invitationParams,
         body: { type: "object", additionalProperties: false, maxProperties: 0 },
         response: { ...errors, 200: accountResult },
@@ -165,8 +166,8 @@ export async function registerOperatorLifecycleRoutes(
           tags: ["Identity"],
           security,
           description: own
-            ? "Invitaciones del usuario autenticado. No necesita tener permisos ni MFA configurado para consultar su invitación."
-            : "Operador con MFA reciente: consulta invitaciones de plataforma, sin acceder a actividad municipal.",
+            ? "Invitaciones del usuario autenticado: las dirigidas a su correo verificado actual y las anteriores dirigidas a su cuenta. No necesita tener permisos ni MFA configurado para consultar su invitación."
+            : "Operador con MFA reciente: consulta invitaciones de plataforma, sin acceder a actividad municipal. recipientEmail es el correo de una invitación sin aceptar; accountId, la cuenta que la aceptó o a la que se dirigía una invitación anterior. Ambos son nulos cuando la conservación ya retiró el correo.",
           querystring: {
             type: "object",
             additionalProperties: false,
@@ -194,6 +195,7 @@ export async function registerOperatorLifecycleRoutes(
                         ? []
                         : [
                             "accountId",
+                            "recipientEmail",
                             "accountName",
                             "invitedBy",
                             "invitedByName",
@@ -209,7 +211,11 @@ export async function registerOperatorLifecycleRoutes(
                       ...(own
                         ? {}
                         : {
-                            accountId,
+                            accountId: { ...accountId, nullable: true },
+                            recipientEmail: {
+                              ...invitationAddressSchema,
+                              nullable: true,
+                            },
                             accountName: accountNameSchema,
                             invitedBy: accountId,
                             invitedByName: accountNameSchema,

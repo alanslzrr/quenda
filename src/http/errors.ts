@@ -124,8 +124,8 @@ const messages = {
     gl: "O convenio non admite esta operación no seu estado actual. Recarga para revisar a súa versión, as súas aprobacións e a súa vixencia antes de repetila.",
   },
   ROLE_ALREADY_ACTIVE: {
-    es: "La cuenta ya tiene este rol o una invitación pendiente para él. Recarga para ver su estado actual.",
-    gl: "A conta xa ten este rol ou unha invitación pendente para el. Recarga para ver o seu estado actual.",
+    es: "La cuenta ya tiene este rol o la dirección ya tiene una invitación pendiente para él. Recarga para ver su estado actual.",
+    gl: "A conta xa ten este rol ou o enderezo xa ten unha invitación pendente para el. Recarga para ver o seu estado actual.",
   },
   MUNICIPALITY_ALREADY_INITIALIZED: {
     es: "Este ayuntamiento ya completó su alta inicial y su invitación inicial no se puede sustituir. Si no queda ningún responsable habilitado, usa la recuperación de responsable.",

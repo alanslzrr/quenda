@@ -116,8 +116,8 @@ test("platform operators invite revoke and hand over authority without inheritin
     });
     await page.goto(`${view}/invitar-operador`);
     await page
-      .getByLabel(/Identificador de (cuenta|conta)/)
-      .fill(f.recipient.accountId);
+      .getByLabel(/Correo del destinatario|Correo do destinatario/)
+      .fill(f.recipient.email);
     await deadline(page);
     await confirm(page, "Enviar invitación");
     const pending = await recipient.request.get("/api/me/operator-invitations");
@@ -126,10 +126,17 @@ test("platform operators invite revoke and hand over authority without inheritin
     );
     expect(invitation).toBeTruthy();
     await page.goto(`${view}/invitaciones`);
+    // Until accepted, the invitation is named by the address it was sent to.
     const card = page
-      .getByRole("region")
-      .filter({ has: page.getByText(invitation.invitationId, { exact: true }) })
-      .filter({ hasNot: page.getByRole("navigation") });
+      .getByRole("region", {
+        name: new RegExp(
+          `^${literal(f.recipient.email)} \\(correo, (?:sin|sen) aceptar\\)$`,
+        ),
+      })
+      .filter({
+        has: page.getByText(invitation.invitationId, { exact: true }),
+      });
+    await expect(card).toBeVisible();
     await card.getByRole("link", { name: /^Revocar$|^Revogar$/ }).click();
     await revoke(page);
     expect(
@@ -144,8 +151,8 @@ test("platform operators invite revoke and hand over authority without inheritin
     ).toBe("REVOKED");
     await page.goto(`${view}/invitar-operador`);
     await page
-      .getByLabel(/Identificador de (cuenta|conta)/)
-      .fill(f.recipient.accountId);
+      .getByLabel(/Correo del destinatario|Correo do destinatario/)
+      .fill(f.recipient.email);
     await deadline(page);
     await confirm(page, "Enviar invitación");
     await accept(recipient, "Operación de plataforma");
@@ -163,8 +170,8 @@ test("platform operators invite revoke and hand over authority without inheritin
     ).toBeVisible();
     await page.goto(`${view}/invitar-privacidad`);
     await page
-      .getByLabel(/Identificador de (cuenta|conta)/)
-      .fill(f.recipient.accountId);
+      .getByLabel(/Correo del destinatario|Correo do destinatario/)
+      .fill(f.recipient.email);
     await deadline(page);
     await page
       .getByRole("checkbox", {
@@ -330,8 +337,8 @@ test("municipal onboarding replacement security suspension and recovery preserve
     await expect(page.getByRole("status")).toHaveCount(0);
     await page.goto(`${view}/suspender`);
     await page
-      .getByLabel(/Identificador de (cuenta|conta)/)
-      .fill(f.recipient.accountId);
+      .getByRole("textbox", { name: /Correo de la cuenta|Correo da conta/ })
+      .fill(f.recipient.email);
     await page
       .getByLabel("Motivo", { exact: true })
       .fill("Identidad sintética comprometida");

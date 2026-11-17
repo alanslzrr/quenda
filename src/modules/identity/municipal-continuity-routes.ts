@@ -5,6 +5,7 @@ import { invitationAddressSchema } from "./invitation-address.ts";
 import {
   makeAdministratorIndefinite,
   recoverMunicipalAdministrator,
+  revokeAddressInvitationsForSecurity,
   revokeMunicipalAccessForSecurity,
 } from "./municipal-continuity.ts";
 import { createRequestActor } from "./request-actor.ts";
@@ -86,6 +87,50 @@ export async function registerMunicipalContinuityRoutes(
         ),
     );
   }
+  app.post<{
+    Params: { tenantId: string };
+    Body: { email: string; reason: string };
+  }>(
+    "/api/municipalities/:tenantId/invitation-addresses/revoke-for-security",
+    {
+      schema: {
+        operationId: "revokeAddressInvitationsForSecurity",
+        description:
+          "Administrador municipal con MFA reciente: revoca por seguridad, con motivo, las invitaciones de administrador y gestor de este municipio pendientes y dirigidas a ese correo, que nadie ha aceptado todavía. No busca ninguna cuenta: 404 indica solo que no había invitaciones pendientes a esa dirección. Para una cuenta que ya tiene permisos, usar revoke-access-for-security.",
+        tags: ["Identity"],
+        security: [{ quendaSession: [] }],
+        params: {
+          type: "object",
+          additionalProperties: false,
+          required: ["tenantId"],
+          properties: { tenantId: uuid },
+        },
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["email", "reason"],
+          properties: { email: invitationAddressSchema, reason },
+        },
+        response: {
+          ...errors,
+          200: {
+            type: "object",
+            additionalProperties: false,
+            required: ["tenantId", "email"],
+            properties: { tenantId: uuid, email: invitationAddressSchema },
+          },
+        },
+      },
+    },
+    async (request, reply) =>
+      revokeAddressInvitationsForSecurity(
+        pool,
+        await actor(request, reply),
+        request.params.tenantId,
+        request.body.email,
+        request.body.reason,
+      ),
+  );
   app.post<{
     Params: { tenantId: string };
     Body: {

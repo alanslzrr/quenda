@@ -2,13 +2,22 @@ import { useState } from "react";
 import { usePreferences } from "../../app/preferences-provider";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
+import { AccountSelect } from "../municipal/account-select";
 import { Reason } from "../municipal/shared";
 import { usePrivacyScope } from "./context";
-import { type Category, families } from "./model";
-export function CategoryField() {
+import { accountKeyedFamily, type Category, families } from "./model";
+export function CategoryField({
+  value,
+  onChange,
+}: {
+  value?: string;
+  onChange?: (value: string) => void;
+} = {}) {
   const { global } = usePrivacyScope();
   const { locale, t } = usePreferences();
-  const [selected, setSelected] = useState("");
+  const [own, setOwn] = useState("");
+  const selected = value ?? own;
+  const setSelected = onChange ?? setOwn;
   const anchors: Record<Category, string> = {
     COMMUNICATIONS: t(
       "Cómputo desde la última actividad del evento, aviso, correo e intentos.",
@@ -114,8 +123,105 @@ export function Authorization() {
     </>
   );
 }
-export function TargetField() {
+/**
+ * The account a privacy form refers to. An actor who is also an administrator
+ * of this municipality may pick it among the people linked to it, a list that
+ * role already reads; otherwise, and always in the global scope, the exact
+ * identifier is typed. A privacy permission alone never opens that list.
+ */
+export function SubjectField({
+  name,
+  label,
+  maxLength = 128,
+  value,
+  onChange,
+}: {
+  name: string;
+  /** Label of the exact identifier field. */
+  label: string;
+  maxLength?: number;
+  value?: string;
+  onChange?: (value: string) => void;
+}) {
+  const { directory, global } = usePrivacyScope();
   const { t } = usePreferences();
+  const [mode, setMode] = useState(directory ? "directory" : "exact");
+  const listed = directory && mode === "directory";
+  return (
+    <>
+      {directory && (
+        <Select
+          label={t("Cómo indicar la cuenta", "Como indicar a conta")}
+          value={mode}
+          onValueChange={(next) => {
+            setMode(next);
+            onChange?.("");
+          }}
+          options={[
+            {
+              value: "directory",
+              label: t(
+                "Elegir entre las personas vinculadas al municipio",
+                "Escoller entre as persoas vinculadas ao municipio",
+              ),
+            },
+            {
+              value: "exact",
+              label: t(
+                "Escribir el identificador exacto",
+                "Escribir o identificador exacto",
+              ),
+            },
+          ]}
+        />
+      )}
+      {listed ? (
+        <AccountSelect
+          key="directory"
+          name={name}
+          label={t("Persona vinculada", "Persoa vinculada")}
+          value={value}
+          onChange={onChange}
+        />
+      ) : (
+        <Input
+          key="exact"
+          required
+          name={name}
+          maxLength={maxLength}
+          label={label}
+          value={value}
+          onChange={onChange && ((e) => onChange(e.target.value))}
+        />
+      )}
+      {!directory && (
+        <p>
+          {global
+            ? t(
+                "No existe un directorio global de cuentas: indica el identificador exacto que consta en la solicitud o en el expediente.",
+                "Non existe un directorio global de contas: indica o identificador exacto que consta na solicitude ou no expediente.",
+              )
+            : t(
+                "El permiso de privacidad no da acceso al listado de personas del municipio, que corresponde a su administración: indica el identificador exacto.",
+                "O permiso de privacidade non dá acceso á listaxe de persoas do municipio, que corresponde á súa administración: indica o identificador exacto.",
+              )}
+        </p>
+      )}
+    </>
+  );
+}
+export function TargetField({ category }: { category?: string } = {}) {
+  const { t } = usePreferences();
+  const { directory } = usePrivacyScope();
+  if (directory && category && accountKeyedFamily(category))
+    return (
+      <SubjectField
+        key={category}
+        name="targetKey"
+        maxLength={500}
+        label={t("Referencia del registro", "Referencia do rexistro")}
+      />
+    );
   return (
     <>
       <Input

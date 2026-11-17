@@ -170,7 +170,7 @@ test("personal data access is self-service or explicitly scoped, bounded and aud
       exportGrant.invitationId,
     );
     const globalGrant = await inviteGlobalPrivacy(domain, actor("operator"), {
-      accountId: "global-reader",
+      email: "global-reader@example.test",
       permissions: ["PRIVACY_READ"],
       expiresAt: expiry(),
       reason: "Global privacy access",

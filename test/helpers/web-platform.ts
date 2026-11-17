@@ -24,7 +24,7 @@ export async function seedPlatformBrowser(
     mfaVerifiedAt: new Date(),
   });
   const invitation = await inviteOperator(domain, actor(issuer), {
-    accountId: operator.accountId,
+    email: operator.email,
     expiresAt: new Date(Date.now() + 86400000).toISOString(),
   });
   await acceptOperatorInvitation(

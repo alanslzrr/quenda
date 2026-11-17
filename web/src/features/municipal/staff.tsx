@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams } from "react-router";
 import { textField } from "../../app/action";
 import { announce } from "../../app/announce";
+import { ApiError } from "../../app/api";
 import { localDateTime } from "../../app/dates";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
@@ -10,10 +11,10 @@ import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
-import { Input } from "../../ui/input/input";
 import { SectionNav } from "../../ui/section-nav/section-nav";
+import { Select } from "../../ui/select/select";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
-import { AccountLabel } from "./account-label";
+import { AccountLabel, accountText } from "./account-label";
 import styles from "./municipal.module.css";
 import { UnitName } from "./names";
 import { ManagementPage } from "./page";
@@ -34,6 +35,8 @@ import {
   invitationEvent,
   invitationRecipient,
   type StaffInvitation,
+  securityCandidates,
+  securityWithdrawalRequest,
   staffOperations,
 } from "./staff-model";
 
@@ -472,12 +475,46 @@ function Recipient({ item }: { item: StaffInvitation }) {
     </span>
   );
 }
+/**
+ * The administrator picks someone from its own staff tables: an account that
+ * holds or is invited to authority here, or the address of a pending
+ * invitation. No other account can be named, and no directory is consulted.
+ */
 function SecurityWithdrawal() {
   const m = useMunicipality();
   const { t } = usePreferences();
   const { account } = useSession();
   const saved = useAuthoritySaved();
-  const [target, setTarget] = useState("");
+  const administrators = useMunicipalPages<Administrator>(
+    `${endpoint(m.id)}/administrators`,
+  );
+  const administratorInvitations = useMunicipalPages<StaffInvitation>(
+    `${endpoint(m.id)}/administrator-invitations`,
+  );
+  const managerInvitations = useMunicipalPages<StaffInvitation>(
+    `${endpoint(m.id)}/manager-invitations`,
+  );
+  const queries = [
+    administrators,
+    administratorInvitations,
+    managerInvitations,
+  ];
+  const [selected, setSelected] = useState("");
+  const rows = <T,>(q: { data?: { pages: { items: T[] }[] } }) =>
+    q.data?.pages.flatMap((p) => p.items) ?? [];
+  const candidates = securityCandidates({
+    administrators: rows(administrators),
+    administratorInvitations: rows(administratorInvitations),
+    managerInvitations: rows(managerInvitations),
+  });
+  const candidate = candidates.find((c) => c.value === selected);
+  const roles = {
+    administrator: t("administración", "administración"),
+    manager: t("gestión", "xestión"),
+    pending: t("invitación pendiente", "invitación pendente"),
+  };
+  const failed = queries.find((q) => q.isError);
+  const more = queries.filter((q) => q.hasNextPage);
   return (
     <section>
       <h2>
@@ -492,32 +529,121 @@ function SecurityWithdrawal() {
           "Retira inmediatamente todos os permisos e invitacións pendentes da conta neste municipio, incluso os do último administrador. Non suspende a conta global, non afecta a outros municipios nin cancela reservas. Se non queda un administrador habilitado, requírese recuperación controlada por un operador.",
         )}
       </p>
-      <MunicipalForm
-        path={`${endpoint(m.id)}/accounts/${encodeURIComponent(target.trim())}/revoke-access-for-security`}
-        danger
-        label={t(
-          "Retirar acceso por seguridad",
-          "Retirar acceso por seguridade",
+      <p>
+        {t(
+          "Elige entre quienes administran o gestionan este municipio o tienen una invitación pendiente. Una invitación por correo que nadie ha aceptado se identifica por su dirección: se revocan todas las pendientes a esa dirección en este municipio, sin consultar ninguna cuenta.",
+          "Escolle entre quen administra ou xestiona este municipio ou ten unha invitación pendente. Unha invitación por correo que ninguén aceptou identifícase polo seu enderezo: revóganse todas as pendentes a ese enderezo neste municipio, sen consultar ningunha conta.",
         )}
-        body={(d) => ({ reason: textField(d, "reason").trim() })}
-        onSaved={() => saved(target.trim() === account?.accountId)}
-      >
-        <Input
-          required
-          maxLength={128}
-          label={t("Identificador de cuenta", "Identificador de conta")}
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
+      </p>
+      {queries.some((q) => q.isPending) ? (
+        <Loading />
+      ) : failed ? (
+        <Failure
+          error={failed.error}
+          retry={() => {
+            for (const q of queries) void q.refetch();
+          }}
         />
-        <Reason />
-        <Checkbox
-          required
+      ) : (
+        <MunicipalForm
+          path={
+            candidate
+              ? securityWithdrawalRequest(endpoint(m.id), candidate, "").path
+              : `${endpoint(m.id)}/accounts/-/revoke-access-for-security`
+          }
+          danger
           label={t(
-            "Confirmo la retirada por seguridad en este municipio",
-            "Confirmo a retirada por seguridade neste municipio",
+            "Retirar acceso por seguridad",
+            "Retirar acceso por seguridade",
           )}
-        />
-      </MunicipalForm>
+          body={(d) => {
+            if (!candidate)
+              throw new ApiError(
+                400,
+                "INVALID_INPUT",
+                t(
+                  "Selecciona a quién retirar el acceso.",
+                  "Selecciona a quen retirar o acceso.",
+                ),
+              );
+            return securityWithdrawalRequest(
+              endpoint(m.id),
+              candidate,
+              textField(d, "reason"),
+            ).body;
+          }}
+          onSaved={async () => {
+            const own =
+              candidate?.kind === "account" &&
+              candidate.accountId === account?.accountId;
+            // The form already refreshes the staff tables; a withdrawn person
+            // leaves the list and must be chosen again to repeat anything.
+            await saved(own);
+          }}
+        >
+          <Select
+            name="target"
+            required
+            label={t("Persona o invitación", "Persoa ou invitación")}
+            placeholder={t("Selecciona a quién", "Selecciona a quen")}
+            value={selected}
+            onValueChange={setSelected}
+            options={candidates.map((c) => ({
+              value: c.value,
+              label:
+                c.kind === "account"
+                  ? `${accountText(
+                      c.accountLabel,
+                      t("Cuenta no disponible", "Conta non dispoñible"),
+                    )}${
+                      c.accountId === account?.accountId
+                        ? t(" (tu cuenta)", " (a túa conta)")
+                        : ""
+                    } — ${c.roles.map((r) => roles[r]).join(", ")}`
+                  : `${c.email} — ${t(
+                      "invitación por correo sin aceptar",
+                      "invitación por correo sen aceptar",
+                    )}`,
+            }))}
+          />
+          {!candidates.length && (
+            <p>
+              {t(
+                "No hay permisos ni invitaciones pendientes que retirar.",
+                "Non hai permisos nin invitacións pendentes que retirar.",
+              )}
+            </p>
+          )}
+          {more.length > 0 && (
+            <Button
+              type="button"
+              variant="secondary"
+              loading={more.some((q) => q.isFetchingNextPage)}
+              disabled={queries.some((q) => q.isFetching)}
+              onClick={() => {
+                for (const q of more) void q.fetchNextPage();
+              }}
+            >
+              {t("Cargar más personal", "Cargar máis persoal")}
+            </Button>
+          )}
+          {candidate?.kind === "account" && (
+            <Disclosure
+              title={t("Identificador técnico", "Identificador técnico")}
+            >
+              <code>{candidate.accountId}</code>
+            </Disclosure>
+          )}
+          <Reason />
+          <Checkbox
+            required
+            label={t(
+              "Confirmo la retirada por seguridad en este municipio",
+              "Confirmo a retirada por seguridade neste municipio",
+            )}
+          />
+        </MunicipalForm>
+      )}
     </section>
   );
 }

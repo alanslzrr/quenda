@@ -19,9 +19,9 @@
 
 El usuario crea una cuenta y verifica su correo antes de reservar. Al confirmar una reserva, Quenda crea la relación cuenta–municipio si no existe; el usuario no cumplimenta un perfil municipal adicional. Consultar el catálogo no crea esa relación.
 
-El operador de plataforma crea el municipio e invita a su primer administrador. El administrador municipal configura el catálogo y asigna permisos mediante invitaciones dirigidas al correo del destinatario y vinculadas a municipio, rol, vigencia y unidades reservables, cuando el ámbito esté limitado. Crear la invitación no revela si existe una cuenta con ese correo. La aceptación exige autenticar al destinatario, que su correo verificado coincida en ese momento con la dirección invitada y que la invitación siga vigente; no permite ampliar sus permisos.
+El operador de plataforma crea el municipio e invita a su primer administrador. El administrador municipal configura el catálogo y asigna permisos mediante invitaciones dirigidas al correo del destinatario y vinculadas a municipio, rol, vigencia y unidades reservables, cuando el ámbito esté limitado. Crear la invitación no revela si existe una cuenta con ese correo. La aceptación exige autenticar al destinatario, que su correo verificado coincida en ese momento con la dirección invitada y que la invitación siga vigente; no permite ampliar sus permisos. Las invitaciones de operador y de privacidad global que emite un operador siguen el mismo procedimiento.
 
-Los formularios envían datos a la API, que valida las entradas, comprueba los permisos y persiste los cambios en PostgreSQL. El directorio municipal contiene únicamente los perfiles vinculados a ese servicio.
+Los formularios envían datos a la API, que valida las entradas, comprueba los permisos y persiste los cambios en PostgreSQL. El directorio municipal contiene únicamente los perfiles vinculados a ese servicio y solo lo consulta su administración; los formularios eligen a las personas entre datos que quien actúa ya puede ver o piden un correo, y conservan el identificador exacto cuando no hay alternativa sin directorio ([referencias de cuenta](07_identidad_y_colaboracion.md#referencias-de-cuenta-en-los-formularios-del-personal)).
 
 **Justificación:** separar registro y asignación de permisos impide que una cuenta nueva obtenga acceso administrativo.
 
@@ -48,7 +48,7 @@ sequenceDiagram
   A-->>U: Acceso personal recuperado; requiere nuevo inicio de sesión
 ```
 
-Para un relevo ordinario, el sustituto acepta una invitación o ya dispone de un permiso válido. Antes de retirar al último responsable indefinido, otro debe quedar habilitado con permiso indefinido. La retirada por seguridad no espera al relevo; si no queda un responsable habilitado se utiliza la recuperación controlada, sin reaprovechar permisos ni invitaciones anteriores.
+Para un relevo ordinario, el sustituto acepta una invitación o ya dispone de un permiso válido. Antes de retirar al último responsable indefinido, otro debe quedar habilitado con permiso indefinido. La retirada por seguridad no espera al relevo; el administrador elige a la persona entre su personal y sus invitaciones pendientes, y una invitación por correo sin aceptar se retira por su dirección. Si no queda un responsable habilitado se utiliza la recuperación controlada, sin reaprovechar permisos ni invitaciones anteriores.
 
 ### D-06 Registro y gestión manual
 

@@ -43,7 +43,7 @@ El [despliegue en la nube](13_despliegue_nube.md) automatiza esta composición e
 
 ### Gestión de operadores
 
-`POST /api/platform/operator-invitations` invita a una cuenta verificada con `accountId` y `expiresAt`. `GET` sobre la misma ruta lista las invitaciones para operadores autorizados. El destinatario consulta `GET /api/me/operator-invitations` y acepta mediante `POST /api/platform/operator-invitations/{invitationId}/accept`, con MFA reciente. `POST /api/platform/operator-invitations/{invitationId}/revoke` y `POST /api/platform/operators/{accountId}/revoke` requieren `reason`. `GET /api/platform/operators` lista los responsables. La retirada ordinaria no puede dejar la plataforma sin operador habilitado; el permiso no caduca automáticamente.
+`POST /api/platform/operator-invitations` invita a un correo con `email` y `expiresAt`; no busca cuentas y responde igual exista o no una con esa dirección. `GET` sobre la misma ruta lista las invitaciones para operadores autorizados, con la dirección mientras no se acepta. La cuenta cuyo correo verificado coincide la consulta en `GET /api/me/operator-invitations` y la acepta mediante `POST /api/platform/operator-invitations/{invitationId}/accept`, con MFA reciente. `POST /api/platform/operator-invitations/{invitationId}/revoke` y `POST /api/platform/operators/{accountId}/revoke` requieren `reason`. `GET /api/platform/operators` lista los responsables. La retirada ordinaria no puede dejar la plataforma sin operador habilitado; el permiso no caduca automáticamente.
 
 La recuperación excepcional usa la credencial separada de mantenimiento y exige una verificación externa documentada:
 

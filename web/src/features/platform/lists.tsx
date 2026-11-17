@@ -5,7 +5,7 @@ import { usePreferences } from "../../app/preferences-provider";
 import { Badge, type BadgeTone } from "../../ui/badge/badge";
 import { RecordCard, RecordList } from "../../ui/record-card/record-card";
 import { More } from "../municipal/shared";
-import { staffOperations } from "../municipal/staff-model";
+import { invitationRecipient, staffOperations } from "../municipal/staff-model";
 import { PlatformAccount } from "./account";
 import { type Invitation, type Operator, statuses } from "./model";
 import { platformView, usePlatformPages } from "./shared";
@@ -92,6 +92,31 @@ export function Operators() {
     </>
   );
 }
+/**
+ * The invited address until someone accepts; then the account that accepted,
+ * by name. Older invitations were addressed to an account and show it.
+ */
+function Recipient({ item }: { item: Invitation }) {
+  const { t } = usePreferences();
+  const recipient = invitationRecipient(item);
+  if (recipient.kind === "account")
+    return <PlatformAccount id={recipient.accountId} name={item.accountName} />;
+  if (recipient.kind === "address")
+    return (
+      <span style={{ overflowWrap: "anywhere" }}>
+        {recipient.email}{" "}
+        <small>{t("(correo, sin aceptar)", "(correo, sen aceptar)")}</small>
+      </span>
+    );
+  return (
+    <span>
+      {t(
+        "Dirección retirada por conservación",
+        "Enderezo retirado por conservación",
+      )}
+    </span>
+  );
+}
 export function PlatformInvitations({
   privacy = false,
 }: {
@@ -119,7 +144,7 @@ export function PlatformInvitations({
         {invitations.map((i) => (
           <RecordCard
             key={i.invitationId}
-            title={<PlatformAccount id={i.accountId} name={i.accountName} />}
+            title={<Recipient item={i} />}
             status={
               <Badge size="sm" tone={invitationTones[i.status] ?? "neutral"}>
                 {t(...(statuses[i.status] ?? [i.status, i.status]))}
@@ -169,7 +194,9 @@ export function PlatformInvitations({
                   variant="danger"
                   size="sm"
                   to={`${platformView}/${privacy ? "retirar-privacidad" : "retirar-invitacion"}?id=${encodeURIComponent(i.invitationId)}`}
-                  state={{ name: i.accountName ?? i.accountId }}
+                  state={{
+                    name: i.accountName ?? i.accountId ?? i.recipientEmail,
+                  }}
                 >
                   {t("Revocar", "Revogar")}
                 </LinkButton>

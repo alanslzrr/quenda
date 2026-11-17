@@ -74,7 +74,7 @@ test("operator invitations, handover and controlled recovery preserve global aut
             await assert.rejects(domain.query(sql), { code: "42501" });
           await assert.rejects(
             inviteOperator(domain, actor("third"), {
-              accountId: "second",
+              email: "second@example.test",
               expiresAt: expiresAt(),
             }),
             { code: "FORBIDDEN" },
@@ -86,7 +86,7 @@ test("operator invitations, handover and controlled recovery preserve global aut
             domain,
             async (connection) =>
               connection.query(
-                "SELECT domain.invite_operator('second',now()+interval '1 day',$1,$2) AS outcome",
+                "SELECT domain.invite_operator('second@example.test',now()+interval '1 day',$1,$2) AS outcome",
                 [randomUUID(), randomUUID()],
               ),
             { accountId: "third", tenantId: null },
@@ -95,23 +95,24 @@ test("operator invitations, handover and controlled recovery preserve global aut
         },
       );
       await t.test(
-        "invites an active verified account before MFA setup, but acceptance requires MFA",
+        "invites an address before MFA setup, but acceptance requires a verified address and MFA",
         async () => {
-          for (const accountId of ["unverified", "inactive", "absent", "first"])
+          // Only the issuer's own address and malformed input are rejected.
+          for (const email of [" FIRST@example.test ", "not-an-address"])
             await assert.rejects(
               inviteOperator(domain, actor("first"), {
-                accountId,
+                email,
                 expiresAt: expiresAt(),
               }),
               { code: "INVALID_INPUT" },
             );
           const invitation = await inviteOperator(domain, actor("first"), {
-            accountId: "no-mfa",
+            email: "No-MFA@Example.test",
             expiresAt: expiresAt(),
           });
           await assert.rejects(
             inviteOperator(domain, actor("first"), {
-              accountId: "no-mfa",
+              email: "no-mfa@example.test",
               expiresAt: expiresAt(),
             }),
             { code: "ROLE_ALREADY_ACTIVE" },
@@ -180,7 +181,7 @@ test("operator invitations, handover and controlled recovery preserve global aut
         "only the recipient accepts and retries do not duplicate grants or audit",
         async () => {
           const invitation = await inviteOperator(domain, actor("first"), {
-            accountId: "second",
+            email: "second@example.test",
             expiresAt: expiresAt(),
           });
           await assert.rejects(
@@ -261,7 +262,15 @@ test("operator invitations, handover and controlled recovery preserve global aut
             );
             assert.equal(accepted?.accountName, "Segunda operadora");
             assert.equal(accepted?.invitedByName, null);
-            assert.ok(!JSON.stringify([operators, invitations]).includes("@"));
+            // Only the invited address of an unaccepted invitation is shown.
+            assert.ok(!JSON.stringify(operators).includes("@"));
+            for (const item of invitations.items)
+              assert.ok(
+                !JSON.stringify({ ...item, recipientEmail: null }).includes(
+                  "@",
+                ),
+              );
+            assert.equal(accepted?.recipientEmail, null);
             await transaction(
               domain,
               async (client) => {
@@ -310,7 +319,7 @@ test("operator invitations, handover and controlled recovery preserve global aut
         "withdrawal invalidates pending delegation, never a role already accepted",
         async () => {
           const pending = await inviteOperator(domain, actor("first"), {
-            accountId: "third",
+            email: "third@example.test",
             expiresAt: expiresAt(),
           });
           const municipal = await createMunicipality(domain, actor("first"), {
@@ -349,7 +358,7 @@ test("operator invitations, handover and controlled recovery preserve global aut
             { code: "ACCOUNT_HANDOVER_REQUIRED" },
           );
           const replacement = await inviteOperator(domain, actor("second"), {
-            accountId: "first",
+            email: "first@example.test",
             expiresAt: expiresAt(),
           });
           await acceptOperatorInvitation(
@@ -434,7 +443,7 @@ test("operator invitations, handover and controlled recovery preserve global aut
             )
           ).rows[0].account_id as string;
           const pending = await inviteOperator(domain, actor(active), {
-            accountId: "third",
+            email: "third@example.test",
             expiresAt: expiresAt(),
           });
           await migration.query(
@@ -530,7 +539,10 @@ test("operator invitations, handover and controlled recovery preserve global aut
             const responses = verifyProductResponses(app);
             await app.ready();
             const url = "/api/platform/operator-invitations";
-            const payload = { accountId: "third", expiresAt: expiresAt() };
+            const payload = {
+              email: "third@example.test",
+              expiresAt: expiresAt(),
+            };
             assert.equal(
               (await app.inject({ method: "POST", url, payload })).statusCode,
               403,

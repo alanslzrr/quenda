@@ -88,7 +88,7 @@ test("privacy permissions are explicit, scoped, accepted and permanently withdra
       });
     const inviteGlobal = (id: string) =>
       inviteGlobalPrivacy(domain, actor("operator"), {
-        accountId: id,
+        email: `${id}@example.test`,
         permissions: ["PRIVACY_READ"],
         expiresAt: expiresAt(),
         reason: "Delegación aprobada sobre identidad global",
@@ -228,7 +228,7 @@ test("privacy permissions are explicit, scoped, accepted and permanently withdra
           await assert.rejects(domain.query(sql), { code: "42501" });
         await assert.rejects(
           inviteGlobalPrivacy(domain, actor("admin-a"), {
-            accountId: "global",
+            email: "global@example.test",
             permissions: ["PRIVACY_READ"],
             expiresAt: expiresAt(),
             reason: "Municipal authority is insufficient",
@@ -285,7 +285,15 @@ test("privacy permissions are explicit, scoped, accepted and permanently withdra
         const grant = listed.items.find((i) => i.invitationId === globalGrant);
         assert.equal(grant?.accountName, "global");
         assert.equal(grant?.invitedByName, "operator");
-        assert.ok(!JSON.stringify(listed).includes("@"));
+        // Names only: an address appears solely as the recipient of an
+        // invitation nobody has accepted yet.
+        for (const invitation of listed.items)
+          assert.ok(
+            !JSON.stringify({ ...invitation, recipientEmail: null }).includes(
+              "@",
+            ),
+          );
+        assert.equal(grant?.recipientEmail, null);
         assert.ok(
           !Object.keys(
             (await listGlobalPrivacyInvitations(domain, actor("global"), true))
@@ -365,7 +373,7 @@ test("privacy permissions are explicit, scoped, accepted and permanently withdra
           accepted.invitationId,
         );
         const successor = await inviteOperator(domain, actor("operator"), {
-          accountId: "next-operator",
+          email: "next-operator@example.test",
           expiresAt: expiresAt(),
         });
         await acceptOperatorInvitation(
@@ -385,7 +393,7 @@ test("privacy permissions are explicit, scoped, accepted and permanently withdra
         );
         await allowed("global", null);
         const reinvited = await inviteOperator(domain, actor("next-operator"), {
-          accountId: "operator",
+          email: "operator@example.test",
           expiresAt: expiresAt(),
         });
         await acceptOperatorInvitation(

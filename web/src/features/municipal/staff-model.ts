@@ -98,6 +98,106 @@ export function invitationRecipient(
   return { kind: "withdrawn" };
 }
 /**
+ * Who a security withdrawal can name in this municipality: accounts that hold
+ * administration or a manager grant, or have a pending invitation addressed to
+ * them, and addresses of pending invitations nobody has accepted. The data is
+ * the administrator's own staff tables; nothing else is looked up.
+ */
+export type SecurityCandidate =
+  | {
+      kind: "account";
+      value: string;
+      accountId: string;
+      accountLabel?: AccountLabelValue;
+      roles: ("administrator" | "manager" | "pending")[];
+    }
+  | { kind: "address"; value: string; email: string };
+export function securityCandidates(
+  staff: {
+    administrators: Administrator[];
+    administratorInvitations: StaffInvitation[];
+    managerInvitations: StaffInvitation[];
+  },
+  now = Date.now(),
+): SecurityCandidate[] {
+  const accounts = new Map<
+    string,
+    Extract<SecurityCandidate, { kind: "account" }>
+  >();
+  const addresses = new Map<string, SecurityCandidate>();
+  const future = (instant: string | null) =>
+    !instant || Date.parse(instant) > now;
+  const add = (
+    accountId: string,
+    role: "administrator" | "manager" | "pending",
+    accountLabel?: AccountLabelValue,
+  ) => {
+    const current = accounts.get(accountId) ?? {
+      kind: "account" as const,
+      value: `account:${accountId}`,
+      accountId,
+      accountLabel,
+      roles: [],
+    };
+    if (!current.roles.includes(role)) current.roles.push(role);
+    current.accountLabel ??= accountLabel;
+    accounts.set(accountId, current);
+  };
+  for (const a of staff.administrators)
+    if (!a.revokedAt && future(a.expiresAt))
+      add(a.accountId, "administrator", a.accountLabel);
+  const invitations = [
+    ...staff.administratorInvitations.map((i) => [i, false] as const),
+    ...staff.managerInvitations.map((i) => [i, true] as const),
+  ];
+  for (const [i, manager] of invitations) {
+    if (i.revokedAt || !future(i.roleExpiresAt)) continue;
+    if (i.acceptedAt) {
+      // An accepted administrator invitation is the assignment listed above;
+      // an accepted manager invitation is the grant itself.
+      if (manager && i.accountId) add(i.accountId, "manager", i.accountLabel);
+      continue;
+    }
+    if (!future(i.expiresAt)) continue;
+    const recipient = invitationRecipient(i);
+    if (recipient.kind === "account")
+      add(recipient.accountId, "pending", i.accountLabel);
+    else if (recipient.kind === "address")
+      addresses.set(recipient.email, {
+        kind: "address",
+        value: `address:${recipient.email}`,
+        email: recipient.email,
+      });
+  }
+  return [
+    ...[...accounts.values()].sort((a, b) =>
+      (a.accountLabel?.email ?? a.accountId).localeCompare(
+        b.accountLabel?.email ?? b.accountId,
+      ),
+    ),
+    ...[...addresses.values()].sort((a, b) => a.value.localeCompare(b.value)),
+  ];
+}
+/**
+ * An account is withdrawn through its identifier; a pending address through
+ * the address-only withdrawal, which never resolves it to an account.
+ */
+export function securityWithdrawalRequest(
+  base: string,
+  candidate: SecurityCandidate,
+  reason: string,
+) {
+  return candidate.kind === "account"
+    ? {
+        path: `${base}/accounts/${encodeURIComponent(candidate.accountId)}/revoke-access-for-security`,
+        body: { reason: reason.trim() },
+      }
+    : {
+        path: `${base}/invitation-addresses/revoke-for-security`,
+        body: { email: candidate.email, reason: reason.trim() },
+      };
+}
+/**
  * A new invitation is addressed to an email; a scope replacement names no
  * recipient, because the server addresses it to the holder of the replaced
  * grant.

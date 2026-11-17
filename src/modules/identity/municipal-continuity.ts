@@ -68,6 +68,36 @@ export async function revokeMunicipalAccessForSecurity(
 }
 
 /**
+ * Withdraws for security the pending invitations of this municipality that
+ * are addressed to an email nobody has accepted yet. The administrator already
+ * sees that address in the invitation history; no account is looked up, and
+ * NOT_FOUND only means there was no pending invitation to it.
+ */
+export async function revokeAddressInvitationsForSecurity(
+  pool: Pool,
+  actor: AuthenticatedAccount,
+  tenantId: string,
+  email: string,
+  rationale: string,
+) {
+  const recipient = invitationAddress(email);
+  const explanation = reason(rationale);
+  return command(
+    pool,
+    { accountId: actor.accountId, tenantId },
+    async (client) => {
+      await requireAdministrator(client, actor);
+      const result = await client.query<{ revoked: boolean }>(
+        "SELECT domain.revoke_address_invitations_for_security($1,$2) AS revoked",
+        [recipient, explanation],
+      );
+      if (!result.rows[0]?.revoked) throw new HttpError("NOT_FOUND");
+      return { tenantId, email: recipient };
+    },
+  );
+}
+
+/**
  * The substitute is invited by address and never looked up: a missing or
  * disabled account simply cannot accept. The operator's own address is
  * rejected, since the issuing operator can never accept a recovery.

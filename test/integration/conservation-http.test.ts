@@ -456,7 +456,7 @@ test("retention policy HTTP requires explicit scope authorization and never defa
       const globalPath = "/api/platform/retention-policies";
       assert.equal((await send("operator", globalPath)).statusCode, 403);
       const global = await inviteGlobalPrivacy(domain, actor("operator"), {
-        accountId: "operator",
+        email: "operator@example.test",
         permissions: ["PRIVACY_READ", "PRIVACY_EXECUTE"],
         expiresAt: expiry(),
         reason: "Autorización global explícita de prueba",

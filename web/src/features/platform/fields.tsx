@@ -1,26 +1,10 @@
 import { Deadline } from "../../app/deadline";
 import { usePreferences } from "../../app/preferences-provider";
 import { Input } from "../../ui/input/input";
-export function AccountField() {
-  const { t } = usePreferences();
-  return (
-    <>
-      <Input
-        label={t("Identificador de cuenta", "Identificador de conta")}
-        name="accountId"
-        required
-        maxLength={128}
-      />
-      <p>
-        {t(
-          "El destinatario facilita su identificador desde los datos de su cuenta. No se consulta un directorio global de usuarios.",
-          "O destinatario facilita o seu identificador desde os datos da súa conta. Non se consulta un directorio global de usuarios.",
-        )}
-      </p>
-    </>
-  );
-}
-/** Recipient of a municipal administrator invitation, addressed by email. */
+/**
+ * Recipient of a platform invitation (initial or recovery administrator,
+ * operator or global privacy), addressed by email. No directory is consulted.
+ */
 export function EmailField() {
   const { t } = usePreferences();
   return (

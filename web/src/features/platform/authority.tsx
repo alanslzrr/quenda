@@ -7,11 +7,16 @@ import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
+import { Select } from "../../ui/select/select";
 import { Reason } from "../municipal/shared";
 import staff from "../municipal/staff.module.css";
 import { PlatformAccount } from "./account";
-import { AccountField, InvitationDeadline, Receipt } from "./fields";
-import { invitationDates } from "./model";
+import { EmailField, InvitationDeadline, Receipt } from "./fields";
+import {
+  platformInvitationBody,
+  suspendsOwnAccount,
+  suspensionRequest,
+} from "./model";
 import { PlatformForm, platformApi } from "./shared";
 export function Invite({ privacy = false }: { privacy?: boolean }) {
   const { t, locale } = usePreferences();
@@ -55,17 +60,11 @@ export function Invite({ privacy = false }: { privacy?: boolean }) {
                 "Selecciona polo menos un permiso.",
               ),
             );
-          return {
-            accountId: textField(d, "accountId").trim(),
-            ...invitationDates(d, locale, privacy),
-            ...(privacy
-              ? { permissions, reason: textField(d, "reason").trim() }
-              : {}),
-          };
+          return platformInvitationBody(d, locale, privacy, permissions);
         }}
         onResult={setResult}
       >
-        <AccountField />
+        <EmailField />
         <InvitationDeadline role={privacy} />
         {privacy && (
           <>
@@ -92,8 +91,8 @@ export function Invite({ privacy = false }: { privacy?: boolean }) {
         <Checkbox
           required
           label={t(
-            "Confirmo la cuenta, el alcance y la vigencia",
-            "Confirmo a conta, o alcance e a vixencia",
+            "Confirmo el correo, el alcance y la vigencia",
+            "Confirmo o correo, o alcance e a vixencia",
           )}
         />
       </PlatformForm>
@@ -147,8 +146,8 @@ export function Revoke({
       ) : (
         <>
           {name && (
-            <p>
-              {t("Cuenta", "Conta")}: {name}
+            <p style={{ overflowWrap: "anywhere" }}>
+              {t("Destinatario", "Destinatario")}: {name}
             </p>
           )}
           <p>
@@ -207,7 +206,9 @@ export function SuspendAccount() {
   const { t } = usePreferences();
   const { account } = useSession();
   const client = useQueryClient();
+  const [by, setBy] = useState<"email" | "account">("email");
   const [id, setId] = useState("");
+  const request = suspensionRequest(by, id, "");
   const [result, setResult] = useState<{
     accountId: string;
     suspendedAt: string;
@@ -230,26 +231,64 @@ export function SuspendAccount() {
           "Revoga todas as sesións e a autoridade administrativa da conta na instancia, aínda que sexa o último responsable. Conserva reservas e historial. A recuperación esixe verificación operativa e substitución de credenciais; non é unha reactivación de autoservizo.",
         )}
       </p>
+      <p>
+        {t(
+          "Identifica la cuenta por su correo exacto o por su identificador. No es una búsqueda: un correo o identificador desconocido responde igual, sin sugerir cuentas.",
+          "Identifica a conta polo seu correo exacto ou polo seu identificador. Non é unha busca: un correo ou identificador descoñecido responde igual, sen suxerir contas.",
+        )}
+      </p>
       <PlatformForm<{ accountId: string; suspendedAt: string }>
-        path={`${platformApi}/accounts/${encodeURIComponent(id.trim())}/suspend`}
+        path={request.path}
         label={t("Suspender cuenta", "Suspender conta")}
         danger
-        body={(d) => ({ reason: textField(d, "reason").trim() })}
+        body={(d) => suspensionRequest(by, id, textField(d, "reason")).body}
         onResult={async (r) => {
           setResult(r);
           if (r.accountId === account?.accountId)
             await client.invalidateQueries({ queryKey: ["session"] });
         }}
       >
-        <Input
-          label={t("Identificador de cuenta", "Identificador de conta")}
-          required
-          maxLength={128}
-          value={id}
-          onChange={(e) => setId(e.target.value)}
+        <Select
+          label={t("Identificar la cuenta por", "Identificar a conta por")}
+          value={by}
+          onValueChange={(value) => {
+            setBy(value === "account" ? "account" : "email");
+            setId("");
+          }}
+          options={[
+            {
+              value: "email",
+              label: t("Correo de la cuenta", "Correo da conta"),
+            },
+            {
+              value: "account",
+              label: t("Identificador de cuenta", "Identificador de conta"),
+            },
+          ]}
         />
+        {by === "email" ? (
+          <Input
+            key="email"
+            label={t("Correo de la cuenta", "Correo da conta")}
+            type="email"
+            autoComplete="off"
+            required
+            maxLength={320}
+            value={id}
+            onChange={(e) => setId(e.target.value)}
+          />
+        ) : (
+          <Input
+            key="account"
+            label={t("Identificador de cuenta", "Identificador de conta")}
+            required
+            maxLength={128}
+            value={id}
+            onChange={(e) => setId(e.target.value)}
+          />
+        )}
         <Reason />
-        {id.trim() === account?.accountId && (
+        {suspendsOwnAccount(by, id, account) && (
           <p role="alert">
             {t(
               "Vas a suspender tu propia cuenta y perderás esta sesión.",
