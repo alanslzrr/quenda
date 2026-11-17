@@ -247,11 +247,92 @@ test("an unconfirmed invitation cannot be silently resubmitted or displayed as a
   expect(attempts).toBe(1);
 });
 
+test("security withdrawal of a pending address sends the address, never an account", async ({
+  page,
+}) => {
+  await fixture(page);
+  const sent: { path: string; body: unknown }[] = [];
+  await page.route(`**${root}/manager-invitations`, (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          {
+            ...invitation,
+            permissions: [{ operation: "RESERVATION_READ", unitId: null }],
+            replacesInvitationId: null,
+          },
+        ],
+        nextCursor: null,
+      },
+    }),
+  );
+  await page.route(
+    `**${root}/invitation-addresses/revoke-for-security`,
+    async (route) => {
+      sent.push({
+        path: new URL(route.request().url()).pathname,
+        body: route.request().postDataJSON(),
+      });
+      await route.fulfill({
+        json: { tenantId: tenant, email: "destinatario@demo.test" },
+      });
+    },
+  );
+  await page.goto(`/administracion/${tenant}/personal/seguridad`);
+  await select(
+    page,
+    "Persona o invitación",
+    "destinatario@demo.test — invitación por correo sin aceptar",
+  );
+  await page
+    .getByLabel("Motivo", { exact: true })
+    .fill("Dirección comprometida");
+  await page
+    .getByRole("checkbox", {
+      name: /Confirmo la retirada por seguridad|Confirmo a retirada por seguridade/,
+    })
+    .check();
+  await page
+    .getByRole("button", {
+      name: /Retirar acceso por seguridad|Retirar acceso por seguridade/,
+    })
+    .click();
+  await expect(
+    page.getByRole("main").getByText(/Cambios guardados|Cambios gardados/),
+  ).toBeVisible();
+  expect(sent).toEqual([
+    {
+      path: `${root}/invitation-addresses/revoke-for-security`,
+      body: { email: "destinatario@demo.test", reason: "Dirección comprometida" },
+    },
+  ]);
+});
 test("a successful security withdrawal empties the reason without marking it invalid", async ({
   page,
 }) => {
   await fixture(page);
   const sent: unknown[] = [];
+  await page.route(`**${root}/administrators`, (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          {
+            accountId: "destinatario",
+            accountLabel: {
+              name: "Destinataria",
+              email: "destinataria@demo.test",
+            },
+            invitationId: "00000000-0000-4000-8000-000000000006",
+            grantedAt: "2020-01-01T00:00:00Z",
+            expiresAt: null,
+            revokedAt: null,
+            active: true,
+          },
+        ],
+        nextCursor: null,
+      },
+    }),
+  );
   await page.route(
     `**${root}/accounts/destinatario/revoke-access-for-security`,
     async (route) => {
@@ -260,7 +341,15 @@ test("a successful security withdrawal empties the reason without marking it inv
     },
   );
   await page.goto(`/administracion/${tenant}/personal/seguridad`);
-  await page.getByLabel(/Identificador de (cuenta|conta)/).fill("destinatario");
+  // The account is chosen among the municipality's staff, never typed.
+  await expect(page.getByLabel(/Identificador de (cuenta|conta)/)).toHaveCount(
+    0,
+  );
+  await select(
+    page,
+    "Persona o invitación",
+    "Destinataria · destinataria@demo.test — administración",
+  );
   const reason = page.getByLabel("Motivo", { exact: true });
   await reason.fill("Contención del compromiso local");
   await page
