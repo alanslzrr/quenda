@@ -92,7 +92,7 @@ Las validaciones largas se ejecutan en local, no en GitHub Actions. Con PostgreS
 PG_BIN=/ruta/a/postgresql-17.11/bin pnpm validate
 ```
 
-`pnpm validate` encadena, y se detiene en el primer fallo: `pnpm check` (tipos, lint, pruebas unitarias y HTTP, incluido el contrato OpenAPI), `pnpm --dir web check` y `pnpm --dir web build`, la suite de integración PostgreSQL, las pruebas de navegador con axe (reglas WCAG 2.0 y 2.1, niveles A y AA), la construcción de las imágenes de API y web y `pnpm test:oci`. Requiere Docker y `pnpm --dir web exec playwright install chromium`. Tarda decenas de minutos; una pull request se abre cuando todo termina bien. Para ensayar el rendimiento o inventariar licencias, que no forman parte del encadenado, usar `pnpm test:performance` y `pnpm licenses:inventory`; sus resultados se conservan fuera de Git y se comparan solo con mediciones del mismo entorno.
+`pnpm validate` encadena, y se detiene en el primer fallo: `pnpm check` (tipos, lint, pruebas unitarias y HTTP, incluido el contrato OpenAPI), `pnpm --dir web check` y `pnpm --dir web build`, la suite de integración PostgreSQL, las pruebas de navegador con axe (reglas WCAG 2.0 y 2.1, niveles A y AA), la construcción de las imágenes de API y web, `pnpm test:oci` y `pnpm test:deploy`. Requiere Docker y `pnpm --dir web exec playwright install chromium`. Tarda decenas de minutos; una pull request se abre cuando todo termina bien. Para ensayar el rendimiento o inventariar licencias, que no forman parte del encadenado, usar `pnpm test:performance` y `pnpm licenses:inventory`; sus resultados se conservan fuera de Git y se comparan solo con mediciones del mismo entorno.
 
 ### Integración continua
 

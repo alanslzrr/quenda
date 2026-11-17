@@ -18,6 +18,7 @@ Quenda gestiona la consulta y reserva de instalaciones deportivas municipales. E
 | [10 Referencia de la API](10_api.md) | Rutas HTTP por área, permisos exigidos, respuestas y límites. |
 | [11 Desarrollo y pruebas](11_desarrollo.md) | Entorno local, aplicación web, demostración y comprobaciones. |
 | [12 Despliegue y operación](12_operacion.md) | Imágenes, despliegue de referencia, workers, auditoría, métricas, copias y recuperación. |
+| [13 Despliegue en la nube](13_despliegue_nube.md) | Infraestructura en OCI, AWS, Azure y GCP, validación local con emuladores, publicación y demostración. |
 
 ## Terminología
 
