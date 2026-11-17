@@ -36,6 +36,8 @@ export type Agreement = AgreementSummary &
       tenantId: string;
       /** Null for another municipality: only the approving municipality sees the account. */
       approvedBy: string | null;
+      /** Name and email of an approver from the acting municipality. */
+      approvedByLabel: { name: string; email: string } | null;
       approvedAt: string;
       correlationId: string;
     }[];

@@ -11,6 +11,7 @@ import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
 import styles from "../municipal/municipal.module.css";
+import { MunicipalityName, UnitName } from "../municipal/names";
 import { ManagementPage } from "../municipal/page";
 import {
   Denied,
@@ -248,7 +249,9 @@ function VersionDetails({ item: a }: { item: Agreement }) {
         const approval = a.approvals.find((x) => x.tenantId === p.tenantId);
         return (
           <section className={styles.section} key={p.tenantId}>
-            <h3>{p.tenantId === m.id ? m.name : p.tenantId}</h3>
+            <h3>
+              <MunicipalityName id={p.tenantId} />
+            </h3>
             <p>
               {p.accreditationIssuer
                 ? t("Emisor de acreditaciones", "Emisor de acreditacións")
@@ -257,7 +260,7 @@ function VersionDetails({ item: a }: { item: Agreement }) {
             <ul>
               {p.unitIds.map((id) => (
                 <li key={id}>
-                  {id}
+                  <UnitName tenantId={p.tenantId} id={id} />
                   {p.tenantId === m.id && (
                     <>
                       {" "}
@@ -277,7 +280,7 @@ function VersionDetails({ item: a }: { item: Agreement }) {
             )}
             <p>
               {approval
-                ? `${approval.approvedBy ? `${t("Aprobada por", "Aprobada por")} ${approval.approvedBy}` : t("Aprobada", "Aprobada")} · ${localDateTime(approval.approvedAt, locale)}`
+                ? `${approval.approvedByLabel ? `${t("Aprobada por", "Aprobada por")} ${approval.approvedByLabel.name.trim() || approval.approvedByLabel.email}` : t("Aprobada", "Aprobada")} · ${localDateTime(approval.approvedAt, locale)}`
                 : t("Sin aprobación registrada.", "Sen aprobación rexistrada.")}
             </p>
           </section>
