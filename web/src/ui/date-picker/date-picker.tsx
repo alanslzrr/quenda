@@ -1,9 +1,15 @@
 import { CalendarDays, ChevronDown } from "lucide-react";
 import type { Variants } from "motion/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import type { ButtonHTMLAttributes, FocusEvent, KeyboardEvent } from "react";
+import type {
+  ButtonHTMLAttributes,
+  FocusEvent,
+  KeyboardEvent,
+  ReactNode,
+} from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Calendar } from "../calendar/calendar";
+import { FieldMessage } from "../lib/field-message";
 import {
   anchorStyle,
   topLayerProps,
@@ -28,6 +34,10 @@ export interface DatePickerProps
   locale?: string;
   formatValue?: (date: Date) => string;
   calendarLabel?: string;
+  /** Shown below the field; it also marks the trigger invalid. */
+  error?: string;
+  /** Rendered beside the trigger, such as a form's hidden value or a clear button. */
+  children?: ReactNode;
 }
 
 const monthStart = (date: Date) =>
@@ -73,6 +83,8 @@ export function DatePicker({
   formatValue = (date) =>
     dateTimeFormat(locale, { dateStyle: "medium" }).format(date),
   calendarLabel,
+  error,
+  children,
   id,
   className,
   disabled,
@@ -83,6 +95,7 @@ export function DatePicker({
   const labelId = `${controlId}-label`;
   const valueId = `${controlId}-value`;
   const hintId = description ? `${controlId}-description` : undefined;
+  const errorId = error ? `${controlId}-error` : undefined;
   const [open, setOpen] = useState(false);
   const [month, setMonth] = useState(monthStart(value ?? today ?? new Date()));
   const rootRef = useRef<HTMLDivElement>(null);
@@ -184,7 +197,12 @@ export function DatePicker({
           aria-labelledby={`${labelId} ${valueId}`}
           aria-haspopup="dialog"
           aria-expanded={open}
-          aria-describedby={hintId}
+          aria-describedby={
+            [buttonProps["aria-describedby"], hintId, errorId]
+              .filter(Boolean)
+              .join(" ") || undefined
+          }
+          aria-invalid={error ? true : buttonProps["aria-invalid"]}
           className={styles.trigger}
           style={anchorStyle(anchor)}
           onClick={() => (open ? close() : show())}
@@ -216,6 +234,7 @@ export function DatePicker({
             aria-hidden="true"
           />
         </button>
+        {children}
         <AnimatePresence>
           {open && (
             <motion.div
@@ -267,6 +286,7 @@ export function DatePicker({
           {description}
         </span>
       )}
+      <FieldMessage id={errorId} text={error} className={styles.error} />
     </div>
   );
 }
