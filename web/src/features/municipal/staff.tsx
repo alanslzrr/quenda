@@ -1,16 +1,17 @@
 import { useState } from "react";
-import { NavLink, useParams } from "react-router";
+import { useParams } from "react-router";
 import { textField } from "../../app/action";
 import { announce } from "../../app/announce";
 import { localDateTime } from "../../app/dates";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink as Link } from "../../app/link-button";
+import { LinkButton, RowButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
+import { SectionNav } from "../../ui/section-nav/section-nav";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
 import { AccountLabel } from "./account-label";
 import styles from "./municipal.module.css";
@@ -25,7 +26,6 @@ import {
   useMunicipality,
   useMunicipalPages,
 } from "./shared";
-import staffStyles from "./staff.module.css";
 import { StaffInvite, useAuthoritySaved } from "./staff-forms";
 import {
   type Administrator,
@@ -49,19 +49,27 @@ export function MunicipalStaff() {
         "Quen administra e xestiona o municipio e con que permisos. Os cambios aplícanse cando a persoa acepta a invitación.",
       )}
     >
-      <nav
-        className={staffStyles.navigation}
-        aria-label={t("Personal municipal", "Persoal municipal")}
-      >
-        <NavLink end to={base}>
-          {t("Administradores", "Administradores")}
-        </NavLink>
-        <NavLink to={`${base}/gestores`}>{t("Gestores", "Xestores")}</NavLink>
-        <NavLink to={`${base}/invitar`}>{t("Invitar", "Invitar")}</NavLink>
-        <NavLink to={`${base}/seguridad`}>
-          {t("Retirada por seguridad", "Retirada por seguridade")}
-        </NavLink>
-      </nav>
+      <SectionNav
+        label={t("Personal municipal", "Persoal municipal")}
+        groups={[
+          {
+            items: [
+              ["administradores", "", t("Administradores", "Administradores")],
+              ["gestores", "/gestores", t("Gestores", "Xestores")],
+              ["invitar", "/invitar", t("Invitar", "Invitar")],
+              [
+                "seguridad",
+                "/seguridad",
+                t("Retirada por seguridad", "Retirada por seguridade"),
+              ],
+            ].map(([id, path, label]) => ({
+              to: `${base}${path}`,
+              label,
+              current: section === id,
+            })),
+          },
+        ]}
+      />
       {section === "administradores" ? (
         <Administrators />
       ) : section === "gestores" ? (
@@ -74,9 +82,9 @@ export function MunicipalStaff() {
       ) : section === "seguridad" ? (
         <SecurityWithdrawal />
       ) : (
-        <Link to={base}>
+        <LinkButton to={base}>
           {t("Volver al personal municipal", "Volver ao persoal municipal")}
-        </Link>
+        </LinkButton>
       )}
     </ManagementPage>
   );
@@ -119,8 +127,7 @@ function Administrators() {
                 label: t("Cuenta", "Conta"),
                 sortable: false,
                 render: (_, r) => (
-                  <Button
-                    variant="ghost"
+                  <RowButton
                     aria-pressed={selected === r.accountId}
                     onClick={() => {
                       setSelected(r.accountId);
@@ -133,7 +140,7 @@ function Administrators() {
                     }}
                   >
                     <AccountLabel id={r.accountId} label={r.accountLabel} />
-                  </Button>
+                  </RowButton>
                 ),
               },
               {
@@ -294,8 +301,7 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
                 label: t("Cuenta", "Conta"),
                 sortable: false,
                 render: (_, r) => (
-                  <Button
-                    variant="ghost"
+                  <RowButton
                     aria-pressed={selected === r.invitationId}
                     onClick={() => {
                       setSelected(r.invitationId);
@@ -309,7 +315,7 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
                     }}
                   >
                     <AccountLabel id={r.accountId} label={r.accountLabel} />
-                  </Button>
+                  </RowButton>
                 ),
               },
               {
