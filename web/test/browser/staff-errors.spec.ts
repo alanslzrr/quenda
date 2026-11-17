@@ -66,7 +66,11 @@ async function fill(page: Page) {
     .getByRole("checkbox", { name: /Confirmo (el correo|o correo)/ })
     .check();
 }
-async function select(page: Page, name: string, option: string | RegExp) {
+async function select(
+  page: Page,
+  name: string | RegExp,
+  option: string | RegExp,
+) {
   await page.getByRole("combobox", { name, exact: true }).click();
   await page.getByRole("option", { name: option, exact: true }).click();
 }
@@ -281,8 +285,8 @@ test("security withdrawal of a pending address sends the address, never an accou
   await page.goto(`/administracion/${tenant}/personal/seguridad`);
   await select(
     page,
-    "Persona o invitación",
-    "destinatario@demo.test — invitación por correo sin aceptar",
+    /^(Persona o invitación|Persoa ou invitación)$/,
+    /^destinatario@demo\.test — invitación por correo (sin|sen) aceptar$/,
   );
   await page
     .getByLabel("Motivo", { exact: true })
@@ -350,7 +354,7 @@ test("a successful security withdrawal empties the reason without marking it inv
   );
   await select(
     page,
-    "Persona o invitación",
+    /^(Persona o invitación|Persoa ou invitación)$/,
     "Destinataria · destinataria@demo.test — administración",
   );
   const reason = page.getByLabel("Motivo", { exact: true });
