@@ -54,6 +54,7 @@ test("the cloud demo seeds every role, a coherent history and no pending mail", 
           (SELECT count(*) FROM domain.reservation WHERE created_at < now() - interval '40 days')::int AS old_bookings,
           (SELECT count(*) FROM domain.schedule_block)::int AS blocks,
           (SELECT count(*) FROM domain.reservation_email WHERE accepted_at IS NULL)::int AS pending_mail,
+          (SELECT count(*) FROM domain.invitation_email)::int AS invitation_mail,
           (SELECT count(*) FROM domain.reservation_notice WHERE read_at IS NULL)::int AS unread
       `);
       const counts = rows[0] as Record<string, number>;
@@ -66,6 +67,8 @@ test("the cloud demo seeds every role, a coherent history and no pending mail", 
       assert.ok((counts.old_bookings ?? 0) > 100, "history is backdated");
       assert.equal(counts.blocks, 1);
       assert.equal(counts.pending_mail, 0);
+      // No invitation notice is left for a demo address.
+      assert.equal(counts.invitation_mail, 0);
       assert.ok((counts.unread ?? 0) > 0, "recent notices stay unread");
 
       // Nothing seeded happens after the seeding: bookings, events, notices.

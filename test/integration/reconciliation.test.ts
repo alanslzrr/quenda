@@ -102,6 +102,12 @@ test("restored database reconciliation is read-only, detects inconsistent occupa
         assert.ok(Object.values(report.checks).every((n) => n === 0));
         assert.equal(report.mail.pending, 1);
         assert.equal(report.mail.accepted, 0);
+        // Invitation notices are counted apart, by state only.
+        assert.deepEqual(Object.keys(report.invitationMail).sort(), [
+          "exhausted",
+          "leased",
+          "pending",
+        ]);
         assert.deepEqual(await snapshot(), before);
         assert.ok(!JSON.stringify(report).includes("citizen"));
         // Controlled corruption in the disposable restored database only.

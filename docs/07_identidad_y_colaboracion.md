@@ -236,3 +236,9 @@ alternativa que respeta estos límites. Cada formulario resuelve a la persona as
 Las familias cuya referencia de registro no es una cuenta (reservas,
 comunicaciones, acreditaciones, accesos de privacidad o direcciones de
 invitaciones retiradas) conservan su referencia exacta.
+
+Cada invitación dirigida a un correo envía a la dirección un aviso con el rol, el
+municipio o la plataforma y el plazo. El aviso es idéntico exista o no una cuenta
+con esa dirección, no nombra al emisor y no permite aceptar: enlaza a «Mi cuenta ›
+Invitaciones», donde la acepta la cuenta con ese correo verificado y MFA. Enviarlo
+no consulta cuentas ni crea un directorio.

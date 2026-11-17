@@ -269,8 +269,8 @@ export function StaffInvite({
             required
             maxLength={320}
             description={t(
-              "Escribe el correo de la persona. La respuesta es la misma tenga o no una cuenta registrada con esa dirección; no se consulta un directorio de usuarios.",
-              "Escribe o correo da persoa. A resposta é a mesma teña ou non unha conta rexistrada con ese enderezo; non se consulta un directorio de usuarios.",
+              "Escribe el correo de la persona. La respuesta es la misma tenga o no una cuenta registrada con esa dirección; no se consulta un directorio de usuarios. Quenda le envía un aviso con el rol, el municipio y el plazo, sin enlace de aceptación.",
+              "Escribe o correo da persoa. A resposta é a mesma teña ou non unha conta rexistrada con ese enderezo; non se consulta un directorio de usuarios. Quenda envíalle un aviso co rol, o municipio e o prazo, sen ligazón de aceptación.",
             )}
           />
         )}

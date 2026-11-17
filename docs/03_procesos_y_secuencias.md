@@ -19,7 +19,7 @@
 
 El usuario crea una cuenta y verifica su correo antes de reservar. Al confirmar una reserva, Quenda crea la relación cuenta–municipio si no existe; el usuario no cumplimenta un perfil municipal adicional. Consultar el catálogo no crea esa relación.
 
-El operador de plataforma crea el municipio e invita a su primer administrador. El administrador municipal configura el catálogo y asigna permisos mediante invitaciones dirigidas al correo del destinatario y vinculadas a municipio, rol, vigencia y unidades reservables, cuando el ámbito esté limitado. Crear la invitación no revela si existe una cuenta con ese correo. La aceptación exige autenticar al destinatario, que su correo verificado coincida en ese momento con la dirección invitada y que la invitación siga vigente; no permite ampliar sus permisos. Las invitaciones de operador y de privacidad global que emite un operador siguen el mismo procedimiento.
+El operador de plataforma crea el municipio e invita a su primer administrador. El administrador municipal configura el catálogo y asigna permisos mediante invitaciones dirigidas al correo del destinatario y vinculadas a municipio, rol, vigencia y unidades reservables, cuando el ámbito esté limitado. Crear la invitación no revela si existe una cuenta con ese correo. La aceptación exige autenticar al destinatario, que su correo verificado coincida en ese momento con la dirección invitada y que la invitación siga vigente; no permite ampliar sus permisos. Las invitaciones de operador y de privacidad global que emite un operador siguen el mismo procedimiento. Cada invitación dirigida a un correo envía a esa dirección un aviso con el rol, el ámbito y el plazo, igual exista o no una cuenta; no contiene enlaces de aceptación.
 
 Los formularios envían datos a la API, que valida las entradas, comprueba los permisos y persiste los cambios en PostgreSQL. El directorio municipal contiene únicamente los perfiles vinculados a ese servicio y solo lo consulta su administración; los formularios eligen a las personas entre datos que quien actúa ya puede ver o piden un correo, y conservan el identificador exacto cuando no hay alternativa sin directorio ([referencias de cuenta](07_identidad_y_colaboracion.md#referencias-de-cuenta-en-los-formularios-del-personal)).
 
@@ -69,6 +69,7 @@ sequenceDiagram
   M->>A: Invitar a un correo con rol y ámbito
   A->>D: Verificar facultad de delegar, guardar invitación con el correo normalizado
   Note over A,D: Crear la invitación no consulta cuentas ni concede permisos. La aceptación exige autenticación, correo verificado coincidente y validación.
+  A->>D: En la misma transacción, encolar el aviso a la dirección invitada
   M->>A: Crear o modificar instalación y unidad reservable
   A->>D: Transacción: permisos, configuración, reservas afectadas y auditoría
   alt Datos válidos y sin conflicto
@@ -221,6 +222,32 @@ El sistema genera un aviso interno y un correo por confirmación, modificación 
 El worker reclama cada evento mediante una concesión temporal, envía el mensaje fuera de la transacción y registra el intento. Las concesiones vencidas permiten recuperar trabajos abandonados. Los avisos se procesan por reserva y versión; cada mensaje describe un evento fechado y enlaza al estado actual.
 
 La aceptación por el proveedor no garantiza la recepción. Un fallo después de enviar y antes de registrar el resultado puede provocar una entrega duplicada.
+
+### Avisos de invitación
+
+Crear una invitación dirigida a un correo encola, en la misma transacción, un aviso a esa dirección: administración o gestión municipal, primer administrador, sustituto de recuperación, operador o privacidad global. Las sustituciones de alcance de un gestor y las invitaciones anteriores dirigidas a una cuenta no generan aviso. El mensaje indica el rol, el municipio o la plataforma, el plazo de aceptación y que se acepta en «Mi cuenta › Invitaciones» tras iniciar sesión, o crear la cuenta, con esa misma dirección verificada y la verificación en dos pasos. Enlaza a esa página de la aplicación, sin tokens ni otros datos: la aceptación sigue siendo una operación de la aplicación con MFA. No nombra al emisor ni a ninguna cuenta y es igual exista o no una cuenta con la dirección. Usa el idioma del proceso del worker, porque no se consulta ninguna preferencia de cuenta.
+
+El mismo worker reclama estos avisos con las mismas concesiones temporales, intentos y reintentos que los de reservas, en una cola propia. Revocar, sustituir o aceptar la invitación, o retirar su dirección, elimina el aviso pendiente en la misma transacción; al reclamarlo, el worker descarta el de una invitación vencida o que ya no puede aceptarse, sin enviarlo. Un envío aceptado borra el aviso; agotar los intentos borra la dirección y deja solo un contador hasta que la invitación termina.
+
+```mermaid
+sequenceDiagram
+  actor E as Emisor
+  participant A as API
+  participant D as PostgreSQL
+  participant W as Worker
+  participant C as Canal de avisos
+  E->>A: Invitar a un correo
+  A->>D: Guardar invitación y encolar aviso (misma transacción)
+  A-->>E: Misma respuesta exista o no una cuenta
+  W->>D: Reclamar aviso con concesión temporal
+  alt Invitación todavía aceptable
+    D-->>W: Dirección, rol, ámbito y plazo
+    W->>C: Enviar aviso sin enlace de aceptación
+    W->>D: Envío aceptado: borrar aviso / fallo: reintento o agotado sin dirección
+  else Vencida, revocada, aceptada o sin dirección
+    D->>D: Descartar el aviso sin enviarlo
+  end
+```
 
 ### D-07 Envío de avisos
 
