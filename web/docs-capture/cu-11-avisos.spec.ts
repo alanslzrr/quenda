@@ -48,16 +48,9 @@ test("CU-11 recibir y consultar avisos de reserva", async ({ page }) => {
   if (!slot) throw new Error("No free slot");
   const reservation = await book(page, valdeira.id, valdeira.court, slot);
 
-  // Paso 1: Quenda registra el aviso y el worker envía el correo.
-  const confirmed = await runMailWorker(origin, () =>
-    delivered(email, reservation.id),
-  );
-  await cu.terminal(
-    page,
-    "envio-del-correo",
-    confirmed.command,
-    confirmed.output,
-  );
+  // Paso 1: Quenda registra el aviso y el worker envía el correo (sin
+  // captura: la persona solo ve el resultado).
+  await runMailWorker(origin, () => delivered(email, reservation.id));
 
   // Paso 2: el correo describe el evento y enlaza la reserva.
   const message = await latestMail(email, reservation.id);
