@@ -12,7 +12,7 @@ import { Button } from "../ui/button/button";
 import { announce } from "./announce";
 import { Failure } from "./feedback";
 import styles from "./layout.module.css";
-import { trackValidity } from "./validity";
+import { clearFields, trackValidity } from "./validity";
 
 // Mutations are explicit, single-flight and never retried by the component.
 export function ActionForm({
@@ -67,11 +67,7 @@ export function ActionForm({
       await submit(data);
       setDone(true);
       if (resetOnSuccess) form.reset();
-      else
-        for (const name of clearOnSuccess) {
-          const field = form.elements.namedItem(name);
-          if (field instanceof HTMLInputElement) field.value = "";
-        }
+      else clearFields(form, clearOnSuccess);
     } catch (failure) {
       setError(failure);
     } finally {
