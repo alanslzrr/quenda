@@ -10,6 +10,7 @@ import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
 import { Textarea } from "../../ui/textarea/textarea";
 import styles from "../municipal/municipal.module.css";
+import { MunicipalityName, UnitName } from "../municipal/names";
 import { ManagementPage } from "../municipal/page";
 import {
   endpoint,
@@ -260,7 +261,12 @@ export function AgreementEditor({ original }: { original?: Agreement }) {
           <fieldset className={ui.participant} key={p.key}>
             <legend>
               {t("Participante", "Participante")} {i + 1}
-              {p.tenantId === m.id ? ` · ${m.name}` : ""}
+              {new RegExp(`^${uuidPattern}$`).test(p.tenantId) && (
+                <>
+                  {" · "}
+                  <MunicipalityName id={p.tenantId} />
+                </>
+              )}
             </legend>
             <Input
               label={`${t("Municipio", "Municipio")} ${i + 1}`}
@@ -282,6 +288,25 @@ export function AgreementEditor({ original }: { original?: Agreement }) {
               value={p.unitsText}
               onChange={(e) => patch(p.key, { unitsText: e.target.value })}
             />
+            {/* The identifiers stay editable; their names confirm the choice. */}
+            {(() => {
+              const valid = new RegExp(`^${uuidPattern}$`);
+              const ids = p.unitsText
+                .split(/\s+/)
+                .filter((id) => valid.test(id));
+              return (
+                valid.test(p.tenantId) &&
+                ids.length > 0 && (
+                  <ul className={ui.unitNames}>
+                    {ids.map((id) => (
+                      <li key={id}>
+                        <UnitName tenantId={p.tenantId} id={id} />
+                      </li>
+                    ))}
+                  </ul>
+                )
+              );
+            })()}
             {p.locked ? (
               <>
                 <Select
