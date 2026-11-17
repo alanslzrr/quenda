@@ -313,9 +313,10 @@ async function municipality(
     "INSERT INTO domain.municipality(id,name,timezone,cancellation_minutes) VALUES($1,$2,$3,1440)",
     [seed.id, seed.name, timeZone],
   );
-  // The catalog has been open for 60 days, recorded as the application would:
-  // indicators derive offered time from calendar versions and publication events.
-  const since = "now()-interval '70 days'";
+  // The catalog has been open for four months, recorded as the application
+  // would: indicators derive offered time from calendar versions and
+  // publication events, so it predates the oldest seeded booking.
+  const since = "now()-interval '120 days'";
   const event = (
     facility: string,
     unit: string | null,

@@ -34,11 +34,12 @@ import {
 } from "./seed.ts";
 
 // A demonstration installation that looks used: two municipalities with their
-// own identity, staff with every role, eight weeks of history behind the
-// analytics, a busy next fortnight, closures, a block, legal pages and notices.
-// Every write goes through the application modules except what can only be
-// backdated (creation, acceptance, event, notice and arrival times), which uses
-// the migration pool. Nothing seeded happens after the seeding itself.
+// own identity, staff with every role, fourteen weeks of history behind the
+// analytics (so that a month and 30 days compare with the period before), a
+// busy next fortnight, closures, a block, legal pages and notices. Every write
+// goes through the application modules except what can only be backdated
+// (creation, acceptance, event, notice and arrival times), which uses the
+// migration pool. Nothing seeded happens after the seeding itself.
 
 interface Pools {
   auth: Pool;
@@ -62,8 +63,8 @@ type Staff = AuthenticatedAccount;
 const hour = 3600000;
 const day = 24 * hour;
 const retention = 3600;
-/** Days of history behind the analytics. */
-const history = 56;
+/** Days of history: covers the previous calendar month and the one before it. */
+const history = 98;
 
 /** Deterministic pseudo-random sequence: every installation gets the same history. */
 function random(seed: number) {
@@ -456,7 +457,7 @@ export async function seedCloudDemo(
     );
   }
 
-  // Eight weeks of history and the next three weeks, unit by unit.
+  // Fourteen weeks of history and the next three weeks, unit by unit.
   for (const seed of [valdeira, ribasanta])
     for (const unit of units(seed))
       for (let offset = -history; offset <= 21; offset++) {
@@ -466,10 +467,11 @@ export async function seedCloudDemo(
           const startsAt = new Date(zoned(date, hour));
           if (future && startsAt.getTime() < horizon) continue;
           if (!future && startsAt.getTime() > now - 2 * 3600000) continue;
-          // History grows over the weeks; the future is half-booked so far.
+          // History grows gently over the weeks, so consecutive months stay
+          // comparable; the future is half-booked so far.
           const trend = future
             ? 0.55
-            : 0.75 + (0.25 * (offset + history)) / history;
+            : 0.9 + (0.1 * (offset + history)) / history;
           const share = seed === ribasanta ? 0.6 : 1;
           if (draw() > demand(hour, date) * trend * share) continue;
           const bookedAt = bookedBefore(startsAt, (1.2 + draw() * 8) * day);

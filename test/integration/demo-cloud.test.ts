@@ -116,6 +116,35 @@ test("the cloud demo seeds every role, a coherent history and no pending mail", 
       assert.equal(acceptance[0]?.incoherent, 0);
       assert.equal(acceptance[0]?.snapshots, 0);
 
+      // «Mes pasado» and «Últimos 30 días» compare with populated periods of
+      // a similar volume.
+      const { rows: periods } = await migration.query<Record<string, number>>(
+        `WITH bounds AS (
+           SELECT date_trunc('month', $1 AT TIME ZONE 'Europe/Madrid') AS month)
+         SELECT
+          count(*) FILTER (WHERE starts_at >= (month - interval '1 month') AT TIME ZONE 'Europe/Madrid'
+            AND starts_at < month AT TIME ZONE 'Europe/Madrid')::int AS last_month,
+          count(*) FILTER (WHERE starts_at >= (month - interval '2 months') AT TIME ZONE 'Europe/Madrid'
+            AND starts_at < (month - interval '1 month') AT TIME ZONE 'Europe/Madrid')::int AS month_before,
+          count(*) FILTER (WHERE starts_at >= $1::timestamptz - interval '30 days'
+            AND starts_at < $1)::int AS last_30_days,
+          count(*) FILTER (WHERE starts_at >= $1::timestamptz - interval '60 days'
+            AND starts_at < $1::timestamptz - interval '30 days')::int AS previous_30_days
+         FROM domain.reservation, bounds`,
+        [seededAt],
+      );
+      const volume = periods[0] as Record<string, number>;
+      for (const [current, previous] of [
+        ["last_month", "month_before"],
+        ["last_30_days", "previous_30_days"],
+      ] as const) {
+        const ratio = (volume[current] ?? 0) / (volume[previous] ?? 0);
+        assert.ok(
+          (volume[previous] ?? 0) > 200 && ratio > 0.75 && ratio < 1.35,
+          `${current} ${volume[current]} vs ${previous} ${volume[previous]}`,
+        );
+      }
+
       const branding = await app.inject({
         method: "GET",
         url: "/api/public/municipalities/00000000-0000-4000-8000-00000000d100",
