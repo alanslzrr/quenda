@@ -1,0 +1,67 @@
+.list {
+  display: grid;
+  gap: var(--space-3);
+  margin-block: var(--space-4);
+}
+.card {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+.title {
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--leading-body);
+}
+/* Facts sit in as many columns as fit the card, each a small label over its value. */
+.details {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+  gap: var(--space-3) var(--space-5);
+  margin: 0;
+}
+.details div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.details dt {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+.details dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+}
+.card > :is(p, ul) {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+@container content (max-width: 30em) {
+  .card {
+    padding: var(--space-4);
+  }
+}
