@@ -19,6 +19,7 @@ import { createBlock } from "../../src/modules/reservations/blocks.ts";
 import { replaceCalendarSubscription } from "../../src/modules/reservations/calendar-subscription.ts";
 import { cancelReservation } from "../../src/modules/reservations/cancel.ts";
 import { createReservation } from "../../src/modules/reservations/create.ts";
+import { backdateBookings } from "./backdate.ts";
 import {
   account,
   administrator,
@@ -33,10 +34,12 @@ import {
 } from "./seed.ts";
 
 // A demonstration installation that looks used: two municipalities with their
-// own identity, staff with every role, eight weeks of history behind the
-// analytics, a busy next fortnight, closures, a block, legal pages and notices.
-// Every write goes through the application modules except what can only be
-// backdated (creation and arrival times), which uses the migration pool.
+// own identity, staff with every role, fourteen weeks of history behind the
+// analytics (so that a month and 30 days compare with the period before), a
+// busy next fortnight, closures, a block, legal pages and notices. Every write
+// goes through the application modules except what can only be backdated
+// (creation, acceptance, event, notice and arrival times), which uses the
+// migration pool. Nothing seeded happens after the seeding itself.
 
 interface Pools {
   auth: Pool;
@@ -57,8 +60,11 @@ interface Reserved {
 }
 type Staff = AuthenticatedAccount;
 
-const day = 86400000;
+const hour = 3600000;
+const day = 24 * hour;
 const retention = 3600;
+/** Days of history: covers the previous calendar month and the one before it. */
+const history = 98;
 
 /** Deterministic pseudo-random sequence: every installation gets the same history. */
 function random(seed: number) {
@@ -194,6 +200,7 @@ export async function seedCloudDemo(
   { auth, domain, migration }: Pools,
   { origin, password }: Options,
 ) {
+  const startedAt = new Date();
   const base = await seedDemo(app, auth, domain, migration, origin, password);
   let address = 50;
   const person = async (email: string, name: string, mfa: boolean) => {
@@ -376,6 +383,15 @@ export async function seedCloudDemo(
     holders.push((await person(email, name, false)).actor);
 
   const draw = random(20261116);
+  const now = Date.now();
+  // A booking `lead` before its start, or in the last days when that is still
+  // ahead: everything seeded was booked before the seeding.
+  const bookedBefore = (startsAt: Date, lead: number) => {
+    const planned = startsAt.getTime() - lead;
+    return new Date(
+      planned < now - hour ? planned : now - (0.1 + draw() * 2.9) * day,
+    );
+  };
   const reserved: Reserved[] = [];
   let skipped = 0;
   const reserve = async (
@@ -384,7 +400,7 @@ export async function seedCloudDemo(
     holder: Staff,
     startsAt: Date,
     minutes: number,
-    bookedAt: Date | null,
+    bookedAt: Date,
   ) => {
     try {
       const { result } = await createReservation(
@@ -404,7 +420,7 @@ export async function seedCloudDemo(
         },
         randomUUID(),
         retention,
-        bookedAt ? { now: () => bookedAt } : undefined,
+        { now: () => bookedAt },
       );
       const entry = {
         tenantId,
@@ -412,7 +428,7 @@ export async function seedCloudDemo(
         revision: result.revision as number,
         holder,
         startsAt,
-        bookedAt: bookedAt ?? new Date(),
+        bookedAt,
       };
       reserved.push(entry);
       return entry;
@@ -425,39 +441,40 @@ export async function seedCloudDemo(
 
   // A regular: Lucía plays padel every Tuesday at 19:00 (recommendations).
   const padel = valdeira.facilities[0]?.units[0] as UnitSeed;
-  for (let offset = -49; offset <= 21; offset++) {
+  const horizon = now + 26 * hour;
+  for (let offset = -history; offset <= 21; offset++) {
     const date = localDate(offset);
     if (weekday(date) !== 2) continue;
     const startsAt = new Date(zoned(date, 19));
-    if (startsAt.getTime() < Date.now() + 26 * 3600000 && offset >= 0) continue;
+    if (startsAt.getTime() < horizon && offset >= 0) continue;
     await reserve(
       valdeira.id,
       padel.id,
       lucia,
       startsAt,
       90,
-      offset < 0 ? new Date(startsAt.getTime() - 5 * day) : null,
+      bookedBefore(startsAt, 5 * day),
     );
   }
 
-  // Eight weeks of history and the next three weeks, unit by unit.
-  const horizon = Date.now() + 26 * 3600000;
+  // Fourteen weeks of history and the next three weeks, unit by unit.
   for (const seed of [valdeira, ribasanta])
     for (const unit of units(seed))
-      for (let offset = -56; offset <= 21; offset++) {
+      for (let offset = -history; offset <= 21; offset++) {
         const date = localDate(offset);
         const future = offset >= 0;
         for (const hour of starts(unit, date, 60)) {
           const startsAt = new Date(zoned(date, hour));
           if (future && startsAt.getTime() < horizon) continue;
-          if (!future && startsAt.getTime() > Date.now() - 2 * 3600000)
-            continue;
-          // History grows over the weeks; the future is half-booked so far.
-          const trend = future ? 0.55 : 0.75 + (offset + 56) / 224;
+          if (!future && startsAt.getTime() > now - 2 * 3600000) continue;
+          // History grows gently over the weeks, so consecutive months stay
+          // comparable; the future is half-booked so far.
+          const trend = future
+            ? 0.55
+            : 0.9 + (0.1 * (offset + history)) / history;
           const share = seed === ribasanta ? 0.6 : 1;
           if (draw() > demand(hour, date) * trend * share) continue;
-          const lead = (1.2 + draw() * 8) * day;
-          const bookedAt = future ? null : new Date(startsAt.getTime() - lead);
+          const bookedAt = bookedBefore(startsAt, (1.2 + draw() * 8) * day);
           await reserve(
             seed.id,
             unit.id,
@@ -469,15 +486,18 @@ export async function seedCloudDemo(
         }
       }
 
-  // Cancellations: some by residents in time, a few by the municipality.
+  // Cancellations: some by residents in time, a few by the municipality,
+  // hours or days after the booking, before its deadline and before now.
   const cancelledAt = new Map<string, Date>();
   for (const entry of reserved) {
     const roll = draw();
-    const latest = entry.startsAt.getTime() - 25 * 3600000;
-    if (roll > 0.13 || latest <= entry.bookedAt.getTime()) continue;
-    const at = new Date(
-      entry.bookedAt.getTime() + draw() * (latest - entry.bookedAt.getTime()),
+    const earliest = entry.bookedAt.getTime() + 2 * hour;
+    const latest = Math.min(
+      entry.startsAt.getTime() - 25 * hour,
+      now - 15 * 60000,
     );
+    if (roll > 0.13 || latest <= earliest) continue;
+    const at = new Date(earliest + draw() * (latest - earliest));
     const administrative = roll < 0.02 && entry.tenantId === valdeira.id;
     try {
       await cancelReservation(
@@ -539,26 +559,42 @@ export async function seedCloudDemo(
       },
     });
 
+  // The base dataset's own bookings were made just now: spread them over the
+  // last days too. A non-cancellable booking stays inside its deadline.
+  const { rows: recent } = await migration.query<{
+    id: string;
+    status: string;
+    non_cancellable_accepted: boolean;
+  }>(
+    `SELECT id, status, non_cancellable_accepted FROM domain.reservation
+      WHERE created_at >= $1 AND NOT id = ANY($2::uuid[]) ORDER BY starts_at, id`,
+    [startedAt, reserved.map((entry) => entry.id)],
+  );
+  const baseHistory = recent.map((row) => {
+    const bookedAt = new Date(
+      row.non_cancellable_accepted
+        ? now - (0.5 + draw() * 1.5) * hour
+        : now - (0.3 + draw() * 2.7) * day,
+    );
+    const span = now - 10 * 60000 - (bookedAt.getTime() + 2 * hour);
+    return {
+      id: row.id,
+      bookedAt,
+      cancelledAt:
+        row.status === "CANCELADA" && span > 0
+          ? new Date(bookedAt.getTime() + 2 * hour + draw() * span)
+          : null,
+    };
+  });
   // Backdate what the database stamped with the seeding time.
-  const past = reserved;
-  await migration.query(
-    `UPDATE domain.reservation r SET created_at=v.booked
-       FROM unnest($1::uuid[], $2::timestamptz[]) AS v(id, booked)
-      WHERE r.id=v.id`,
-    [past.map((entry) => entry.id), past.map((entry) => entry.bookedAt)],
-  );
-  await migration.query(
-    `UPDATE domain.reservation_event e SET occurred_at=v.booked
-       FROM unnest($1::uuid[], $2::timestamptz[]) AS v(id, booked)
-      WHERE e.reservation_id=v.id AND e.revision=1`,
-    [past.map((entry) => entry.id), past.map((entry) => entry.bookedAt)],
-  );
-  await migration.query(
-    `UPDATE domain.reservation_event e SET occurred_at=v.at
-       FROM unnest($1::uuid[], $2::timestamptz[]) AS v(id, at)
-      WHERE e.reservation_id=v.id AND e.revision>1`,
-    [[...cancelledAt.keys()], [...cancelledAt.values()]],
-  );
+  await backdateBookings(migration, [
+    ...reserved.map((entry) => ({
+      id: entry.id,
+      bookedAt: entry.bookedAt,
+      cancelledAt: cancelledAt.get(entry.id) ?? null,
+    })),
+    ...baseHistory,
+  ]);
   // Staff recorded arrival at most past reservations.
   await migration.query(
     `UPDATE domain.reservation SET
@@ -567,21 +603,7 @@ export async function seedCloudDemo(
       WHERE status='CONFIRMADA' AND ends_at < now() AND random() < 0.82`,
     [valdeira.id, brais.accountId, xoan.accountId],
   );
-  // Notices follow their events; older ones have been read.
-  await migration.query(
-    `UPDATE domain.reservation_notice n SET created_at=e.occurred_at,
-        read_at=CASE WHEN e.occurred_at < now() - interval '3 days'
-          THEN e.occurred_at + interval '2 hours' END
-       FROM domain.reservation_event e
-      WHERE n.tenant_id=e.tenant_id AND n.event_id=e.id`,
-  );
   // Seeded events are history, never mail: the worker must not deliver them.
-  await migration.query(
-    `UPDATE domain.reservation_email m SET created_at=e.occurred_at, accepted_at=e.occurred_at
-       FROM domain.reservation_event e
-      WHERE m.tenant_id=e.tenant_id AND m.event_id=e.id
-        AND m.accepted_at IS NULL`,
-  );
   await migration.query(
     "UPDATE domain.reservation_email SET accepted_at=created_at WHERE accepted_at IS NULL",
   );
