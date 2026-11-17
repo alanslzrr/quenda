@@ -42,6 +42,18 @@ export type Agreement = AgreementSummary &
       correlationId: string;
     }[];
   };
+/** Select options naming each agreement; a name shared by several agreements also shows its identifier. */
+export function agreementChoices(
+  agreements: readonly { agreementId: string; name: string }[],
+) {
+  return agreements.map((a) => ({
+    value: a.agreementId,
+    label:
+      agreements.filter((other) => other.name === a.name).length > 1
+        ? `${a.name} · ${a.agreementId}`
+        : a.name,
+  }));
+}
 export const uuidPattern =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 export function validParticipants(items: Participant[], own: string) {
