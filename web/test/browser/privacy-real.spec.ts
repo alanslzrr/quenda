@@ -13,6 +13,19 @@ async function select(
   await page.getByRole("combobox", { name: label, exact: true }).click();
   await page.getByRole("option", { name: option, exact: true }).click();
 }
+/** Administrators may pick a linked person; these tests type the exact reference. */
+async function exact(page: Page) {
+  const mode = page.getByRole("combobox", {
+    name: /Cómo indicar la cuenta|Como indicar a conta/,
+  });
+  if (!(await mode.count())) return;
+  await mode.click();
+  await page
+    .getByRole("option", {
+      name: /Escribir el identificador exacto|Escribir o identificador exacto/,
+    })
+    .click();
+}
 async function authorize(page: Page) {
   await page
     .getByLabel("Referencia de autorización", { exact: true })
@@ -24,6 +37,7 @@ async function authorize(page: Page) {
 }
 async function download(page: Page, view: string, subject: string) {
   await page.goto(`${view}/descarga`);
+  await exact(page);
   await page.getByLabel(/Identificador (de la cuenta|da conta)/).fill(subject);
   await authorize(page);
   const finished = page.waitForEvent("download");
@@ -47,6 +61,7 @@ async function action(
     "Familia de datos",
     /Perfiles municipales|Perfís municipais/,
   );
+  await exact(page);
   await page
     .getByLabel(/Referencia (del registro|do rexistro)/, { exact: true })
     .fill(subject);
@@ -153,9 +168,13 @@ test("authorized privacy staff manages policies, holds, scoped copies and all in
     /Perfiles municipales|Perfís municipais/,
   );
   await select(page, /Alcance (de la excepción|da excepción)/, "Un interesado");
-  await page
-    .getByLabel(/Identificador (de la cuenta|da conta)/)
-    .fill(f.subject);
+  // The fixture's privacy staff also administers the municipality, so it
+  // picks the subject among the people linked to it.
+  await select(
+    page,
+    /Persona vinculada|Persoa vinculada/,
+    `${f.subject} · ${f.subject}@example.test`,
+  );
   await authorize(page);
   await page
     .getByRole("button", {

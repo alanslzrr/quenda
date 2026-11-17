@@ -10,6 +10,7 @@ async function fixture(
   page: Page,
   permissions = ["PRIVACY_READ", "PRIVACY_EXECUTE"],
   global: string[] = [],
+  administrator = true,
 ) {
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -32,7 +33,7 @@ async function fixture(
             {
               id: tenant,
               name: "Oleiros",
-              administrator: true,
+              administrator,
               permissions: permissions.map((operation) => ({
                 operation,
                 unitId: null,
@@ -63,6 +64,19 @@ async function select(
   await page.getByRole("combobox", { name: label, exact: true }).click();
   await page.getByRole("option", { name: option, exact: true }).click();
 }
+/** Administrators may pick a linked person; these tests type the exact reference. */
+async function exact(page: Page) {
+  const mode = page.getByRole("combobox", {
+    name: /Cómo indicar la cuenta|Como indicar a conta/,
+  });
+  if (!(await mode.count())) return;
+  await mode.click();
+  await page
+    .getByRole("option", {
+      name: /Escribir el identificador exacto|Escribir o identificador exacto/,
+    })
+    .click();
+}
 async function authorize(page: Page) {
   await page
     .getByLabel("Referencia de autorización", { exact: true })
@@ -77,6 +91,7 @@ async function individual(page: Page) {
     "Familia de datos",
     /Perfiles municipales|Perfís municipais/,
   );
+  await exact(page);
   await page
     .getByLabel(/Referencia (del registro|do rexistro)/, { exact: true })
     .fill("subject");
@@ -295,6 +310,7 @@ test("holds target one subject or record and truncated read results disclose the
     .getByLabel(/Referencia (del registro|do rexistro)/, { exact: true })
     .fill("discarded-key");
   await select(page, /Alcance (de la excepción|da excepción)/, "Un interesado");
+  await exact(page);
   await page
     .getByLabel(/Identificador (de la cuenta|da conta)/)
     .fill("subject");
@@ -325,6 +341,82 @@ test("holds target one subject or record and truncated read results disclose the
   await page.goto(`${view}/excepciones`);
   await expect(page.getByText(/100 excepciones|100 excepcións/)).toBeVisible();
   await expect(page.getByText(/100 conflictos|100 conflitos/)).toBeVisible();
+});
+test("an administrator with privacy permissions picks the subject among linked people", async ({
+  page,
+}) => {
+  await fixture(page);
+  let sent: Record<string, unknown> | undefined;
+  await page.route(`**${base}/profiles`, (r) =>
+    r.fulfill({
+      json: {
+        items: [
+          {
+            accountId: "subject",
+            accountLabel: { name: "Persona", email: "persona@example.test" },
+            createdAt: "2026-01-01T00:00:00Z",
+          },
+        ],
+        nextCursor: null,
+      },
+    }),
+  );
+  await page.route(`**${base}/privacy-actions`, async (r) => {
+    sent = r.request().postDataJSON();
+    await r.fulfill({ json: { status: "ABSENT", eventId: id } });
+  });
+  await page.goto(`${view}/actuacion`);
+  // A family keyed by record keeps the exact reference only.
+  await select(page, "Familia de datos", "Reservas");
+  await expect(
+    page.getByRole("combobox", { name: /Cómo indicar la cuenta/ }),
+  ).toHaveCount(0);
+  await select(
+    page,
+    "Familia de datos",
+    /Perfiles municipales|Perfís municipais/,
+  );
+  await select(
+    page,
+    /Persona vinculada|Persoa vinculada/,
+    "Persona · persona@example.test",
+  );
+  await select(page, "Actuación", "Suprimir");
+  await authorize(page);
+  await page
+    .getByRole("button", { name: /Ejecutar actuación|Executar actuación/ })
+    .click();
+  await expect(page.getByRole("status")).toContainText(/ausente/);
+  expect(sent).toMatchObject({
+    category: "MUNICIPAL_PROFILE",
+    targetKey: "subject",
+  });
+});
+test("privacy staff without administration type the exact account and never read the municipal directory", async ({
+  page,
+}) => {
+  await fixture(page, ["PRIVACY_READ", "PRIVACY_EXECUTE"], [], false);
+  let directory = 0;
+  await page.route("**/profiles**", async (r) => {
+    directory++;
+    await r.fulfill({ json: { items: [], nextCursor: null } });
+  });
+  await page.goto(`${view}/registrar-excepcion`);
+  await select(page, /Alcance (de la excepción|da excepción)/, "Un interesado");
+  await expect(
+    page.getByRole("combobox", { name: /Cómo indicar la cuenta/ }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(/no da acceso al listado de personas del municipio/),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel(/Identificador (de la cuenta|da conta)/),
+  ).toBeVisible();
+  await page.goto(`${view}/descarga`);
+  await expect(
+    page.getByLabel(/Identificador (de la cuenta|da conta)/),
+  ).toBeVisible();
+  expect(directory).toBe(0);
 });
 test("global privacy offers only global categories and oversized copies do not produce a download", async ({
   page,
