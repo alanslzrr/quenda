@@ -20,6 +20,28 @@ export function AccountField() {
     </>
   );
 }
+/** Recipient of a municipal administrator invitation, addressed by email. */
+export function EmailField() {
+  const { t } = usePreferences();
+  return (
+    <>
+      <Input
+        label={t("Correo del destinatario", "Correo do destinatario")}
+        name="email"
+        type="email"
+        autoComplete="off"
+        required
+        maxLength={320}
+      />
+      <p>
+        {t(
+          "Solo puede aceptar la invitación, desde «Mi cuenta › Invitaciones», la cuenta cuyo correo verificado sea esta dirección; no hace falta que exista todavía. La respuesta es la misma tenga o no una cuenta registrada con ese correo.",
+          "Só pode aceptar a invitación, desde «A miña conta › Invitacións», a conta cuxo correo verificado sexa este enderezo; non fai falta que exista aínda. A resposta é a mesma teña ou non unha conta rexistrada con ese correo.",
+        )}
+      </p>
+    </>
+  );
+}
 export function InvitationDeadline({ role = false }: { role?: boolean }) {
   const { t } = usePreferences();
   return (
