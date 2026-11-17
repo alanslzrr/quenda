@@ -109,6 +109,13 @@ test("operator invitations, handover and controlled recovery preserve global aut
             accountId: "no-mfa",
             expiresAt: expiresAt(),
           });
+          await assert.rejects(
+            inviteOperator(domain, actor("first"), {
+              accountId: "no-mfa",
+              expiresAt: expiresAt(),
+            }),
+            { code: "ROLE_ALREADY_ACTIVE" },
+          );
           assert.equal(
             (
               await listOwnOperatorInvitations(domain, {
