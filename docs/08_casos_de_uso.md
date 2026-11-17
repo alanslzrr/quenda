@@ -285,6 +285,7 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 - Una cuenta con otro correo, o con el correo sin verificar, no ve la invitación ni puede aceptarla. Si el correo de una cuenta cambia antes de aceptar, la invitación sigue a la dirección, no a la cuenta.
 - El historial de invitaciones muestra el correo invitado mientras está pendiente y la cuenta que la aceptó después. Las invitaciones anteriores a las invitaciones por correo siguen dirigidas a su cuenta y pueden aceptarse.
 - Sustituir los permisos de un gestor no pide correo: la nueva invitación se dirige al titular de la concesión sustituida.
+- Un operador invita a otro operador o concede privacidad global del mismo modo, por correo: la respuesta es igual exista o no una cuenta con esa dirección y solo la acepta la cuenta con ese correo verificado. Su propio correo se rechaza en la invitación de operador.
 - Si el sustituto ya dispone del permiso adecuado, no necesita otra invitación; uno temporal aceptado puede hacerse indefinido expresamente, con motivo.
 - Retirar al último responsable ordinario se rechaza hasta resolver el relevo. La seguridad se trata en CU-16.
 - Retirar al administrador invalida las invitaciones pendientes de su concesión; recuperar el rol no las reactiva.
@@ -362,7 +363,7 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 - **Precondiciones:** autorización para el ámbito, MFA exigido y motivo registrado.
 
 **Flujo principal**
-1. El actor indica cuenta, motivo y ámbito de contención.
+1. El actor indica cuenta, motivo y ámbito de contención. El administrador municipal elige a la persona entre sus administradores, gestores y destinatarios de invitaciones pendientes; el operador identifica la cuenta por su correo exacto o por su identificador.
 2. Si actúa el administrador municipal, Quenda revoca permisos e invitaciones locales. Si un operador con MFA reciente suspende la identidad global, revoca sesiones y permisos administrativos en toda la instancia. Ninguna de las dos intervenciones cancela reservas.
 3. La recuperación controlada verifica identidad o autoridad, resuelve el compromiso y registra la intervención.
 
@@ -371,6 +372,8 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 - La seguridad puede dejar temporalmente al ámbito sin responsable; no espera un relevo.
 - Sin administrador habilitado, un operador invita al correo de un sustituto tras verificar autoridad («Invitar a un sustituto»). La respuesta no indica si existe una cuenta con ese correo. Solo la cuenta cuyo correo verificado coincida al aceptar, con MFA, puede aceptarla; el correo del propio operador se rechaza y el operador emisor nunca puede aceptarla.
 - La retirada local por seguridad también revoca las invitaciones pendientes del municipio dirigidas al correo verificado de la cuenta retirada.
+- Una invitación por correo que nadie ha aceptado se retira por su dirección: se revocan con motivo todas las pendientes a esa dirección en el municipio, sin consultar ninguna cuenta.
+- Un correo desconocido en la suspensión global responde igual que un identificador desconocido; no se ofrecen coincidencias parciales ni listados de cuentas. La suspensión también retira las invitaciones pendientes dirigidas al correo verificado de la cuenta.
 - Sin operadores habilitados, la recuperación exige mantenimiento separado. Recuperar una cuenta no restituye permisos antiguos y exige sustituir las credenciales comprometidas.
 
 **Resultado esperado:** acceso comprometido contenido y recuperación trazable, sin ampliar permisos.
@@ -431,6 +434,7 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 
 **Alternativas y excepciones**
 - El personal municipal prepara solo datos de su municipio; el permiso global cubre identidad y seguridad, no historiales municipales.
+- Si quien prepara la copia es además administrador del municipio, puede elegir la cuenta entre las personas vinculadas; en otro caso, y siempre en el ámbito global, indica el identificador exacto: el permiso de privacidad no da acceso al directorio municipal.
 - Una cuenta inactiva puede atenderse administrativamente sin reactivarla.
 - Si se supera el volumen admitido, no entrega un archivo truncado: requiere preparación administrativa.
 - No incluye secretos, contenido bloqueado ni información de terceros pendiente de revisión.
@@ -452,7 +456,7 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 
 **Alternativas y excepciones**
 - Sin política aprobada no selecciona registros ordinarios para eliminación automática.
-- Registrar o levantar una excepción exige autorización, motivo y un registro o interesado existente.
+- Registrar o levantar una excepción exige autorización, motivo y un registro o interesado existente. El interesado se elige entre las personas vinculadas al municipio solo cuando quien actúa es además su administrador; si no, se indica su identificador exacto.
 - Una excepción impide la destrucción correspondiente; no suspende el tratamiento ordinario ni la revocación de credenciales.
 - Una nueva aprobación sustituye la política anterior. Revocarla detiene nuevas actuaciones sobre registros ordinarios, pero no recupera datos ni amplía la conservación autorizada de archivos bloqueados.
 - Un conflicto no detiene los demás registros elegibles. Consultar controles requiere además `PRIVACY_READ`.
@@ -468,7 +472,7 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 - **Precondiciones:** actuación valorada por el responsable, permiso explícito, MFA reciente, autorización y motivo.
 
 **Flujo principal**
-1. El actor identifica familia, registro y actuación; para bloquear, indica también la duración autorizada.
+1. El actor identifica familia, registro y actuación; para bloquear, indica también la duración autorizada. En perfiles municipales y permisos, un actor que además administra el municipio puede elegir la persona vinculada; la referencia exacta sigue disponible y es la única vía en el resto de familias y en el ámbito global.
 2. Quenda comprueba ámbito, excepciones y dependencias.
 3. Ejecuta la actuación y registra el resultado, o conserva los datos si no procede.
 
