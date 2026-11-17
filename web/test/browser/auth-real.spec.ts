@@ -93,6 +93,19 @@ test("verified account signs in and persists preferences through the real API", 
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  const sessionCookies = async () =>
+    (await page.context().cookies()).filter((cookie) =>
+      cookie.name.endsWith("session_token"),
+    );
+  expect(await sessionCookies()).toHaveLength(1);
+  // A rejected sign-out keeps the session and never asks to clear site data.
+  const forged = await page.request.post("/api/auth/sign-out", {
+    headers: { origin: "https://attacker.example" },
+    data: {},
+  });
+  expect(forged.status()).toBe(403);
+  expect(forged.headers()["clear-site-data"]).toBeUndefined();
+  expect(await sessionCookies()).toHaveLength(1);
   const logoutResponse = page.waitForResponse("**/api/auth/sign-out");
   const stored = await page.evaluate(() =>
     localStorage.getItem("quenda.preferences"),
@@ -101,6 +114,7 @@ test("verified account signs in and persists preferences through the real API", 
   expect((await (await logoutResponse).allHeaders())["clear-site-data"]).toBe(
     '"cookies"',
   );
+  expect(await sessionCookies()).toHaveLength(0);
   expect(
     await page.evaluate(() => localStorage.getItem("quenda.preferences")),
   ).toBe(stored);
