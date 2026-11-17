@@ -89,7 +89,7 @@ test("privacy permission API requires verified sessions, recipient acceptance, O
       }
       const path = "/api/platform/privacy-invitations";
       const input = {
-        accountId: recipient.id,
+        email: "privacy-recipient@example.test",
         permissions: ["PRIVACY_READ"],
         expiresAt: new Date(Date.now() + 86400000).toISOString(),
         reason: "Autorización de consulta de identidad global",
@@ -146,7 +146,9 @@ test("privacy permission API requires verified sessions, recipient acceptance, O
       );
       const listed = await operator.client.request(path);
       assert.equal(listed.headers["cache-control"], "no-store");
+      // Acceptance binds the account and drops the invited address.
       assert.equal(ok(listed).items[0].accountId, recipient.id);
+      assert.equal(ok(listed).items[0].recipientEmail, null);
       assert.equal((await recipient.client.request(path)).statusCode, 403);
       await migration.query(
         'UPDATE auth.session SET "mfaVerifiedAt"=now()-interval \'6 minutes\' WHERE "userId"=$1',
