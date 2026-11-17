@@ -39,6 +39,13 @@
   font-weight: 500;
   text-align: start;
 }
+.row svg {
+  color: var(--text-muted);
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    translate var(--duration-fast) var(--ease-standard),
+    rotate var(--duration-fast) var(--ease-standard);
+}
 .rowButton {
   min-height: var(--control-height-sm);
   padding: 0;
@@ -55,13 +62,6 @@
 .rowButton[aria-pressed="true"] svg {
   color: var(--foreground);
   rotate: 90deg;
-}
-.row svg {
-  color: var(--text-muted);
-  transition:
-    color var(--duration-fast) var(--ease-standard),
-    translate var(--duration-fast) var(--ease-standard),
-    rotate var(--duration-fast) var(--ease-standard);
 }
 
 @media (hover: hover) and (pointer: fine) {
