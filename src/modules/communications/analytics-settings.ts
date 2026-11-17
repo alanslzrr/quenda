@@ -105,7 +105,7 @@ export async function saveAnalyticsSettings(
           ],
         )
       ).rows[0];
-      if (!row?.version) throw new HttpError("CONFLICT");
+      if (!row?.version) throw new HttpError("STALE_VERSION");
       return {
         version: row.version,
         highDemandPercent: input.highDemandPercent,
