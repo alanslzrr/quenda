@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { access, Capture, expect, test } from "./capture";
 import {
+  alongside,
   closeSql,
   command,
   otherBrowser,
@@ -143,7 +144,7 @@ test("CU-20 aplicar una política de conservación", async ({
       AUTH_ORIGIN: origin,
       LOCAL_MAIL_DIR: mail,
     },
-    "WORKER_DATABASE_URL=$WORKER_DATABASE_URL EMAIL_LOCALE=es AUTH_ORIGIN=$AUTH_ORIGIN node src/email-worker.ts --once",
+    "pnpm -s worker:local --once",
   );
   expect(worker.code).toBe(0);
   expect(worker.output).toContain(
@@ -153,12 +154,17 @@ test("CU-20 aplicar una política de conservación", async ({
 
   // Paso 5: el conflicto queda señalado y los datos protegidos se conservan.
   await page.goto(`${view}/excepciones`);
-  const conflicts = page.getByRole("heading", {
-    name: "Conflictos de conservación",
-  });
-  await expect(conflicts).toBeVisible();
-  await expect(page.getByText(carme.accountId).first()).toBeVisible();
-  await tallShot(cu, page, "excepciones-y-conflictos", { target: conflicts });
+  await expect(
+    page.getByRole("heading", { name: "Conflictos de conservación" }),
+  ).toBeVisible();
+  // The conflict card itself: the innermost card that names the reason.
+  const conflict = page
+    .locator("section, article, li")
+    .filter({ hasText: "LEGAL_HOLD" })
+    .filter({ hasText: carme.accountId })
+    .last();
+  await expect(conflict).toBeVisible();
+  await tallShot(cu, page, "excepciones-y-conflictos", { target: conflict });
 
   // Alternativa: una nueva aprobación sustituye a la política anterior.
   await policy(page, view, {
@@ -216,9 +222,11 @@ test("CU-20 aplicar una política de conservación", async ({
     .getByLabel("Motivo", { exact: true })
     .fill("Conservación cautelar");
   await page.getByRole("checkbox", { name: /Confirmo la excepción/ }).check();
-  await page.getByRole("button", { name: "Registrar excepción" }).click();
+  const submitHold = page.getByRole("button", { name: "Registrar excepción" });
+  await submitHold.click();
   const missing = page.locator("form").getByRole("alert").first();
   await expect(missing).toBeVisible();
+  await alongside(submitHold);
   await cu.shot(page, "excepcion-sin-interesado", { target: missing });
 
   // Alternativa: retirar la política detiene nuevas actuaciones.
@@ -234,7 +242,9 @@ test("CU-20 aplicar una política de conservación", async ({
     .getByLabel("Motivo", { exact: true })
     .fill("Revocación de la aprobación por el responsable");
   await page.getByRole("checkbox", { name: /Confirmo la retirada/ }).check();
-  await page.getByRole("button", { name: "Retirar política" }).click();
+  const retire = page.getByRole("button", { name: "Retirar política" });
+  await tallShot(cu, page, "formulario-retirada", { target: retire });
+  await retire.click();
   const revoked = page
     .getByRole("status")
     .filter({ hasText: "Retirada registrada" });
