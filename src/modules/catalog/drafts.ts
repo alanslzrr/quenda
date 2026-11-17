@@ -77,7 +77,8 @@ export async function createReservableUnit(
             [facilityId],
           );
           if (!parent.rows[0]) throw new HttpError("NOT_FOUND");
-          if (parent.rows[0].withdrawn_at) throw new HttpError("CONFLICT");
+          if (parent.rows[0].withdrawn_at)
+            throw new HttpError("FACILITY_WITHDRAWN");
           await client.query(
             "INSERT INTO domain.reservable_unit (tenant_id,id,facility_id,name) VALUES ($1,$2,$3,$4)",
             [tenantId, unitId, facilityId, title],

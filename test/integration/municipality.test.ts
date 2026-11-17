@@ -2280,7 +2280,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
             f.facilityId,
             { name: "No crear" },
           ),
-          { code: "CONFLICT" },
+          { code: "FACILITY_WITHDRAWN" },
         );
         await assert.rejects(
           transaction(
