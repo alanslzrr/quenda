@@ -18,6 +18,8 @@ import { auditedAuthenticationHandler } from "./request-audit.ts";
 export interface AuthConfiguration {
   origin: string;
   secret: string;
+  /** Send `Clear-Site-Data: "cookies"` after a successful sign-out; off by default. */
+  clearSiteCookiesOnSignOut?: boolean;
 }
 
 export function authOptions(

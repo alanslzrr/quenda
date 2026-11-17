@@ -31,6 +31,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
     const config = {
       origin: "https://quenda.test",
       secret: randomBytes(32).toString("hex"),
+      clearSiteCookiesOnSignOut: true,
     };
     const identity = createAuthentication(auth, config, mail);
     const database = {
