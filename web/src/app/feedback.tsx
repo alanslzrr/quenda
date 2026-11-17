@@ -7,7 +7,7 @@ import { Button } from "../ui/button/button";
 import { Skeleton } from "../ui/skeleton/skeleton";
 import { ApiError } from "./api";
 import styles from "./feedback.module.css";
-import { ActionLink } from "./link-button";
+import { LinkButton } from "./link-button";
 import { usePreferences } from "./preferences-provider";
 import {
   ReauthenticationContext,
@@ -97,7 +97,8 @@ export function Failure({
               )}
         </p>
         {notice.pending && (
-          <ActionLink
+          <LinkButton
+            size="sm"
             to="#security-verification"
             onClick={(event) => {
               event.preventDefault();
@@ -107,7 +108,7 @@ export function Failure({
             }}
           >
             {t("Ir a la verificación", "Ir á verificación")}
-          </ActionLink>
+          </LinkButton>
         )}
       </section>
     );
@@ -138,12 +139,12 @@ export function Failure({
           </p>
         ))}
       {expired ? (
-        <ActionLink
+        <LinkButton
           to={`/acceso?returnTo=${encodeURIComponent(location.pathname + location.search)}`}
           onClick={() => client.setQueryData(["session"], null)}
         >
           {t("Volver a iniciar sesión", "Volver iniciar sesión")}
-        </ActionLink>
+        </LinkButton>
       ) : needsFactor ? (
         <Button type="button" variant="secondary" onClick={reauthenticate}>
           {t("Verificar acceso", "Verificar acceso")}

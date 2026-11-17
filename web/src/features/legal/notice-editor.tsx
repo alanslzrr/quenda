@@ -1,9 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { ArrowUpRight } from "lucide-react";
 import { useState } from "react";
 import { ActionForm, textField } from "../../app/action";
 import { api } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink as Link } from "../../app/link-button";
+import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
@@ -62,11 +63,12 @@ function NoticeForm({
           : t(
               `Versión publicada: ${notice.version}. Guardar publica una versión nueva y conserva las anteriores.`,
               `Versión publicada: ${notice.version}. Gardar publica unha versión nova e conserva as anteriores.`,
-            )}{" "}
-        <Link to={noticePath(kind, tenantId)}>
-          {t("Ver la página pública", "Ver a páxina pública")}
-        </Link>
+            )}
       </p>
+      <LinkButton size="sm" to={noticePath(kind, tenantId)}>
+        {t("Ver la página pública", "Ver a páxina pública")}
+        <ArrowUpRight size={16} aria-hidden="true" />
+      </LinkButton>
       {/* Its publish button is pinned to the bottom of the scroller (see notice-editor.module.css). */}
       <div className={editor.form} data-pinned-end="">
         <ActionForm
