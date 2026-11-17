@@ -6,7 +6,7 @@ import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
-import { explicitPrivacy } from "./model";
+import { directoryAvailable, explicitPrivacy } from "./model";
 export interface Scope {
   base: string;
   view: string;
@@ -14,6 +14,8 @@ export interface Scope {
   global: boolean;
   read: boolean;
   execute: boolean;
+  /** Whether the actor may already list the people linked to this municipality. */
+  directory: boolean;
 }
 const Context = createContext<Scope | null>(null);
 export function usePrivacyScope() {
@@ -30,6 +32,10 @@ export function MunicipalPrivacyScope({ children }: { children: ReactNode }) {
     global: false,
     read: explicitPrivacy(m.permissions, "PRIVACY_READ"),
     execute: explicitPrivacy(m.permissions, "PRIVACY_EXECUTE"),
+    directory: directoryAvailable({
+      global: false,
+      administrator: m.administrator,
+    }),
   };
   return scope.read || scope.execute ? (
     <Context.Provider value={scope}>{children}</Context.Provider>
@@ -61,6 +67,7 @@ export function GlobalPrivacyScope({ children }: { children: ReactNode }) {
     global: true,
     read: p.includes("PRIVACY_READ"),
     execute: p.includes("PRIVACY_EXECUTE"),
+    directory: false,
   };
   return scope.read || scope.execute ? (
     <Context.Provider value={scope}>{children}</Context.Provider>
