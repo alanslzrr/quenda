@@ -194,7 +194,7 @@ export function SignIn({ register = false }: { register?: boolean }) {
           {challenge && (
             <Button
               type="button"
-              variant="ghost"
+              variant="secondary"
               disabled={busy}
               onClick={() => {
                 // The second-factor window may have expired; start again from the password step.
