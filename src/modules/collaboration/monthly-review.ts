@@ -101,7 +101,7 @@ export async function reviewMonthlyAssessment(
             )
           ).rows[0]?.digest;
           if (history !== input.expectedHistoryDigest)
-            throw new HttpError("CONFLICT");
+            throw new HttpError("STALE_VERSION");
         },
         execute: async (client) => {
           const row = (
@@ -131,8 +131,9 @@ export async function reviewMonthlyAssessment(
     if (error instanceof DatabaseError) {
       if (error.code === "42501") throw new HttpError("FORBIDDEN");
       if (error.code === "P0002") throw new HttpError("NOT_FOUND");
-      if (["P0001", "23514"].includes(error.code ?? ""))
-        throw new HttpError("CONFLICT");
+      // P0001: a newer assessment or another release changed the reviewed history.
+      if (error.code === "P0001") throw new HttpError("STALE_VERSION");
+      if (error.code === "23514") throw new HttpError("CONFLICT");
     }
     throw error;
   }
