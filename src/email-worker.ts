@@ -6,7 +6,10 @@ import {
 } from "./database/pools.ts";
 import { readMailConfiguration } from "./mail/config.ts";
 import { createMailTransport } from "./mail/transport.ts";
-import { processReservationEmail } from "./modules/communications/index.ts";
+import {
+  processInvitationEmail,
+  processReservationEmail,
+} from "./modules/communications/index.ts";
 import { processRetentionBatch } from "./modules/identity/index.ts";
 
 function required(name: string) {
@@ -73,6 +76,7 @@ async function run() {
     let lastHealthCheck = 0;
     let lastRetentionCheck = 0;
     let lastExhausted: string | null = null;
+    let lastInvitationExhausted: string | null = null;
     do {
       if (Date.now() - lastRetentionCheck >= 60000) {
         try {
@@ -108,7 +112,18 @@ async function run() {
         process.stdout.write(
           `${JSON.stringify({ event: "EMAIL_ATTEMPT", outcome })}\n`,
         );
-      if (Date.now() - lastHealthCheck >= 60000 || outcome === "EXHAUSTED") {
+      // Invitation notices share the loop, limits and transport, in their own
+      // queue. Their events name no address, kind or municipality.
+      const invitation = await processInvitationEmail(pool, transport, options);
+      if (invitation !== "IDLE")
+        process.stdout.write(
+          `${JSON.stringify({ event: "INVITATION_EMAIL_ATTEMPT", outcome: invitation })}\n`,
+        );
+      if (
+        Date.now() - lastHealthCheck >= 60000 ||
+        outcome === "EXHAUSTED" ||
+        invitation === "EXHAUSTED"
+      ) {
         const health = (
           await pool.query<{
             pending: string;
@@ -125,10 +140,29 @@ async function run() {
             `${JSON.stringify({ event: "EMAIL_QUEUE_ATTENTION", exhausted: health.exhausted })}\n`,
           );
         lastExhausted = health.exhausted;
+        const invitations = (
+          await pool.query<{
+            pending: string;
+            leased: string;
+            exhausted: string;
+          }>("SELECT * FROM domain.invitation_email_health()")
+        ).rows[0];
+        if (!invitations) throw new Error("Missing queue health");
+        process.stdout.write(
+          `${JSON.stringify({ event: "INVITATION_EMAIL_QUEUE_HEALTH", ...invitations })}\n`,
+        );
+        if (
+          invitations.exhausted !== "0" &&
+          invitations.exhausted !== lastInvitationExhausted
+        )
+          process.stderr.write(
+            `${JSON.stringify({ event: "INVITATION_EMAIL_QUEUE_ATTENTION", exhausted: invitations.exhausted })}\n`,
+          );
+        lastInvitationExhausted = invitations.exhausted;
         lastHealthCheck = Date.now();
       }
       if (process.argv.includes("--once") || shutdown.signal.aborted) break;
-      if (outcome === "IDLE") {
+      if (outcome === "IDLE" && invitation === "IDLE") {
         try {
           await setTimeout(idleMs, undefined, { signal: shutdown.signal });
         } catch (error) {
