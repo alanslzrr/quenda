@@ -4,6 +4,7 @@ import Fastify, { LogController } from "fastify";
 import type { Pool } from "pg";
 import { type Config, defaultIdempotencyRetentionSeconds } from "./config.ts";
 import type { DatabaseHealth } from "./database/pools.ts";
+import { registerCspReports } from "./http/csp-reports.ts";
 import { HttpError, registerErrors } from "./http/errors.ts";
 import { registerHttpMetrics } from "./http/metrics.ts";
 import { operationSummary } from "./http/openapi-summary.ts";
@@ -157,6 +158,7 @@ export async function buildApp(options: {
         options.idempotencyRetentionSeconds ??
           defaultIdempotencyRetentionSeconds,
       );
+      await registerCspReports(app, options.domain, options.identity.config);
     }
   }
   app.get(

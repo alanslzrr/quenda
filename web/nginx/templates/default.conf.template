@@ -81,6 +81,12 @@ server {
       client_max_body_size 9m;
       proxy_pass http://quenda_api;
     }
+
+    # Browsers deliver CSP violation reports here; the API applies the same 16 KiB limit.
+    location ~ ^/api/csp-reports$ {
+      client_max_body_size 16k;
+      proxy_pass http://quenda_api;
+    }
   }
 
   location /assets/ {

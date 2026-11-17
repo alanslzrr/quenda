@@ -118,8 +118,21 @@ test("the web image serves the bundle with strict headers and proxies the API", 
       "frame-ancestors 'none'",
       "require-trusted-types-for 'script'",
       "trusted-types default",
+      "report-uri /api/csp-reports",
+      "report-to csp",
     ])
       assert.ok(policy.includes(directive), directive);
+    assert.equal(
+      index.headers.get("reporting-endpoints"),
+      'csp="/api/csp-reports"',
+    );
+    // Violation reports keep a body limit of their own before reaching the API.
+    const oversizedReport = await fetch(`${base}/api/csp-reports`, {
+      method: "POST",
+      headers: { "content-type": "application/reports+json" },
+      body: "x".repeat(16385),
+    });
+    assert.equal(oversizedReport.status, 413);
     assert.ok(!policy.includes("unsafe-eval"));
     assert.ok(!/script-src[^;]*unsafe-inline/.test(policy));
     assert.equal(index.headers.get("x-content-type-options"), "nosniff");

@@ -132,6 +132,53 @@ test("public limits are shared, IP-private, atomic and clean up bounded expired 
         },
       );
       await t.test(
+        "CSP reports have their own shared allowance, separate from catalog reads",
+        async () => {
+          const report = JSON.stringify([
+            {
+              type: "csp-violation",
+              body: {
+                documentURL: `${config.origin}/perfil`,
+                effectiveDirective: "img-src",
+                blockedURL: "https://images.example.test/a.png",
+                disposition: "enforce",
+                statusCode: 200,
+              },
+            },
+          ]);
+          for (let i = 0; i < 61; i++) {
+            const app = apps[i % 2];
+            assert.ok(app);
+            const response = await app.inject({
+              method: "POST",
+              url: "/api/csp-reports",
+              remoteAddress: "192.0.2.46",
+              headers: { "content-type": "application/reports+json" },
+              payload: report,
+            });
+            assert.equal(
+              response.statusCode,
+              i < 60 ? 204 : 429,
+              response.body,
+            );
+          }
+          const app = apps[0];
+          assert.ok(app);
+          const catalog = await app.inject({
+            url: `/api/public/municipalities/${randomUUID()}/facilities`,
+            remoteAddress: "192.0.2.46",
+          });
+          assert.equal(catalog.statusCode, 200, catalog.body);
+          assert.doesNotMatch(
+            JSON.stringify(
+              (await migration.query("SELECT * FROM domain.public_rate_limit"))
+                .rows,
+            ),
+            /192\.0\.2\.46/,
+          );
+        },
+      );
+      await t.test(
         "cleanup is bounded per request and eventually removes expired hashes",
         async () => {
           await migration.query(

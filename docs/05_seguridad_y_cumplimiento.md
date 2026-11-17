@@ -68,7 +68,8 @@ La aplicación y la API se sirven bajo el mismo origen, por lo que la política 
 
 | Cabecera | Valor mínimo | Motivo |
 |---|---|---|
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'` | Limita el origen de código y datos; impide el embebido. |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; report-uri /api/csp-reports; report-to csp` | Limita el origen de código y datos; impide el embebido; envía las infracciones al propio origen. |
+| `Reporting-Endpoints` | `csp="/api/csp-reports"` | Destino del grupo `csp` de `report-to`. |
 | `Strict-Transport-Security` | `max-age=31536000` | Acceso solo por HTTPS. La imagen web no añade `includeSubDomains`: extenderlo a los subdominios corresponde a quien administra el dominio. |
 | `X-Content-Type-Options` | `nosniff` | También para los activos estáticos. |
 | `Referrer-Policy` | `no-referrer` | Los enlaces de acción llevan el secreto en el fragmento y no deben filtrarse. |
@@ -76,6 +77,8 @@ La aplicación y la API se sirven bajo el mismo origen, por lo que la política 
 | `Cross-Origin-Opener-Policy` | `same-origin` | Aísla el contexto de navegación. |
 
 `style-src 'unsafe-inline'` es necesario hoy porque la apariencia municipal inyecta un elemento `<style>` y algunos componentes usan atributos `style`. Sustituirlos por clases y variables CSS permitiría una política de estilos estricta y se trata como mejora posterior. La recarga automática ante un fragmento obsoleto y la ausencia de scripts en línea son compatibles con `script-src 'self'`. Antes de una nueva versión deben conservarse los activos de la anterior durante el plazo de las pestañas abiertas, o la aplicación mostrará la pantalla de recarga.
+
+**Informes de infracción.** Los navegadores que aplican la Reporting API envían cada infracción a `POST /api/csp-reports` según `report-to csp`; los demás usan `report-uri`, que se mantiene como alternativa. El destino es del mismo origen, de modo que no se añade ningún tercero ni se amplía `connect-src`. No requiere sesión ni lee cookies, y cualquiera podría falsificar un informe, así que sirven para detectar errores de la política o inyecciones, no como prueba. La API acepta hasta 16 KiB, aplica un límite propio de 60 peticiones por minuto y dirección, responde `204` sin cuerpo y descarta los informes sobre páginas de otro origen. De cada informe solo registra directiva, origen del recurso bloqueado (o `inline`, `eval` y equivalentes; para `data:`, `blob:` y extensiones, solo el esquema), ruta de la página sin consulta ni fragmento, disposición y estado HTTP. El evento no conserva URL completas, muestras de código, archivo y línea de origen, referente, agente de usuario ni IP, y la API no escribe en la base de datos más que el contador HMAC del límite. La lectura de esos eventos se describe en [operación](12_operacion.md#infracciones-de-la-política-de-contenido).
 
 ## Fotografías del catálogo
 

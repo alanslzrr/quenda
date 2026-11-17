@@ -18,11 +18,15 @@ export async function consumePublicAttempt(pool: Pool, subject: string) {
   if (!row) throw new Error("Missing public rate-limit decision");
   return { allowed: row.allowed, retryAfter: row.retry_after };
 }
-export function publicRateLimit(pool: Pool, secret: string) {
+/** One public allowance per address; a bucket gives a route an allowance of its own. */
+export function publicRateLimit(pool: Pool, secret: string, bucket?: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     const decision = await consumePublicAttempt(
       pool,
-      publicSubjectHash(secret, request.ip),
+      publicSubjectHash(
+        secret,
+        bucket ? `${bucket}\0${request.ip}` : request.ip,
+      ),
     );
     if (!decision.allowed) {
       reply.header("retry-after", decision.retryAfter);
