@@ -1,5 +1,6 @@
 import type { Pool } from "pg";
 import type { MailTransport } from "../../shared/mail.ts";
+import { type InvitationMailEvent, invitationMail } from "./invitation-mail.ts";
 import {
   type ReservationMailEvent,
   reservationMail,
@@ -12,11 +13,7 @@ export interface EmailWorkerOptions {
   maxAttempts: number;
   retrySeconds: number;
 }
-export async function processReservationEmail(
-  pool: Pool,
-  transport: MailTransport,
-  options: EmailWorkerOptions,
-) {
+function validLimits(options: EmailWorkerOptions) {
   if (
     !Number.isSafeInteger(options.leaseSeconds) ||
     options.leaseSeconds < 5 ||
@@ -29,6 +26,64 @@ export async function processReservationEmail(
     options.retrySeconds > 86400
   )
     throw new Error("Invalid worker limits");
+}
+/**
+ * One attempt of the invitation notice queue, with the same lease, attempt
+ * and retry limits as reservation mail. The message uses the process locale:
+ * nothing about an account that might use the address is consulted.
+ */
+export async function processInvitationEmail(
+  pool: Pool,
+  transport: MailTransport,
+  options: EmailWorkerOptions,
+) {
+  validLimits(options);
+  // Autocommit claim, as for reservation mail: no client is held while sending.
+  const result = await pool.query<{
+    token: string;
+    attempt: number;
+    kind: InvitationMailEvent["kind"];
+    recipient: string;
+    municipality: string | null;
+    timezone: string;
+    expires_at: Date;
+  }>("SELECT * FROM domain.claim_invitation_email($1,$2)", [
+    options.leaseSeconds,
+    options.maxAttempts,
+  ]);
+  const job = result.rows[0];
+  if (!job) return "IDLE" as const;
+  let accepted = false;
+  try {
+    await transport.send(
+      invitationMail(job.recipient, options.origin, options.locale, {
+        kind: job.kind,
+        municipality: job.municipality,
+        timeZone: job.timezone,
+        expiresAt: job.expires_at.toISOString(),
+      }),
+    );
+    accepted = true;
+  } catch {
+    // Neither the address nor provider errors are recorded or logged.
+  }
+  const finished = await pool.query<{ saved: boolean }>(
+    "SELECT domain.finish_invitation_email($1,$2,$3,$4) AS saved",
+    [job.token, accepted, options.maxAttempts, options.retrySeconds],
+  );
+  if (!finished.rows[0]?.saved) return "LEASE_LOST" as const;
+  return accepted
+    ? ("ACCEPTED" as const)
+    : job.attempt >= options.maxAttempts
+      ? ("EXHAUSTED" as const)
+      : ("RETRY_SCHEDULED" as const);
+}
+export async function processReservationEmail(
+  pool: Pool,
+  transport: MailTransport,
+  options: EmailWorkerOptions,
+) {
+  validLimits(options);
   // Autocommit completes the claim before any external I/O. No pooled client is
   // held while sending; a lost acknowledgement is recovered by lease expiry.
   const result = await pool.query<{
