@@ -38,7 +38,7 @@ test("CU-01 consultar catálogo y disponibilidad", async ({ page }) => {
 
   const unit = page.getByRole("link", { name: /^Pista de pádel 1/ });
   await expect(unit).toBeVisible();
-  await shot(cu, page, "elegir-espacio", { target: unit });
+  await shot(cu, page, "elegir-espacio", { target: unit, fullPage: true });
   await unit.click();
 
   // Paso 2: fecha y duración.
