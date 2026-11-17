@@ -173,7 +173,7 @@ export async function grantManager(
     await cookieOf(admin),
     `/api/municipalities/${tenantId}/manager-invitations`,
     {
-      accountId: person.id,
+      email: person.email,
       expiresAt: new Date(Date.now() + 86400000).toISOString(),
       permissions,
     },
