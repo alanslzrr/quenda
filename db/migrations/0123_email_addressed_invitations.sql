@@ -349,8 +349,8 @@ REVOKE ALL ON FUNCTION domain.revoke_administrator_invitation(uuid) FROM PUBLIC,
 GRANT EXECUTE ON FUNCTION domain.revoke_administrator_invitation(uuid) TO quenda_domain;
 
 -- Withdrawing an account for security also withdraws pending invitations sent
--- to its current verified address, so the account cannot accept them later.
--- They do not count as the account's own municipal ties in the result.
+-- to its current verified address, so the account cannot accept them later,
+-- even when it has no other tie with the municipality.
 CREATE OR REPLACE FUNCTION domain.revoke_municipal_access_for_security(subject text,rationale text) RETURNS boolean
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog AS $$
 DECLARE tenant uuid:=nullif(current_setting('quenda.tenant_id',true),'')::uuid;
@@ -394,11 +394,13 @@ BEGIN
     AND accepted_at IS NULL AND revoked_at IS NULL RETURNING id
   ) INSERT INTO domain.identity_event(tenant_id,id,actor_id,operation,subject_id,invitation_id,reason)
    SELECT tenant,gen_random_uuid(),actor,'REVOKE_INVITATION',subject,id,rationale FROM revoked;
+  affected:=affected OR FOUND;
   WITH revoked AS (
    UPDATE domain.manager_invitation SET revoked_at=now() WHERE tenant_id=tenant AND account_id IS NULL AND recipient_email=address
     AND accepted_at IS NULL AND revoked_at IS NULL RETURNING id
   ) INSERT INTO domain.manager_event(tenant_id,id,invitation_id,actor_id,operation,reason)
    SELECT tenant,gen_random_uuid(),id,actor,'REVOKE_MANAGER_INVITATION',rationale FROM revoked;
+  affected:=affected OR FOUND;
  END IF;
  RETURN affected;
 END $$;
