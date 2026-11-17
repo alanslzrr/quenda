@@ -303,7 +303,10 @@ test("security withdrawal of a pending address sends the address, never an accou
   expect(sent).toEqual([
     {
       path: `${root}/invitation-addresses/revoke-for-security`,
-      body: { email: "destinatario@demo.test", reason: "Dirección comprometida" },
+      body: {
+        email: "destinatario@demo.test",
+        reason: "Dirección comprometida",
+      },
     },
   ]);
 });
