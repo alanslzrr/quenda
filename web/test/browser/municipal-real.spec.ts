@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { accessibilityViolations } from "./axe-scan";
 import { fieldValue, pickDate, pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 
@@ -218,13 +218,7 @@ test("municipal appearance saves explicitly while preview temporarily overrides 
   await expect(
     page.getByLabel(/^Acento en modo (oscuro|escuro), en hexadecimal$/),
   ).toHaveValue("#7fb0ff");
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: `test-results/municipal-appearance-${info.project.name}.png`,
@@ -402,13 +396,7 @@ test("blocks survive reload and release through the daily agenda", async ({
   await release.getByRole("checkbox").check();
   await release.getByRole("button", { name: "Liberar bloqueo" }).click();
   await expect(page.getByText("Liberado", { exact: true })).toBeVisible();
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: `test-results/municipal-agenda-${info.project.name}.png`,

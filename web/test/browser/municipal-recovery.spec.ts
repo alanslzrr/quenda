@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { accessibilityViolations } from "./axe-scan";
 import { test } from "./fixtures";
 
 const tenant = "00000000-0000-4000-8000-000000000091";
@@ -115,7 +115,7 @@ test("a rate-limited municipal page keeps the management shell, waits, then reco
   await expect(
     page.getByRole("link", { name: /Cambiar municipio/ }),
   ).toHaveAttribute("href", "/administracion");
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(await accessibilityViolations(page, { allRules: true })).toEqual([]);
   if ((page.viewportSize()?.width ?? 1280) < 768)
     await page.keyboard.press("Escape");
   const baseline = state.navigationReads;
@@ -166,7 +166,7 @@ test("report and review queries explain why they are unavailable without agreeme
   await expect(report).toHaveAccessibleDescription(
     /pertenecen a un convenio|pertencen a un convenio/,
   );
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(await accessibilityViolations(page, { allRules: true })).toEqual([]);
   await page.goto(`${base}/informes/revision`);
   const review = page.getByRole("button", {
     name: "Consultar contexto de revisión",
@@ -204,7 +204,7 @@ test("revocation is unavailable with nothing to revoke, unless a known reference
   await page.goto(`${base}/acreditaciones`);
   await expect(revoke).toBeDisabled();
   await expect(revoke).toHaveAccessibleDescription(/Aún no hay|Aínda non hai/);
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(await accessibilityViolations(page, { allRules: true })).toEqual([]);
   await page
     .getByRole("button", {
       name: either(
