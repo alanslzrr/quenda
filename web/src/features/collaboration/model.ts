@@ -36,6 +36,8 @@ export type Agreement = AgreementSummary &
       tenantId: string;
       /** Null for another municipality: only the approving municipality sees the account. */
       approvedBy: string | null;
+      /** Name and email of an approver from the acting municipality. */
+      approvedByLabel: { name: string; email: string } | null;
       approvedAt: string;
       correlationId: string;
     }[];
@@ -71,7 +73,12 @@ export function civilValue(instant: string, timeZone: string) {
       .formatToParts(new Date(instant))
       .map((p) => [p.type, p.value]),
   );
-  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}.${parts.fractionalSecond}`;
+  const minute = `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+  // Whole minutes read as hh:mm in the time field; finer precision is kept so
+  // a cloned instant is not silently rounded.
+  return parts.second === "00" && parts.fractionalSecond === "000"
+    ? minute
+    : `${minute}:${parts.second}.${parts.fractionalSecond}`;
 }
 export function civilOptions(value: string, zone: string) {
   const match =

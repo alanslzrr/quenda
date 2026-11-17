@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import {
   type AuthConfiguration,
   type Authentication,
+  accountLabelSchema,
   createRequestActor,
 } from "../identity/index.ts";
 import { listAgreementVersions, readAgreementVersion } from "./queries.ts";
@@ -59,6 +60,7 @@ const detail = {
     items: object({
       tenantId: uuid,
       approvedBy: { ...text, nullable: true },
+      approvedByLabel: accountLabelSchema,
       approvedAt: instant,
       correlationId: uuid,
     }),

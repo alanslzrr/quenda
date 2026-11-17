@@ -248,9 +248,11 @@ export async function authenticationSchema(auth: Authentication) {
 }
 
 const errorMessages: Record<string, [string, string]> = {
+  // Covers voluntary deactivation and security suspension alike, so the
+  // reply does not reveal which one applies.
   ACCOUNT_INACTIVE: [
-    "La cuenta está dada de baja.",
-    "A conta está dada de baixa.",
+    "La cuenta no está activa. Si la diste de baja, puedes recuperarla con «Reactivar mi cuenta»; si no, contacta con el equipo que opera Quenda.",
+    "A conta non está activa. Se a deches de baixa, podes recuperala con «Reactivar a miña conta»; se non, contacta co equipo que opera Quenda.",
   ],
   INVALID_EMAIL_OR_PASSWORD: [
     "Correo o contraseña incorrectos.",

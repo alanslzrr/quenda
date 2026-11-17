@@ -189,6 +189,10 @@ test("staff grants require acceptance and replace scope without an authority gap
     await expect(
       recipient.getByText("No tienes acceso a este municipio."),
     ).toBeVisible();
+    // The management frame stays, with a way back to the municipalities list.
+    await expect(
+      recipient.getByRole("link", { name: "Volver a Gestión" }),
+    ).toBeVisible();
   } finally {
     await other.close();
   }

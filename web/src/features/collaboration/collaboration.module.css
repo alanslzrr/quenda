@@ -33,3 +33,9 @@
   gap: 1.4rem;
   min-width: 0;
 }
+.unitNames {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}

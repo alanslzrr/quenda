@@ -15,6 +15,7 @@ import { SectionNav } from "../../ui/section-nav/section-nav";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
 import { AccountLabel } from "./account-label";
 import styles from "./municipal.module.css";
+import { UnitName } from "./names";
 import { ManagementPage } from "./page";
 import {
   Denied,
@@ -380,9 +381,14 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
               {item.permissions.map((p) => (
                 <li key={`${p.operation}:${p.unitId}`}>
                   {t(...staffOperations[p.operation])} ·{" "}
-                  {p.unitId
-                    ? `${t("Unidad", "Unidade")}: ${p.unitId}`
-                    : t("Todo el municipio", "Todo o municipio")}
+                  {p.unitId ? (
+                    <>
+                      {t("Unidad", "Unidade")}:{" "}
+                      <UnitName tenantId={m.id} id={p.unitId} />
+                    </>
+                  ) : (
+                    t("Todo el municipio", "Todo o municipio")
+                  )}
                 </li>
               ))}
             </ul>

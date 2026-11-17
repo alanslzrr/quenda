@@ -715,7 +715,11 @@ test("agreement drafts preserve participant ownership and do not activate capabi
         assert.ok(
           current.approvals
             .filter((a) => a.tenantId !== tenant)
-            .every((a) => a.approvedBy === null),
+            .every((a) => a.approvedBy === null && a.approvedByLabel === null),
+        );
+        assert.ok(
+          current.approvals.find((a) => a.tenantId === tenant)?.approvedByLabel
+            ?.email,
         );
         assert.equal(current.createdBy, actor(0).accountId);
         assert.equal(

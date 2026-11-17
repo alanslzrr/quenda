@@ -339,6 +339,7 @@
 /* The logo is previewed on the background it will sit on. */
 .logoPreview {
   display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   width: 5.5rem;
   height: 3rem;
   place-items: center;
