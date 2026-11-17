@@ -49,7 +49,8 @@
     "privacy:checkpoint": "node --env-file=.env.migration.local scripts/privacy-checkpoint.ts",
     "privacy:restore-reconcile": "node scripts/privacy-restore-reconcile.ts",
     "email:recover": "node --env-file=.env.migration.local scripts/recover-email.ts",
-    "account:recover": "node --env-file=.env.migration.local scripts/recover-account.ts"
+    "account:recover": "node --env-file=.env.migration.local scripts/recover-account.ts",
+    "docs:capture": "pnpm --dir web docs:capture"
   },
   "dependencies": {
     "@better-auth/utils": "0.5.0",

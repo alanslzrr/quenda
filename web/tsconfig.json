@@ -17,6 +17,8 @@
     "test",
     "vite.config.ts",
     "playwright.config.ts",
-    "playwright.tablet.config.ts"
+    "playwright.tablet.config.ts",
+    "playwright.docs.config.ts",
+    "docs-capture"
   ]
 }
