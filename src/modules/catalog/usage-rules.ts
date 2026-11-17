@@ -84,7 +84,7 @@ export async function saveUsageRules(
           ],
         )
       ).rows[0];
-      if (!row?.version) throw new HttpError("CONFLICT");
+      if (!row?.version) throw new HttpError("STALE_VERSION");
       return read(client, tenantId, unitId, row.version);
     },
   );
