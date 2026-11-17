@@ -18,8 +18,10 @@ const network = "quenda-emulators";
 const emulators = path.resolve("infra/emulators");
 
 interface Cloud {
-  /** URL polled from the emulator network until it answers 2xx. */
+  /** URL polled until it answers 2xx, from the runner's network. */
   health: string;
+  /** Extra `docker run` arguments for the health probe and OpenTofu runner. */
+  docker?: string[];
   /** Environment for the OpenTofu container. */
   env: Record<string, string>;
   /** Resources applied for real; the rest of the configuration is only planned. */
@@ -48,6 +50,52 @@ const clouds: Record<string, Cloud> = {
         mode: 0o600,
       });
     },
+  },
+  aws: {
+    // The emulator's certificate names 127.0.0.1 only: the runner joins its
+    // network namespace and reads its generated config, CA and credentials.
+    health: "https://127.0.0.1:9297/__admin/health",
+    docker: [
+      "--network",
+      "container:quenda-emulators-aws-1",
+      "-v",
+      "quenda-emulators_aws-emulator:/home/emulator/.aws/emulator:ro",
+    ],
+    env: {},
+    // The security group is only planned: see infra/emulators/aws.
+    targets: ["aws_eip.quenda", "aws_route_table_association.public"],
+  },
+  azure: {
+    health: "http://azure:4577/_floci/health",
+    // Go adds every certificate in SSL_CERT_DIR to the system bundle.
+    env: { SSL_CERT_DIR: "/work/ca" },
+    targets: [],
+    prepare: async (work) => {
+      await mkdir(path.join(work, "ca"));
+      await docker(
+        [
+          "run",
+          "--rm",
+          "--user",
+          "0",
+          "--network",
+          network,
+          "-v",
+          `${work}:/work`,
+          curlImage,
+          "-fsS",
+          "-o",
+          "/work/ca/floci-az.pem",
+          "http://azure:4577/_floci/tls-cert",
+        ],
+        { quiet: true },
+      );
+    },
+  },
+  gcp: {
+    health: "http://gcp:4588/health",
+    env: { GOOGLE_OAUTH_ACCESS_TOKEN: "floci-gcp-placeholder" },
+    targets: [],
   },
 };
 
@@ -94,7 +142,14 @@ async function validate(name: string, cloud: Cloud, keep: boolean) {
     let healthy = false;
     for (let attempt = 0; attempt < 90 && !healthy; attempt++) {
       healthy = await docker(
-        ["run", "--rm", "--network", network, curlImage, "-fsS", cloud.health],
+        [
+          "run",
+          "--rm",
+          ...(cloud.docker ?? ["--network", network]),
+          curlImage,
+          "-fsSk",
+          cloud.health,
+        ],
         { quiet: true },
       ).then(
         () => true,
@@ -130,8 +185,7 @@ async function validate(name: string, cloud: Cloud, keep: boolean) {
         [
           "run",
           "--rm",
-          "--network",
-          network,
+          ...(cloud.docker ?? ["--network", network]),
           "-v",
           `${work}:/work`,
           "-v",
@@ -193,7 +247,8 @@ async function validate(name: string, cloud: Cloud, keep: boolean) {
         tofu("plan", "-detailed-exitcode", ...common, ...vars, ...targets),
       )) &&
       (await phase("destroy", () =>
-        tofu("destroy", "-auto-approve", ...common, ...vars, ...targets),
+        // Untargeted: removes what was applied, dependencies included.
+        tofu("destroy", "-auto-approve", ...common, ...vars),
       )) &&
       (await phase(
         "state empty",

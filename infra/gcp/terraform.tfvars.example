@@ -1,0 +1,15 @@
+# Copy to terraform.tfvars (ignored by Git) and replace every value.
+project         = "my-project"
+region          = "europe-southwest1"
+zone            = "europe-southwest1-a"
+ssh_public_key  = "ssh-ed25519 AAAA... operator@example"
+ssh_source_cidr = "203.0.113.10/32"
+
+domain     = "reservas.example.org"
+acme_email = "operacion@example.org"
+
+smtp = {
+  host = "smtp.example.org"
+  from = "reservas@example.org"
+  user = "quenda"
+}
