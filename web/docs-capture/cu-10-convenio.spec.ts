@@ -111,14 +111,6 @@ test("CU-10 gestionar un convenio", async ({ page, browser }) => {
   await approval.click();
   await expect(approval).toHaveCount(0);
 
-  // Alternativa: aprobar no activa; falta la aprobación del otro municipio.
-  const pending = page.getByText("Sin aprobación registrada.");
-  await expect(pending).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Activar versión" }),
-  ).toHaveCount(0);
-  await snap(cu, page, "falta-aprobacion", { tall: true, target: pending });
-
   const other = await secondBrowser(browser, page);
   try {
     const xoan = await other.newPage();
@@ -208,13 +200,28 @@ test("CU-10 gestionar un convenio", async ({ page, browser }) => {
   await snap(cu, page, "nueva-version", { tall: true, target: next });
   await next.click();
   await expect(page).toHaveURL(/\/versiones\/2$/);
+  const nextVersion = new URL(page.url()).pathname;
   const second = page.getByText("BORRADOR", { exact: true });
   await expect(second).toBeVisible();
   await snap(cu, page, "version-2-borrador", { tall: true, target: second });
   await page.goto(`/administracion/${valdeira}/convenios`);
   const history = page.getByRole("table", { name: "Versiones del convenio" });
   await expect(history.getByRole("row")).toHaveCount(3);
-  await snap(cu, page, "versiones", { target: history });
+  await snap(cu, page, "versiones", {
+    target: history.getByRole("link", { name: /versión 2/ }),
+  });
+
+  // Alternativa: aprobar no activa; falta la aprobación del otro municipio.
+  await page.goto(nextVersion);
+  const approveNext = await approve(page);
+  await approveNext.click();
+  await expect(approveNext).toHaveCount(0);
+  const pending = page.getByText("Sin aprobación registrada.");
+  await expect(pending).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Activar versión" }),
+  ).toHaveCount(0);
+  await snap(cu, page, "falta-aprobacion", { tall: true, target: pending });
 
   // Limpieza: Valdeira también reabre su pista al público.
   const reopened = await reopen(page, valdeira, units.tennis);
