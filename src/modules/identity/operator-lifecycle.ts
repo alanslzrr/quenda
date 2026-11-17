@@ -3,6 +3,7 @@ import { DatabaseError, type Pool } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
+import { invitationAddress } from "./invitation-address.ts";
 import { platformAccountNames } from "./platform-account-names.ts";
 import { requireRecentMfa } from "./reauthentication.ts";
 
@@ -13,7 +14,8 @@ function outcome(value: string | undefined): void {
     case "HANDOVER_REQUIRED":
       throw new HttpError("ACCOUNT_HANDOVER_REQUIRED");
     case "CONFLICT":
-      // The account is already an operator or has a pending invitation.
+      // The accepting account is already an operator, or the address already
+      // has a pending invitation.
       throw new HttpError("ROLE_ALREADY_ACTIVE");
     case "INVALID_INPUT":
     case "NOT_FOUND":
@@ -30,31 +32,42 @@ function reason(value: string): string {
   return result;
 }
 
+/**
+ * The invitation is addressed to an email address. No account is looked up,
+ * so the response is the same whether or not one uses that address. Only the
+ * issuing operator's own address is rejected.
+ */
 export async function inviteOperator(
   pool: Pool,
   actor: AuthenticatedAccount,
-  input: { accountId: string; expiresAt: string },
+  input: { email: string; expiresAt: string },
 ) {
   requireRecentMfa(actor);
+  const recipient = invitationAddress(input.email);
   if (
-    !input.accountId ||
-    input.accountId.length > 128 ||
+    recipient === actor.email.trim().toLowerCase() ||
     !Number.isFinite(Date.parse(input.expiresAt))
   )
     throw new HttpError("INVALID_INPUT");
   const invitationId = randomUUID();
-  return command(
-    pool,
-    { accountId: actor.accountId, tenantId: null },
-    async (client) => {
-      const result = await client.query<{ outcome: string }>(
-        "SELECT domain.invite_operator($1,$2,$3,$4) AS outcome",
-        [input.accountId, input.expiresAt, invitationId, randomUUID()],
-      );
-      outcome(result.rows[0]?.outcome);
-      return { invitationId };
-    },
-  );
+  try {
+    return await command(
+      pool,
+      { accountId: actor.accountId, tenantId: null },
+      async (client) => {
+        const result = await client.query<{ outcome: string }>(
+          "SELECT domain.invite_operator($1,$2,$3,$4) AS outcome",
+          [recipient, input.expiresAt, invitationId, randomUUID()],
+        );
+        outcome(result.rows[0]?.outcome);
+        return { invitationId };
+      },
+    );
+  } catch (error) {
+    if (error instanceof DatabaseError && error.code === "23514")
+      throw new HttpError("INVALID_INPUT");
+    throw error;
+  }
 }
 
 export async function acceptOperatorInvitation(
@@ -123,7 +136,8 @@ export async function revokeOperator(
 
 type InvitationRow = {
   id: string;
-  account_id?: string;
+  account_id?: string | null;
+  recipient_email?: string | null;
   invited_by?: string;
   expires_at: Date;
   status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
@@ -160,7 +174,8 @@ async function invitations(
             ...(own
               ? {}
               : {
-                  accountId: row.account_id,
+                  accountId: row.account_id ?? null,
+                  recipientEmail: row.recipient_email ?? null,
                   accountName: names.get(row.account_id ?? "") ?? null,
                   invitedBy: row.invited_by,
                   invitedByName: names.get(row.invited_by ?? "") ?? null,
