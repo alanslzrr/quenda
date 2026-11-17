@@ -182,7 +182,7 @@ Para que el calendario se actualice solo, el titular crea una suscripción desde
 
 ## Consulta de reservas
 
-- `GET /api/municipalities/{tenantId}/reservations/{reservationId}`: estado actual de una reserva. Admite al titular sin MFA y al personal con permisos vigentes sobre la unidad y MFA. Un identificador de otro municipio o fuera del ámbito autorizado no revela la reserva.
+- `GET /api/municipalities/{tenantId}/reservations/{reservationId}`: estado actual de una reserva. Admite al titular sin MFA y al personal con permisos vigentes sobre la unidad y MFA. Un identificador de otro municipio o fuera del ámbito autorizado no revela la reserva. Incluye los nombres actuales del municipio, la instalación y el espacio (`municipalityName`, `facilityName`, `unitName`), leídos con la misma autorización que la reserva (`domain.reservation_place`) y no con el catálogo público: se mantienen aunque el espacio o la instalación se hayan retirado y no consumen el límite de peticiones públicas. Solo serían `null` si el espacio no existiera.
 - `GET /api/me/reservations`: historial del usuario autenticado entre municipios de la instancia, incluidas reservas de unidades retiradas. Devuelve nombre municipal y de unidad, sin aceptar un identificador de otro usuario.
 - `GET /api/municipalities/{tenantId}/reservations`: requiere MFA y devuelve únicamente reservas cubiertas por `RESERVATION_READ` o `RESERVATION_MANAGE`. `?unitId=UUID` filtra sin ampliar permisos. `?date=AAAA-MM-DD` selecciona las reservas que se solapan con ese día municipal antes de paginar, incluidas las canceladas. Ser titular de una reserva no concede acceso al listado de gestión.
 
