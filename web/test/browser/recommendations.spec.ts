@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { accessibilityViolations } from "./axe-scan";
 import { test } from "./fixtures";
 
 const tenant = "00000000-0000-4000-8000-000000000081";
@@ -104,7 +104,7 @@ test("the history offers the holder's habitual slots and lets them turn the offe
     "href",
     `/municipios/${tenant}/unidades/${unit}/reservar?inicio=${encodeURIComponent("2026-11-17T18:00:00.000Z")}&fin=${encodeURIComponent("2026-11-17T19:00:00.000Z")}`,
   );
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(await accessibilityViolations(page, { allRules: true })).toEqual([]);
 
   await section
     .getByRole("button", {
@@ -123,7 +123,7 @@ test("the history offers the holder's habitual slots and lets them turn the offe
     ),
   });
   await expect(choice).not.toBeChecked();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(await accessibilityViolations(page, { allRules: true })).toEqual([]);
   await choice.click();
   await expect(choice).toBeChecked();
   expect(state.saved).toEqual([false, true]);

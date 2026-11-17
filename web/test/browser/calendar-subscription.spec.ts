@@ -1,6 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, request, test } from "@playwright/test";
 import { createAccount } from "./account-helpers";
+import { accessibilityViolations } from "./axe-scan";
 
 /** Both calendar options live in one dialog opened from the history heading. */
 async function openCalendar(page: Page) {
@@ -47,13 +47,7 @@ test("a holder creates, replaces and withdraws a calendar subscription URL", asy
       name: /Abrir en mi aplicación de calendario|Abrir na miña aplicación de calendario/,
     }),
   ).toHaveAttribute("href", first.replace(/^https?:/, "webcal:"));
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
 
   // A calendar application has no session: the URL alone must work.
   const calendarApp = await request.newContext({ baseURL });
