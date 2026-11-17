@@ -12,6 +12,7 @@ import {
   ActionFields,
   Authorization,
   CategoryField,
+  SubjectField,
   TargetField,
 } from "./fields";
 import { PrivacyForm } from "./form";
@@ -158,6 +159,7 @@ export function CreateHold() {
   const s = usePrivacyScope();
   const { t } = usePreferences();
   const [kind, setKind] = useState("targetKey");
+  const [category, setCategory] = useState("");
   const [id, setId] = useState<string>();
   return (
     <>
@@ -184,7 +186,7 @@ export function CreateHold() {
             reason: value(d, "reason"),
           })}
         >
-          <CategoryField />
+          <CategoryField value={category} onChange={setCategory} />
           <Select
             label={t("Alcance de la excepción", "Alcance da excepción")}
             value={kind}
@@ -198,12 +200,10 @@ export function CreateHold() {
             ]}
           />
           {kind === "targetKey" ? (
-            <TargetField />
+            <TargetField category={category} />
           ) : (
-            <Input
+            <SubjectField
               name="subjectId"
-              required
-              maxLength={128}
               label={t("Identificador de la cuenta", "Identificador da conta")}
             />
           )}
@@ -275,6 +275,7 @@ export function ReleaseHold() {
 export function IndividualAction() {
   const s = usePrivacyScope();
   const { t } = usePreferences();
+  const [category, setCategory] = useState("");
   const [result, setResult] = useState<ActionResult>();
   return (
     <>
@@ -323,8 +324,8 @@ export function IndividualAction() {
             reason: value(d, "reason"),
           })}
         >
-          <CategoryField />
-          <TargetField />
+          <CategoryField value={category} onChange={setCategory} />
+          <TargetField category={category} />
           <ActionFields />
           <Authorization />
           <Checkbox

@@ -2,9 +2,8 @@ import { useState } from "react";
 import { textField } from "../../app/action";
 import { usePreferences } from "../../app/preferences-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
-import { Input } from "../../ui/input/input";
 import { usePrivacyScope } from "./context";
-import { Authorization } from "./fields";
+import { Authorization, SubjectField } from "./fields";
 import { PrivacyForm } from "./form";
 import type { PersonalData } from "./model";
 export function PersonalDownload() {
@@ -67,11 +66,10 @@ export function PersonalDownload() {
             setDone(true);
           }}
         >
-          <Input
-            required
-            maxLength={128}
+          <SubjectField
+            name="accountId"
             value={id}
-            onChange={(e) => setId(e.target.value)}
+            onChange={setId}
             label={t("Identificador de la cuenta", "Identificador da conta")}
           />
           <Authorization />
