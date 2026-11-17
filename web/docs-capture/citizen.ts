@@ -135,13 +135,23 @@ export async function signInWith(
   await expect(page).not.toHaveURL(/\/acceso/);
 }
 
+/**
+ * «Noelia Varela Souto» → noelia.varela@demo.test. Each scenario uses its
+ * own resident and every run starts from a fresh database, so the readable
+ * address is unique without a random suffix.
+ */
+export function residentEmail(name: string) {
+  const [first = "vecina", second = "demo"] = name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .split(" ");
+  return `${first}.${second}@demo.test`;
+}
+
 /** A fresh verified resident, registered through /registro and its mail. */
 export async function registerResident(page: Page, name: string) {
-  const first = (name.split(" ")[0] ?? "vecina")
-    .normalize("NFD")
-    .replace(/[^a-zA-Z]/g, "")
-    .toLowerCase();
-  const email = `${first}.${randomUUID().slice(0, 8)}@demo.test`;
+  const email = residentEmail(name);
   await page.goto("/registro");
   await page.getByLabel("Nombre", { exact: true }).fill(name);
   await page.getByLabel("Correo electrónico", { exact: true }).fill(email);
