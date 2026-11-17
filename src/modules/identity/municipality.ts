@@ -144,7 +144,14 @@ export async function acceptAdministratorInvitation(
             throw new HttpError("ACCOUNT_HANDOVER_REQUIRED");
           throw error;
         });
-      if (!activated.rows[0]?.allowed) throw new HttpError("CONFLICT");
+      if (!activated.rows[0]?.allowed) {
+        const current = await client.query<{ active: boolean }>(
+          "SELECT domain.current_is_administrator() AS active",
+        );
+        throw new HttpError(
+          current.rows[0]?.active ? "ROLE_ALREADY_ACTIVE" : "CONFLICT",
+        );
+      }
       await client.query(
         "UPDATE domain.administrator_invitation SET accepted_at = now() WHERE tenant_id = $1 AND id = $2",
         [tenantId, invitationId],
