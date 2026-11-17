@@ -161,7 +161,7 @@ export function StaffInvite({
       ),
     );
   return (
-    <>
+    <div className={styles.formFlow}>
       <p>
         {t(
           "La cuenta debe existir. El destinatario consulta y acepta la invitación desde su perfil con la verificación en dos pasos; enviarla no activa permisos.",
@@ -300,6 +300,6 @@ export function StaffInvite({
           )}
         />
       </MunicipalForm>
-    </>
+    </div>
   );
 }
