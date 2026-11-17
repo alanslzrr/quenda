@@ -73,7 +73,7 @@ test("security suspension revokes global access without releasing bookings and r
         invitationId,
       );
       const pending = await inviteOperator(domain, actor("operator"), {
-        accountId: "holder",
+        email: "holder@example.test",
         expiresAt: new Date(Date.now() + 86400000).toISOString(),
       });
       const facilityId = randomUUID(),
