@@ -117,7 +117,7 @@ test("municipal appearance is constrained, isolated, versioned and audited atomi
     assert.equal(competing.filter((x) => x.status === "fulfilled").length, 1);
     assert.equal(
       competing.filter(
-        (x) => x.status === "rejected" && x.reason.code === "CONFLICT",
+        (x) => x.status === "rejected" && x.reason.code === "STALE_VERSION",
       ).length,
       1,
     );
@@ -228,9 +228,23 @@ test("municipal appearance is constrained, isolated, versioned and audited atomi
       const reset = await request({ expectedVersion: 2, ...reset_ });
       assert.equal(reset.statusCode, 200);
       assert.deepEqual(reset.json(), { ...defaults, version: 3 });
-      assert.equal(
-        (await request({ ...input, expectedVersion: 2 })).statusCode,
-        409,
+      const stale = await request({ ...input, expectedVersion: 2 });
+      assert.equal(stale.statusCode, 409);
+      assert.equal(stale.json().error.code, "STALE_VERSION");
+      assert.match(
+        stale.json().error.message,
+        /Recarga para ver la versión actual y vuelve a aplicar tus cambios/,
+      );
+      const staleGalician = await app.inject({
+        method: "PUT",
+        url: `/api/municipalities/${tenantId}/appearance`,
+        headers: { origin: "https://quenda.test", "accept-language": "gl" },
+        payload: { ...input, expectedVersion: 2 },
+      });
+      assert.equal(staleGalician.statusCode, 409);
+      assert.match(
+        staleGalician.json().error.message,
+        /Recarga para ver a versión actual e volve aplicar os teus cambios/,
       );
     } finally {
       await app.close();

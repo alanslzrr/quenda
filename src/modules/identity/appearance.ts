@@ -162,7 +162,7 @@ export async function saveAppearance(
         settings,
         correlationId,
       );
-      if (!version) throw new HttpError("CONFLICT");
+      if (!version) throw new HttpError("STALE_VERSION");
       return { version, ...settings };
     },
   );
