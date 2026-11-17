@@ -126,12 +126,17 @@ test("platform operators invite revoke and hand over authority without inheritin
     );
     expect(invitation).toBeTruthy();
     await page.goto(`${view}/invitaciones`);
+    // Until accepted, the invitation is named by the address it was sent to.
     const card = page
-      .getByRole("region")
-      .filter({ has: page.getByText(invitation.invitationId, { exact: true }) })
-      .filter({ hasNot: page.getByRole("navigation") });
-    // Until accepted, the invitation names the address it was sent to.
-    await expect(card).toContainText(f.recipient.email);
+      .getByRole("region", {
+        name: new RegExp(
+          `^${literal(f.recipient.email)} \\(correo, (?:sin|sen) aceptar\\)$`,
+        ),
+      })
+      .filter({
+        has: page.getByText(invitation.invitationId, { exact: true }),
+      });
+    await expect(card).toBeVisible();
     await card.getByRole("link", { name: /^Revocar$|^Revogar$/ }).click();
     await revoke(page);
     expect(
