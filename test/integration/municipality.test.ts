@@ -2390,7 +2390,7 @@ test("municipal creation and first administrator acceptance are atomic and isola
         );
         assert.equal(
           outcomes.filter(
-            (o) => o.status === "rejected" && o.reason.code === "CONFLICT",
+            (o) => o.status === "rejected" && o.reason.code === "STALE_VERSION",
           ).length,
           1,
         );
