@@ -11,7 +11,7 @@
 .readoutShare { color: var(--foreground); font-size: var(--text-lg); font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .readoutValue { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .bar { position: relative; height: 44px; overflow: hidden; border-radius: 12px; background: var(--surface-muted); cursor: default; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
-.segment { position: absolute; inset: 0px; background: color-mix(in oklab,var(--seg) 42%,var(--surface)); transition: background-color var(--duration-fast) var(--ease-standard),opacity var(--duration-standard) var(--ease-standard); will-change: clip-path; }
+.segment { position: absolute; inset: 0px; background: color-mix(in oklab,var(--seg) 42%,var(--surface)); transition: background-color var(--duration-fast) var(--ease-standard),opacity var(--duration-standard) var(--ease-standard); }
 .segment[data-active] { background: color-mix(in oklab,var(--seg) 62%,var(--surface)); }
 .segment[data-dimmed] { opacity: 0.5; }
 .cap { bottom: 0px; width: 3px; background: var(--seg); }

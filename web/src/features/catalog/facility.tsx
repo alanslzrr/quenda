@@ -3,6 +3,7 @@ import { LayoutGrid } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router";
 import { ApiError, api, type Page } from "../../app/api";
+import { useMunicipality, usePublicAppearance } from "../../app/branding";
 import { Failure, Loading } from "../../app/feedback";
 import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
@@ -19,11 +20,7 @@ import {
   unitPath,
   useJourneyQuery,
 } from "./journey";
-import {
-  MunicipalityGone,
-  useMunicipality,
-  usePublicAppearance,
-} from "./municipality";
+import { MunicipalityGone } from "./municipality";
 import { PhotoGallery, PhotoThumb } from "./photo-gallery";
 import { type CatalogPhoto, publicPhotos } from "./photos";
 import { type UnitProfile, unitFacts } from "./profile";
@@ -123,7 +120,7 @@ export function FacilityPage() {
         </LinkButton>
       </div>
     );
-  const items = [...units.items].sort((a, b) =>
+  const items = units.items.toSorted((a, b) =>
     a.name.localeCompare(b.name, locale),
   );
   const lengths = (unit: UnitChoice) =>

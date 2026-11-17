@@ -296,7 +296,7 @@ export function SplitBar({
         .map((s) => ({ label: s.label, share: percent.format(share(s)), count: countText(Math.max(0, s.value)) })),
       text.keyHint,
     );
-  const hiddenKey = JSON.stringify([...excluded].sort());
+  const hiddenKey = JSON.stringify(excluded.toSorted());
   // biome-ignore lint/correctness/useExhaustiveDependencies: The serialised hidden key stands for the hidden set; the announcement waits for the controlled host to apply the change.
   useLayoutEffect(() => {
     const pending = pendingHidden.current;

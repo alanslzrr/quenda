@@ -1,4 +1,5 @@
 import { calendarLabel } from "../../ui/lib/calendar-labels.ts";
+import { dateTimeFormat } from "../../ui/lib/intl-cache.ts";
 
 // Calendar Date values are civil-day carriers, not reservation instants.
 export function civilDate(value: Date) {
@@ -21,7 +22,7 @@ export function resolveBookingDate(requested: string, today: string) {
   };
 }
 export function municipalToday(timeZone: string, now = new Date()) {
-  const parts = new Intl.DateTimeFormat("en", {
+  const parts = dateTimeFormat("en", {
     timeZone,
     year: "numeric",
     month: "2-digit",
@@ -31,7 +32,7 @@ export function municipalToday(timeZone: string, now = new Date()) {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 export function slotLabel(instant: string, timeZone: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
+  return dateTimeFormat(locale, {
     timeZone,
     hour: "2-digit",
     minute: "2-digit",
@@ -41,16 +42,17 @@ export function slotLabel(instant: string, timeZone: string, locale: string) {
 
 // Only repeated civil times need an offset in citizen-facing copy.
 export function repeatedTime(instant: string, timeZone: string) {
-  const stamp = (date: Date) =>
-    new Intl.DateTimeFormat("sv", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    }).format(date);
+  // One formatter serves all seven comparisons instead of one per probe.
+  const format = dateTimeFormat("sv", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  const stamp = (date: Date) => format.format(date);
   const date = new Date(instant);
   return [-120, -60, -30, 30, 60, 120].some(
     (minutes) =>
@@ -65,7 +67,7 @@ export function localTimeLabel(
   const label = slotLabel(instant, timeZone, locale);
   if (!repeatedTime(instant, timeZone)) return label;
   const offset =
-    new Intl.DateTimeFormat("en", { timeZone, timeZoneName: "longOffset" })
+    dateTimeFormat("en", { timeZone, timeZoneName: "longOffset" })
       .formatToParts(new Date(instant))
       .find((part) => part.type === "timeZoneName")?.value ?? "";
   return `${label} (${offset.replace("GMT", "UTC")})`;

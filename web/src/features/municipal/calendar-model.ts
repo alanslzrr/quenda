@@ -58,7 +58,7 @@ export function calendarProblem(calendar: {
   )
     return "advance";
   const overlaps = (intervals: Interval[]) => {
-    const sorted = [...intervals].sort((a, b) => a.startMinute - b.startMinute);
+    const sorted = intervals.toSorted((a, b) => a.startMinute - b.startMinute);
     return sorted.some(
       (current, index) =>
         index > 0 && current.startMinute < (sorted[index - 1]?.endMinute ?? 0),

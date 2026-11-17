@@ -26,7 +26,7 @@ export function Home() {
   const [filter, setFilter] = useState("");
   const query = useJourneyQuery();
   const municipalities = useMunicipalities();
-  const items = [...municipalities.items].sort((a, b) =>
+  const items = municipalities.items.toSorted((a, b) =>
     a.name.localeCompare(b.name, locale),
   );
   const chosen = items.find((item) => item.id === favorite);

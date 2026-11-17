@@ -3,6 +3,8 @@ import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "../../app/api";
+import { useMunicipality, usePublicAppearance } from "../../app/branding";
+import { useClockBoundaries } from "../../app/clock-boundaries";
 import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
 import { serverNow } from "../../app/server-clock.ts";
@@ -18,7 +20,6 @@ import {
 } from "../../ui/dialog/dialog";
 import { BackLink, BookingSummary, RulesText } from "../catalog/booking";
 import booking from "../catalog/booking.module.css";
-import { useMunicipality, usePublicAppearance } from "../catalog/municipality";
 import { AccessPass } from "./access-code";
 import { accessCodeTarget } from "./access-code-model";
 import styles from "./reservations.module.css";
@@ -48,11 +49,16 @@ export function ReservationDetail() {
       ),
     retry: false,
   });
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => tick((n) => n + 1), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // The page changes only when the cancellation deadline and the start pass, so it re-renders then
+  // rather than every second.
+  const startsAt = Date.parse(query.data?.startsAt ?? "");
+  useClockBoundaries(
+    [
+      startsAt - (query.data?.cancellationMinutes ?? Number.NaN) * 60000,
+      startsAt,
+    ],
+    serverNow,
+  );
   const now = serverNow();
   if (query.isPending) return <Loading />;
   if (query.isError)

@@ -22,7 +22,7 @@
 .weekdays span { min-width: 0; overflow: hidden; }
 /* Months sit on one strip inside a clipped window. Every pane shares one grid cell and has six weeks, so the height never changes. */
 .monthViewport { position: relative; display: grid; overflow: hidden; contain: paint; }
-.monthBody { position: relative; grid-area: 1 / 1; min-width: 0; will-change: transform; }
+.monthBody { position: relative; grid-area: 1 / 1; min-width: 0; }
 .monthBody[inert] { pointer-events: none; }
 .grid { display: grid; row-gap: 4px; }
 .placeholderDay { aspect-ratio: 1; }
@@ -31,7 +31,7 @@
 .day::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: transparent; transition: background-color var(--duration-fast) var(--ease-standard), scale var(--duration-spring) var(--ease-spring); }
 .dayNumber { position: relative; transition: opacity var(--duration-fast) var(--ease-standard) var(--number-delay, 0ms), scale var(--duration-spring) var(--ease-spring); }
 /* The selected disc is one element per month, one cell in size, placed by week and weekday under the day buttons. It glides on a transform, so the strip sliding around it never bends its path. Press scales the inner fill so it never fights the glide. */
-.highlight { position: absolute; top: 0; left: 0; width: calc((100% - 24px) / 7); aspect-ratio: 1; pointer-events: none; will-change: transform; }
+.highlight { position: absolute; top: 0; left: 0; width: calc((100% - 24px) / 7); aspect-ratio: 1; pointer-events: none; }
 .highlightFill { position: absolute; inset: 0; border-radius: 50%; background: var(--accent); transition: background-color var(--duration-fast) var(--ease-standard), scale var(--duration-spring) var(--ease-spring); }
 @media (hover: hover) and (pointer: fine) { .day:hover:not(:disabled):not(.selected)::before { background: var(--surface-muted); } .monthBody:has(.day.selected:hover) .highlightFill { background: var(--accent-strong); } }
 .day:active:not(:disabled)::before, .day:active:not(:disabled) .dayNumber, .monthBody:has(.day.selected:active:not(:disabled)) .highlightFill { scale: .94; transition-duration: var(--duration-fast), 100ms; transition-timing-function: var(--ease-standard); }

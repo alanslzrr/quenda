@@ -7,11 +7,10 @@ import {
   isJourneyPath,
   useBookingEntry,
 } from "../features/catalog/journey";
-import { useMunicipality } from "../features/catalog/municipality";
 import { kindShort, kinds, noticePath } from "../features/legal/notices";
 import { Announcer } from "./announce";
 import { BookingNavigation } from "./booking-navigation";
-import { MunicipalLogo, useBranding } from "./branding";
+import { MunicipalLogo, useBranding, useMunicipality } from "./branding";
 import { Failure } from "./feedback";
 import { hasInvalidIds, isUuid } from "./ids.ts";
 import styles from "./layout.module.css";
