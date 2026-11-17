@@ -47,6 +47,21 @@ test("account theme is isolated, exported and independent of notice locale", {
       ),
       { code: "42501" },
     );
+    await accountTheme(domain, actor("one"), { theme: "system" });
+    assert.deepEqual(await accountTheme(domain, actor("one")), {
+      theme: "system",
+    });
+    assert.equal(
+      (
+        await migration.query(
+          "SELECT record FROM domain.personal_data_records('one',NULL,true,false) WHERE record_type='account'",
+        )
+      ).rows[0].record.theme,
+      "system",
+    );
+    await assert.rejects(
+      accountTheme(domain, actor("one"), { theme: "invalid" as never }),
+    );
     await accountTheme(domain, actor("one"), { theme: null });
     assert.deepEqual(await accountTheme(domain, actor("one")), { theme: null });
     assert.equal(

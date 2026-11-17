@@ -354,6 +354,8 @@ export async function registerAuthentication(
           .header("content-language", locale)
           .send({ error: { code, message }, requestId: request.id });
       }
+      if (path === "/sign-out" && response.ok)
+        reply.header("clear-site-data", '"cookies"');
       return reply.send(text || null);
     },
   });

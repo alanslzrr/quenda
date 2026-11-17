@@ -2,7 +2,7 @@ import type { Pool } from "pg";
 import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
-export type ThemePreference = "light" | "dark" | null;
+export type ThemePreference = "light" | "dark" | "system" | null;
 export async function accountTheme(
   pool: Pool,
   actor: AuthenticatedAccount,
@@ -12,7 +12,8 @@ export async function accountTheme(
     update &&
     update.theme !== null &&
     update.theme !== "light" &&
-    update.theme !== "dark"
+    update.theme !== "dark" &&
+    update.theme !== "system"
   )
     throw new HttpError("INVALID_INPUT");
   return command(

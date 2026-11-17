@@ -10,8 +10,9 @@
     } catch {
       /* Blocked or unreadable storage keeps the default theme. */
     }
+    if (theme === "system") theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     if (theme === "light" || theme === "dark") root.dataset.theme = theme;
-    // The app does not follow the OS, so the browser hints follow the theme that will render. The colours are the
+    // The browser hints follow the resolved preference. The colours are the
     // foundation.css backgrounds that paint before the app applies the municipal palette.
     const mode = root.dataset.theme === "dark" ? "dark" : "light";
     document.querySelector('meta[name="color-scheme"]')?.setAttribute("content", mode);

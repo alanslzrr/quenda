@@ -19,7 +19,11 @@ export async function registerPreferenceRoutes(
     additionalProperties: false,
     required: ["theme"],
     properties: {
-      theme: { type: "string", enum: ["light", "dark", null], nullable: true },
+      theme: {
+        type: "string",
+        enum: ["light", "dark", "system", null],
+        nullable: true,
+      },
     },
   };
   for (const method of ["GET", "PUT"] as const) {
@@ -31,7 +35,7 @@ export async function registerPreferenceRoutes(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Preferencia personal de modo claro u oscuro. null utiliza el modo municipal predeterminado o el modo claro de Quenda. No modifica la apariencia municipal ni el idioma.",
+          "Preferencia personal de modo claro, oscuro o del sistema (system). null utiliza el modo municipal predeterminado o el modo claro de Quenda. No modifica la apariencia municipal ni el idioma.",
         ...(method === "PUT" ? { body: themeSchema } : {}),
         response: {
           ...Object.fromEntries(

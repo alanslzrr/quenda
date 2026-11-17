@@ -12,6 +12,7 @@ import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
 import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { browserStorage } from "../../app/storage";
+import { useSystemTheme } from "../../app/system-theme";
 import {
   type ColorProblem,
   colorProblem,
@@ -151,7 +152,10 @@ function AppearanceForm({
   const [saved, setSaved] = useState(initial);
   const { restored, store } = useStoredDraft(m.id, initial);
   const [draft, setDraft] = useState<Appearance>(restored ?? initial);
-  const [mode, setMode] = useState<Mode>(personal ?? initial.defaultTheme);
+  const systemTheme = useSystemTheme();
+  const [mode, setMode] = useState<Mode>(
+    (personal === "system" ? systemTheme : personal) ?? initial.defaultTheme,
+  );
   const dirty = !same(settingsOf(draft), settingsOf(saved));
   // The whole application shows the draft while this editor is open.
   useAppearancePreview(draft, mode);

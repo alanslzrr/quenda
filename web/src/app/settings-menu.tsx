@@ -1,4 +1,4 @@
-import { Check, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { Check, LogOut, Monitor, Moon, Settings, Sun } from "lucide-react";
 import { useState } from "react";
 import { DropdownMenu } from "../ui/dropdown-menu/dropdown-menu";
 import { Failure } from "./feedback";
@@ -91,6 +91,19 @@ export function SettingsMenu() {
             current: theme === "dark",
             disabled: pending,
             onSelect: () => theme !== "dark" && update({ theme: "dark" }),
+          },
+          {
+            label: t("Sistema", "Sistema"),
+            icon: <Monitor size={16} />,
+            current: theme === "system",
+            disabled: pending,
+            onSelect: () => theme !== "system" && update({ theme: "system" }),
+          },
+          {
+            label: t("Tema del municipio", "Tema do municipio"),
+            current: theme === null,
+            disabled: pending,
+            onSelect: () => theme !== null && update({ theme: null }),
           },
           ...(account
             ? [

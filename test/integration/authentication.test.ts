@@ -1347,6 +1347,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           assert.equal(signed.statusCode, 200, signed.body);
           const logout = await client.request("/api/auth/sign-out", {});
           assert.equal(logout.statusCode, 200, logout.body);
+          assert.equal(logout.headers["clear-site-data"], '"cookies"');
           assert.deepEqual(
             (
               await migration.query(

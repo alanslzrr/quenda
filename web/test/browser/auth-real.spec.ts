@@ -64,6 +64,21 @@ test("verified account signs in and persists preferences through the real API", 
   await expect(
     appearance.getByRole("radio", { name: "Claro", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
+  await page.emulateMedia({ colorScheme: "dark" });
+  const savedSystem = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/me/theme") &&
+      response.request().method() === "PUT",
+  );
+  await appearance.getByRole("radio", { name: "Sistema", exact: true }).click();
+  expect((await savedSystem).status()).toBe(200);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.reload();
+  await expect(
+    appearance.getByRole("radio", { name: "Sistema", exact: true }),
+  ).toBeChecked();
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   // The account navigation lists only account settings.
   const accountNav = page.getByRole("navigation", { name: "Mi cuenta" });
   await expect(
@@ -78,7 +93,17 @@ test("verified account signs in and persists preferences through the real API", 
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  const logoutResponse = page.waitForResponse("**/api/auth/sign-out");
+  const stored = await page.evaluate(() =>
+    localStorage.getItem("quenda.preferences"),
+  );
   await signOut(page);
+  expect((await (await logoutResponse).allHeaders())["clear-site-data"]).toBe(
+    '"cookies"',
+  );
+  expect(
+    await page.evaluate(() => localStorage.getItem("quenda.preferences")),
+  ).toBe(stored);
   await expect(
     page.getByRole("link", { name: "Acceder", exact: true }),
   ).toBeVisible();
