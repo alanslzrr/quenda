@@ -6,6 +6,7 @@ import {
   listMunicipalAdministrators,
 } from "./administrator-query.ts";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
+import { invitationAddressSchema } from "./invitation-address.ts";
 import { createRequestActor } from "./request-actor.ts";
 
 const uuid = { type: "string", format: "uuid" } as const;
@@ -43,10 +44,11 @@ export async function registerAdministratorQueryRoutes(
       operationId: "listMunicipalAdministratorInvitations",
       cursor: uuid,
       description:
-        "Administrador con MFA reciente: consulta el historial de invitaciones del municipio. Una aceptación histórica no acredita un rol vigente; consultar administrators para la asignación actual.",
+        "Administrador con MFA reciente: consulta el historial de invitaciones del municipio. recipientEmail es el correo de una invitación sin aceptar; accountId, la cuenta que la aceptó o a la que se dirigía una invitación anterior a las invitaciones por correo. Una aceptación histórica no acredita un rol vigente; consultar administrators para la asignación actual.",
       properties: {
         invitationId: uuid,
-        accountId,
+        accountId: { ...accountId, nullable: true },
+        recipientEmail: { ...invitationAddressSchema, nullable: true },
         accountLabel: accountLabelSchema,
         invitedBy: accountId,
         invitedByLabel: accountLabelSchema,

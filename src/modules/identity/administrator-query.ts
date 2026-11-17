@@ -69,33 +69,36 @@ export async function listMunicipalAdministratorInvitations(
       await requireAdministrator(client, actor);
       const result = await client.query<{
         id: string;
-        account_id: string;
+        account_id: string | null;
+        recipient_email: string | null;
         invited_by: string;
         expires_at: Date;
         role_expires_at: Date | null;
         accepted_at: Date | null;
         revoked_at: Date | null;
       }>(
-        `SELECT id,account_id,invited_by,expires_at,role_expires_at,accepted_at,revoked_at
+        `SELECT id,account_id,recipient_email,invited_by,expires_at,role_expires_at,accepted_at,revoked_at
        FROM domain.administrator_invitation WHERE tenant_id=$1 AND ($2::uuid IS NULL OR id>$2)
        ORDER BY id LIMIT 21`,
         [tenantId, after],
       );
       const page = result.rows.slice(0, 20);
+      // An address-only invitation has no account to label until accepted.
       const labels = await accountLabels(
         client,
         page.flatMap((row) => [
-          row.account_id,
-          ...("invited_by" in row && typeof row.invited_by === "string"
-            ? [row.invited_by]
-            : []),
+          ...(row.account_id ? [row.account_id] : []),
+          row.invited_by,
         ]),
       );
       return {
         items: page.map((row) => ({
           invitationId: row.id,
           accountId: row.account_id,
-          accountLabel: labels.get(row.account_id) ?? null,
+          recipientEmail: row.recipient_email,
+          accountLabel: row.account_id
+            ? (labels.get(row.account_id) ?? null)
+            : null,
           invitedBy: row.invited_by,
           invitedByLabel: labels.get(row.invited_by) ?? null,
           expiresAt: row.expires_at.toISOString(),
