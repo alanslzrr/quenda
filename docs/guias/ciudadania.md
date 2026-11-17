@@ -38,9 +38,9 @@ Sirve para encontrar un espacio (una pista, una sala, un campo) y una hora libre
 
 3. **Elige el espacio.** Cada espacio se reserva entero y por separado; bajo su nombre se indica cuánto puede durar una reserva.
 
-   ![Lista de espacios del complejo con Pista de pádel 1 recuadrada](../capturas/cu-01/03-elegir-espacio.webp)
+   ![Página «Elige un espacio» de Complejo Deportivo A Fontela con Pista de pádel 1 recuadrada](../capturas/cu-01/03-elegir-espacio.webp)
 
-   *Bajo las fotos de la instalación están sus cuatro espacios, todos con reservas de 1 h a 2 h. El recuadro marca Pista de pádel 1.*
+   *La barra de pasos marca el paso 3, «Espacio». Bajo las fotos de la instalación están sus cuatro espacios, todos con reservas de 1 h a 2 h; el recuadro marca Pista de pádel 1. Al final, «Ver horarios libres de todos sus espacios» muestra a la vez las horas libres de la instalación.*
 
 4. **Abre el día.** La página del espacio muestra su foto, el día y la duración elegidos y las horas libres de ese día.
 
@@ -279,9 +279,9 @@ Sirve para cambiar el día, la hora o el espacio de una reserva futura, o para c
 
 1. **Abre la reserva.** En «Mis reservas», pulsa la reserva que quieres cambiar.
 
-   ![«Mis reservas» con el filtro de municipio y la primera reserva de la lista recuadrada](../capturas/cu-03/01-mis-reservas.webp)
+   ![Página «Mis reservas» con los horarios habituales, el filtro de municipio y la primera reserva de la lista recuadrada](../capturas/cu-03/01-mis-reservas.webp)
 
-   *Bajo el filtro «Municipio», la lista empieza por la reserva recuadrada, con la etiqueta verde «Confirmada».*
+   *Bajo «Tus horarios habituales» y el filtro «Municipio» empieza la lista de reservas, de la más lejana a la más cercana. La reserva recuadrada lleva la etiqueta verde «Confirmada».*
 
 2. **Pulsa «Cambiar horario».** La página de la reserva indica hasta cuándo puedes cambiarla o cancelarla.
 
@@ -359,7 +359,7 @@ Antes del inicio y con un motivo, el personal municipal autorizado puede cancela
 
 ![Lista de avisos con «Reserva cancelada» marcada como «Cambio hecho por la administración» y su motivo, recuadrada](../capturas/cu-03/12-aviso-intervencion-municipal.webp)
 
-*El aviso recuadrado muestra «Cambio hecho por la administración», el nombre de la persona y el motivo («Competición escolar no complexo»). El punto rojo indica que está sin leer.*
+*El aviso recuadrado muestra «Cambio hecho por la administración», el nombre de la persona y el motivo («Competición escolar no complexo»). A la derecha de cada aviso figura la fecha en que se produjo; los avisos anteriores se cargan con «Ver más avisos», al final de la lista.*
 
 ![Página «Reserva cancelada» abierta desde el aviso](../capturas/cu-03/13-reserva-cancelada-por-el-ayuntamiento.webp)
 
@@ -391,39 +391,39 @@ Sirve para tener una cuenta con la que reservar en cualquier municipio que use e
 
 2. **Escribe tus datos.** Nombre, correo y una contraseña de al menos 8 caracteres. El enlace «Cómo se tratan tus datos al crear la cuenta» explica la información de privacidad. Pulsa «Crear cuenta».
 
-   ![Formulario «Crea tu cuenta» completo con el botón «Crear cuenta» recuadrado](../capturas/cu-07/03-datos-de-registro.webp)
+   ![Formulario «Crea tu cuenta» completo con el botón «Crear cuenta» recuadrado](../capturas/cu-07/02-datos-de-registro.webp)
 
-   *Los tres campos están completos y el recuadro marca «Crear cuenta».*
+   *Nombre, correo y contraseña están completos; la contraseña se muestra oculta. El recuadro marca «Crear cuenta».*
 
 3. **Comprueba tu correo.** Quenda no activa la cuenta hasta que verificas el correo.
 
-   ![Mensaje «Comprueba tu correo para verificar la cuenta.»](../capturas/cu-07/04-comprueba-tu-correo.webp)
+   ![Mensaje «Comprueba tu correo para verificar la cuenta.»](../capturas/cu-07/03-comprueba-tu-correo.webp)
 
    *El formulario desaparece y queda el aviso recuadrado. El siguiente paso se hace desde tu buzón.*
 
 4. **Abre el correo de verificación.** Llega un mensaje con un enlace para verificar el correo.
 
-   ![Correo «Verifica tu correo en Quenda» con el enlace de verificación](../capturas/cu-07/05-correo-de-verificacion.webp)
+   ![Correo «Verifica tu correo en Quenda» con el enlace de verificación](../capturas/cu-07/04-correo-de-verificacion.webp)
 
-   *El correo, con asunto «Verifica tu correo en Quenda», contiene solo el enlace. Ábrelo en el mismo navegador.*
+   *El correo, con asunto «Verifica tu correo en Quenda», contiene solo el enlace de verificación (aquí, abreviado). Ábrelo en el mismo navegador.*
 
 5. **Accede por primera vez.** El enlace verifica el correo y te lleva a la página de acceso ([CU-09](#cu-09--iniciar-o-cerrar-sesión)).
 
-   ![Página de acceso con correo y contraseña completos y el botón «Entrar» recuadrado](../capturas/cu-07/07-acceder-con-la-cuenta.webp)
+   ![Página de acceso con correo y contraseña completos y el botón «Entrar» recuadrado](../capturas/cu-07/05-acceder-con-la-cuenta.webp)
 
    *Escribe el correo y la contraseña que acabas de registrar y pulsa «Entrar», recuadrado.*
 
-   ![Página «Preferencias de tu cuenta» de la cuenta nueva](../capturas/cu-07/08-cuenta-creada.webp)
+   ![Página «Preferencias de tu cuenta» de la cuenta nueva](../capturas/cu-07/06-cuenta-creada.webp)
 
    *Al entrar se abre «Mi cuenta» en «Preferencias», con el idioma y la apariencia. Abajo a la izquierda aparece el correo de la cuenta.*
 
 6. **Reserva en un municipio.** Puedes reservar en cualquier municipio sin rellenar ningún perfil adicional: Quenda crea la relación con el municipio al confirmar la primera reserva.
 
-   ![Revisión de una reserva en Ribasanta con las normas aceptadas y el botón «Confirmar reserva» recuadrado](../capturas/cu-07/09-primera-reserva.webp)
+   ![Revisión de una reserva en Ribasanta con las normas aceptadas y el botón «Confirmar reserva» recuadrado](../capturas/cu-07/07-primera-reserva.webp)
 
    *La revisión muestra las normas de uso de Ribasanta (en gallego, tal como las publica el ayuntamiento). Con la casilla marcada, el recuadro señala «Confirmar reserva».*
 
-   ![Reserva confirmada en la Pista polideportiva de Ribasanta](../capturas/cu-07/10-primera-reserva-confirmada.webp)
+   ![Reserva confirmada en la Pista polideportiva de Ribasanta](../capturas/cu-07/08-primera-reserva-confirmada.webp)
 
    *La primera reserva de la cuenta queda confirmada, con sus botones de cambio y cancelación.*
 
@@ -431,15 +431,15 @@ Sirve para tener una cuenta con la que reservar en cualquier municipio que use e
 
 #### La contraseña es demasiado corta
 
-![Formulario de registro con el campo de contraseña en rojo y la indicación «Mínimo 8 caracteres»](../capturas/cu-07/02-contrasena-demasiado-corta.webp)
+![Formulario de registro con el campo de contraseña recuadrado, bordeado en rojo, bajo la indicación «Mínimo 8 caracteres»](../capturas/cu-07/09-contrasena-demasiado-corta.webp)
 
-*El campo «Contraseña» queda bordeado en rojo y la cuenta no se crea. Encima del campo se recuerda «Mínimo 8 caracteres»; escribe una contraseña más larga y vuelve a pulsar «Crear cuenta».*
+*Con solo cinco caracteres, el campo «Contraseña» (recuadrado) queda bordeado en rojo y la cuenta no se crea. Encima del campo se recuerda «Mínimo 8 caracteres»; escribe una contraseña más larga y vuelve a pulsar «Crear cuenta».*
 
 #### El enlace de verificación no funciona
 
 Si el enlace está incompleto, ya se usó o ha caducado, Quenda no verifica la cuenta.
 
-![Página de acceso con el mensaje «No se ha podido verificar el enlace. Solicita uno nuevo.»](../capturas/cu-07/06-enlace-no-valido.webp)
+![Página de acceso con el mensaje «No se ha podido verificar el enlace. Solicita uno nuevo.»](../capturas/cu-07/10-enlace-no-valido.webp)
 
 *El mensaje recuadrado aparece sobre el formulario de acceso. Usa «Reenviar verificación» para pedir un enlace nuevo.*
 
@@ -479,29 +479,25 @@ Sirve para ver todas tus reservas, pasadas y futuras, y la situación actual de 
 
    *El desplegable lista los dos municipios con reservas de esta cuenta. El recuadro marca Concello de Ribasanta.*
 
-   ![Lista filtrada con reservas de Ribasanta en estado Confirmada, Finalizada y Cancelada](../capturas/cu-08/03-reservas-de-ribasanta.webp)
+   ![Lista filtrada por Concello de Ribasanta con reservas Confirmada, Cancelada y Finalizada, y una finalizada recuadrada](../capturas/cu-08/03-reservas-de-ribasanta.webp)
 
-   *Con el filtro aplicado (recuadrado), la lista muestra solo reservas de Ribasanta. Cada una indica espacio, municipio, fecha y hora, y una etiqueta con su estado.*
+   *Con el filtro en «Concello de Ribasanta», la lista muestra solo reservas de ese municipio, de la más lejana a la más antigua. Cada una indica espacio, municipio, fecha y hora, y una etiqueta con su estado: «Confirmada», «Cancelada» o «Finalizada». El recuadro marca una reserva finalizada.*
 
-3. **Carga más reservas.** La lista va de la más reciente a la más antigua por fecha de inicio; las siguientes se cargan al final.
+3. **Consulta una reserva.** Al abrirla, se ven su estado, el registro de llegada si lo hubo y las normas aceptadas.
 
-   ![Final de la lista con el botón «Ver más reservas» recuadrado](../capturas/cu-08/04-ver-mas-reservas.webp)
+   ![Página «Reserva finalizada» con el aviso sobre asistencia y las normas aceptadas](../capturas/cu-08/04-detalle-finalizada.webp)
 
-   *Al final de cada bloque aparece «Ver más reservas», recuadrado.*
+   *«Cancelación y cambios» aclara que el horario ya ha pasado y que el estado «Finalizada» no acredita la asistencia; debajo están las normas aceptadas con su fecha. Cuando el personal ha registrado tu llegada, la página la muestra en «Acceso a la instalación».*
 
-   ![Lista con reservas pasadas y una reserva «Finalizada» recuadrada](../capturas/cu-08/05-reservas-pasadas.webp)
-
-   *Tras las confirmadas próximas aparecen las pasadas, con la etiqueta «Finalizada» o «Cancelada». El recuadro marca una reserva finalizada.*
-
-4. **Consulta una reserva.** Al abrirla, se ven su estado, el registro de llegada si lo hubo y las normas aceptadas.
-
-   ![Página «Reserva finalizada» con el aviso sobre asistencia y las normas aceptadas](../capturas/cu-08/06-detalle-finalizada.webp)
-
-   *«Cancelación y cambios» aclara que el horario ya ha pasado y que el estado «Finalizada» no acredita la asistencia. Debajo están las normas aceptadas con su fecha. Cuando el personal registra tu llegada, la página la muestra además en «Acceso a la instalación».*
-
-   ![Página «Reserva cancelada» con el texto «La reserva está cancelada y el horario ha quedado libre.»](../capturas/cu-08/07-detalle-cancelada.webp)
+   ![Página «Reserva cancelada» con el texto «La reserva está cancelada y el horario ha quedado libre.»](../capturas/cu-08/05-detalle-cancelada.webp)
 
    *Una reserva cancelada conserva su página, su referencia y sus normas aceptadas.*
+
+4. **Carga más reservas.** La lista muestra las reservas por bloques; las siguientes, más antiguas, se cargan al final.
+
+   ![Final de la lista con el botón «Ver más reservas» recuadrado](../capturas/cu-08/06-ver-mas-reservas.webp)
+
+   *Al final de cada bloque aparece «Ver más reservas», recuadrado.*
 
 ### Si algo no sale como se espera
 
@@ -539,23 +535,23 @@ Sirve para entrar con tu cuenta y para salir cuando terminas. Lo hace cualquier 
 
 3. **Pulsa «Entrar».**
 
-   ![Formulario con los datos escritos y el botón «Entrar» recuadrado](../capturas/cu-09/04-credenciales-completas.webp)
+   ![Formulario con los datos escritos y el botón «Entrar» recuadrado](../capturas/cu-09/03-credenciales-completas.webp)
 
-   *Con el correo y la contraseña correctos, pulsa «Entrar», recuadrado. El mensaje de error que se ve corresponde al intento anterior y desaparece al entrar.*
+   *Con el correo y la contraseña escritos, pulsa «Entrar», recuadrado.*
 
 4. **Sesión iniciada.** Quenda te lleva a «Mi cuenta» o a la página que estabas visitando. Iniciar sesión no da permisos nuevos.
 
-   ![«Preferencias de tu cuenta» con la sesión iniciada](../capturas/cu-09/05-sesion-iniciada.webp)
+   ![«Preferencias de tu cuenta» con la sesión iniciada](../capturas/cu-09/04-sesion-iniciada.webp)
 
    *La cabecera ya no muestra «Acceder». El punto rojo en «Ajustes» indica que tienes avisos sin leer.*
 
 5. **Cierra la sesión.** Abre «Ajustes» y pulsa «Cerrar sesión».
 
-   ![Menú «Ajustes» abierto con «Cerrar sesión» recuadrado](../capturas/cu-09/06-menu-cerrar-sesion.webp)
+   ![Menú «Ajustes» abierto con «Cerrar sesión» recuadrado](../capturas/cu-09/05-menu-cerrar-sesion.webp)
 
    *El menú reúne Mi cuenta, Mis reservas, Avisos (con el número de avisos sin leer), idioma y apariencia. «Cerrar sesión», recuadrado, está al final.*
 
-   ![Página de inicio otra vez sin sesión](../capturas/cu-09/07-sesion-cerrada.webp)
+   ![Página de inicio otra vez sin sesión](../capturas/cu-09/06-sesion-cerrada.webp)
 
    *Tras cerrar la sesión vuelves al inicio y la cabecera muestra de nuevo «Acceder». La sesión cerrada ya no sirve para ninguna otra petición.*
 
@@ -563,7 +559,7 @@ Sirve para entrar con tu cuenta y para salir cuando terminas. Lo hace cualquier 
 
 #### El correo o la contraseña no son correctos
 
-![Formulario de acceso con el mensaje «Correo o contraseña incorrectos.»](../capturas/cu-09/03-credenciales-invalidas.webp)
+![Formulario de acceso con el mensaje «Correo o contraseña incorrectos.»](../capturas/cu-09/07-credenciales-invalidas.webp)
 
 *El mensaje recuadrado no dice cuál de los dos datos falla. Revísalos y vuelve a intentarlo, o usa «He olvidado mi contraseña».*
 
@@ -575,17 +571,19 @@ Las cuentas con permisos de gestión, y las que la activan voluntariamente, pide
 
 *Tras la contraseña aparece «Verifica tu acceso». El recuadro marca el campo del código; «Usar un código de respaldo» permite usar uno de los códigos guardados al activar la verificación.*
 
-![Mensaje «El código no es válido.» bajo el campo del código](../capturas/cu-09/09-codigo-incorrecto.webp)
-
-*Si el código no es correcto, aparece el mensaje recuadrado y no se inicia la sesión.*
-
-![Código escrito y botón «Verificar» recuadrado](../capturas/cu-09/10-codigo-introducido.webp)
+![Código escrito y botón «Verificar» recuadrado](../capturas/cu-09/09-codigo-introducido.webp)
 
 *Escribe el código vigente y pulsa «Verificar». Cada código solo sirve una vez y cambia cada 30 segundos: si entras dos veces seguidas, espera al siguiente.*
 
-![«Preferencias de tu cuenta» de una cuenta de gestión, con «Gestión» en la cabecera](../capturas/cu-09/11-acceso-con-segundo-factor.webp)
+![«Preferencias de tu cuenta» de una cuenta de gestión, con «Gestión» en la cabecera](../capturas/cu-09/10-acceso-con-segundo-factor.webp)
 
 *Con la verificación completada se abre la cuenta. Las cuentas de gestión ven además «Gestión» en la cabecera.*
+
+Si el código no es correcto, no se inicia la sesión:
+
+![Mensaje «El código no es válido.» bajo el campo del código](../capturas/cu-09/11-codigo-incorrecto.webp)
+
+*El mensaje recuadrado aparece bajo el código escrito. Escribe el código que muestre en ese momento tu aplicación y vuelve a pulsar «Verificar».*
 
 Mientras la cuenta conserve permisos de gestión no se puede desactivar la verificación en dos pasos.
 
@@ -605,7 +603,7 @@ Mientras la cuenta conserve permisos de gestión no se puede desactivar la verif
 
 ![Correo «Restablece tu contraseña de Quenda» con el enlace](../capturas/cu-09/15-correo-de-recuperacion.webp)
 
-*El correo contiene el enlace para elegir una contraseña nueva.*
+*El correo contiene el enlace (aquí, abreviado) para elegir una contraseña nueva.*
 
 ![Página «Establecer nueva contraseña» con el botón «Guardar contraseña» recuadrado](../capturas/cu-09/16-nueva-contrasena.webp)
 
@@ -635,53 +633,49 @@ Sirve para enterarte de que una reserva se ha confirmado, modificado o cancelado
 
 ### Paso a paso
 
-1. **Quenda envía el correo.** Al confirmarse una operación, el aviso queda registrado al momento y el servicio de correo de Quenda envía los mensajes pendientes.
+Una vez confirmada la operación, Quenda registra el aviso en la web al momento y envía el correo. Que el servidor de correo acepte el mensaje no garantiza que llegue a tu buzón; el aviso de la web está siempre disponible.
 
-   ![Salida del servicio de envío de correo con varias entregas aceptadas](../capturas/cu-11/01-envio-del-correo.webp)
+1. **Recibes el correo.** Describe el evento, su fecha y el horario, con un enlace a la reserva.
 
-   *Así lo registra el servicio de correo: «EMAIL_WORKER_READY» indica que está en marcha, «EMAIL_QUEUE_HEALTH» resume la cola (pendientes, en curso y agotados) y cada «EMAIL_ATTEMPT … ACCEPTED» es un mensaje que el servidor de correo ha aceptado. Aceptarlo no garantiza que llegue al buzón.*
-
-2. **Recibes el correo.** Describe el evento, su fecha y el horario, con un enlace a la reserva.
-
-   ![Correo «Quenda — Reserva confirmada» con reserva, revisión, fecha del evento, inicio, fin y enlace](../capturas/cu-11/02-correo-de-confirmacion.webp)
+   ![Correo «Quenda — Reserva confirmada» con reserva, revisión, fecha del evento, inicio, fin y enlace](../capturas/cu-11/01-correo-de-confirmacion.webp)
 
    *El correo indica el evento («Reserva confirmada»), la referencia, la revisión, cuándo ocurrió, el inicio y el fin con su zona horaria. Advierte de que la reserva puede haber cambiado después y enlaza a «Consultar el estado actual».*
 
-3. **Mira los avisos en la web.** El punto rojo en «Ajustes» indica que hay avisos sin leer.
+2. **Mira los avisos en la web.** El punto rojo en «Ajustes» indica que hay avisos sin leer.
 
-   ![Cabecera con «Ajustes» recuadrado y un punto rojo](../capturas/cu-11/03-avisos-sin-leer.webp)
+   ![Cabecera con «Ajustes» recuadrado y un punto rojo](../capturas/cu-11/02-avisos-sin-leer.webp)
 
    *El botón «Ajustes», recuadrado, lleva un punto rojo junto al icono.*
 
-   ![Menú «Ajustes» con «Avisos» recuadrado y el número de avisos sin leer](../capturas/cu-11/04-menu-avisos.webp)
+   ![Menú «Ajustes» con «Avisos» recuadrado y el número de avisos sin leer](../capturas/cu-11/03-menu-avisos.webp)
 
    *En el menú, «Avisos» (recuadrado) muestra cuántos quedan sin leer.*
 
-4. **Abre el aviso.** La lista agrupa los avisos por día; los no leídos llevan un punto rojo.
+3. **Abre el aviso.** La lista agrupa los avisos por día; los no leídos llevan un punto rojo.
 
-   ![Lista de avisos con «Reserva confirmada · Pista central» recuadrado](../capturas/cu-11/05-lista-de-avisos.webp)
+   ![Lista de avisos con «Reserva confirmada · Pista central» recuadrado](../capturas/cu-11/04-lista-de-avisos.webp)
 
-   *Cada aviso indica el evento, el espacio, la instalación, el municipio y el horario. El recuadro marca el aviso de la nueva reserva; los cambios hechos por el ayuntamiento llevan además «Cambio hecho por la administración» y el motivo.*
+   *Cada aviso indica el evento, el espacio, la instalación, el municipio y el horario, y a la derecha cuándo se produjo. El recuadro marca el aviso de la nueva reserva, con su punto rojo de no leído. Cuando el cambio lo hace el ayuntamiento, el aviso añade «Cambio hecho por la administración» y el motivo (ver [CU-03](#cu-03--modificar-o-cancelar-una-reserva)).*
 
-5. **Consulta la reserva enlazada.** El aviso, igual que el enlace del correo, abre la reserva con su estado actual y las normas pendientes, si las hay.
+4. **Consulta la reserva enlazada.** El aviso, igual que el enlace del correo, abre la reserva con su estado actual y las normas pendientes, si las hay.
 
-   ![Página «Reserva confirmada» abierta desde el aviso](../capturas/cu-11/06-reserva-enlazada.webp)
+   ![Página «Reserva confirmada» abierta desde el aviso](../capturas/cu-11/05-reserva-enlazada.webp)
 
    *La página muestra el estado actual de la reserva, que puede ser distinto del que describía el aviso si hubo cambios posteriores.*
 
-6. **Cada cambio genera su propio aviso.** Si la reserva se cancela o se modifica después, llega otro correo con su revisión.
+5. **Cada cambio genera su propio aviso.** Si la reserva se cancela o se modifica después, llega otro correo con su revisión.
 
-   ![Correo «Quenda — Reserva cancelada» con la revisión 2](../capturas/cu-11/07-correo-de-cancelacion.webp)
+   ![Correo «Quenda — Reserva cancelada» con la revisión 2](../capturas/cu-11/06-correo-de-cancelacion.webp)
 
    *El correo de cancelación tiene el mismo formato, con «Reserva cancelada», la revisión 2 y el enlace a la misma reserva.*
 
-7. **Marca los avisos como leídos.**
+6. **Marca los avisos como leídos.**
 
-   ![Página «Avisos» con el botón «Marcar todo como leído» recuadrado](../capturas/cu-11/08-marcar-todo-como-leido.webp)
+   ![Página «Avisos» con el botón «Marcar todo como leído» recuadrado](../capturas/cu-11/07-marcar-todo-como-leido.webp)
 
    *El botón recuadrado marca de una vez todos los avisos. Los que ya habías abierto aparecen sin punto rojo.*
 
-   ![Lista de avisos sin puntos rojos y sin el botón «Marcar todo como leído»](../capturas/cu-11/09-avisos-leidos.webp)
+   ![Lista de avisos sin puntos rojos y sin el botón «Marcar todo como leído»](../capturas/cu-11/08-avisos-leidos.webp)
 
    *Todos los avisos quedan leídos, el botón desaparece y «Ajustes» deja de mostrar el punto rojo.*
 
@@ -729,45 +723,45 @@ Sirve para mantener al día tu nombre, tus preferencias de idioma y apariencia, 
 
 3. **Solicita el cambio de correo.** En «Datos personales», escribe el nuevo correo y tu contraseña actual, y pulsa «Solicitar cambio de correo».
 
-   ![Nuevo correo y contraseña escritos con «Solicitar cambio de correo» recuadrado](../capturas/cu-13/06-solicitar-cambio-de-correo.webp)
+   ![Nuevo correo y contraseña escritos con «Solicitar cambio de correo» recuadrado](../capturas/cu-13/05-solicitar-cambio-de-correo.webp)
 
    *El texto superior recuerda que hay que autorizar el cambio desde el correo actual, verificar el nuevo y que al completarlo se cerrarán todas tus sesiones.*
 
-   ![Mensaje «Revisa tu correo actual para autorizar la solicitud.»](../capturas/cu-13/07-revisa-tu-correo-actual.webp)
+   ![Mensaje «Revisa tu correo actual para autorizar la solicitud.»](../capturas/cu-13/06-revisa-tu-correo-actual.webp)
 
    *El aviso recuadrado indica el siguiente paso: abrir el buzón actual.*
 
 4. **Autoriza desde tu correo actual.**
 
-   ![Correo «Autoriza el cambio de correo de Quenda» con el enlace](../capturas/cu-13/08-correo-de-autorizacion.webp)
+   ![Correo «Autoriza el cambio de correo de Quenda» con el enlace](../capturas/cu-13/07-correo-de-autorizacion.webp)
 
-   *El correo llega al buzón actual. Explica que el enlace solo sirve una vez, caduca a los diez minutos y no debe confirmarse si no pediste el cambio.*
+   *El correo llega al buzón actual con el enlace de autorización. Explica que el enlace solo sirve una vez, caduca a los diez minutos y no debe confirmarse si no pediste el cambio.*
 
-   ![Página «Autorizar cambio de correo» con el botón «Autorizar cambio» recuadrado](../capturas/cu-13/09-autorizar-cambio.webp)
+   ![Página «Autorizar cambio de correo» con el botón «Autorizar cambio» recuadrado](../capturas/cu-13/08-autorizar-cambio.webp)
 
    *Abrir el enlace no ejecuta nada: hay que pulsar «Autorizar cambio», recuadrado, en la misma sesión con la que se pidió el cambio.*
 
-   ![Mensaje «Revisa el nuevo correo para completar la verificación.»](../capturas/cu-13/10-revisa-el-nuevo-correo.webp)
+   ![Mensaje «Revisa el nuevo correo para completar la verificación.»](../capturas/cu-13/09-revisa-el-nuevo-correo.webp)
 
    *El aviso recuadrado indica que ahora hay que ir al buzón nuevo.*
 
 5. **Verifica el nuevo correo.**
 
-   ![Correo «Verifica el nuevo correo de Quenda» enviado a la nueva dirección](../capturas/cu-13/11-correo-de-verificacion.webp)
+   ![Correo «Verifica el nuevo correo de Quenda» enviado a la nueva dirección](../capturas/cu-13/10-correo-de-verificacion.webp)
 
    *El mensaje llega a la nueva dirección, con las mismas condiciones de uso único y caducidad.*
 
-   ![Página «Verificar nuevo correo» con el botón «Confirmar nuevo correo» recuadrado](../capturas/cu-13/12-confirmar-nuevo-correo.webp)
+   ![Página «Verificar nuevo correo» con el botón «Confirmar nuevo correo» recuadrado](../capturas/cu-13/11-confirmar-nuevo-correo.webp)
 
    *Pulsa «Confirmar nuevo correo», recuadrado. El campo «Contraseña para recuperación asistida» solo se usa cuando el cambio lo tramita el equipo que opera Quenda.*
 
 6. **Vuelve a entrar con el nuevo correo.** Quenda sustituye el correo y cierra todas tus sesiones.
 
-   ![Página de acceso con el mensaje «Correo actualizado. Inicia sesión con el nuevo correo.»](../capturas/cu-13/13-correo-actualizado.webp)
+   ![Página de acceso con el mensaje «Correo actualizado. Inicia sesión con el nuevo correo.»](../capturas/cu-13/12-correo-actualizado.webp)
 
    *El aviso recuadrado confirma el cambio sobre el formulario de acceso.*
 
-   ![«Datos personales» con el nuevo correo recuadrado](../capturas/cu-13/14-acceso-con-el-nuevo-correo.webp)
+   ![«Datos personales» con el nuevo correo recuadrado](../capturas/cu-13/13-acceso-con-el-nuevo-correo.webp)
 
    *Tras entrar con el nuevo correo, «Datos personales» lo muestra en «Correo electrónico». El nombre y el resto de la cuenta se mantienen.*
 
@@ -775,9 +769,9 @@ Sirve para mantener al día tu nombre, tus preferencias de idioma y apariencia, 
 
 #### La contraseña actual no es correcta
 
-![Mensaje «Confirma tu contraseña actual para realizar esta operación.»](../capturas/cu-13/05-contrasena-incorrecta.webp)
+![Mensaje «Confirma tu contraseña actual para realizar esta operación.»](../capturas/cu-13/14-contrasena-incorrecta.webp)
 
-*El mensaje recuadrado aparece bajo los campos y el cambio no se solicita. Escribe tu contraseña actual y vuelve a pulsar «Solicitar cambio de correo».*
+*Al pedir un nuevo cambio con una contraseña equivocada, el mensaje recuadrado aparece bajo los campos y el cambio no se solicita. Escribe tu contraseña actual y vuelve a pulsar «Solicitar cambio de correo».*
 
 #### El enlace caduca o la cuenta cambia entretanto
 
@@ -807,17 +801,17 @@ Sirve para desactivar voluntariamente tu cuenta en toda la instalación de Quend
 
 2. **Confirma la baja.** Escribe tu contraseña, marca la casilla y pulsa «Confirmar baja de cuenta».
 
-   ![Contraseña escrita, casilla marcada y «Confirmar baja de cuenta» recuadrado](../capturas/cu-14/03-confirmar-baja.webp)
+   ![Contraseña escrita, casilla marcada y «Confirmar baja de cuenta» recuadrado](../capturas/cu-14/02-confirmar-baja.webp)
 
-   *Con los datos completos, el recuadro marca el botón. El mensaje de error visible corresponde al intento anterior.*
+   *Con la contraseña escrita y la casilla «Quiero desactivar mi cuenta global» marcada, el recuadro señala «Confirmar baja de cuenta».*
 
 3. **Cuenta desactivada.** Quenda cierra tus sesiones y te lleva a la página de acceso.
 
-   ![Página de acceso con el mensaje «Cuenta desactivada.»](../capturas/cu-14/05-cuenta-desactivada.webp)
+   ![Página de acceso con el mensaje «Cuenta desactivada.»](../capturas/cu-14/03-cuenta-desactivada.webp)
 
    *El aviso recuadrado confirma la baja.*
 
-   ![Intento de acceso con el mensaje «La cuenta está dada de baja.»](../capturas/cu-14/06-acceso-tras-la-baja.webp)
+   ![Intento de acceso con el mensaje «La cuenta está dada de baja.»](../capturas/cu-14/04-acceso-tras-la-baja.webp)
 
    *Si intentas entrar después, aparece «La cuenta está dada de baja.». Para volver a usarla, sigue [CU-15](#cu-15--reactivar-una-cuenta).*
 
@@ -825,13 +819,13 @@ Sirve para desactivar voluntariamente tu cuenta en toda la instalación de Quend
 
 #### La contraseña no es correcta
 
-![Mensaje «Confirma tu contraseña actual para realizar esta operación.» en el apartado de baja](../capturas/cu-14/02-contrasena-incorrecta.webp)
+![Mensaje «Confirma tu contraseña actual para realizar esta operación.» en el apartado de baja](../capturas/cu-14/05-contrasena-incorrecta.webp)
 
 *El mensaje recuadrado aparece sobre el botón y la cuenta sigue activa.*
 
 #### Tienes reservas confirmadas pendientes
 
-![Mensaje «No puedes dar de baja la cuenta mientras tengas reservas confirmadas futuras o en curso.»](../capturas/cu-14/04-reserva-futura-impide-la-baja.webp)
+![Mensaje «No puedes dar de baja la cuenta mientras tengas reservas confirmadas futuras o en curso.»](../capturas/cu-14/06-reserva-futura-impide-la-baja.webp)
 
 *El mensaje recuadrado pide consultar tus reservas o contactar con el ayuntamiento. La baja no cancela reservas: cancélalas tú si el plazo lo permite ([CU-03](#cu-03--modificar-o-cancelar-una-reserva)) y vuelve a intentarlo.*
 
@@ -872,37 +866,37 @@ Sirve para recuperar el acceso a una cuenta que diste de baja voluntariamente. L
 
    ![Correo «Reactiva tu cuenta de Quenda» con el enlace](../capturas/cu-15/04-correo-de-reactivacion.webp)
 
-   *El correo pide confirmar la reactivación con la contraseña y, si lo tenías, el segundo factor. El enlace caduca en 10 minutos y solo sirve una vez.*
+   *El correo contiene el enlace de reactivación y pide confirmar la reactivación con la contraseña y, si lo tenías, el segundo factor. El enlace caduca en 10 minutos y solo sirve una vez.*
 
 4. **Confirma con tu contraseña.** Escribe tu contraseña y, si tenías verificación en dos pasos, el código. Pulsa «Reactivar cuenta».
 
-   ![Página «Confirmar reactivación» con la contraseña escrita y «Reactivar cuenta» recuadrado](../capturas/cu-15/06-confirmar-reactivacion.webp)
+   ![Página «Confirmar reactivación» con la contraseña escrita y «Reactivar cuenta» recuadrado](../capturas/cu-15/05-confirmar-reactivacion.webp)
 
-   *El campo «Código de autenticación» solo hace falta si tenías activada la verificación en dos pasos. El mensaje de error visible corresponde al intento anterior.*
+   *El campo «Código de autenticación» solo hace falta si tenías activada la verificación en dos pasos; si no, basta con la contraseña. El recuadro marca «Reactivar cuenta».*
 
-   ![Mensaje «Cuenta reactivada. No se han recuperado permisos administrativos.»](../capturas/cu-15/07-cuenta-reactivada.webp)
+   ![Mensaje «Cuenta reactivada. No se han recuperado permisos administrativos.»](../capturas/cu-15/06-cuenta-reactivada.webp)
 
    *El aviso recuadrado confirma la reactivación y recuerda que los permisos administrativos no se recuperan.*
 
 5. **Inicia una sesión nueva.** La reactivación no abre sesión por sí sola: entra con [CU-09](#cu-09--iniciar-o-cerrar-sesión).
 
-   ![«Preferencias de tu cuenta» tras entrar con la cuenta reactivada](../capturas/cu-15/08-sesion-nueva.webp)
+   ![«Preferencias de tu cuenta» tras entrar con la cuenta reactivada](../capturas/cu-15/07-sesion-nueva.webp)
 
    *La cuenta vuelve a funcionar con normalidad.*
 
 ### Si algo no sale como se espera
 
-#### La contraseña no es correcta
-
-![Mensaje «La solicitud contiene datos no válidos.» en «Confirmar reactivación»](../capturas/cu-15/05-contrasena-incorrecta.webp)
-
-*El mensaje recuadrado no detalla qué dato falla y la cuenta sigue desactivada. Revisa la contraseña y vuelve a intentarlo.*
-
 #### El enlace ya se usó o ha caducado
 
-![Mismo mensaje «La solicitud contiene datos no válidos.» al usar otra vez el enlace](../capturas/cu-15/09-enlace-ya-utilizado.webp)
+![Mensaje «La solicitud contiene datos no válidos.» al usar otra vez el enlace](../capturas/cu-15/08-enlace-ya-utilizado.webp)
 
-*Un enlace usado, caducado o incorrecto no reactiva la cuenta. Pide uno nuevo con «Solicitar otro enlace».*
+*Al abrir de nuevo un enlace ya usado y pulsar «Reactivar cuenta», aparece el mensaje recuadrado. Un enlace usado, caducado o incorrecto no reactiva la cuenta: pide uno nuevo con «Solicitar otro enlace».*
+
+#### La contraseña no es correcta
+
+![Mensaje «La solicitud contiene datos no válidos.» en «Confirmar reactivación»](../capturas/cu-15/09-contrasena-incorrecta.webp)
+
+*Con un enlace válido pero una contraseña equivocada aparece el mismo mensaje, que no detalla qué dato falla, y la cuenta sigue desactivada. Revisa la contraseña y vuelve a intentarlo.*
 
 #### La cuenta está suspendida o ya no existe
 
@@ -926,17 +920,17 @@ Sirve para descargar una copia de los datos de tu cuenta que Quenda puede entreg
 
    *El texto explica que la descarga identifica sus exclusiones y no equivale a una respuesta completa al derecho de acceso. El recuadro marca el botón.*
 
-2. **Revisa el alcance de la copia.** El archivo declara al principio qué incluye y qué no. Puedes abrirlo con cualquier editor de texto o, como aquí, con la herramienta `jq`.
+2. **Revisa el alcance de la copia.** Abre el archivo con cualquier editor de texto. Al principio declara qué incluye y qué queda fuera.
 
-   ![Salida de jq con el formato, el alcance y la sección de completitud del archivo](../capturas/cu-19/02-alcance-de-la-copia.webp)
+   ![Principio del archivo quenda-personal-data.json con su formato, alcance y la sección «completeness»](../capturas/cu-19/02-alcance-de-la-copia.webp)
 
-   *«status: PARTIAL» indica que la copia es parcial. «reviewRequired» enumera la información que requiere revisión (texto libre e información de terceros, otras evidencias, contexto del responsable), «excludedSecurityMaterial» lo que nunca se entrega (contraseñas, tokens y secretos del segundo factor) y «administrativeChannel» cómo pedir el resto.*
+   *«scope» con «SELF» indica que la copia es de tu propia cuenta. En «completeness», «status: PARTIAL» avisa de que es parcial; «reviewRequired» enumera lo que necesita revisión antes de entregarse (texto libre e información de terceros, otras evidencias y el contexto del responsable), «excludedSecurityMaterial» lo que nunca se entrega (contraseñas, claves de sesión y secretos del segundo factor) y «administrativeChannel» cómo pedir el resto. Al final, «records» reúne todos tus registros (aquí, abreviado).*
 
-3. **Consulta tus registros.** El resto del archivo contiene los registros agrupados por categoría.
+3. **Consulta tus registros.** Cada registro de «records» indica su categoría, su tipo y sus datos.
 
-   ![Salida de jq con el número de registros por categoría](../capturas/cu-19/03-registros-por-categoria.webp)
+   ![Fragmento de «records» con un registro de ejemplo de cada categoría](../capturas/cu-19/03-registros-por-categoria.webp)
 
-   *El recuento muestra cuántos registros hay de autenticación, comunicaciones (avisos), identidad, perfil municipal y reservas.*
+   *El fragmento muestra un registro de cada categoría, abreviado: «AUTHENTICATION» (accesos y seguridad), «COMMUNICATIONS» (avisos y correos), «IDENTITY» (tu nombre, tu correo y tus preferencias), «MUNICIPAL_PROFILE» (cada municipio donde tienes relación) y «RESERVATIONS» (tus reservas, con el espacio y las condiciones aceptadas). Los puntos suspensivos señalan lo que se ha omitido.*
 
 ### Si algo no sale como se espera
 
