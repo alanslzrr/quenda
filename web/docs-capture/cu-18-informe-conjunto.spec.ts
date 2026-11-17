@@ -146,11 +146,10 @@ async function agreementWithHistory(month: string) {
   return agreement;
 }
 
-/** A manager names the agreement by the identifier the administration gave. */
+/** A report reader chooses the agreement by name among those with joint reports. */
 async function agreementField(page: Page, agreement: string) {
-  const field = page.getByLabel("Identificador del convenio", { exact: true });
-  await field.fill(agreement);
-  return field;
+  await chooseValue(page, "agreementId", "Convenio", agreement);
+  return page.getByRole("combobox", { name: "Convenio", exact: true });
 }
 
 /** Requests the report, waiting out the per-account limit if it shows. */
