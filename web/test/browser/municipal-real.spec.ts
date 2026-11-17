@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { fieldValue, pickDate, pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 
 async function enter(page: Page, index: number) {
@@ -124,7 +125,7 @@ test("municipal catalog and versioned configuration use the real API", async ({
   await calendar
     .getByRole("button", { name: /Añadir excepción|Engadir excepción/ })
     .click();
-  await calendar.getByLabel(/^(Fecha|Data)$/).fill("2030-01-01");
+  await pickDate(page, /^(Fecha|Data)$/, "2030-01-01", calendar);
   await calendar.getByLabel("Motivo").fill("Horario inicial");
   await calendar
     .getByRole("button", { name: /Guardar horarios|Gardar horarios/ })
@@ -146,7 +147,7 @@ test("municipal catalog and versioned configuration use the real API", async ({
     page.getByLabel(/Texto de las normas|Texto das normas/),
   ).toHaveValue("Uso deportivo. Respeta el horario reservado.");
   await page.getByRole("tab", { name: "Horarios", exact: true }).click();
-  await expect(page.getByLabel(/^(Fecha|Data)$/)).toHaveValue("2030-01-01");
+  await expect(fieldValue(page, /^(Fecha|Data)$/)).toHaveValue("2030-01-01");
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: `test-results/municipal-catalog-${info.project.name}.png`,
@@ -306,14 +307,14 @@ test("daily agenda relocates without accepting rules and cancels explicitly", as
       })
       .click();
   await page.getByRole("link", { name: /Agenda diaria|Axenda diaria/ }).click();
-  await page.getByLabel(/Fecha de la agenda|Data da axenda/).fill(f.date);
+  await pickDate(page, /Fecha de la agenda|Data da axenda/, f.date);
   await page
     .getByRole("table", { name: /Reservas del día|Reservas do día/ })
     .getByRole("link")
     .first()
     .click();
   await select(page, /Unidad de destino|Unidade de destino/, "Pista 2");
-  await page.getByLabel(/Nueva fecha|Nova data/).fill(f.date);
+  await pickDate(page, /Nueva fecha|Nova data/, f.date);
   await page
     .getByRole("combobox", { name: /Franja disponible|Franxa dispoñible/ })
     .click();
@@ -365,7 +366,7 @@ test("blocks survive reload and release through the daily agenda", async ({
     .getByRole("link", { name: /Agenda diaria|Axenda diaria/ })
     .first()
     .click();
-  await page.getByLabel(/Fecha de la agenda|Data da axenda/).fill(f.date);
+  await pickDate(page, /Fecha de la agenda|Data da axenda/, f.date);
   const block = page
     .locator("form")
     .filter({ has: page.getByRole("button", { name: "Crear bloqueo" }) });
@@ -374,12 +375,18 @@ test("blocks survive reload and release through the daily agenda", async ({
     /Unidad a bloquear|Unidade que se vai bloquear/,
     "Pista 1",
   );
-  await block
-    .getByLabel(/Inicio del bloqueo|Inicio do bloqueo/)
-    .fill(`${f.date}T12:00`);
-  await block
-    .getByLabel(/Fin del bloqueo|Fin do bloqueo/)
-    .fill(`${f.date}T13:00`);
+  await pickDateTime(
+    page,
+    /Inicio del bloqueo|Inicio do bloqueo/,
+    `${f.date}T12:00`,
+    block,
+  );
+  await pickDateTime(
+    page,
+    /Fin del bloqueo|Fin do bloqueo/,
+    `${f.date}T13:00`,
+    block,
+  );
   await block.getByLabel("Motivo").fill("Revisión del pavimento");
   await block.getByRole("checkbox").check();
   await block.getByRole("button", { name: "Crear bloqueo" }).click();
@@ -387,7 +394,7 @@ test("blocks survive reload and release through the daily agenda", async ({
     page.getByText("Revisión del pavimento", { exact: true }),
   ).toBeVisible();
   await page.reload();
-  await page.getByLabel(/Fecha de la agenda|Data da axenda/).fill(f.date);
+  await pickDate(page, /Fecha de la agenda|Data da axenda/, f.date);
   const release = page
     .locator("form")
     .filter({ has: page.getByRole("button", { name: "Liberar bloqueo" }) });
