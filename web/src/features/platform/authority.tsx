@@ -27,11 +27,6 @@ export function Invite({ privacy = false }: { privacy?: boolean }) {
     );
   return (
     <>
-      <h2>
-        {privacy
-          ? t("Conceder privacidad global", "Conceder privacidade global")
-          : t("Invitar operador", "Invitar operador")}
-      </h2>
       <p>
         {privacy
           ? t(
@@ -144,7 +139,6 @@ export function Revoke({
     );
   return (
     <>
-      <h2>{t("Retirar autorización", "Retirar autorización")}</h2>
       {kind === "operator" ? (
         <p>
           <PlatformAccount id={id} name={name} />
@@ -229,7 +223,6 @@ export function SuspendAccount() {
     );
   return (
     <>
-      <h2>{t("Suspender identidad global", "Suspender identidade global")}</h2>
       <p>
         {t(
           "Revoca todas las sesiones y la autoridad administrativa de la cuenta en la instancia, aunque sea el último responsable. Conserva reservas e historial. La recuperación exige verificación operativa y sustitución de credenciales; no es una reactivación de autoservicio.",
