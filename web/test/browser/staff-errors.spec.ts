@@ -248,6 +248,53 @@ test("an unconfirmed invitation cannot be silently resubmitted or displayed as a
   expect(attempts).toBe(1);
 });
 
+test("a successful security withdrawal empties the reason without marking it invalid", async ({
+  page,
+}) => {
+  await fixture(page);
+  const sent: unknown[] = [];
+  await page.route(
+    `**${root}/accounts/destinatario/revoke-access-for-security`,
+    async (route) => {
+      sent.push(route.request().postDataJSON());
+      await route.fulfill({ json: {} });
+    },
+  );
+  await page.goto(`/administracion/${tenant}/personal/seguridad`);
+  await page.getByLabel(/Identificador de (cuenta|conta)/).fill("destinatario");
+  const reason = page.getByLabel("Motivo", { exact: true });
+  await reason.fill("Contención del compromiso local");
+  await page
+    .getByRole("checkbox", {
+      name: /Confirmo la retirada por seguridad|Confirmo a retirada por seguridade/,
+    })
+    .check();
+  const submit = page.getByRole("button", {
+    name: /Retirar acceso por seguridad|Retirar acceso por seguridade/,
+  });
+  await submit.click();
+  await expect(
+    page.getByRole("main").getByText(/Cambios guardados|Cambios gardados/),
+  ).toBeVisible();
+  expect(sent).toEqual([{ reason: "Contención del compromiso local" }]);
+  // The cleared field is neutral: neither the browser's :user-invalid nor aria-invalid flags it.
+  await expect(reason).toHaveValue("");
+  await expect(reason).toHaveAttribute("aria-invalid", "false");
+  expect(await reason.evaluate((field) => field.matches(":user-invalid"))).toBe(
+    false,
+  );
+  await reason.focus();
+  await reason.blur();
+  await expect(reason).toHaveAttribute("aria-invalid", "false");
+  // A new attempt without a reason is still rejected and flagged.
+  await submit.click();
+  await expect(reason).toHaveAttribute("aria-invalid", "true");
+  expect(await reason.evaluate((field) => field.matches(":user-invalid"))).toBe(
+    true,
+  );
+  expect(sent).toHaveLength(1);
+});
+
 test("staff history paginates without claiming accepted grants are currently authorized", async ({
   page,
 }, info) => {

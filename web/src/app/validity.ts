@@ -27,6 +27,10 @@ function mirroredControl(target: EventTarget | null) {
   return null;
 }
 
+// Lets clearFields return a field of a tracked form to the untouched state.
+const forgetters = new WeakMap<HTMLFormElement, (field: Element) => void>();
+let clearings = 0;
+
 const nativeField = (target: EventTarget | null): target is NativeField =>
   (target instanceof HTMLInputElement ||
     target instanceof HTMLSelectElement ||
@@ -110,6 +114,11 @@ export function trackValidity(form: HTMLFormElement | null) {
     edited = new WeakSet();
     flagged = new WeakSet();
   };
+  forgetters.set(form, (field) => {
+    edited.delete(field);
+    flagged.delete(field);
+    if (nativeField(field)) field.setAttribute("aria-invalid", "false");
+  });
   // `invalid` does not bubble, so the form listens in the capture phase.
   form.addEventListener("invalid", onInvalid, true);
   form.addEventListener("input", onInput);
@@ -118,6 +127,7 @@ export function trackValidity(form: HTMLFormElement | null) {
   form.addEventListener("reset", onReset);
   form.addEventListener("focusin", onFocus);
   return () => {
+    forgetters.delete(form);
     form.removeEventListener("focusin", onFocus);
     form.removeEventListener("invalid", onInvalid, true);
     form.removeEventListener("input", onInput);
@@ -125,4 +135,43 @@ export function trackValidity(form: HTMLFormElement | null) {
     form.removeEventListener("focusout", onBlur);
     form.removeEventListener("reset", onReset);
   };
+}
+
+/**
+ * Empties named text fields after a successful submit while the rest of the form keeps its edits, such as a one-off
+ * reason. Assigning `value` alone keeps the browser's user-validity flag, so an emptied required field would match
+ * :user-invalid and look failed although nothing was wrong. Each field is instead reset on its own, through a
+ * temporary form owner, which clears that flag exactly as a form reset does; its own form, and any Radix control
+ * listening for that form's reset, is untouched. The field then stays neutral until the person edits or submits again.
+ */
+export function clearFields(form: HTMLFormElement, names: readonly string[]) {
+  const fields = names
+    .map((name) => form.elements.namedItem(name))
+    .filter(
+      (field): field is HTMLInputElement | HTMLTextAreaElement =>
+        field instanceof HTMLInputElement ||
+        field instanceof HTMLTextAreaElement,
+    );
+  if (!fields.length) return;
+  const owner = form.ownerDocument.createElement("form");
+  owner.id = `quenda-clear-${++clearings}`;
+  owner.hidden = true;
+  form.ownerDocument.body.append(owner);
+  const previous = fields.map((field) => field.getAttribute("form"));
+  try {
+    for (const field of fields) field.setAttribute("form", owner.id);
+    owner.reset();
+  } finally {
+    fields.forEach((field, index) => {
+      const value = previous[index];
+      if (value === null || value === undefined) field.removeAttribute("form");
+      else field.setAttribute("form", value);
+    });
+    owner.remove();
+  }
+  for (const field of fields) {
+    // A reset restores the default value; a field rendered with one must still end up empty.
+    field.value = "";
+    forgetters.get(form)?.(field);
+  }
 }
