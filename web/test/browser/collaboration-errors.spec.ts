@@ -298,6 +298,7 @@ test("reopening captures the exact restriction and never reports availability af
             ? null
             : {
                 agreementId: id,
+                agreementName: "Convenio comarcal",
                 version: 4,
                 hasRemainingAssignment: remaining,
               },
@@ -322,6 +323,15 @@ test("reopening captures the exact restriction and never reports availability af
   await expect(
     page.getByText(/existen adscripciones|existen adscricións/),
   ).toBeVisible();
+  // The agreement is named; its identifier stays behind the technical disclosure.
+  await expect(
+    page.getByText(/^Convenio: Convenio comarcal · versión 4$/),
+  ).toBeVisible();
+  await expect(page.getByText(id, { exact: true })).toBeHidden();
+  await page
+    .getByRole("button", { name: "Identificador técnico", exact: true })
+    .click();
+  await expect(page.getByText(id, { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Retirar vinculación" }),
   ).toHaveCount(0);

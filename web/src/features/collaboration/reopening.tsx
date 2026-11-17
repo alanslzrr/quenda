@@ -1,5 +1,6 @@
 import { useParams } from "react-router";
 import { textField } from "../../app/action";
+import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
 import { BackLink } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
@@ -27,6 +28,8 @@ function Restriction() {
     unitId: string;
     restriction: null | {
       agreementId: string;
+      /** Null only when the agreement is not visible to this municipality. */
+      agreementName: string | null;
       version: number;
       hasRemainingAssignment: boolean;
     };
@@ -59,9 +62,19 @@ function Restriction() {
       ) : (
         <>
           <p>
-            {t("Convenio", "Convenio")}: {r.agreementId} ·{" "}
-            {t("versión", "versión")} {r.version}
+            {t("Convenio", "Convenio")}:{" "}
+            {r.agreementName ??
+              t(
+                "Convenio sin nombre visible",
+                "Convenio sen nome visible",
+              )}{" "}
+            · {t("versión", "versión")} {r.version}
           </p>
+          <Disclosure
+            title={t("Identificador técnico", "Identificador técnico")}
+          >
+            <code>{r.agreementId}</code>
+          </Disclosure>
           {r.hasRemainingAssignment ? (
             <p>
               {t(
