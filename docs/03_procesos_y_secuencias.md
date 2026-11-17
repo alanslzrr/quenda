@@ -266,7 +266,9 @@ La exportación `quenda.reservations`, versión 3, distingue la unidad y versió
 |---|---|
 | Entrada inválida | Errores por campo, sin cambios parciales. |
 | Sesión ausente o permiso insuficiente | Rechazo sin revelar objetos ajenos. |
-| Solape, cuota agotada o versión obsoleta | Conflicto, sin datos de reservas de terceros. |
+| Solape, cuota agotada o revisión de reserva obsoleta | Conflicto específico (`SLOT_UNAVAILABLE`, `QUOTA_EXCEEDED`, `RESERVATION_CHANGED`), sin datos de reservas de terceros. |
+| Versión obsoleta de una ficha, calendario, normas, política o ajustes | `STALE_VERSION`: se recarga la versión actual y se vuelve a aplicar el cambio. |
+| Calendario que deja fuera reservas confirmadas | `SCHEDULE_HAS_RESERVATIONS`: se cancelan o reubican antes esas reservas, sin que la respuesta las identifique. |
 | Publicación sin normas | `USAGE_RULES_REQUIRED`: «Añade las normas de uso para publicar esta unidad». |
 | Modificación que exige nueva aceptación o condiciones cambiadas | `CONDITIONS_ACCEPTANCE_REQUIRED` o `CONDITIONS_CHANGED`; el titular debe consultar y aceptar las condiciones aplicables. |
 | Intento de aceptar por otro titular | Rechazo sin registrar aceptación ni alterar la reserva. |
