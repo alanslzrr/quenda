@@ -72,6 +72,57 @@ test("CU-23 configurar la apariencia pública", async ({ page, browser }) => {
   await expect(remove).toBeVisible();
   await snap(cu, page, "logo-oscuro", { target: remove.locator("xpath=..") });
 
+  // Paso 2: elegir un tema del catálogo; se aplica al momento.
+  const viewing = page.getByRole("group", { name: "Modo que estás viendo" });
+  await viewing.getByRole("radio", { name: "Claro", exact: true }).check();
+  await page.getByRole("button", { name: "Neutro", exact: true }).click();
+  const blue = page.getByRole("menuitem", { name: "Azul", exact: true });
+  await expect(blue).toBeVisible();
+  await snap(cu, page, "catalogo-de-temas", { target: blue });
+  await blue.click();
+  await expect(page.locator("body")).toHaveCSS(
+    "background-color",
+    "rgb(249, 251, 255)",
+  );
+  const theme = page.getByRole("region", { name: "Tema" });
+  await snap(cu, page, "tema-azul", {
+    tall: true,
+    target: theme.getByRole("button", { name: "Azul" }),
+  });
+
+  // Paso 2: ajustar el acento del modo que se está viendo y las esquinas.
+  const accent = page.getByLabel("Acento en modo claro, en hexadecimal", {
+    exact: true,
+  });
+  await accent.fill("#0b5394");
+  await accent.blur();
+  await page.getByRole("radio", { name: "Suaves", exact: true }).check();
+  await snap(cu, page, "ajustes", { tall: true, target: accent });
+
+  // Paso 3: guardar; Quenda comprueba permisos, contraste y revisión.
+  const save = saveBar(page);
+  await snap(cu, page, "guardar", { target: save });
+  await save.click();
+  const stored = page.getByText("Apariencia guardada");
+  await expect(stored).toBeVisible();
+  await snap(cu, page, "guardada", { target: stored });
+
+  // Resultado: la página pública del municipio usa la nueva apariencia.
+  const pub = await secondBrowser(browser, page);
+  try {
+    const visitor = await pub.newPage();
+    await visitor.goto(`/municipios/${ribasanta}`);
+    await expect(visitor.locator("body")).toHaveCSS(
+      "background-color",
+      "rgb(249, 251, 255)",
+    );
+    const heading = visitor.getByRole("heading", { level: 1 });
+    await expect(heading).toBeVisible();
+    await snap(cu, visitor, "pagina-publica", { fullPage: true });
+  } finally {
+    await pub.close();
+  }
+
   // Alternativa: un logo SVG se rechaza sin guardarse.
   await dark.setInputFiles({
     name: "escudo.svg",
@@ -103,33 +154,6 @@ test("CU-23 configurar la apariencia pública", async ({ page, browser }) => {
   });
   await expect(smallError).toHaveCount(0);
 
-  // Paso 2: elegir un tema del catálogo; se aplica al momento.
-  const viewing = page.getByRole("group", { name: "Modo que estás viendo" });
-  await viewing.getByRole("radio", { name: "Claro", exact: true }).check();
-  await page.getByRole("button", { name: "Neutro", exact: true }).click();
-  const blue = page.getByRole("menuitem", { name: "Azul", exact: true });
-  await expect(blue).toBeVisible();
-  await snap(cu, page, "catalogo-de-temas", { target: blue });
-  await blue.click();
-  await expect(page.locator("body")).toHaveCSS(
-    "background-color",
-    "rgb(249, 251, 255)",
-  );
-  const theme = page.getByRole("region", { name: "Tema" });
-  await snap(cu, page, "tema-azul", {
-    tall: true,
-    target: theme.getByRole("button", { name: "Azul" }),
-  });
-
-  // Paso 2: ajustar el acento del modo que se está viendo y las esquinas.
-  const accent = page.getByLabel("Acento en modo claro, en hexadecimal", {
-    exact: true,
-  });
-  await accent.fill("#0b5394");
-  await accent.blur();
-  await page.getByRole("radio", { name: "Suaves", exact: true }).check();
-  await snap(cu, page, "ajustes", { tall: true, target: accent });
-
   // Alternativa: una combinación sin contraste se señala antes de guardar.
   const text = page.getByLabel("Texto en modo claro, en hexadecimal", {
     exact: true,
@@ -148,6 +172,7 @@ test("CU-23 configurar la apariencia pública", async ({ page, browser }) => {
   await expect(contrast).toHaveCount(0);
 
   // Alternativa: el borrador sin guardar se conserva al recargar.
+  await page.getByRole("radio", { name: "Redondeadas", exact: true }).check();
   await page.reload();
   const recovered = page.getByText(
     "Recuperamos los cambios que no llegaste a guardar.",
@@ -177,29 +202,8 @@ test("CU-23 configurar la apariencia pública", async ({ page, browser }) => {
     .click();
   await expect(dialog).toHaveCount(0);
 
-  // Paso 3: guardar; Quenda comprueba permisos, contraste y revisión.
-  const save = saveBar(page);
-  await snap(cu, page, "guardar", { target: save });
-  await save.click();
-  const stored = page.getByText("Apariencia guardada");
-  await expect(stored).toBeVisible();
-  await snap(cu, page, "guardada", { target: stored });
-
-  // Resultado: la página pública del municipio usa la nueva apariencia.
-  const pub = await secondBrowser(browser, page);
-  try {
-    const visitor = await pub.newPage();
-    await visitor.goto(`/municipios/${ribasanta}`);
-    await expect(visitor.locator("body")).toHaveCSS(
-      "background-color",
-      "rgb(249, 251, 255)",
-    );
-    const heading = visitor.getByRole("heading", { level: 1 });
-    await expect(heading).toBeVisible();
-    await snap(cu, visitor, "pagina-publica", { fullPage: true });
-  } finally {
-    await pub.close();
-  }
+  await saveBar(page).click();
+  await expect(page.getByText("Apariencia guardada")).toBeVisible();
 
   // Alternativa: otra pestaña guardó antes; la revisión queda obsoleta.
   const tab = await secondBrowser(browser, page, true);
@@ -212,7 +216,7 @@ test("CU-23 configurar la apariencia pública", async ({ page, browser }) => {
   } finally {
     await tab.close();
   }
-  await page.getByRole("radio", { name: "Redondeadas", exact: true }).check();
+  await page.getByRole("radio", { name: "Suaves", exact: true }).check();
   await saveBar(page).click();
   const conflict = page.getByRole("alert").filter({ hasText: /\S/ }).last();
   await expect(conflict).toBeVisible();
