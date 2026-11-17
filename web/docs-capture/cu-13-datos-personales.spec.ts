@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { Capture, expect, latestMail, mailUrl, test } from "./capture";
 import {
   newPassword,
@@ -14,7 +13,7 @@ const cu = new Capture("CU-13");
 
 test("CU-13 actualizar datos personales y correo", async ({ page }) => {
   const email = await registerResident(page, "Antía Rey Barreiro");
-  const next = `antia.${randomUUID().slice(0, 8)}@demo.test`;
+  const next = "antia.barreiro@demo.test";
 
   // Paso 1: cambiar el nombre.
   await page.goto("/perfil/datos");
@@ -49,13 +48,6 @@ test("CU-13 actualizar datos personales y correo", async ({ page }) => {
     name: "Solicitar cambio de correo",
   });
   await mailbox.fill(next);
-
-  // Alternativa: contraseña actual incorrecta.
-  await current.fill("no-es-la-contrasena");
-  await request.click();
-  const wrong = page.getByRole("main").getByRole("alert");
-  await expect(wrong).toBeVisible();
-  await shot(cu, page, "contrasena-incorrecta", { target: wrong });
 
   await current.fill(newPassword);
   await shot(cu, page, "solicitar-cambio-de-correo", { target: request });
@@ -107,4 +99,16 @@ test("CU-13 actualizar datos personales y correo", async ({ page }) => {
   await shot(cu, page, "acceso-con-el-nuevo-correo", {
     target: page.getByRole("main").getByText(next, { exact: true }).last(),
   });
+
+  // Alternativa: contraseña actual incorrecta al pedir otro cambio.
+  await page
+    .getByLabel("Nuevo correo", { exact: true })
+    .fill("antia.rey.lemos@demo.test");
+  await page.getByLabel("Contraseña actual").fill("no-es-la-contrasena");
+  await page
+    .getByRole("button", { name: "Solicitar cambio de correo" })
+    .click();
+  const wrong = page.getByRole("main").getByRole("alert");
+  await expect(wrong).toBeVisible();
+  await shot(cu, page, "contrasena-incorrecta", { target: wrong });
 });
