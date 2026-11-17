@@ -56,9 +56,10 @@
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
+/* At least 1rem: iOS zooms the page into a focused field whose text is smaller. */
 .page input,
 .page textarea {
-  font-size: 14px;
+  font-size: max(1rem, 14px);
 }
 .page textarea {
   min-height: 220px;

@@ -2,14 +2,17 @@ import {
   Children,
   type FormEvent,
   type ReactNode,
+  useEffect,
   useId,
   useRef,
   useState,
 } from "react";
 import { Alert } from "../ui/alert/alert";
 import { Button } from "../ui/button/button";
+import { announce } from "./announce";
 import { Failure } from "./feedback";
 import styles from "./layout.module.css";
+import { trackValidity } from "./validity";
 
 // Mutations are explicit, single-flight and never retried by the component.
 export function ActionForm({
@@ -46,6 +49,11 @@ export function ActionForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const [done, setDone] = useState(false);
+  // The page announcer speaks the outcome once it is shown: a live region mounted together with its text is not
+  // announced reliably. A form that unmounted meanwhile (its owner moved on) leaves the outcome to its owner.
+  useEffect(() => {
+    if (done && success) announce(success);
+  }, [done, success]);
   async function run(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (lock.current || blocked) return;
@@ -72,18 +80,18 @@ export function ActionForm({
     }
   }
   return (
-    <form className={styles.form} onSubmit={run}>
+    // Busy fields stay enabled: disabling them would drop keyboard focus to the page mid-submit, and the lock already rejects a resubmit.
+    <form
+      ref={trackValidity}
+      className={styles.form}
+      onSubmit={run}
+      aria-busy={busy || undefined}
+    >
       {Children.toArray(children).length > 0 && (
-        <fieldset disabled={busy} className={styles.fields}>
-          {children}
-        </fieldset>
+        <fieldset className={styles.fields}>{children}</fieldset>
       )}
       {error !== undefined && <Failure error={error} />}
-      {done && success && (
-        <div role="status">
-          <Alert tone="success" title={success} />
-        </div>
-      )}
+      {done && success && <Alert tone="success" title={success} role="none" />}
       {unavailable && <p id={reasonId}>{unavailable}</p>}
       {secondary ? (
         <div className={styles.formActions}>
@@ -92,7 +100,7 @@ export function ActionForm({
             type="submit"
             variant={danger ? (quiet ? "danger-ghost" : "danger") : "primary"}
             loading={busy}
-            disabled={busy || blocked}
+            disabled={blocked}
             aria-describedby={unavailable ? reasonId : undefined}
           >
             {label}
@@ -103,7 +111,7 @@ export function ActionForm({
           type="submit"
           variant={danger ? (quiet ? "danger-ghost" : "danger") : "primary"}
           loading={busy}
-          disabled={busy || blocked}
+          disabled={blocked}
           aria-describedby={unavailable ? reasonId : undefined}
         >
           {label}

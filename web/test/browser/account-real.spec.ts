@@ -21,7 +21,7 @@ test("personal details, password recovery and accessible settings use the real A
     .getByRole("button", { name: /Guardar nombre|Gardar nome/ })
     .click();
   await expect(
-    page.getByText(/Nombre actualizado|Nome actualizado/),
+    page.getByRole("main").getByText(/Nombre actualizado|Nome actualizado/),
   ).toBeVisible();
   await page.reload();
   await expect(page.getByLabel(/^(Nombre|Nome)$/)).toHaveValue(
@@ -38,7 +38,9 @@ test("personal details, password recovery and accessible settings use the real A
   await page.goto("/recuperar");
   await page.getByLabel("Correo electrónico", { exact: true }).fill(email);
   await page.getByRole("button", { name: /Enviar instru/ }).click();
-  await expect(page.getByText(/Si la solicitud|Se a solicitude/)).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText(/Si la solicitud|Se a solicitude/),
+  ).toBeVisible();
   await page.goto(await mailLink(email, "reset-password"));
   const changed = `${password}-changed`;
   await page.getByLabel(/Nueva contraseña|Novo contrasinal/).fill(changed);
@@ -46,7 +48,9 @@ test("personal details, password recovery and accessible settings use the real A
     .getByRole("button", { name: /Guardar contraseña|Gardar contrasinal/ })
     .click();
   await expect(
-    page.getByText(/Contraseña actualizada|Contrasinal actualizado/),
+    page
+      .getByRole("main")
+      .getByText(/Contraseña actualizada|Contrasinal actualizado/),
   ).toBeVisible();
   await login(page, email, changed);
   await expect(page).toHaveURL(/\/perfil$/);
@@ -122,7 +126,9 @@ test("MFA enrollment, backup sign-in and password change retain usable sessions"
     .getByRole("button", { name: /Cambiar contraseña|Cambiar contrasinal/ })
     .click();
   await expect(
-    page.getByText(/Contraseña actualizada|Contrasinal actualizado/),
+    page
+      .getByRole("main")
+      .getByText(/Contraseña actualizada|Contrasinal actualizado/),
   ).toBeVisible();
   await page
     .getByRole("button", {
@@ -130,9 +136,11 @@ test("MFA enrollment, backup sign-in and password change retain usable sessions"
     })
     .click();
   await expect(
-    page.getByText(
-      /Las demás sesiones se han cerrado|As demais sesións pecháronse/,
-    ),
+    page
+      .getByRole("main")
+      .getByText(
+        /Las demás sesiones se han cerrado|As demais sesións pecháronse/,
+      ),
   ).toBeVisible();
 });
 
@@ -148,7 +156,9 @@ test("email change requires two explicit confirmations and then a new session", 
     .getByRole("button", { name: "Solicitar cambio de correo" })
     .click();
   await expect(
-    page.getByText(/Revisa tu correo actual|Revisa o teu correo actual/),
+    page
+      .getByRole("main")
+      .getByText(/Revisa tu correo actual|Revisa o teu correo actual/),
   ).toBeVisible();
   const mutations: string[] = [];
   page.on("request", (request) => {
@@ -165,7 +175,9 @@ test("email change requires two explicit confirmations and then a new session", 
     .getByRole("button", { name: "Autorizar cambio", exact: true })
     .click();
   await expect(
-    page.getByText(/Revisa el nuevo correo|Revisa o novo correo/),
+    page
+      .getByRole("main")
+      .getByText(/Revisa el nuevo correo|Revisa o novo correo/),
   ).toBeVisible();
   await page.goto(await mailLink(next, "email-change/confirm"));
   await page
@@ -200,7 +212,9 @@ test("privacy download, voluntary deactivation and verified reactivation remain 
   await page.getByLabel("Correo electrónico", { exact: true }).fill(email);
   await page.getByLabel(/Contraseña actual|Contrasinal actual/).fill(password);
   await page.getByRole("button", { name: /Enviar instru/ }).click();
-  await expect(page.getByText(/Si la solicitud|Se a solicitude/)).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText(/Si la solicitud|Se a solicitude/),
+  ).toBeVisible();
   await page.goto(await mailLink(email, "/account/reactivation"));
   await page.getByLabel(/Contraseña actual|Contrasinal actual/).fill(password);
   await page
@@ -210,7 +224,7 @@ test("privacy download, voluntary deactivation and verified reactivation remain 
     })
     .click();
   await expect(
-    page.getByText(/Cuenta reactivada|Conta reactivada/),
+    page.getByRole("main").getByText(/Cuenta reactivada|Conta reactivada/),
   ).toBeVisible();
   await login(page, email);
   await expect(page).toHaveURL(/\/perfil$/);

@@ -164,9 +164,13 @@ for (const personal of ["light", "dark"] as const) {
     await page.goto(`${base}/apariencia`);
     const modeLabel = (mode: "light" | "dark") =>
       mode === "light" ? "Claro" : "Oscuro";
+    // "Modo inicial" is a radio group with the same two names, so the previewed mode is picked within its own group.
+    const viewing = page.getByRole("group", {
+      name: "Modo que estás viendo",
+    });
     // The editor opens in the person's own mode and already shows the municipal draft.
     await expect(
-      page.getByRole("radio", { name: modeLabel(personal), exact: true }),
+      viewing.getByRole("radio", { name: modeLabel(personal), exact: true }),
     ).toBeChecked();
     await expect(page.locator("html")).toHaveAttribute("data-theme", personal);
     await expect(page.locator("html")).toHaveAttribute(
@@ -174,7 +178,7 @@ for (const personal of ["light", "dark"] as const) {
       "true",
     );
     const preview = personal === "dark" ? "light" : "dark";
-    await page
+    await viewing
       .getByRole("radio", { name: modeLabel(preview), exact: true })
       .check();
     await page.getByRole("button", { name: "Neutro", exact: true }).click();

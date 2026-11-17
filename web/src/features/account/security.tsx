@@ -101,6 +101,7 @@ export function AccountSecurity() {
               name="newPassword"
               autoComplete="new-password"
               minLength={8}
+              description={t("Mínimo 8 caracteres", "Mínimo 8 caracteres")}
             />
           </ActionForm>
         </SecuritySection>

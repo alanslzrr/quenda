@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useFieldErrorAnnouncement } from "../../app/announce";
 import { usePreferences } from "../../app/preferences-provider";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
@@ -26,6 +27,14 @@ export function InstantField({
     options.length === 1
       ? options[0].utc
       : (options.find((o) => o.utc === choice)?.utc ?? "");
+  const error =
+    value && !options.length
+      ? t(
+          "La fecha, hora o zona no es válida. Las horas inexistentes no se ajustan automáticamente.",
+          "A data, hora ou zona non é válida. As horas inexistentes non se axustan automaticamente.",
+        )
+      : undefined;
+  const announceError = useFieldErrorAnnouncement(label, error);
   return (
     <div>
       <Input
@@ -34,20 +43,14 @@ export function InstantField({
         type="datetime-local"
         step="0.001"
         value={value}
+        error={error}
+        onBlur={announceError}
         onChange={(e) => {
           setValue(e.target.value);
           setChoice("");
         }}
       />
       <input type="hidden" name={name} value={utc} />
-      {value && !options.length && (
-        <p role="alert">
-          {t(
-            "La fecha, hora o zona no es válida. Las horas inexistentes no se ajustan automáticamente.",
-            "A data, hora ou zona non é válida. As horas inexistentes non se axustan automaticamente.",
-          )}
-        </p>
-      )}
       {options.length > 1 && (
         <Select
           label={`${label} · UTC`}

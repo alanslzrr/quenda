@@ -19,7 +19,8 @@
   background: var(--surface);
   color: var(--foreground);
   font: inherit;
-  font-size: var(--text-sm);
+  /* At least 1rem: iOS zooms the page into a focused field whose text is smaller. */
+  font-size: max(1rem, var(--text-sm));
   line-height: var(--leading-body);
   outline: none;
   box-shadow: 0 0 0 6px transparent;
@@ -32,7 +33,7 @@
   color: var(--text-muted);
 }
 @media (hover: hover) and (pointer: fine) {
-  .control:hover:not(:disabled, [aria-invalid="true"]) {
+  .control:hover:not(:disabled, [aria-invalid="true"], :user-invalid) {
     border-color: var(--foreground);
   }
 }
@@ -42,27 +43,34 @@
   outline: 2px solid transparent;
   outline-offset: 2px;
 }
-.control[aria-invalid="true"] {
+/* :user-invalid marks a failed native constraint only once the field was left or a submit was tried. */
+.control:is([aria-invalid="true"], :user-invalid) {
   border-color: var(--danger);
+}
+/* Focused while invalid, the danger border thickens: the colour alone would no longer show focus. */
+.control:is([aria-invalid="true"], :user-invalid):focus-visible {
+  box-shadow: 0 0 0 1px var(--danger);
 }
 .control:disabled {
   cursor: not-allowed;
   background: var(--surface-muted);
   opacity: 0.6;
 }
-/* The row's space is padding inside the clipped slot, so the height animates from a true zero. */
-.hint,
-.error {
+/* The row's space is padding inside the clipped slot, so the height animates from a true zero. The hint sits above the
+   field with its space below the copy (the label keeps its own gap); the error sits below with its space above. */
+.hint {
   display: block;
-  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  color: var(--text-muted);
   font-size: var(--text-xs);
   line-height: var(--leading-body);
 }
-.hint {
-  color: var(--text-muted);
-}
 .error {
+  display: block;
+  padding-top: var(--space-2);
   color: var(--danger);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
 }
 @media (prefers-reduced-motion: reduce) {
   .control {

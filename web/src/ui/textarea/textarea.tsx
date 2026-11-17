@@ -8,7 +8,9 @@ import styles from "./textarea.module.css";
 export interface TextareaProps
   extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: string;
+  /** Shown between the label and the field, where autofill popovers and on-screen keyboards cannot cover it. */
   description?: string;
+  /** Shown below the field. */
   error?: string;
 }
 
@@ -24,6 +26,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className={styles.field}>
         <label htmlFor={controlId}>{label}</label>
+        <FieldMessage id={hintId} text={description} className={styles.hint} />
         <textarea
           {...props}
           data-lumen-border-focus=""
@@ -37,13 +40,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
               .join(" ") || undefined
           }
         />
-        <FieldMessage id={hintId} text={description} className={styles.hint} />
-        <FieldMessage
-          id={errorId}
-          text={error}
-          className={styles.error}
-          alert
-        />
+        <FieldMessage id={errorId} text={error} className={styles.error} />
       </div>
     );
   },

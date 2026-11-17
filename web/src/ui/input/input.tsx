@@ -7,7 +7,9 @@ import styles from "./input.module.css";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
+  /** Shown between the label and the field, where autofill popovers and on-screen keyboards cannot cover it. */
   description?: string;
+  /** Shown below the field. */
   error?: string;
 }
 
@@ -27,6 +29,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       <label className={styles.label} htmlFor={controlId}>
         {label}
       </label>
+      <FieldMessage id={hintId} text={description} className={styles.description} />
       <input
         {...props}
         data-lumen-border-focus=""
@@ -36,12 +39,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         aria-invalid={error ? true : props["aria-invalid"]}
         aria-describedby={describedBy}
       />
-      <FieldMessage
-        id={hintId}
-        text={description}
-        className={styles.description}
-      />
-      <FieldMessage id={errorId} text={error} className={styles.error} alert />
+      <FieldMessage id={errorId} text={error} className={styles.error} />
     </div>
   );
 });

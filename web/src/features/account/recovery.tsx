@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ActionForm, textField } from "../../app/action";
+import { announce } from "../../app/announce";
 import { api } from "../../app/api";
 import styles from "../../app/layout.module.css";
 import { releaseLinkToken, takeLinkToken } from "../../app/link-token.ts";
@@ -95,7 +96,9 @@ export function RecoveryRequest({
           name="email"
           type="email"
           required
-          autoComplete="email"
+          // The address identifies an existing account, so password managers fill it as the username.
+          autoComplete="username"
+          spellCheck={false}
         />
         {kind === "reactivate" && (
           <SecretField
@@ -109,6 +112,16 @@ export function RecoveryRequest({
       </p>
     </>
   );
+}
+/**
+ * A success replaces the form, so the page announcer speaks it once shown: a live region mounted together with its
+ * text is not announced reliably, and a status role here would read it a second time.
+ */
+function Success({ title }: { title: string }) {
+  useEffect(() => {
+    announce(title);
+  }, [title]);
+  return <Alert tone="success" title={title} role="none" />;
 }
 export function ResetPassword() {
   useMunicipalTheme(undefined);
@@ -130,15 +143,12 @@ export function ResetPassword() {
           )}
         />
       ) : done ? (
-        <div role="status">
-          <Alert
-            tone="success"
-            title={t(
-              "Contraseña actualizada. Inicia sesión de nuevo.",
-              "Contrasinal actualizado. Inicia sesión de novo.",
-            )}
-          />
-        </div>
+        <Success
+          title={t(
+            "Contraseña actualizada. Inicia sesión de nuevo.",
+            "Contrasinal actualizado. Inicia sesión de novo.",
+          )}
+        />
       ) : (
         <ActionForm
           label={t("Guardar contraseña", "Gardar contrasinal")}
@@ -162,6 +172,7 @@ export function ResetPassword() {
             name="password"
             autoComplete="new-password"
             minLength={8}
+            description={t("Mínimo 8 caracteres", "Mínimo 8 caracteres")}
           />
         </ActionForm>
       )}
@@ -196,15 +207,12 @@ export function ReactivateAccount() {
           )}
         />
       ) : done ? (
-        <div role="status">
-          <Alert
-            tone="success"
-            title={t(
-              "Cuenta reactivada. No se han recuperado permisos administrativos.",
-              "Conta reactivada. Non se recuperaron permisos administrativos.",
-            )}
-          />
-        </div>
+        <Success
+          title={t(
+            "Cuenta reactivada. No se han recuperado permisos administrativos.",
+            "Conta reactivada. Non se recuperaron permisos administrativos.",
+          )}
+        />
       ) : (
         <ActionForm
           label={t("Reactivar cuenta", "Reactivar conta")}
@@ -272,15 +280,12 @@ export function EmailChangeConfirmation({
           )}
         />
       ) : done ? (
-        <div role="status">
-          <Alert
-            tone="success"
-            title={t(
-              "Revisa el nuevo correo para completar la verificación.",
-              "Revisa o novo correo para completar a verificación.",
-            )}
-          />
-        </div>
+        <Success
+          title={t(
+            "Revisa el nuevo correo para completar la verificación.",
+            "Revisa o novo correo para completar a verificación.",
+          )}
+        />
       ) : (
         <ActionForm
           label={

@@ -133,28 +133,24 @@ function MotionText({ text }: { text: string }) {
   );
 }
 
-/** Helper and error copy: the row opens its height on a spring, then the words settle in. */
+/**
+ * Helper and error copy: the row opens its height on a spring, then the words settle in.
+ * It is never a live region: one mounted with its text is not announced reliably, so the field reads it through
+ * aria-describedby and the application announces a new error through its single page announcer.
+ */
 export function FieldMessage({
   id,
   text,
   className,
-  alert,
 }: {
   id?: string;
   text?: string;
   className?: string;
-  alert?: boolean;
 }) {
   return (
     <AnimatePresence initial={false}>
       {text ? (
-        <MessageRow
-          key="message"
-          id={id}
-          text={text}
-          className={className}
-          alert={alert}
-        />
+        <MessageRow key="message" id={id} text={text} className={className} />
       ) : null}
     </AnimatePresence>
   );
@@ -165,12 +161,10 @@ function MessageRow({
   id,
   text,
   className,
-  alert,
 }: {
   id?: string;
   text: string;
   className?: string;
-  alert?: boolean;
 }) {
   const reduced = useReducedMotion();
   const copyRef = useRef<HTMLSpanElement>(null);
@@ -215,7 +209,6 @@ function MessageRow({
         ref={copyRef}
         id={id}
         className={className}
-        role={alert ? "alert" : undefined}
         initial={
           reduced
             ? false

@@ -22,6 +22,7 @@ import { ApiError, api } from "../../app/api";
 import { Failure } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
+import { trackValidity } from "../../app/validity";
 import { Alert } from "../../ui/alert/alert";
 import { Button } from "../../ui/button/button";
 import { Dialog, DialogContent } from "../../ui/dialog/dialog";
@@ -331,7 +332,7 @@ function AddPhoto({
       </div>
     );
   return (
-    <form className={styles.compose} onSubmit={submit}>
+    <form ref={trackValidity} className={styles.compose} onSubmit={submit}>
       {portrait && (
         <Alert
           tone="warning"
@@ -401,6 +402,7 @@ function Describe({
   const [error, setError] = useState<unknown>();
   return (
     <form
+      ref={trackValidity}
       className={styles.compose}
       onSubmit={async (event) => {
         event.preventDefault();

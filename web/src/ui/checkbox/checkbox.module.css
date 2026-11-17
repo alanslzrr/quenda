@@ -50,9 +50,13 @@
   border-color: var(--control-on);
 }
 @media (hover: hover) and (pointer: fine) {
-  .box[data-state="unchecked"]:hover:not(:disabled) .visual {
+  .box[data-state="unchecked"]:hover:not(:disabled, [aria-invalid="true"]) .visual {
     border-color: var(--text-muted);
   }
+}
+/* A required box left empty on submit is outlined in the danger role, next to its written error. */
+.box[aria-invalid="true"] .visual {
+  border-color: var(--danger);
 }
 .box:active:not(:disabled) .visual {
   transform: scale(0.95);
@@ -79,10 +83,15 @@
   line-height: var(--leading-body);
   cursor: pointer;
 }
-.copy span {
+/* Only the direct rows: the error's animated word spans inherit its colour. */
+.copy > span {
   color: var(--text-muted);
   font-size: var(--text-xs);
   line-height: var(--leading-body);
+}
+.copy .error {
+  display: block;
+  color: var(--danger);
 }
 @media (prefers-reduced-motion: reduce) {
   .visual,

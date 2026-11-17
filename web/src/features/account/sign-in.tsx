@@ -6,6 +6,7 @@ import styles from "../../app/layout.module.css";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { useMunicipalTheme } from "../../app/theme-provider";
+import { trackValidity } from "../../app/validity";
 import { Alert } from "../../ui/alert/alert";
 import { Button } from "../../ui/button/button";
 import { Input } from "../../ui/input/input";
@@ -129,7 +130,7 @@ export function SignIn({ register = false }: { register?: boolean }) {
           )}
         />
       ) : (
-        <form className={styles.form} onSubmit={submit}>
+        <form ref={trackValidity} className={styles.form} onSubmit={submit}>
           {challenge ? (
             <FactorField focus />
           ) : (
@@ -147,7 +148,9 @@ export function SignIn({ register = false }: { register?: boolean }) {
                 label={t("Correo electrónico", "Correo electrónico")}
                 name="email"
                 type="email"
-                autoComplete="email"
+                // Password managers pair "username" with the password field, on sign-up as on sign-in.
+                autoComplete="username"
+                spellCheck={false}
                 required
               />
               <PasswordField
@@ -158,6 +161,13 @@ export function SignIn({ register = false }: { register?: boolean }) {
                 label={t("Contraseña", "Contrasinal")}
                 name="password"
                 autoComplete={register ? "new-password" : "current-password"}
+                // The account service rejects new passwords shorter than eight characters.
+                minLength={register ? 8 : undefined}
+                description={
+                  register
+                    ? t("Mínimo 8 caracteres", "Mínimo 8 caracteres")
+                    : undefined
+                }
                 required
               />
             </>
@@ -173,7 +183,8 @@ export function SignIn({ register = false }: { register?: boolean }) {
             </p>
           )}
           {failure !== undefined && <Failure error={failure} />}
-          <Button type="submit" loading={busy} disabled={busy}>
+          {/* Loading keeps the button focusable while it swallows presses; the lock rejects a repeated Enter. */}
+          <Button type="submit" loading={busy}>
             {challenge
               ? t("Verificar", "Verificar")
               : register

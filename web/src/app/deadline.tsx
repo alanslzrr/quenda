@@ -2,6 +2,7 @@ import { useState } from "react";
 import { localInstants } from "../features/municipal/local-instants";
 import { Input } from "../ui/input/input";
 import { Select } from "../ui/select/select";
+import { useFieldErrorAnnouncement } from "./announce";
 import { usePreferences } from "./preferences-provider";
 export function Deadline({
   name,
@@ -21,6 +22,14 @@ export function Deadline({
     instants.length === 1
       ? instants[0].utc
       : (instants.find((x) => x.utc === choice)?.utc ?? "");
+  const error =
+    value && !instants.length
+      ? t(
+          "Esta hora no existe en la zona indicada.",
+          "Esta hora non existe na zona indicada.",
+        )
+      : undefined;
+  const announceError = useFieldErrorAnnouncement(label, error);
   return (
     <div>
       <Input
@@ -28,6 +37,8 @@ export function Deadline({
         type="datetime-local"
         value={value}
         required={required}
+        error={error}
+        onBlur={announceError}
         onChange={(e) => {
           setValue(e.target.value);
           setChoice("");
@@ -35,14 +46,6 @@ export function Deadline({
       />
       <input type="hidden" name={name} value={utc} />
       <input type="hidden" name={`${name}Entered`} value={value} />
-      {value && !instants.length && (
-        <p role="alert">
-          {t(
-            "Esta hora no existe en la zona indicada.",
-            "Esta hora non existe na zona indicada.",
-          )}
-        </p>
-      )}
       {instants.length > 1 && (
         <Select
           label={`${label} · UTC`}
