@@ -98,6 +98,15 @@ export async function secondBrowser(
   });
 }
 
+/**
+ * A new client address for the browser of `page`. The public catalogue limits
+ * requests per address and minute; a scenario that opens many management
+ * pages in a row starts each part from its own address, as separate visits.
+ */
+export async function freshAddress(page: Page) {
+  await page.context().setExtraHTTPHeaders(clientHeader());
+}
+
 /** Waits for the next TOTP window when an account signs in twice. */
 export async function nextTotpWindow() {
   const wait = 30000 - (Date.now() % 30000) + 500;
@@ -548,6 +557,8 @@ export async function activeAgreement(
   name: string,
   { accreditation = false } = {},
 ) {
+  await freshAddress(marta);
+  await freshAddress(xoan);
   await marta.goto(`/administracion/${valdeira}/convenios/nuevo`);
   await marta.getByLabel("Nombre del convenio", { exact: true }).fill(name);
   await pickDateTime(marta, "Inicio de vigencia", localDate(0), "00:00");
@@ -617,6 +628,8 @@ export async function activeAgreement(
     .getByRole("button", { name: "Activar versión", exact: true })
     .click();
   await expect(marta.getByText("ACTIVADO", { exact: true })).toBeVisible();
+  await freshAddress(marta);
+  await freshAddress(xoan);
   return { agreementId, path };
 }
 
@@ -629,6 +642,8 @@ export async function closeAgreement(
   xoan: Page,
   agreementId: string,
 ) {
+  await freshAddress(marta);
+  await freshAddress(xoan);
   await xoan.goto(
     `/administracion/${ribasanta}/convenios/${agreementId}/versiones/1`,
   );
