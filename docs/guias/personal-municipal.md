@@ -392,6 +392,8 @@ La administración municipal decide quién gestiona el municipio y con qué perm
 
    *La invitación queda registrada, pero todavía no da ningún permiso.*
 
+   Quenda avisa por correo a esa dirección de que tiene una invitación pendiente, con el rol, el municipio y el plazo. El aviso no confirma si la dirección tiene cuenta ni sirve para aceptar: la aceptación se hace dentro de Quenda.
+
 4. **La persona invitada acepta.** En **Mi cuenta → Invitaciones** ve la invitación pendiente con el municipio, el plazo y los permisos, y pulsa **Aceptar invitación**.
 
    ![Página «Tus invitaciones» con una invitación pendiente de gestión municipal y el botón «Aceptar invitación» señalado](../capturas/cu-12/05-invitacion-pendiente.webp)
@@ -406,7 +408,7 @@ La administración municipal decide quién gestiona el municipio y con qué perm
 
    ![Agenda diaria de la persona recién incorporada con el menú lateral, que solo contiene «Agenda diaria», señalado](../capturas/cu-12/07-gestora-con-permisos.webp)
 
-   *El menú señalado solo ofrece «Agenda diaria» y el uso personal; la agenda muestra las reservas que puede consultar.*
+   *El menú señalado solo ofrece «Agenda diaria» y el uso personal; la agenda muestra las reservas del día que puede consultar (en el ejemplo, a última hora ya no queda ninguna).*
 
 ### Si algo no sale como se espera
 
