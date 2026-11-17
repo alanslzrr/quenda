@@ -48,7 +48,7 @@ test("usage rules preserve immutable versions, scope, publication and atomic con
       {
         name: "Rules",
         timezone: "Europe/Madrid",
-        administratorId: actor.accountId,
+        administratorEmail: actor.email,
         invitationExpiresAt: new Date(Date.now() + 3600000).toISOString(),
       },
     );
