@@ -38,7 +38,6 @@ export function NewMunicipality() {
     );
   return (
     <>
-      <h2>{t("Incorporar municipio", "Incorporar municipio")}</h2>
       <p>
         {t(
           "El alta crea el municipio y su primera invitación administrativa de forma conjunta. No concede acceso municipal al operador.",
@@ -122,14 +121,6 @@ export function MunicipalContinuity({
     );
   return (
     <>
-      <h2>
-        {recovery
-          ? t(
-              "Recuperar responsable municipal",
-              "Recuperar responsable municipal",
-            )
-          : t("Sustituir invitación inicial", "Substituír invitación inicial")}
-      </h2>
       <p>
         {recovery
           ? t(

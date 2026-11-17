@@ -1,0 +1,87 @@
+.panel {
+  width: min(288px, calc(100vw - 32px));
+}
+.header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.year {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.step {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+.step[aria-disabled] {
+  cursor: default;
+  opacity: 0.36;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.month {
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--radius-control);
+  padding: 0 4px;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-transform: capitalize;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+.month[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-weight: 500;
+}
+.month:disabled {
+  cursor: default;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+.month:focus-visible,
+.step:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 1px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .month:not(:disabled, [aria-pressed="true"]):hover,
+  .step:not([aria-disabled]):hover {
+    background: var(--surface-muted);
+    color: var(--foreground);
+  }
+}
+@media (forced-colors: active) {
+  .month[aria-pressed="true"] {
+    outline: 2px solid Highlight;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .month,
+  .step {
+    transition: none;
+  }
+}

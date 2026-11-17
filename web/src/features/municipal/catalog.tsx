@@ -15,7 +15,7 @@ import { ActionForm, textField } from "../../app/action";
 import { ApiError, api } from "../../app/api";
 import { saveFile } from "../../app/download";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink as Link, LinkButton } from "../../app/link-button";
+import { BackLink, LinkButton, RowLink } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { Badge } from "../../ui/badge/badge";
@@ -243,9 +243,9 @@ export function Catalog() {
           "Os teus permisos neste municipio non abren ningunha sección de xestión.",
         )}
       >
-        <Link to="/administracion">
+        <LinkButton to="/administracion">
           {t("Volver a Gestión", "Volver a Xestión")}
-        </Link>
+        </LinkButton>
       </ManagementPage>
     );
   }
@@ -386,11 +386,11 @@ function ResourceList({ kind }: { kind: "facilities" | "units" }) {
                     "CATALOG_MANAGE",
                     kind === "units" ? r.id : null,
                   ) ? (
-                    <Link
+                    <RowLink
                       to={`${municipalPath(m.id)}/${kind === "units" ? "unidades" : "instalaciones"}/${r.id}`}
                     >
                       {r.name}
-                    </Link>
+                    </RowLink>
                   ) : (
                     r.name
                   ),
@@ -465,9 +465,9 @@ export function NewUnit() {
         "A unidade créase en borrador. Configura os seus horarios e normas antes de publicala.",
       )}
       breadcrumb={
-        <Link to={municipalPath(m.id)}>
+        <BackLink to={municipalPath(m.id)}>
           {t("Volver al catálogo", "Volver ao catálogo")}
-        </Link>
+        </BackLink>
       }
     >
       <MunicipalForm
@@ -593,7 +593,9 @@ function ResourceDetails({ unit, id }: { unit: boolean; id: string }) {
         title={resource.data.name}
         description={kind.description}
         breadcrumb={
-          <Link to={municipalPath(m.id)}>{t("Catálogo", "Catálogo")}</Link>
+          <BackLink to={municipalPath(m.id)}>
+            {t("Catálogo", "Catálogo")}
+          </BackLink>
         }
         status={<ResourceState resource={resource.data} detailed />}
         actions={
@@ -788,9 +790,9 @@ function FacilityUnits({ facilityId }: { facilityId: string }) {
                 {own.map((u) => (
                   <li key={u.id}>
                     {permitted(m, "CATALOG_MANAGE", u.id) ? (
-                      <Link to={`${municipalPath(m.id)}/unidades/${u.id}`}>
+                      <RowLink to={`${municipalPath(m.id)}/unidades/${u.id}`}>
                         {u.name}
-                      </Link>
+                      </RowLink>
                     ) : (
                       u.name
                     )}

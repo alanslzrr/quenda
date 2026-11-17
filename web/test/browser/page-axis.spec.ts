@@ -49,15 +49,13 @@ async function axis(page: Page, path: string) {
   };
 }
 
-test("sign-in, errors, notices and platform pages share the booking axis", async ({
-  page,
-}) => {
+test("sign-in, errors and notices share the booking axis", async ({ page }) => {
   await mock(page, false);
   const reference = await axis(page, "/reservar");
   for (const path of ["/acceso", "/registro", "/no-existe"])
     expect(await axis(page, path), path).toEqual(reference);
   await page.unrouteAll({ behavior: "ignoreErrors" });
   await mock(page, true);
-  for (const path of ["/avisos", "/plataforma"])
-    expect(await axis(page, path), path).toEqual(reference);
+  // Platform management has its own frame, like municipal management, so it is not on this axis.
+  expect(await axis(page, "/avisos"), "/avisos").toEqual(reference);
 });

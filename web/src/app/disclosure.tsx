@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { Button } from "../ui/button/button";
 import styles from "./disclosure.module.css";
@@ -24,6 +25,7 @@ export function Disclosure({
         aria-controls={id}
         onClick={() => setOpen((value) => !value)}
       >
+        <ChevronRight size={16} aria-hidden="true" className={styles.chevron} />
         {title}
         {open && (
           <span className={styles.state}>{t("Ocultar", "Ocultar")}</span>

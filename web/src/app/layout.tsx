@@ -67,7 +67,10 @@ export function Layout() {
     });
     return () => observer.disconnect();
   }, [titleRoot]);
-  const resource = /^\/administracion\/[^/]+(?:\/|$)/.test(location.pathname);
+  // Municipal and platform management draw their own frame, with its own navigation, instead of the product header.
+  const resource = /^\/(?:administracion\/[^/]+|plataforma)(?:\/|$)/.test(
+    location.pathname,
+  );
   const name = tenantId ? municipality.data?.name : undefined;
   const branding = useBranding(tenantId).data;
   const entry = useBookingEntry();

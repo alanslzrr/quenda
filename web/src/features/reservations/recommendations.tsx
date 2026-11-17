@@ -138,7 +138,7 @@ export function HabitualSlots() {
         })}
       </ul>
       <Button
-        variant="ghost"
+        variant="secondary"
         size="sm"
         loading={turnOff.isPending}
         onClick={() => turnOff.mutate(false)}

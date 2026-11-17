@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 
 const view = "/plataforma/gestion";
@@ -33,7 +34,7 @@ async function invite(page: Page, privacy = false) {
     `${view}/${privacy ? "invitar-privacidad" : "invitar-operador"}`,
   );
   await page.getByLabel(/Identificador de (cuenta|conta)/).fill("recipient");
-  await page.getByLabel("Aceptar antes de", { exact: true }).fill(future());
+  await pickDateTime(page, "Aceptar antes de", future());
   await page
     .getByRole("checkbox", { name: /Confirmo la cuenta|Confirmo a conta/ })
     .check();
@@ -255,7 +256,7 @@ test("municipal replacement and recovery send exact scopes and a distinct verifi
       .getByLabel(/Identificador (del municipio|do municipio)/)
       .fill(id);
     await page.getByLabel(/Identificador de (cuenta|conta)/).fill("recipient");
-    await page.getByLabel("Aceptar antes de", { exact: true }).fill(future());
+    await pickDateTime(page, "Aceptar antes de", future());
     await page.getByLabel("Motivo", { exact: true }).fill("Relevo autorizado");
     if (recovery)
       await page.getByLabel(/Referencia de verificación/).fill("Acto 27");

@@ -11,7 +11,7 @@ import { ActionForm } from "../../app/action";
 import { ApiError, api, type Navigation, type Page } from "../../app/api";
 import { usePublicAppearance } from "../../app/branding";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink } from "../../app/link-button";
+import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { canRefetch } from "../../app/query";
 import {
@@ -351,9 +351,9 @@ export function MunicipalLayout() {
       <>
         <Failure error={query.error} retry={() => void query.refetch()} />
         {/* The management shell is not drawn here, so offer the way out. */}
-        <ActionLink to="/administracion">
+        <LinkButton to="/administracion">
           {t("Volver a Gestión", "Volver a Xestión")}
-        </ActionLink>
+        </LinkButton>
       </>
     );
   const context = query.data;

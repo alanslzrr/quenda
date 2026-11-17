@@ -15,10 +15,20 @@ const messages = {
     es: "Elige una opción",
     en: "Choose an option",
   },
+  date: {
+    gl: "Escolle unha data",
+    es: "Elige una fecha",
+    en: "Choose a date",
+  },
+  month: {
+    gl: "Escolle un mes",
+    es: "Elige un mes",
+    en: "Choose a month",
+  },
 };
 
 /**
- * A required Radix checkbox or select is validated through a hidden native mirror inside its field. A failed submit
+ * A required Radix checkbox or select, or a date or month picker, is validated through a hidden native mirror inside its field. A failed submit
  * fires `invalid` on that mirror, which nobody can see; the field shows the error by its visible control instead, until
  * the value changes. Attach `ref` to the element that wraps the Radix root.
  */

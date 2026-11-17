@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { localInstants } from "../features/municipal/local-instants";
-import { Input } from "../ui/input/input";
 import { Select } from "../ui/select/select";
 import { useFieldErrorAnnouncement } from "./announce";
+import { DateTimeField } from "./date-fields";
+import styles from "./date-fields.module.css";
 import { usePreferences } from "./preferences-provider";
 export function Deadline({
   name,
@@ -31,16 +32,15 @@ export function Deadline({
       : undefined;
   const announceError = useFieldErrorAnnouncement(label, error);
   return (
-    <div>
-      <Input
+    <div className={styles.stack}>
+      <DateTimeField
         label={label}
-        type="datetime-local"
         value={value}
         required={required}
         error={error}
         onBlur={announceError}
-        onChange={(e) => {
-          setValue(e.target.value);
+        onValueChange={(next) => {
+          setValue(next);
           setChoice("");
         }}
       />

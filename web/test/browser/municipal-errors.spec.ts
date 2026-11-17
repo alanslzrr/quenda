@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 
 const tenant = "00000000-0000-4000-8000-000000000001",
@@ -179,12 +180,16 @@ test("a lost block response survives reload and replays the same command into th
     })
     .click();
   await page.getByRole("option", { name: "Pista 1", exact: true }).click();
-  await page
-    .getByLabel(/Inicio del bloqueo|Inicio do bloqueo/)
-    .fill("2030-01-01T12:00");
-  await page
-    .getByLabel(/Fin del bloqueo|Fin do bloqueo/)
-    .fill("2030-01-01T13:00");
+  await pickDateTime(
+    page,
+    /Inicio del bloqueo|Inicio do bloqueo/,
+    "2030-01-01T12:00",
+  );
+  await pickDateTime(
+    page,
+    /Fin del bloqueo|Fin do bloqueo/,
+    "2030-01-01T13:00",
+  );
   await page.getByLabel("Motivo").fill("Mantenimiento");
   await page
     .getByRole("checkbox", { name: /Confirmo el bloqueo|Confirmo o bloqueo/ })

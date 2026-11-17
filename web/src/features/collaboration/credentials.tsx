@@ -5,7 +5,7 @@ import { ApiError } from "../../app/api";
 import { localDate } from "../../app/dates";
 import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink as Link, LinkButton } from "../../app/link-button";
+import { BackLink, LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { Checkbox } from "../../ui/checkbox/checkbox";
@@ -63,9 +63,9 @@ function Issue() {
       <ManagementPage
         title={t("Emitir acreditación", "Emitir acreditación")}
         breadcrumb={
-          <Link to={agreementPath(m.id, a.agreementId, a.version)}>
+          <BackLink to={agreementPath(m.id, a.agreementId, a.version)}>
             {a.name} · {a.version}
-          </Link>
+          </BackLink>
         }
       >
         {receipt ? (
@@ -77,12 +77,13 @@ function Issue() {
               )}
             </p>
             <p>{receipt}</p>
-            <Link
+            <LinkButton
+              variant="danger"
+              size="sm"
               to={`/administracion/${m.id}/acreditaciones?referencia=${encodeURIComponent(receipt)}`}
-              danger
             >
               {t("Revocar acreditación", "Revogar acreditación")}
-            </Link>
+            </LinkButton>
           </section>
         ) : (
           <CollaborationAction

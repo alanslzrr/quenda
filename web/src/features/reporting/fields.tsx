@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DateField, MonthField } from "../../app/date-fields";
 import { usePreferences } from "../../app/preferences-provider";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
@@ -79,15 +80,13 @@ export function PeriodFields() {
   const { t } = usePreferences();
   return (
     <>
-      <Input
+      <DateField
         name="from"
-        type="date"
         required
         label={t("Desde (incluido)", "Desde (incluído)")}
       />
-      <Input
+      <DateField
         name="to"
-        type="date"
         required
         label={t("Hasta (excluido)", "Ata (excluído)")}
       />
@@ -116,16 +115,11 @@ export function MonthlyFields() {
           pattern={uuidPattern}
         />
       )}
-      <Input
+      <MonthField
         name="month"
-        type="month"
         required
-        // Browsers without a month picker show free text; the server accepts only YYYY-MM.
-        pattern="[0-9]{4}-(0[1-9]|1[0-2])"
-        placeholder="2026-11"
-        title={t("Mes en formato AAAA-MM.", "Mes en formato AAAA-MM.")}
         label={t("Mes publicado", "Mes publicado")}
-        // Reports are published after a month closes; starting on the last one avoids an empty "--------- ----".
+        // Reports are published after a month closes, so the last closed month is the usual choice.
         defaultValue={lastMonth()}
       />
     </>

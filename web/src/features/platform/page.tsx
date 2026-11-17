@@ -1,111 +1,168 @@
+import { KeyRound, UserPlus } from "lucide-react";
+import type { ReactNode } from "react";
 import { useParams, useSearchParams } from "react-router";
-import { ActionLink as Link } from "../../app/link-button";
+import { BackLink, LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { InstanceNotices } from "../legal/notice-editor";
-import styles from "../privacy/privacy.module.css";
+import { ManagementPage } from "../municipal/page";
 import { Invite, Revoke, SuspendAccount } from "./authority";
 import { Operators, PlatformInvitations } from "./lists";
 import { MunicipalContinuity, NewMunicipality } from "./municipalities";
 import { OperatorGuard, platformView } from "./shared";
+import { PlatformShell } from "./shell";
+
 export function Platform() {
   return (
-    <OperatorGuard>
-      <Workspace />
-    </OperatorGuard>
+    <PlatformShell>
+      <OperatorGuard>
+        <Workspace />
+      </OperatorGuard>
+    </PlatformShell>
   );
 }
+type View = {
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+  /** The list a form was opened from, offered as the way back. */
+  parent?: { id: string; label: string };
+  component: ReactNode;
+};
 function Workspace() {
   const { section = "operadores" } = useParams();
   const [search] = useSearchParams();
   const { account } = useSession();
   const { t } = usePreferences();
-  const pages = [
-    {
-      id: "operadores",
-      label: t("Operadores", "Operadores"),
-      component: <Operators />,
+  const operators = { id: "operadores", label: t("Operadores", "Operadores") };
+  const invitations = {
+    id: "invitaciones",
+    label: t("Invitaciones de operadores", "Invitacións de operadores"),
+  };
+  const privacy = {
+    id: "privacidad",
+    label: t("Permisos de privacidad global", "Permisos de privacidade global"),
+  };
+  const invite = (
+    <LinkButton variant="primary" to={`${platformView}/invitar-operador`}>
+      <UserPlus size={16} aria-hidden="true" />
+      {t("Invitar operador", "Invitar operador")}
+    </LinkButton>
+  );
+  const revoke = t("Retirar autorización", "Retirar autorización");
+  const views: Record<string, View> = {
+    operadores: {
+      title: operators.label,
+      description: t(
+        "Estas operaciones requieren permiso de operador y haber completado la verificación en dos pasos en los últimos cinco minutos. No conceden acceso general a la actividad municipal.",
+        "Estas operacións requiren permiso de operador e ter completada a verificación en dous pasos nos últimos cinco minutos. Non conceden acceso xeral á actividade municipal.",
+      ),
+      actions: invite,
+      component: (
+        <>
+          <p>
+            {t(
+              "El permiso es indefinido. Habilitado exige cuenta activa, correo verificado y verificación en dos pasos activada; no exige mantener una sesión abierta.",
+              "O permiso é indefinido. Habilitado esixe conta activa, correo verificado e verificación en dous pasos activada; non esixe manter unha sesión aberta.",
+            )}
+          </p>
+          <Operators />
+        </>
+      ),
     },
-    {
-      id: "invitaciones",
-      label: t("Invitaciones de operadores", "Invitacións de operadores"),
+    invitaciones: {
+      title: invitations.label,
+      description: t(
+        "Una invitación aceptada no acredita el permiso actual. Consulta Operadores para comprobarlo o retirarlo.",
+        "Unha invitación aceptada non acredita o permiso actual. Consulta Operadores para comprobalo ou retiralo.",
+      ),
+      actions: invite,
       component: <PlatformInvitations />,
     },
-    {
-      id: "privacidad",
-      label: t(
-        "Permisos de privacidad global",
-        "Permisos de privacidade global",
+    privacidad: {
+      title: privacy.label,
+      description: t(
+        "Concesiones de consulta y ejecución sobre identidad y seguridad globales. No incluyen actividad municipal.",
+        "Concesións de consulta e execución sobre identidade e seguridade globais. Non inclúen actividade municipal.",
+      ),
+      actions: (
+        <LinkButton variant="primary" to={`${platformView}/invitar-privacidad`}>
+          <KeyRound size={16} aria-hidden="true" />
+          {t("Conceder privacidad global", "Conceder privacidade global")}
+        </LinkButton>
       ),
       component: <PlatformInvitations privacy />,
     },
-    {
-      id: "textos-legales",
-      label: t("Textos legales de la instancia", "Textos legais da instancia"),
+    "textos-legales": {
+      title: t("Textos legales de la instancia", "Textos legais da instancia"),
       component: <InstanceNotices />,
     },
-    {
-      id: "nuevo-municipio",
-      label: t("Incorporar municipio", "Incorporar municipio"),
+    "nuevo-municipio": {
+      title: t("Incorporar municipio", "Incorporar municipio"),
       component: <NewMunicipality />,
     },
-    {
-      id: "invitacion-inicial",
-      label: t("Sustituir invitación inicial", "Substituír invitación inicial"),
+    "invitacion-inicial": {
+      title: t("Sustituir invitación inicial", "Substituír invitación inicial"),
       component: <MunicipalContinuity />,
     },
-    {
-      id: "recuperar-responsable",
-      label: t(
+    "recuperar-responsable": {
+      title: t(
         "Recuperar responsable municipal",
         "Recuperar responsable municipal",
       ),
       component: <MunicipalContinuity recovery />,
     },
-    {
-      id: "suspender",
-      label: t("Suspender identidad global", "Suspender identidade global"),
+    suspender: {
+      title: t("Suspender identidad global", "Suspender identidade global"),
       component: <SuspendAccount />,
     },
-  ];
-  const forms: Record<string, React.ReactNode> = {
-    "invitar-operador": <Invite />,
-    "invitar-privacidad": <Invite privacy />,
-    "retirar-operador": <Revoke kind="operator" />,
-    "retirar-invitacion": <Revoke kind="invitation" />,
-    "retirar-privacidad": <Revoke kind="privacy" />,
+    "invitar-operador": {
+      title: t("Invitar operador", "Invitar operador"),
+      parent: operators,
+      component: <Invite />,
+    },
+    "invitar-privacidad": {
+      title: t("Conceder privacidad global", "Conceder privacidade global"),
+      parent: privacy,
+      component: <Invite privacy />,
+    },
+    "retirar-operador": {
+      title: revoke,
+      parent: operators,
+      component: <Revoke kind="operator" />,
+    },
+    "retirar-invitacion": {
+      title: revoke,
+      parent: invitations,
+      component: <Revoke kind="invitation" />,
+    },
+    "retirar-privacidad": {
+      title: revoke,
+      parent: privacy,
+      component: <Revoke kind="privacy" />,
+    },
   };
+  const view = Object.hasOwn(views, section) ? views[section] : undefined;
   return (
-    <div className={styles.surface}>
-      <Link to="/administracion">{t("Administración", "Administración")}</Link>
-      <h1>
-        {t("Administración de plataforma", "Administración de plataforma")}
-      </h1>
-      <p>
-        {t(
-          "Estas operaciones requieren permiso de operador y haber completado la verificación en dos pasos en los últimos cinco minutos. No conceden acceso general a la actividad municipal.",
-          "Estas operacións requiren permiso de operador e ter completada a verificación en dous pasos nos últimos cinco minutos. Non conceden acceso xeral á actividade municipal.",
-        )}
-      </p>
-      <nav
-        className={styles.nav}
-        aria-label={t("Gestión de plataforma", "Xestión de plataforma")}
-      >
-        {pages.map((p) => (
-          <Link
-            key={p.id}
-            to={`${platformView}/${p.id}`}
-            aria-current={p.id === section ? "page" : undefined}
-          >
-            {p.label}
-          </Link>
-        ))}
-      </nav>
+    <ManagementPage
+      title={view?.title ?? t("Sección no encontrada", "Sección non atopada")}
+      description={view?.description}
+      actions={view?.actions}
+      breadcrumb={
+        view?.parent && (
+          <BackLink to={`${platformView}/${view.parent.id}`}>
+            {view.parent.label}
+          </BackLink>
+        )
+      }
+    >
       <div key={`${account?.accountId}:${section}:${search.get("id") ?? ""}`}>
-        {pages.find((p) => p.id === section)?.component ?? forms[section] ?? (
-          <p>{t("Sección no encontrada.", "Sección non atopada.")}</p>
+        {view?.component ?? (
+          <LinkButton to={`${platformView}/operadores`}>
+            {t("Ir a Operadores", "Ir a Operadores")}
+          </LinkButton>
         )}
       </div>
-    </div>
+    </ManagementPage>
   );
 }

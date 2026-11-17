@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 
 async function signin(
@@ -42,7 +43,7 @@ async function invite(
   if (admin)
     await select(page, "Tipo de invitación", "Administrador municipal");
   await page.getByLabel(/Identificador de (cuenta|conta)/).fill(recipient);
-  await page.getByLabel("Aceptar antes de", { exact: true }).fill(tomorrow());
+  await pickDateTime(page, "Aceptar antes de", tomorrow());
 }
 async function confirmInvitation(page: Page) {
   await page
@@ -136,7 +137,7 @@ test("staff grants require acceptance and replace scope without an authority gap
     await page
       .getByRole("button", { name: /Añadir permiso|Engadir permiso/ })
       .click();
-    await page.getByLabel("Aceptar antes de", { exact: true }).fill(tomorrow());
+    await pickDateTime(page, "Aceptar antes de", tomorrow());
     const replacement = page.locator("form").filter({
       has: page.getByRole("button", {
         name: /Invitar con nuevos permisos|Invitar con novos permisos/,
@@ -231,7 +232,7 @@ test("municipal administrator handover needs an accepted indefinite successor", 
   ).toBeVisible();
   await expect(page).toHaveURL(base);
   await invite(page, f.administrator.tenant, f.recipient.accountId, true);
-  await page.getByLabel(/Permiso válido (hasta|ata)/).fill(tomorrow(10));
+  await pickDateTime(page, /Permiso válido (hasta|ata)/, tomorrow(10));
   await confirmInvitation(page);
   const other = await browser.newContext({
     baseURL: "http://127.0.0.1:5173",

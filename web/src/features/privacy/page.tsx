@@ -1,9 +1,10 @@
 import { useParams } from "react-router";
-import { ActionLink as Link } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { Badge } from "../../ui/badge/badge";
+import { SectionNav } from "../../ui/section-nav/section-nav";
 import { ManagementPage } from "../municipal/page";
 import { Denied } from "../municipal/shared";
+import { PlatformShell } from "../platform/shell";
 import {
   GlobalPrivacyScope,
   MunicipalPrivacyScope,
@@ -17,7 +18,6 @@ import {
   ReleaseHold,
   RevokePolicy,
 } from "./operations";
-import styles from "./privacy.module.css";
 import { Policies, RetentionOverview } from "./queries";
 import { SharedRetention } from "./shared-retention";
 export function MunicipalPrivacy() {
@@ -29,9 +29,11 @@ export function MunicipalPrivacy() {
 }
 export function GlobalPrivacy() {
   return (
-    <GlobalPrivacyScope>
-      <Workspace />
-    </GlobalPrivacyScope>
+    <PlatformShell>
+      <GlobalPrivacyScope>
+        <Workspace />
+      </GlobalPrivacyScope>
+    </PlatformShell>
   );
 }
 function Workspace() {
@@ -109,22 +111,24 @@ function Workspace() {
         "Consulta e execución requiren permisos independentes e unha verificación en dous pasos recente. As solicitudes de dereitos tramítanse polas canles administrativas existentes.",
       )}
     >
-      <nav
-        className={styles.nav}
-        aria-label={t("Gestión de privacidad", "Xestión de privacidade")}
-      >
-        {pages
-          .filter((p) => (p.read ? s.read : s.execute))
-          .map((p) => (
-            <Link
-              key={p.id}
-              aria-current={p.id === current ? "page" : undefined}
-              to={`${s.view}/${p.id}`}
-            >
-              {p.label}
-            </Link>
-          ))}
-      </nav>
+      <SectionNav
+        label={t("Gestión de privacidad", "Xestión de privacidade")}
+        groups={[
+          { label: t("Consultar", "Consultar"), read: true, allowed: s.read },
+          { label: t("Actuar", "Actuar"), read: false, allowed: s.execute },
+        ].map((group) => ({
+          label: group.label,
+          items: group.allowed
+            ? pages
+                .filter((p) => p.read === group.read)
+                .map((p) => ({
+                  to: `${s.view}/${p.id}`,
+                  label: p.label,
+                  current: p.id === current,
+                }))
+            : [],
+        }))}
+      />
       <div key={`${s.base}:${current}`}>
         {page ? (
           (page.read ? s.read : s.execute) ? (

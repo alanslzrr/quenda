@@ -548,7 +548,7 @@ export function SettingsPanel({
               </div>
             </fieldset>
             <div className={styles.footer}>
-              <Button type="button" variant="ghost" onClick={onViewReset}>
+              <Button type="button" variant="secondary" onClick={onViewReset}>
                 {t("Restablecer mi vista", "Restablecer a miña vista")}
               </Button>
             </div>

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { pickDate, pickMonth } from "./date-fields";
 import { test } from "./fixtures";
 import { selectValue } from "./select-value";
 
@@ -55,7 +56,7 @@ async function report(
     await page
       .getByLabel(/Identificador (del convenio|do convenio)/)
       .fill(agreement);
-  await page.getByLabel("Mes publicado").fill(month);
+  await pickMonth(page, "Mes publicado", month);
   const submit = page.getByRole("button", {
     name: "Consultar informe",
     exact: true,
@@ -157,10 +158,12 @@ test("real reporting preserves municipal exports and jointly reviewed monthly pu
   // The usage screen has its own specs with real data; this account keeps its
   // request budget for exports and the monthly publication.
   await page.goto(`${base}/exportaciones`);
-  await page.getByLabel(/Desde \(incluido\)|Desde \(incluído\)/).fill(f.a.date);
-  await page
-    .getByLabel(/Hasta \(excluido\)|Ata \(excluído\)/)
-    .fill(end.toISOString().slice(0, 10));
+  await pickDate(page, /Desde \(incluido\)|Desde \(incluído\)/, f.a.date);
+  await pickDate(
+    page,
+    /Hasta \(excluido\)|Ata \(excluído\)/,
+    end.toISOString().slice(0, 10),
+  );
   await page.getByRole("checkbox", { name: /Confirmo/ }).check();
   const downloading = page.waitForEvent("download");
   await page

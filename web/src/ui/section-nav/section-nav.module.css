@@ -1,0 +1,96 @@
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3) var(--space-5);
+  min-width: 0;
+  margin: var(--space-6) 0;
+}
+/* A column flex box, so the track's max-width resolves against the column the page gives it. */
+.group {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.caption {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+/* Views that do not fit wrap onto another row inside the same frame, so none is hidden off the edge. */
+.track {
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 3px;
+  gap: 2px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+}
+.track li {
+  display: flex;
+  min-width: 0;
+}
+.item {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: calc(var(--control-height-sm) - 2px);
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius-control) - 3px);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+.item svg {
+  flex: none;
+  color: var(--text-muted);
+}
+.item[aria-current="page"] {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-resting);
+  color: var(--foreground);
+}
+.item[aria-current="page"] svg {
+  color: currentColor;
+}
+.item:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: -2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .item:not([aria-current="page"]):hover {
+    color: var(--foreground);
+    background: color-mix(in oklab, var(--foreground) 5%, transparent);
+  }
+}
+.item:not([aria-current="page"]):active {
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--foreground) 7%, transparent);
+}
+@media (pointer: coarse) {
+  .item {
+    min-height: 42px;
+  }
+}
+/* Forced colours drop the raised surface, so the current view keeps a visible frame of its own. */
+@media (forced-colors: active) {
+  .item[aria-current="page"] {
+    border-color: Highlight;
+  }
+}

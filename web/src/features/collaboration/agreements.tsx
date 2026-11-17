@@ -1,9 +1,9 @@
-import { Plus } from "lucide-react";
+import { CopyPlus, Plus, TicketPlus } from "lucide-react";
 import { useParams } from "react-router";
 import { textField } from "../../app/action";
 import { localDateTime } from "../../app/dates";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink as Link, LinkButton } from "../../app/link-button";
+import { BackLink, LinkButton, RowLink } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { blocksEditor, EditorRecovery } from "../../app/read-recovery";
 import { Badge } from "../../ui/badge/badge";
@@ -83,9 +83,9 @@ function AgreementList() {
                 label: t("Convenio", "Convenio"),
                 sortable: false,
                 render: (_, r) => (
-                  <Link to={agreementPath(m.id, r.agreementId, r.version)}>
+                  <RowLink to={agreementPath(m.id, r.agreementId, r.version)}>
                     {r.name} · {t("versión", "versión")} {r.version}
-                  </Link>
+                  </RowLink>
                 ),
               },
               {
@@ -157,9 +157,9 @@ function VersionDetails({ item: a }: { item: Agreement }) {
     <ManagementPage
       title={`${a.name} · ${t("versión", "versión")} ${a.version}`}
       breadcrumb={
-        <Link to={agreementPath(m.id)}>
+        <BackLink to={agreementPath(m.id)}>
           {t("Versiones del convenio", "Versións do convenio")}
-        </Link>
+        </BackLink>
       }
       status={<Badge size="sm">{a.status}</Badge>}
     >
@@ -177,14 +177,15 @@ function VersionDetails({ item: a }: { item: Agreement }) {
       </p>
       <PendingLink />
       {a.aggregateReports && (
-        <Link
+        <LinkButton
+          size="sm"
           to={`/administracion/${m.id}/informes/revision?convenio=${encodeURIComponent(a.agreementId)}`}
         >
           {t(
             "Revisar privacidad de informes",
             "Revisar privacidade de informes",
           )}
-        </Link>
+        </LinkButton>
       )}
       <dl>
         {[
@@ -261,11 +262,11 @@ function VersionDetails({ item: a }: { item: Agreement }) {
                     <>
                       {" "}
                       ·{" "}
-                      <Link
+                      <RowLink
                         to={`${agreementPath(m.id)}/unidades/${id}/reapertura`}
                       >
                         {t("Consultar vinculación", "Consultar vinculación")}
-                      </Link>
+                      </RowLink>
                     </>
                   )}
                 </li>
@@ -283,15 +284,17 @@ function VersionDetails({ item: a }: { item: Agreement }) {
         );
       })}
       <div className={ui.actions}>
-        <Link to={`${view}/nueva-version`}>
+        <LinkButton to={`${view}/nueva-version`}>
+          <CopyPlus size={16} aria-hidden="true" />
           {t("Crear nueva versión", "Crear nova versión")}
-        </Link>
+        </LinkButton>
         {own?.accreditationIssuer &&
           a.eligibility === "acreditacion_vigente" &&
           a.status === "ACTIVADO" && (
-            <Link to={`${view}/acreditar`}>
+            <LinkButton to={`${view}/acreditar`}>
+              <TicketPlus size={16} aria-hidden="true" />
               {t("Emitir acreditación", "Emitir acreditación")}
-            </Link>
+            </LinkButton>
           )}
       </div>
       {a.status === "BORRADOR" && !approved && own && (

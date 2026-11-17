@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { pickDate } from "./date-fields";
 import { test } from "./fixtures";
 
 const tenant = "00000000-0000-4000-8000-000000000001";
@@ -240,12 +241,18 @@ test("an administrator publishes versions of the legal texts and the public page
       has: page.getByRole("button", { name: "Publicar texto", exact: true }),
     })
     .last();
-  await accessibility
-    .getByLabel(/Fecha de preparación|Data de preparación/)
-    .fill("2026-10-01");
-  await accessibility
-    .getByLabel(/Fecha de la última revisión|Data da última revisión/)
-    .fill("2026-09-01");
+  await pickDate(
+    page,
+    /Fecha de preparación|Data de preparación/,
+    "2026-10-01",
+    accessibility,
+  );
+  await pickDate(
+    page,
+    /Fecha de la última revisión|Data da última revisión/,
+    "2026-09-01",
+    accessibility,
+  );
   await accessibility
     .getByRole("button", { name: "Publicar texto", exact: true })
     .click();

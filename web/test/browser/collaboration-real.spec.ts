@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 import { selectValue } from "./select-value";
 
@@ -72,14 +73,16 @@ test("two municipalities approve exact units, activate, accredit, revoke, suspen
       .getByLabel(/^(?:Nombre del convenio|Nome do convenio)$/, { exact: true })
       .fill("Rede deportiva compartida");
     await page.getByLabel("Zona horaria IANA").fill("UTC");
-    await page
-      .getByLabel(/^(?:Inicio de vigencia|Inicio de vixencia)$/, {
-        exact: true,
-      })
-      .fill(civil(-1));
-    await page
-      .getByLabel(/^(?:Fin de vigencia|Fin de vixencia)$/, { exact: true })
-      .fill(civil(14));
+    await pickDateTime(
+      page,
+      /^(?:Inicio de vigencia|Inicio de vixencia)$/,
+      civil(-1),
+    );
+    await pickDateTime(
+      page,
+      /^(?:Fin de vigencia|Fin de vixencia)$/,
+      civil(14),
+    );
     for (const label of [
       /^(?:Finalidad|Finalidade)$/,
       /^(?:Base jurídica|Base xurídica)$/,
@@ -181,12 +184,8 @@ test("two municipalities approve exact units, activate, accredit, revoke, suspen
       /Persona beneficiaria|Persoa beneficiaria/,
       a.accountId,
     );
-    await page
-      .getByLabel("Inicio de acreditación", { exact: true })
-      .fill(civil(0));
-    await page
-      .getByLabel("Fin de acreditación", { exact: true })
-      .fill(civil(7));
+    await pickDateTime(page, "Inicio de acreditación", civil(0));
+    await pickDateTime(page, "Fin de acreditación", civil(7));
     await page
       .getByLabel("Referencia de verificación", { exact: true })
       .fill("Verificación municipal 01");

@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { pickDate } from "./date-fields";
 import { test } from "./fixtures";
 
 async function enter(page: Page, index: number) {
@@ -66,10 +67,12 @@ test("reservations download as a CSV table with one row per reservation", async 
   await page.goto(`/administracion/${f.tenant}/exportaciones`);
   const end = new Date(`${f.date}T00:00:00Z`);
   end.setUTCDate(end.getUTCDate() + 2);
-  await page.getByLabel(/Desde \(incluido\)|Desde \(incluído\)/).fill(f.date);
-  await page
-    .getByLabel(/Hasta \(excluido\)|Ata \(excluído\)/)
-    .fill(end.toISOString().slice(0, 10));
+  await pickDate(page, /Desde \(incluido\)|Desde \(incluído\)/, f.date);
+  await pickDate(
+    page,
+    /Hasta \(excluido\)|Ata \(excluído\)/,
+    end.toISOString().slice(0, 10),
+  );
   await page.getByRole("combobox", { name: "Formato", exact: true }).click();
   await page
     .getByRole("option", { name: /^(Hoja|Folla) de c[aá]lculo$/ })

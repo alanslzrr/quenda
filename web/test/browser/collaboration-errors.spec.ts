@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 import { selectValue } from "./select-value";
 
@@ -449,12 +450,8 @@ test("recorded activation does not bypass effective-version checks when issuing 
     /Persona beneficiaria|Persoa beneficiaria/,
     "cuenta-vinculada",
   );
-  await page
-    .getByLabel("Inicio de acreditación", { exact: true })
-    .fill("2026-11-01T10:00");
-  await page
-    .getByLabel("Fin de acreditación", { exact: true })
-    .fill("2026-12-01T10:00");
+  await pickDateTime(page, "Inicio de acreditación", "2026-11-01T10:00");
+  await pickDateTime(page, "Fin de acreditación", "2026-12-01T10:00");
   await page
     .getByLabel("Referencia de verificación", { exact: true })
     .fill("Verificación 3");

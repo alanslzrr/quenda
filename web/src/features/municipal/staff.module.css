@@ -1,26 +1,6 @@
 .staff {
   overflow-wrap: break-word;
 }
-/* Sections stay on one line and scroll sideways on a phone, instead of a lone tab wrapping below the rest. */
-.navigation {
-  display: flex;
-  gap: 0.4rem;
-  margin: 0;
-  overflow-x: auto;
-}
-.navigation a {
-  flex: none;
-  padding: 0.7rem;
-  white-space: nowrap;
-  border-radius: var(--radius-control);
-  color: var(--foreground);
-  font-size: 0.875rem;
-  text-decoration: none;
-}
-.navigation a[aria-current] {
-  background: var(--surface-muted);
-  font-weight: 600;
-}
 .identifier {
   display: block;
   max-width: 13rem;

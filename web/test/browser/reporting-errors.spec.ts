@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { expect, type Page } from "@playwright/test";
+import { pickDate, pickMonth } from "./date-fields";
 import { test } from "./fixtures";
 import { selectValue } from "./select-value";
 
@@ -61,8 +62,8 @@ async function fixture(
   });
 }
 async function period(page: Page, from = "2024-03-01", to = "2024-04-01") {
-  await page.getByLabel(/Desde \(incluido\)|Desde \(incluído\)/).fill(from);
-  await page.getByLabel(/Hasta \(excluido\)|Ata \(excluído\)/).fill(to);
+  await pickDate(page, /Desde \(incluido\)|Desde \(incluído\)/, from);
+  await pickDate(page, /Hasta \(excluido\)|Ata \(excluído\)/, to);
 }
 async function select(
   page: Page,
@@ -327,7 +328,7 @@ test("monthly delivery requires an explicit action and suppression renders no me
   await page.goto(`${view}/informes`);
   expect(calls).toBe(0);
   await selectValue(page, "agreementId", "Convenio", agreement);
-  await page.getByLabel("Mes publicado").fill("2024-03");
+  await pickMonth(page, "Mes publicado", "2024-03");
   await page
     .getByRole("button", { name: "Consultar informe", exact: true })
     .click();

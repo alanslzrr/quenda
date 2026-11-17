@@ -202,7 +202,7 @@ function AppearanceForm({
   const discardButton = (
     <Button
       type="button"
-      variant="ghost"
+      variant="secondary"
       loading={discarding}
       onClick={() => void discard()}
     >
@@ -415,7 +415,7 @@ function AppearanceForm({
           </p>
           <Button
             type="button"
-            variant="ghost"
+            variant="secondary"
             size="sm"
             onClick={() =>
               setDraft({ ...defaultAppearance, version: draft.version })

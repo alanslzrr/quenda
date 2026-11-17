@@ -137,3 +137,15 @@
   gap: var(--space-3);
   align-items: start;
 }
+/* Copy, a choice that rebuilds the form below it, and the form keep one rhythm; controls stay in the form's column. */
+.formFlow {
+  display: grid;
+  gap: 1.4rem;
+  min-width: 0;
+}
+.formFlow > p {
+  margin: 0;
+}
+.formFlow > :not(p, form) {
+  max-width: 440px;
+}

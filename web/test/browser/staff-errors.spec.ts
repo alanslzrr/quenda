@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { fieldValue, pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 
 const tenant = "00000000-0000-4000-8000-000000000001",
@@ -58,9 +59,7 @@ async function fixture(page: Page, administrator = true) {
 async function fill(page: Page) {
   await page.goto(`/administracion/${tenant}/personal/invitar`);
   await page.getByLabel(/Identificador de (cuenta|conta)/).fill("destinatario");
-  await page
-    .getByLabel("Aceptar antes de", { exact: true })
-    .fill("2080-01-01T10:00");
+  await pickDateTime(page, "Aceptar antes de", "2080-01-01T10:00");
   await page
     .getByRole("checkbox", { name: /Confirmo (la cuenta|a conta)/ })
     .check();
@@ -162,9 +161,7 @@ test("permission selection preserves exact scope and explicit privacy grants", a
   expect(sent?.accountId).toBe("destinatario");
   failNext = true;
   await page.getByLabel(/Identificador de (cuenta|conta)/).fill("otra-cuenta");
-  await page
-    .getByLabel("Aceptar antes de", { exact: true })
-    .fill("2080-01-01T10:00");
+  await pickDateTime(page, "Aceptar antes de", "2080-01-01T10:00");
   await page
     .getByRole("button", { name: /Añadir permiso|Engadir permiso/ })
     .click();
@@ -208,9 +205,10 @@ test("MFA expiry keeps the invitation draft and does not retry the write", async
   await expect(page.getByLabel(/Identificador de (cuenta|conta)/)).toHaveValue(
     "destinatario",
   );
+  await expect(fieldValue(page, "Aceptar antes de")).toHaveValue("2080-01-01");
   await expect(
-    page.getByLabel("Aceptar antes de", { exact: true }),
-  ).toHaveValue("2080-01-01T10:00");
+    page.getByRole("textbox", { name: "Aceptar antes de · hora", exact: true }),
+  ).toHaveValue("10:00");
   await expect(
     page.getByRole("button", { name: "Quitar permiso 1", exact: true }),
   ).toBeVisible();

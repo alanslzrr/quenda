@@ -59,7 +59,7 @@ async function select(page: Page, label: string, option: string) {
   await page.getByRole("option", { name: option, exact: true }).click();
 }
 
-test("Lumen action links stay flat and menu links never acquire browser underlines", async ({
+test("record links stay flat with a chevron and menu links never acquire browser underlines", async ({
   page,
 }, info) => {
   await fixture(page);
@@ -74,7 +74,8 @@ test("Lumen action links stay flat and menu links never acquire browser underlin
   await expect(link).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(link).toHaveCSS("box-shadow", "none");
   await expect(link).toHaveCSS("text-decoration-line", "none");
-  await expect(link.locator("svg")).toHaveCount(0);
+  // A decorative chevron, not an underline, marks the name as something that opens.
+  await expect(link.locator('svg[aria-hidden="true"]')).toHaveCount(1);
   await link.focus();
   await expect(link).toBeFocused();
   await expect(link).toHaveCSS("outline-style", "solid");
@@ -99,7 +100,7 @@ test("Lumen action links stay flat and menu links never acquire browser underlin
   ).toBeFocused();
 });
 
-test("known references use a text-only keyboard disclosure without a native triangle", async ({
+test("known references use a keyboard disclosure with a chevron instead of a native triangle", async ({
   page,
 }, info) => {
   const writes = await fixture(page);
@@ -111,7 +112,7 @@ test("known references use a text-only keyboard disclosure without a native tria
   await expect(toggle).toBeVisible();
   await expect(toggle).toHaveAttribute("type", "button");
   await expect(page.locator("details, summary")).toHaveCount(0);
-  await expect(toggle.locator("svg")).toHaveCount(0);
+  await expect(toggle.locator('svg[aria-hidden="true"]')).toHaveCount(1);
   await expect(toggle).toHaveCSS("border-top-width", "0px");
   await expect(toggle).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await toggle.focus();
