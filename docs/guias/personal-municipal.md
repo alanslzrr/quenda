@@ -14,7 +14,7 @@ Esta guía es para el personal de los ayuntamientos que usan Quenda. La **admini
 
 ## CU-04 — Mantener catálogo y calendario
 
-El catálogo es lo que la ciudadanía puede reservar. Cada **instalación** (un complejo, un pabellón) agrupa **unidades reservables** (una pista, una sala), y cada unidad tiene su ficha, sus horarios y sus normas. La administración o la gestión con permiso sobre el catálogo da de alta instalaciones y unidades, las publica cuando están listas y las retira cuando dejan de ofrecerse.
+El catálogo es lo que la ciudadanía puede reservar. Cada **instalación** (un complejo, un pabellón) agrupa **unidades reservables** (una pista, una sala; en otras pantallas y para la ciudadanía, «espacios»), y cada unidad tiene su ficha, sus horarios y sus normas. La administración o la gestión con permiso sobre el catálogo da de alta instalaciones y unidades, las publica cuando están listas y las retira cuando dejan de ofrecerse.
 
 **Antes de empezar:** necesitas una sesión con verificación en dos pasos y permiso sobre el catálogo del municipio y sobre las unidades que vas a tocar. **Especificación:** [CU-04](../08_casos_de_uso.md#cu-04--mantener-catálogo-y-calendario).
 
@@ -84,7 +84,7 @@ El catálogo es lo que la ciudadanía puede reservar. Cada **instalación** (un 
 
     ![Página pública «Elige una instalación» del Concello de Valdeira con «Centro Deportivo O Souto» señalado](../capturas/cu-04/11-catalogo-publico.webp)
 
-    *La cabecera muestra el escudo y el nombre del municipio. La tarjeta de la instalación muestra la dirección de su ficha y «1 espacio reservable»; desde aquí la ciudadanía sigue el recorrido de reserva.*
+    *La cabecera muestra el logo y el nombre del municipio. La tarjeta de la instalación muestra la dirección de su ficha y «1 espacio reservable»; desde aquí la ciudadanía sigue el recorrido de reserva.*
 
 ### Si algo no sale como se espera
 
@@ -222,7 +222,7 @@ La instalación y su unidad quedan en el catálogo con su ficha, sus normas y su
 
    ![Archivo «quenda-reservations-v3.csv» abierto en una hoja de cálculo, con la fila de nombres de columna y cinco reservas](../capturas/cu-05/14-exportar-archivo.webp)
 
-   *Se ven las primeras columnas: «id» es el identificador de la reserva, «unitId» el del espacio, «accountId» el de la persona titular (nunca su nombre ni su correo), «startsAt» y «endsAt» el inicio y el fin con su zona horaria, «timeZone» la zona del municipio, «status» el estado (por ejemplo, «FINALIZADA») y «revision» el número de revisión, que aumenta con cada cambio. Más a la derecha siguen las versiones del calendario, de las normas y de las condiciones, y las fechas en que se aceptaron.*
+   *Se ven las primeras columnas: «id» es el identificador de la reserva, «unitId» el del espacio, «accountId» el de la persona titular (nunca su nombre ni su correo), «startsAt» y «endsAt» el inicio y el fin con su zona horaria, «timeZone» la zona del municipio, «status» el estado (por ejemplo, «FINALIZADA») y «revision» el número de revisión, que aumenta con cada cambio. Más a la derecha siguen las versiones del calendario, de las normas y de las condiciones, y las fechas en que se aceptaron. Así se distinguen las normas aceptadas (con versión y fecha), las pendientes («pendingUsageRulesVersion» con valor) y la evidencia ausente (columnas vacías).*
 
 ### Si algo no sale como se espera
 
@@ -306,7 +306,7 @@ Un convenio permite a varios municipios compartir instalaciones con unas condici
 
    ![Versión 1 con la etiqueta «ACTIVADO» señalada](../capturas/cu-10/07-activado.webp)
 
-   *La etiqueta pasa a «ACTIVADO». Más abajo, la ficha añade la referencia de la revisión jurídica, como se ve en la imagen siguiente.*
+   *La etiqueta pasa a «ACTIVADO». Más abajo, la ficha añade la referencia de la revisión jurídica (se ve en la imagen de la suspensión, más abajo).*
 
 ### Si algo no sale como se espera
 
@@ -482,6 +482,7 @@ Las operaciones sensibles, como aceptar una invitación, exigen haber verificado
 
 - **Invitación inválida, caducada o de otra persona:** no concede ningún permiso. Si hay que ampliar los permisos, se envía una nueva invitación que también hay que aceptar.
 - **Permisos de privacidad:** son independientes. Ni la administración ni la exportación de datos deportivos los incluyen.
+- **Recuperar el rol:** si una persona vuelve a recibir la administración, las invitaciones que se invalidaron al retirarla no se reactivan; hay que enviar otras.
 - **Retirada por seguridad:** la pestaña **Retirada por seguridad** se usa ante un compromiso de la cuenta y sigue otro procedimiento (CU-16).
 
 ### Resultado
@@ -687,7 +688,7 @@ La administración municipal da al municipio su nombre visible, su logo y su ide
 
    ![Página pública «Elige una instalación» de Ribasanta do Mar con el tema azul aplicado](../capturas/cu-23/09-pagina-publica.webp)
 
-   *Una persona sin sesión ya ve el escudo y el nuevo nombre en la cabecera y en el recorrido de reserva, y el fondo y los botones del tema elegido.*
+   *Una persona sin sesión ya ve el logo y el nuevo nombre en la cabecera y en el recorrido de reserva, y el fondo y los botones del tema elegido.*
 
 ### Si algo no sale como se espera
 
