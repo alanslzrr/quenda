@@ -1,9 +1,9 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { reservationMail } from "../../../src/modules/communications/reservation-mail";
 import { calendarDate } from "../../src/features/catalog/dates";
 import { calendarLabel } from "../../src/ui/lib/calendar-labels";
 import { createAccount, password, signOut } from "./account-helpers";
+import { accessibilityViolations } from "./axe-scan";
 import { test } from "./fixtures";
 
 const catalog = (index: number) => ({
@@ -219,13 +219,7 @@ test("municipal search offers a ninety minute booking and keeps its context on r
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
-    expect(
-      (
-        await new AxeBuilder({ page })
-          .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-          .analyze()
-      ).violations,
-    ).toEqual([]);
+    expect(await accessibilityViolations(page)).toEqual([]);
     await page.screenshot({
       path: `test-results/search-${info.project.name}-${theme}.png`,
       fullPage: true,

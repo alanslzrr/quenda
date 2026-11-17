@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { accessibilityViolations } from "./axe-scan";
 import { test } from "./fixtures";
 
 const tenant = "00000000-0000-4000-8000-000000000091";
@@ -201,13 +201,7 @@ for (const personal of ["light", "dark"] as const) {
     await expect(
       page.getByRole("button", { name: "Ajustes", exact: true }),
     ).toBeFocused();
-    expect(
-      (
-        await new AxeBuilder({ page })
-          .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-          .analyze()
-      ).violations,
-    ).toEqual([]);
+    expect(await accessibilityViolations(page)).toEqual([]);
     await page.screenshot({
       path: `test-results/lumen-preview-${personal}-${info.project.name}.png`,
       fullPage: true,

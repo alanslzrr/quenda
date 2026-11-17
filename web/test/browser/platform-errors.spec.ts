@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { accessibilityViolations } from "./axe-scan";
 import { pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 
@@ -84,13 +84,7 @@ test("operator invitation preserves draft after MFA rejection and never adds a r
   });
   await invite(page);
   await expect(page.getByLabel(/Permiso válido/)).toHaveCount(0);
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

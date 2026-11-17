@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { accessibilityViolations } from "./axe-scan";
 import { pickDate } from "./date-fields";
 import { test } from "./fixtures";
 
@@ -50,13 +50,7 @@ test("an administrator downloads the catalog as a versioned JSON file without re
   const text = JSON.stringify(document);
   expect(text).not.toContain(f.email);
   expect(text).not.toContain("reservations");
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
 });
 
 test("reservations download as a CSV table with one row per reservation", async ({

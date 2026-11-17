@@ -1,8 +1,8 @@
 import { readFile, writeFile } from "node:fs/promises";
-import AxeBuilder from "@axe-core/playwright";
 import { expect } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { accessibilityViolations } from "./axe-scan";
 import { test } from "./fixtures";
 
 test("an administrator loads an exported catalog into an empty municipality as drafts", async ({
@@ -38,13 +38,7 @@ test("an administrator loads an exported catalog into an empty municipality as d
     name: /^(Importar un catálogo)$/,
   });
   await expect(section).toBeVisible();
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page
     .getByLabel(/^(Archivo de catálogo|Arquivo de catálogo)$/)
     .setInputFiles(file);

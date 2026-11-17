@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { accessibilityViolations } from "./axe-scan";
 import { pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 
@@ -95,13 +95,7 @@ test("platform operators invite revoke and hand over authority without inheritin
     await expect(
       page.getByRole("heading", { level: 1, name: "Operadores", exact: true }),
     ).toBeVisible();
-    expect(
-      (
-        await new AxeBuilder({ page })
-          .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-          .analyze()
-      ).violations,
-    ).toEqual([]);
+    expect(await accessibilityViolations(page)).toEqual([]);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

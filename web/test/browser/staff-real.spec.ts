@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { accessibilityViolations } from "./axe-scan";
 import { pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 
@@ -334,13 +334,7 @@ test("municipal security withdrawal bypasses handover without closing the global
   await page
     .getByLabel(/Identificador de (cuenta|conta)/)
     .fill(f.administrator.accountId);
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.screenshot({
     path: `test-results/staff-security-${info.project.name}.png`,
     fullPage: true,

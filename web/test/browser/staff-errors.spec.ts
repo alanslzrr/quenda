@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { accessibilityViolations } from "./axe-scan";
 import { fieldValue, pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 
@@ -140,13 +140,7 @@ test("permission selection preserves exact scope and explicit privacy grants", a
   await page
     .getByRole("button", { name: /Añadir permiso|Engadir permiso/ })
     .click();
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.screenshot({
     path: `test-results/staff-invite-${info.project.name}.png`,
     fullPage: true,
@@ -349,13 +343,7 @@ test("staff history paginates without claiming accepted grants are currently aut
     page.getByRole("button", { name: /Revocar invitación|Revogar invitación/ }),
   ).toHaveCount(0);
   expect(queries).toContain(`?after=${invitation.invitationId}`);
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.screenshot({
     path: `test-results/staff-history-${info.project.name}.png`,
     fullPage: true,

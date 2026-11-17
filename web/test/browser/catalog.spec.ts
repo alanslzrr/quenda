@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { accessibilityViolations } from "./axe-scan";
 
 test.use({ timezoneId: "America/Los_Angeles" });
 
@@ -189,13 +189,7 @@ test("public catalog uses municipal scope and restores Quenda theme on exit", as
       exact: true,
     }),
   ).toBeVisible();
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.screenshot({
     path: info.outputPath("availability.png"),
     fullPage: true,
@@ -267,13 +261,7 @@ test("settings preserve explicit language and theme across reloads", async ({
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator("html")).toHaveAttribute("lang", "es");
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.screenshot({
     path: info.outputPath("directory-dark.png"),
     fullPage: true,
@@ -318,13 +306,7 @@ test("sign-in has localized controls and accessible keyboard navigation", async 
     "type",
     "text",
   );
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.screenshot({
     path: info.outputPath("sign-in.png"),
     fullPage: true,

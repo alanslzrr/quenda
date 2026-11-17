@@ -1,9 +1,9 @@
 import { readFile } from "node:fs/promises";
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import sharp from "sharp";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { accessibilityViolations } from "./axe-scan";
 import { test } from "./fixtures";
 
 async function enter(page: Page, index: number) {
@@ -66,11 +66,6 @@ async function productionImagePolicy(page: Page) {
   return blocked;
 }
 
-const axe = (page: Page) =>
-  new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .analyze();
-
 test("staff frame, describe, reorder and remove photos that citizens see in a gallery", async ({
   page,
 }, info) => {
@@ -94,7 +89,7 @@ test("staff frame, describe, reorder and remove photos that citizens see in a ga
   await expect(
     dialog.getByText(/Fotos horizontales|Fotos horizontais/),
   ).toBeVisible();
-  expect((await axe(page)).violations).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
 
   const input = dialog.locator('input[type="file"]');
   await input.setInputFiles(await picture(800, 500, "#1b4332", "#95d5b2"));
@@ -122,7 +117,7 @@ test("staff frame, describe, reorder and remove photos that citizens see in a ga
   await page.keyboard.press("+");
   await page.keyboard.press("ArrowLeft");
   await expect(dialog.getByRole("slider")).not.toHaveValue("1");
-  expect((await axe(page)).violations).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await dialog
     .getByLabel(/Descripción en gallego|Descrición en galego/)
     .fill("Pista verde vista desde a entrada");
@@ -190,7 +185,7 @@ test("staff frame, describe, reorder and remove photos that citizens see in a ga
     name: /Ampliar (la|a) foto 1 de 2: Vestiarios renovados|Ampliar (la|a) foto 1 de 2: Vestuarios renovados/,
   });
   await expect(cover).toBeVisible();
-  expect((await axe(page)).violations).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await cover.click();
   const viewer = page.getByRole("dialog");
   await expect(viewer.getByText(/Foto 1 de 2/)).toBeVisible();
@@ -200,7 +195,7 @@ test("staff frame, describe, reorder and remove photos that citizens see in a ga
     viewer.getByRole("img", { name: /Pista verde vista desde (la|a) entrada/ }),
   ).toBeVisible();
   await expect(viewer).toHaveCSS("opacity", "1");
-  expect((await axe(page)).violations).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.keyboard.press("Escape");
   await expect(viewer).toHaveCount(0);
   expect(

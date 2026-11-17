@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import AxeBuilder from "@axe-core/playwright";
 import { expect } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import {
@@ -9,6 +8,7 @@ import {
   password,
   signOut,
 } from "./account-helpers";
+import { accessibilityViolations } from "./axe-scan";
 import { test } from "./fixtures";
 
 test("personal details, password recovery and accessible settings use the real API", async ({
@@ -27,13 +27,7 @@ test("personal details, password recovery and accessible settings use the real A
   await expect(page.getByLabel(/^(Nombre|Nome)$/)).toHaveValue(
     "Ana Actualizada",
   );
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await signOut(page);
   await page.goto("/recuperar");
   await page.getByLabel("Correo electrónico", { exact: true }).fill(email);
