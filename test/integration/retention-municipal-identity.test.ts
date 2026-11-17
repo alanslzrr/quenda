@@ -283,7 +283,7 @@ test("municipal retention respects active responsibility, dependencies, scope an
           domain,
           actor("operator"),
           {
-            accountId: "privacy",
+            email: "privacy@example.test",
             permissions: ["PRIVACY_READ"],
             expiresAt: future(),
             reason: "Fixture",
