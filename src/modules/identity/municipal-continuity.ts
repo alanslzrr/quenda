@@ -4,6 +4,7 @@ import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import { requireAdministrator } from "./administrator.ts";
 import type { AuthenticatedAccount } from "./auth.ts";
+import { invitationAddress } from "./invitation-address.ts";
 import { municipalityExists } from "./municipality.ts";
 import { requireOperator } from "./operator.ts";
 
@@ -66,21 +67,27 @@ export async function revokeMunicipalAccessForSecurity(
   );
 }
 
+/**
+ * The substitute is invited by address and never looked up: a missing or
+ * disabled account simply cannot accept. The operator's own address is
+ * rejected, since the issuing operator can never accept a recovery.
+ */
 export async function recoverMunicipalAdministrator(
   pool: Pool,
   actor: AuthenticatedAccount,
   tenantId: string,
   input: {
-    accountId: string;
+    email: string;
     expiresAt: string;
     reason: string;
     verificationReference: string;
   },
 ) {
+  const recipient = invitationAddress(input.email);
   const rationale = reason(input.reason);
   const verification = reason(input.verificationReference);
   if (
-    input.accountId === actor.accountId ||
+    recipient === actor.email.trim().toLowerCase() ||
     !Number.isFinite(Date.parse(input.expiresAt))
   )
     throw new HttpError("INVALID_INPUT");
@@ -98,13 +105,7 @@ export async function recoverMunicipalAdministrator(
         if (!future.rows[0]?.valid) throw new HttpError("INVALID_INPUT");
         const result = await client.query<{ allowed: boolean }>(
           "SELECT domain.recover_municipal_administrator($1,$2,$3,$4,$5) AS allowed",
-          [
-            input.accountId,
-            input.expiresAt,
-            rationale,
-            verification,
-            invitationId,
-          ],
+          [recipient, input.expiresAt, rationale, verification, invitationId],
         );
         if (!result.rows[0]?.allowed)
           throw new HttpError(
@@ -116,7 +117,10 @@ export async function recoverMunicipalAdministrator(
       },
     );
   } catch (error) {
-    if (error instanceof DatabaseError && error.code === "23503")
+    if (
+      error instanceof DatabaseError &&
+      ["22023", "23514"].includes(error.code ?? "")
+    )
       throw new HttpError("INVALID_INPUT");
     throw error;
   }
