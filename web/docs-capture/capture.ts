@@ -149,12 +149,17 @@ export class Capture {
     }
   }
 
-  /** A message from the local mail sink, drawn as a mail reader. */
+  /**
+   * A message from the local mail sink, drawn as a mail reader. Links show
+   * the documentation origin with shortened tokens, never the capture host.
+   */
   async mail(page: Page, slug: string, message: Mail) {
     const scratch = await page.context().newPage();
     try {
       await scratch.setViewportSize({ width: 900, height: 200 });
-      await scratch.setContent(mailHtml(message));
+      await scratch.setContent(
+        mailHtml({ ...message, text: message.text.replace(urls, displayUrl) }),
+      );
       const png = await scratch
         .locator(".message")
         .screenshot({ animations: "disabled" });
@@ -163,6 +168,36 @@ export class Capture {
       await scratch.close();
     }
   }
+
+  /** A file a person receives (an export, a download), drawn as a viewer. */
+  async file(page: Page, slug: string, name: string, content: string) {
+    const scratch = await page.context().newPage();
+    try {
+      await scratch.setViewportSize({ width: 1000, height: 200 });
+      await scratch.setContent(fileHtml(name, content));
+      const png = await scratch
+        .locator(".viewer")
+        .screenshot({ animations: "disabled" });
+      return await this.store(png, slug);
+    } finally {
+      await scratch.close();
+    }
+  }
+}
+
+/** Origin printed in place of the local capture host. */
+export const displayOrigin = "https://quenda.example.org";
+const urls = /https?:\/\/127\.0\.0\.1:\d+[^\s]*/g;
+/** Same path, single-use tokens and identifiers shortened, callback dropped. */
+export function displayUrl(raw: string) {
+  const url = new URL(raw);
+  const shorten = (value: string) =>
+    value.length > 20 ? `${value.slice(0, 8)}…` : value;
+  const path = url.pathname.split("/").map(shorten).join("/");
+  const query = [...url.searchParams]
+    .filter(([key]) => key !== "callbackURL")
+    .map(([key, value]) => `${key}=${shorten(value)}`);
+  return `${displayOrigin}${path}${query.length ? `?${query.join("&")}` : ""}`;
 }
 
 /** Waits for pending requests, fonts and transitions to finish. */
@@ -270,3 +305,12 @@ const mailHtml = (message: Mail) => `<!doctype html>
 </style>
 <div class="message"><header><h1>${html(message.subject)}</h1><dl><dt>Para</dt><dd>${html(message.to)}</dd></dl></header>
 <div class="body">${html(message.text)}</div></div>`;
+
+const fileHtml = (name: string, content: string) => `<!doctype html>
+<style>
+  body { margin: 0; padding: 24px; background: #e9ecef; }
+  .viewer { width: 920px; border-radius: 10px; overflow: hidden; background: #fff; box-shadow: 0 8px 24px rgb(0 0 0 / .12); }
+  .name { padding: 10px 16px; background: #f6f8fa; border-bottom: 1px solid #d0d7de; font: 600 13px/1.4 system-ui, sans-serif; color: #57606a; }
+  pre { margin: 0; padding: 16px 20px 20px; font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; color: #1f2328; white-space: pre-wrap; word-break: break-word; }
+</style>
+<div class="viewer"><div class="name">${html(name)}</div><pre>${html(content.trimEnd())}</pre></div>`;
