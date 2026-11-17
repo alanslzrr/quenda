@@ -7,6 +7,7 @@ import { processPhoto } from "../../src/modules/catalog/photo-image.ts";
 import { cancelReservation } from "../../src/modules/reservations/cancel.ts";
 import { createReservation } from "../../src/modules/reservations/create.ts";
 import { browser, totp } from "../helpers/auth-client.ts";
+import { backdateBookings } from "./backdate.ts";
 
 // Representative content for visual review. It lives in its own ephemeral
 // database and never shares municipalities or accounts with automated tests.
@@ -519,28 +520,32 @@ export async function seedDemo(
     unitId: string,
     slot: Slot,
     options: { nonCancellable?: boolean; at?: Date } = {},
-  ) =>
-    (
-      await createReservation(
-        domain,
-        actor,
-        tenantId,
-        randomUUID(),
-        {
-          unitId,
-          startsAt: slot.start.utc,
-          endsAt: slot.end.utc,
-          acceptance: {
-            usageRulesVersion: 1,
-            bookingPolicyVersion: 1,
-            nonCancellable: options.nonCancellable ?? false,
-          },
+  ) => {
+    const { at } = options;
+    const { result } = await createReservation(
+      domain,
+      actor,
+      tenantId,
+      randomUUID(),
+      {
+        unitId,
+        startsAt: slot.start.utc,
+        endsAt: slot.end.utc,
+        acceptance: {
+          usageRulesVersion: 1,
+          bookingPolicyVersion: 1,
+          nonCancellable: options.nonCancellable ?? false,
         },
-        randomUUID(),
-        3600,
-        options.at ? { now: () => options.at as Date } : undefined,
-      )
-    ).result;
+      },
+      randomUUID(),
+      3600,
+      at ? { now: () => at } : undefined,
+    );
+    // A booking made in the past was created and accepted back then.
+    if (at)
+      await backdateBookings(migration, [{ id: result.id, bookedAt: at }]);
+    return result;
+  };
 
   await reserve(
     valdeira.id,
