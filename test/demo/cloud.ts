@@ -273,7 +273,7 @@ export async function seedCloudDemo(
     true,
   );
   const { invitationId } = (await inviteManager(domain, marta, valdeira.id, {
-    accountId: brais.accountId,
+    email: brais.actor.email,
     expiresAt: new Date(Date.now() + 7 * day).toISOString(),
     permissions: [
       { operation: "RESERVATION_READ", unitId: null },

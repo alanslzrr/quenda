@@ -50,7 +50,7 @@ await withDatabase(async ({ auth, domain, migration }) => {
   const municipality = await createMunicipality(domain, actor, {
     name: "History benchmark",
     timezone: "UTC",
-    administratorId: actor.accountId,
+    administratorEmail: actor.email,
     invitationExpiresAt: new Date(Date.now() + 3600000).toISOString(),
   });
   const tenant = municipality.tenantId;
