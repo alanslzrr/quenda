@@ -29,17 +29,12 @@ test("CU-09 iniciar y cerrar sesión", async ({ page }) => {
   const email = page.getByLabel("Correo electrónico", { exact: true });
   const secret = page.getByLabel(/^Contraseña$/);
   const enter = page.getByRole("button", { name: "Entrar", exact: true });
+  const verify = page.getByRole("button", { name: "Verificar", exact: true });
+  const code = page.getByLabel("Código de autenticación", { exact: true });
   await shot(cu, page, "formulario-de-acceso");
 
-  // Alternativa: credenciales inválidas.
+  // Paso principal: credenciales correctas.
   await email.fill(citizen.email);
-  await secret.fill("contraseña-equivocada");
-  await enter.click();
-  await expect(page.getByRole("alert")).toBeVisible();
-  await shot(cu, page, "credenciales-invalidas", {
-    target: page.getByRole("alert"),
-  });
-
   await secret.fill(password);
   await shot(cu, page, "credenciales-completas", { target: enter });
   await enter.click();
@@ -57,37 +52,56 @@ test("CU-09 iniciar y cerrar sesión", async ({ page }) => {
   ).toBeVisible();
   await shot(cu, page, "sesion-cerrada");
 
-  // Cuenta con permisos de gestión: segundo factor obligatorio.
+  // Alternativa: credenciales inválidas, en un formulario recién abierto.
+  await page.goto("/acceso");
+  await email.fill(citizen.email);
+  await secret.fill("contraseña-equivocada");
+  await enter.click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await shot(cu, page, "credenciales-invalidas", {
+    target: page.getByRole("alert"),
+  });
+
+  // Alternativa: cuenta con permisos de gestión, segundo factor obligatorio.
   await page.goto("/acceso");
   await email.fill(staff.email);
   await secret.fill(password);
   await enter.click();
-  const code = page.getByLabel("Código de autenticación", { exact: true });
   await expect(code).toBeVisible();
   await shot(cu, page, "segundo-factor-solicitado", {
     target: around(code),
   });
+  await code.fill(totp(staff.secret ?? ""));
+  await shot(cu, page, "codigo-introducido", { target: verify });
+  await verify.click();
+  await expect(page).not.toHaveURL(/\/acceso/);
+  await shot(cu, page, "acceso-con-segundo-factor");
+});
 
-  // Alternativa: código incorrecto.
+test("CU-09 código de verificación incorrecto", async ({ page }) => {
+  // Alternativa: código incorrecto. Cliente nuevo para no sumar intentos de
+  // acceso a los anteriores; el código erróneo no consume ningún código válido.
+  const { password } = await access();
+  const staff = await account(roles.manager);
+  const code = page.getByLabel("Código de autenticación", { exact: true });
+  await page.goto("/acceso");
+  await page
+    .getByLabel("Correo electrónico", { exact: true })
+    .fill(staff.email);
+  await page.getByLabel(/^Contraseña$/).fill(password);
+  await page.getByRole("button", { name: "Entrar", exact: true }).click();
+  await expect(code).toBeVisible();
   await code.fill("000000");
   await page.getByRole("button", { name: "Verificar", exact: true }).click();
   await expect(page.getByRole("alert")).toBeVisible();
   await shot(cu, page, "codigo-incorrecto", {
     target: page.getByRole("alert"),
   });
-
-  await code.fill(totp(staff.secret ?? ""));
-  await shot(cu, page, "codigo-introducido", {
-    target: page.getByRole("button", { name: "Verificar", exact: true }),
-  });
-  await page.getByRole("button", { name: "Verificar", exact: true }).click();
-  await expect(page).not.toHaveURL(/\/acceso/);
-  await shot(cu, page, "acceso-con-segundo-factor");
 });
 
 test("CU-09 recuperar la contraseña olvidada", async ({ page }) => {
   // Cuenta nueva: la recuperación cambia la contraseña.
-  const email = await registerResident(page, "Brais Iglesias Pazos");
+  const email = await registerResident(page, "Sara Lema Pazos");
   await page.context().clearCookies();
   const changed = `${newPassword}-nueva`;
 
