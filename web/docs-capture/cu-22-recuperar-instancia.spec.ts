@@ -4,6 +4,7 @@ import path from "node:path";
 import pg from "pg";
 import { access, Capture, expect, test } from "./capture";
 import {
+  type Command,
   closeSql,
   command,
   privacyMunicipality,
@@ -72,21 +73,28 @@ test("CU-22 recuperar una instancia sin rehabilitar datos restringidos", async (
     ).status(),
   ).toBe(201);
 
+  // Commands run in the order an operator would; the terminal images are
+  // drawn afterwards in the order the guide shows them (main flow first).
+  const shots: [string, Command][] = [];
+  const dump = path.join(directory, "quenda-copia.dump");
+  const journal = path.join(directory, "privacidad.json");
+  const wrong = "0".repeat(64);
+  const authorization = "Autorización de recuperación OP-2026/12";
   try {
     // Paso 1: copia lógica de la base de datos.
     const backup = await command(
-      ["scripts/backup.ts", path.join(directory, "quenda-copia.dump")],
+      ["scripts/backup.ts", dump],
       { PG_BIN: bin, BACKUP_DATABASE_URL: databases.administration },
-      `PG_BIN=$PG_BIN BACKUP_DATABASE_URL=$BACKUP_DATABASE_URL node scripts/backup.ts ${shown}/quenda-copia.dump | jq .`,
+      `pnpm -s db:backup ${shown}/quenda-copia.dump | jq .`,
       redact,
       undefined,
       true,
     );
     expect(backup.code).toBe(0);
-    await cu.terminal(page, "copia", backup.shown, backup.output);
-    const { sha256: backupHash } = JSON.parse(
-      backup.output.replaceAll(shown, directory),
-    ) as { sha256: string };
+    shots.push(["copia", backup]);
+    const { sha256: backupHash } = JSON.parse(backup.output) as {
+      sha256: string;
+    };
 
     // Después de la copia, el personal de privacidad suprime un perfil.
     const erased = await privacy.api.post(
@@ -102,70 +110,53 @@ test("CU-22 recuperar una instancia sin rehabilitar datos restringidos", async (
       },
     );
     expect(erased.ok(), await erased.text()).toBe(true);
-    expect((await erased.json()).status).toBe("APPLIED");
+    expect(((await erased.json()) as { status: string }).status).toBe(
+      "APPLIED",
+    );
 
     // Paso 2: checkpoint de privacidad, guardado fuera de las copias.
     const checkpoint = await command(
-      [
-        "scripts/privacy-checkpoint.ts",
-        path.join(directory, "privacidad.json"),
-      ],
+      ["scripts/privacy-checkpoint.ts", journal],
       { MIGRATION_DATABASE_URL: databases.migration },
-      `MIGRATION_DATABASE_URL=$MIGRATION_DATABASE_URL node scripts/privacy-checkpoint.ts ${shown}/privacidad.json | jq .`,
+      `pnpm -s privacy:checkpoint ${shown}/privacidad.json | jq .`,
       redact,
       undefined,
       true,
     );
     expect(checkpoint.code).toBe(0);
-    await cu.terminal(page, "checkpoint", checkpoint.shown, checkpoint.output);
+    shots.push(["checkpoint", checkpoint]);
     const { sha256: checkpointHash } = JSON.parse(checkpoint.output) as {
       sha256: string;
     };
 
-    // Alternativa: un checksum que no coincide impide restaurar.
+    // Alternativa: un checksum que no coincide impide restaurar (se ejecuta
+    // antes de crear la base para que el rechazo sea solo por el checksum).
     const restoreEnv = {
       PG_BIN: bin,
       RESTORE_ADMIN_DATABASE_URL: databases.administration,
     };
-    const wrong = "0".repeat(64);
     const rejected = await command(
-      [
-        "scripts/restore.ts",
-        path.join(directory, "quenda-copia.dump"),
-        wrong,
-        target,
-      ],
+      ["scripts/restore.ts", dump, wrong, target],
       restoreEnv,
-      `PG_BIN=$PG_BIN RESTORE_ADMIN_DATABASE_URL=$RESTORE_ADMIN_DATABASE_URL node scripts/restore.ts ${shown}/quenda-copia.dump ${wrong} ${target}`,
+      `pnpm -s db:restore ${shown}/quenda-copia.dump ${wrong} ${target}`,
       redact,
     );
     expect(rejected.code).not.toBe(0);
-    await cu.terminal(
-      page,
-      "restaurar-checksum-erroneo",
-      rejected.shown,
-      rejected.output,
-    );
 
     // Paso 3: restaurar en una base nueva, cerrada al acceso ordinario.
     const restored = await command(
-      [
-        "scripts/restore.ts",
-        path.join(directory, "quenda-copia.dump"),
-        backupHash,
-        target,
-      ],
+      ["scripts/restore.ts", dump, backupHash, target],
       restoreEnv,
-      `PG_BIN=$PG_BIN RESTORE_ADMIN_DATABASE_URL=$RESTORE_ADMIN_DATABASE_URL node scripts/restore.ts ${shown}/quenda-copia.dump ${backupHash} ${target} | jq .`,
+      `pnpm -s db:restore ${shown}/quenda-copia.dump ${backupHash} ${target} | jq .`,
       redact,
       undefined,
       true,
     );
     expect(restored.code).toBe(0);
     expect(restored.output).toContain("RESTORED_CLOSED");
-    await cu.terminal(page, "restaurar", restored.shown, restored.output);
+    shots.push(["restaurar", restored]);
 
-    // El rol de la aplicación no puede conectarse a la base restaurada.
+    // Paso 4: el rol de la aplicación no puede conectarse a la base restaurada.
     const psql = path.join(bin, "psql");
     const closed = await command(
       [restoredDomain, "-c", "SELECT 1"],
@@ -175,89 +166,81 @@ test("CU-22 recuperar una instancia sin rehabilitar datos restringidos", async (
       psql,
     );
     expect(closed.code).not.toBe(0);
-    await cu.terminal(page, "destino-cerrado", closed.shown, closed.output);
+    shots.push(["destino-cerrado", closed]);
 
-    // La copia antigua conserva el perfil suprimido después de la copia.
-    const inspect = (slug: string) =>
-      command(
-        [
-          restoredAdmin,
-          "-c",
-          `SELECT count(*) AS perfiles FROM domain.municipal_profile WHERE account_id='${martino.accountId}'`,
-          "-c",
-          "SELECT domain.privacy_operational() AS servicio_habilitado",
-          "-c",
-          `SELECT category, retention_days, revoked_at IS NOT NULL AS retirada FROM domain.retention_policy WHERE tenant_id='${tenantId}'`,
-        ],
+    // Paso 5: la copia antigua conserva el perfil suprimido después de la copia.
+    const queries = [
+      `SELECT count(*) AS perfiles FROM domain.municipal_profile WHERE account_id='${martino.accountId}'`,
+      "SELECT domain.privacy_operational() AS servicio_habilitado",
+      `SELECT category, retention_days, revoked_at IS NOT NULL AS retirada FROM domain.retention_policy WHERE tenant_id='${tenantId}'`,
+    ];
+    const inspect = async () => {
+      const result = await command(
+        [restoredAdmin, ...queries.flatMap((query) => ["-c", query])],
         { RESTORE_ADMIN_DATABASE_URL: restoredAdmin },
-        `psql "$RESTORE_ADMIN_DATABASE_URL" \\\n  -c "SELECT count(*) AS perfiles FROM domain.municipal_profile WHERE account_id='${martino.accountId}'" \\\n  -c "SELECT domain.privacy_operational() AS servicio_habilitado" \\\n  -c "SELECT category, retention_days, revoked_at IS NOT NULL AS retirada FROM domain.retention_policy WHERE tenant_id='${tenantId}'"`,
+        `psql "$RESTORE_ADMIN_DATABASE_URL" \\\n${queries
+          .map((query) => `  -c "${query}"`)
+          .join(" \\\n")}`,
         redact,
         psql,
-      ).then(async (result) => {
-        expect(result.code).toBe(0);
-        await cu.terminal(page, slug, result.shown, result.output);
-        return result;
-      });
-    const before = await inspect("copia-antigua");
+      );
+      expect(result.code).toBe(0);
+      return result;
+    };
+    const before = await inspect();
     expect(before.output).toMatch(/perfiles\s*\n-+\n\s*1\n/);
+    shots.push(["copia-antigua", before]);
 
     // Alternativa: un checkpoint que no coincide deja el destino cerrado.
     const reconcileEnv = { RESTORE_ADMIN_DATABASE_URL: restoredAdmin };
     const stale = await command(
-      [
-        "scripts/privacy-restore-reconcile.ts",
-        path.join(directory, "privacidad.json"),
-        wrong,
-        "Autorización de recuperación OP-2026/12",
-      ],
+      ["scripts/privacy-restore-reconcile.ts", journal, wrong, authorization],
       reconcileEnv,
-      `RESTORE_ADMIN_DATABASE_URL=$RESTORE_ADMIN_DATABASE_URL node scripts/privacy-restore-reconcile.ts ${shown}/privacidad.json ${wrong} "Autorización de recuperación OP-2026/12"`,
+      `pnpm -s privacy:restore-reconcile ${shown}/privacidad.json ${wrong} "${authorization}"`,
       redact,
     );
     expect(stale.code).not.toBe(0);
-    await cu.terminal(
-      page,
-      "checkpoint-no-coincide",
-      stale.shown,
-      stale.output,
-    );
 
-    // Paso 4: reproducir las actuaciones de privacidad posteriores a la copia.
+    // Paso 6: reproducir las actuaciones de privacidad posteriores a la copia.
     const replay = await command(
       [
         "scripts/privacy-restore-reconcile.ts",
-        path.join(directory, "privacidad.json"),
+        journal,
         checkpointHash,
-        "Autorización de recuperación OP-2026/12",
+        authorization,
       ],
       reconcileEnv,
-      `RESTORE_ADMIN_DATABASE_URL=$RESTORE_ADMIN_DATABASE_URL node scripts/privacy-restore-reconcile.ts ${shown}/privacidad.json ${checkpointHash} "Autorización de recuperación OP-2026/12" | jq .`,
+      `pnpm -s privacy:restore-reconcile ${shown}/privacidad.json ${checkpointHash} "${authorization}" | jq .`,
       redact,
       undefined,
       true,
     );
     expect(replay.code).toBe(0);
     expect(replay.output).toContain('"reopeningAuthorized": false');
-    await cu.terminal(
-      page,
-      "reproducir-privacidad",
-      replay.shown,
-      replay.output,
-    );
-    const after = await inspect("tras-reproducir");
-    expect(after.output).toMatch(/perfiles\s*\n-+\n\s*0\n/);
+    shots.push(["reproducir-privacidad", replay]);
 
-    // Paso 5: conciliación de integridad antes de decidir la reapertura.
+    // Paso 7: el perfil suprimido vuelve a faltar y la política queda retirada.
+    const after = await inspect();
+    expect(after.output).toMatch(/perfiles\s*\n-+\n\s*0\n/);
+    shots.push(["tras-reproducir", after]);
+
+    // Paso 8: conciliación de integridad antes de decidir la reapertura.
     const review = await command(
       ["scripts/reconcile.ts"],
       reconcileEnv,
-      "RESTORE_ADMIN_DATABASE_URL=$RESTORE_ADMIN_DATABASE_URL node scripts/reconcile.ts | jq .",
+      "pnpm -s db:reconcile | jq .",
       redact,
       undefined,
       true,
     );
     expect(review.output).toContain("CHECKED_REQUIRES_REVIEW");
-    await cu.terminal(page, "conciliar", review.shown, review.output);
+    shots.push(["conciliar", review]);
+
+    // Alternativas, en el orden de la guía.
+    shots.push(["restaurar-checksum-erroneo", rejected]);
+    shots.push(["checkpoint-no-coincide", stale]);
+    for (const [slug, result] of shots)
+      await cu.terminal(page, slug, result.shown, result.output);
   } finally {
     const admin = new pg.Client({
       connectionString: databases.administration,
