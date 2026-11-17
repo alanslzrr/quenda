@@ -75,9 +75,15 @@ test("CU-05 consultar el uso de los espacios y exportar reservas", async ({
 
   // Paso 2 (continuación): elegir un espacio por su nombre.
   await page.getByRole("combobox", { name: "Espacio", exact: true }).click();
+  // Typing part of the name narrows the list to the matching spaces.
+  await page.keyboard.type("tenis");
   const option = page.getByRole("option", { name: /^Pista de tenis/ });
   await expect(option).toBeVisible();
-  await snap(cu, page, "elegir-espacio", { target: option });
+  await snap(cu, page, "elegir-espacio", {
+    target: page
+      .getByRole("combobox", { name: "Espacio", exact: true })
+      .locator("xpath=ancestor::div[.//button][1]"),
+  });
   await option.click();
   await expect(page).toHaveURL(/espacio=/);
   await expect(
