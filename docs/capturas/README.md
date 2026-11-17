@@ -14,7 +14,7 @@ PG_BIN=/ruta/a/postgresql@17/bin pnpm docs:capture
 
 El comando:
 
-1. Crea una base de datos efímera y la siembra con el mismo conjunto de datos que la demostración pública (`test/demo/cloud.ts`): Valdeira y Ribasanta, personal con todos los roles y unas 2.000 reservas con historial.
+1. Crea una base de datos efímera y la siembra con el mismo conjunto de datos que la demostración pública (`test/demo/cloud.ts`): Valdeira y Ribasanta, personal con todos los roles y unas 3.500 reservas en catorce semanas de historial.
 2. Arranca la API en `127.0.0.1:3200` y la web en `127.0.0.1:5175` (se pueden cambiar con `QUENDA_CAPTURE_API_PORT` y `QUENDA_CAPTURE_WEB_PORT`). Los correos se guardan en `.local/capture/mail`; nada sale de la máquina.
 3. Recorre los escenarios de `web/docs-capture/` en orden, en escritorio (1280 × 800), tema claro y castellano, y sustituye por completo la carpeta de cada caso de uso que recorre.
 

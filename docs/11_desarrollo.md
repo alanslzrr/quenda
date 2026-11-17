@@ -49,6 +49,8 @@ Para revisar la interfaz con datos ficticios, `PG_BIN=/ruta/a/postgresql-17.11/b
 
 El acceso de administración de la demo mantiene MFA: `pnpm demo:code` genera un código temporal solo después de comprobar que el archivo local privado pertenece al proceso vigente. No reutilizar secretos de registros anteriores. El [procedimiento de acceso de demostración](../test/demo/README.md) describe las cuentas, los archivos protegidos y la recuperación cuando cambia el arranque.
 
+Las capturas de las [guías ilustradas de casos de uso](guias/) se regeneran con `pnpm docs:capture` sobre una base efímera, nunca sobre la demostración pública; el procedimiento está en [capturas/README.md](capturas/README.md).
+
 La cuenta ofrece datos personales, preferencias, contraseña, MFA, sesiones, invitaciones, descarga de datos y baja. Los enlaces de recuperación, reactivación y cambio de correo requieren una acción expresa; abrirlos no ejecuta la operación.
 
 Las reservas incluyen confirmación de condiciones, historial por municipio, modificación, cancelación, aceptación de normas pendientes y avisos. Una respuesta incierta conserva en la pestaña la clave y el contenido del comando para su comprobación expresa, dentro del plazo publicado por la API. No se reenvía automáticamente ni se conserva después de cerrar sesión.

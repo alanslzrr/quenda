@@ -11,11 +11,11 @@ Esta guía es para el equipo que opera una instancia de Quenda: los operadores d
 
 Sirve para dar de alta un municipio nuevo en la instancia y dejar preparada la invitación de su primera persona administradora. Lo hace un operador de plataforma cuando el municipio ya ha decidido quién lo administrará. El alta no da al operador acceso a los datos del municipio, y la administración solo queda habilitada cuando la persona invitada acepta.
 
-**Antes de empezar:** necesitas una cuenta con permiso de operador y haber completado la verificación en dos pasos en los últimos cinco minutos. La futura administradora debe tener una cuenta con el correo verificado y la verificación en dos pasos activada. **Especificación:** [CU-06](../08_casos_de_uso.md#cu-06--incorporar-un-municipio).
+**Antes de empezar:** necesitas una cuenta con permiso de operador y haber completado la verificación en dos pasos en los últimos cinco minutos. La futura persona administradora debe tener una cuenta con el correo verificado y la verificación en dos pasos activada. **Especificación:** [CU-06](../08_casos_de_uso.md#cu-06--incorporar-un-municipio).
 
 ### Paso a paso
 
-1. **La destinataria facilita su identificador.** Quenda no ofrece un directorio de usuarios: la futura administradora entra en **Mi cuenta › Datos personales** y copia su identificador de cuenta, que aparece al final de la página.
+1. **La persona destinataria facilita su identificador.** Quenda no ofrece un directorio de usuarios: la futura persona administradora entra en **Mi cuenta › Datos personales** y copia su identificador de cuenta, que aparece al final de la página.
 
    ![Página Datos personales de Nuria Castro con el identificador de cuenta al final](../capturas/cu-06/01-identificador-destinataria.webp)
 
@@ -33,7 +33,7 @@ Sirve para dar de alta un municipio nuevo en la instancia y dejar preparada la i
 
    *Se abre la plataforma por la lista de Operadores, donde figura tu propia cuenta como habilitada; la opción del menú que hay que pulsar está recuadrada.*
 
-4. **Rellena el alta y regístrala.** Escribe el nombre del municipio, su zona horaria en formato IANA (por ejemplo `Europe/Madrid`), el identificador de cuenta de la destinataria y la fecha y hora límite para aceptar. Marca la casilla de confirmación y pulsa **Registrar municipio**.
+4. **Rellena el alta y regístrala.** Escribe el nombre del municipio, su zona horaria en formato IANA (por ejemplo `Europe/Madrid`), el identificador de cuenta de la persona destinataria y la fecha y hora límite para aceptar. Marca la casilla de confirmación y pulsa **Registrar municipio**.
 
    ![Formulario Incorporar municipio completado para el Concello de Toxeira](../capturas/cu-06/04-formulario-alta.webp)
 
@@ -45,7 +45,7 @@ Sirve para dar de alta un municipio nuevo en la instancia y dejar preparada la i
 
    *El mensaje recuadrado dice «Municipio registrado. Invitación pendiente de aceptación.» y debajo aparecen los dos identificadores.*
 
-6. **La destinataria acepta la invitación.** Desde **Mi cuenta › Invitaciones**, con la verificación en dos pasos completada en esa sesión, pulsa **Aceptar invitación**.
+6. **La persona destinataria acepta la invitación.** Desde **Mi cuenta › Invitaciones**, con la verificación en dos pasos completada en esa sesión, pulsa **Aceptar invitación**.
 
    ![Tus invitaciones con la invitación pendiente de Administración municipal del Concello de Toxeira](../capturas/cu-06/06-invitacion-pendiente.webp)
 
@@ -57,13 +57,13 @@ Sirve para dar de alta un municipio nuevo en la instancia y dejar preparada la i
 
    *La invitación recuadrada figura como Aceptada y en la cabecera aparece ya el acceso Gestión.*
 
-8. **El municipio aparece en Gestión.** La nueva administradora abre **Gestión** y encuentra su municipio en «Municipios que gestionas».
+8. **El municipio aparece en Gestión.** La nueva persona administradora abre **Gestión** y encuentra su municipio en «Municipios que gestionas».
 
-   ![Gestión municipal de la nueva administradora con el Concello de Toxeira](../capturas/cu-06/08-municipio-disponible.webp)
+   ![Gestión municipal de la nueva persona administradora con el Concello de Toxeira](../capturas/cu-06/08-municipio-disponible.webp)
 
    *El municipio recuadrado aparece con el rol «Administración del municipio». Al pulsarlo se entra en su gestión.*
 
-9. **Empieza la administración del municipio.** Se abre la gestión municipal, todavía vacía. Desde **Personal y permisos** la administradora puede invitar a su equipo.
+9. **Empieza la administración del municipio.** Se abre la gestión municipal, todavía vacía. Desde **Personal y permisos** la persona administradora puede invitar a su equipo.
 
    ![Gestión del Concello de Toxeira sin instalaciones, con Personal y permisos señalado](../capturas/cu-06/09-gestion-municipal.webp)
 
@@ -81,7 +81,7 @@ Quenda solo acepta nombres de zona horaria IANA. Si escribes, por ejemplo, «Mad
 
 #### El identificador de cuenta no existe
 
-Si el identificador está mal copiado o no corresponde a ninguna cuenta, Quenda rechaza la solicitud sin crear el municipio. Pide de nuevo el identificador a la destinataria.
+Si el identificador está mal copiado o no corresponde a ninguna cuenta, Quenda rechaza la solicitud sin crear el municipio. Pide de nuevo el identificador a la persona destinataria.
 
 ![Aviso La solicitud contiene datos no válidos con un identificador de cuenta inexistente](../capturas/cu-06/11-cuenta-inexistente.webp)
 
@@ -129,7 +129,11 @@ Una vez que alguien ha aceptado la administración del municipio, la invitación
 
 #### La invitación ha vencido
 
-Si la destinataria no acepta antes de la fecha límite, la invitación deja de poder aceptarse y no concede ningún permiso. Como nadie ha aceptado todavía, el operador puede emitir una nueva con **Invitación inicial**, igual que en el caso de la cuenta equivocada.
+Si la persona destinataria no acepta antes de la fecha límite, la invitación deja de poder aceptarse y no concede ningún permiso. Como nadie ha aceptado todavía, el operador puede emitir una nueva con **Invitación inicial**, igual que en el caso de la cuenta equivocada.
+
+#### La invitación la presenta otra cuenta
+
+Solo puede aceptar la invitación la cuenta a la que va dirigida. Si otra cuenta la presenta, Quenda la rechaza y no le concede ningún permiso.
 
 #### El operador intenta entrar en el municipio
 
@@ -149,7 +153,7 @@ Quien no es operador no ve la administración de plataforma. Si llega a su direc
 
 ### Resultado
 
-El municipio queda configurado en la instancia con su nombre y su zona horaria, y su primera administradora queda habilitada solo después de aceptar la invitación con la verificación en dos pasos. El operador no obtiene acceso a los datos municipales.
+El municipio queda configurado en la instancia con su nombre y su zona horaria, y su primera persona administradora queda habilitada solo después de aceptar la invitación con la verificación en dos pasos. El operador no obtiene acceso a los datos municipales.
 
 ## CU-16 — Contener un compromiso y recuperar acceso
 
@@ -199,7 +203,7 @@ Sirve para cortar de inmediato un acceso que puede estar en manos equivocadas y,
 
    *La opción recuadrada del menú lateral abre el formulario de suspensión.*
 
-7. **Suspende la cuenta comprometida.** Escribe su identificador y el motivo, marca la confirmación y pulsa **Suspender cuenta**. En el ejemplo se suspende a la administradora del Concello de Lousadela, cuyas credenciales se han expuesto.
+7. **Suspende la cuenta comprometida.** Escribe su identificador y el motivo, marca la confirmación y pulsa **Suspender cuenta**. En el ejemplo se suspende a la persona administradora del Concello de Lousadela, cuyas credenciales se han expuesto.
 
    ![Formulario Suspender identidad global completado](../capturas/cu-16/07-suspender-identidad.webp)
 
@@ -239,15 +243,15 @@ Si la contención deja a un municipio sin ningún administrador habilitado, como
 
     *El mensaje recuadrado muestra los identificadores del municipio y de la invitación. El operador sigue sin acceso al municipio.*
 
-13. **La sustituta acepta.** Desde **Mi cuenta › Invitaciones**, con la verificación en dos pasos completada, pulsa **Aceptar invitación**.
+13. **La persona sustituta acepta.** Desde **Mi cuenta › Invitaciones**, con la verificación en dos pasos completada, pulsa **Aceptar invitación**.
 
     ![Invitación pendiente de Administración municipal del Concello de Lousadela](../capturas/cu-16/13-sustituta-acepta.webp)
 
     *La tarjeta muestra el rol, el municipio y el plazo para aceptarla; el botón recuadrado completa la aceptación.*
 
-14. **El municipio vuelve a tener responsable.** En **Personal y permisos › Administradores**, la sustituta figura como habilitada y la administradora suspendida como no habilitada.
+14. **El municipio vuelve a tener responsable.** En **Personal y permisos › Administradores**, la persona sustituta figura como habilitada y la persona administradora suspendida como no habilitada.
 
-    ![Tabla de administradores con la sustituta habilitada y la administradora anterior no habilitada](../capturas/cu-16/14-sustituta-habilitada.webp)
+    ![Tabla de administradores con la persona sustituta habilitada y la persona administradora anterior no habilitada](../capturas/cu-16/14-sustituta-habilitada.webp)
 
     *La celda recuadrada indica Habilitado para Rocío Tella Vidal; Iria Souto Barral aparece como No habilitado.*
 
@@ -255,19 +259,19 @@ Si la contención deja a un municipio sin ningún administrador habilitado, como
 
 Una cuenta suspendida solo vuelve a funcionar con la recuperación asistida, que realiza el personal de operación con las credenciales de mantenimiento cargadas desde los secretos del entorno. No hay pantalla para ello y la persona suspendida no puede restablecer su contraseña por correo. En el ejemplo se recupera a la misma administradora suspendida en el paso 7.
 
-15. **Sustituye las credenciales comprometidas.** Antes de levantar la suspensión, la titular cambia, por el procedimiento controlado del equipo de operación, la contraseña y, si los tenía, el segundo factor y los códigos de respaldo. Este paso no tiene pantalla en Quenda y nunca se escriben contraseñas ni secretos en los comandos ni en las referencias.
+15. **Sustituye las credenciales comprometidas.** Antes de levantar la suspensión, la persona titular cambia, por el procedimiento controlado del equipo de operación, la contraseña y, si los tenía, el segundo factor y los códigos de respaldo. Este paso no tiene pantalla en Quenda y nunca se escriben contraseñas ni secretos en los comandos ni en las referencias.
 
 16. **Ejecuta la recuperación.** Lanza `pnpm -s account:recover` con el identificador de la cuenta, quién la realiza, la referencia de la verificación de identidad, la referencia de la sustitución de credenciales y el motivo.
 
-    ![Terminal con la recuperación de la cuenta de la administradora completada](../capturas/cu-16/15-recuperar-cuenta.webp)
+    ![Terminal con la recuperación de la cuenta de la persona administradora completada](../capturas/cu-16/15-recuperar-cuenta.webp)
 
     *La salida «Personal access recovered; administrative permissions remain revoked» confirma que se recupera solo el acceso personal: los permisos administrativos siguen retirados.*
 
-17. **La titular vuelve a entrar.** Inicia sesión con su nueva contraseña y su nuevo segundo factor. Puede reservar a su nombre, pero ya no administra el municipio: en **Personal y permisos** sigue figurando como «No habilitado» (paso 14). Si vuelve a necesitar el permiso, tendrá que recibir y aceptar una invitación nueva.
+17. **La persona titular vuelve a entrar.** Inicia sesión con su nueva contraseña y, si lo tenía, su nuevo segundo factor. Puede reservar a su nombre, pero ya no administra el municipio: en **Personal y permisos** sigue figurando como «No habilitado» (paso 14). Si vuelve a necesitar el permiso, tendrá que recibir y aceptar una invitación nueva.
 
-    ![Gestión municipal de la administradora recuperada sin permisos vigentes](../capturas/cu-16/16-acceso-recuperado.webp)
+    ![Gestión municipal de la persona administradora recuperada sin permisos vigentes](../capturas/cu-16/16-acceso-recuperado.webp)
 
-    *Tras iniciar sesión, la página Gestión municipal de la administradora recuperada muestra, recuadrado, «No tienes permisos municipales vigentes.»; en la cabecera sigue disponible Reservar.*
+    *Tras iniciar sesión, la página Gestión municipal de la persona administradora recuperada muestra, recuadrado, «No tienes permisos municipales vigentes.»; en la cabecera sigue disponible Reservar.*
 
 ### Si algo no sale como se espera
 
@@ -277,13 +281,13 @@ La recuperación de responsable solo funciona cuando no queda ningún administra
 
 ![Aviso La operación entra en conflicto con el estado actual en Recuperar responsable municipal](../capturas/cu-16/17-recuperacion-rechazada.webp)
 
-*Tras la aceptación de la sustituta, un segundo intento de recuperación muestra, sobre el botón Invitar a un sustituto, el aviso recuadrado «La operación entra en conflicto con el estado actual.».*
+*Tras la aceptación de la persona sustituta, un segundo intento de recuperación muestra, sobre el botón Invitar a un sustituto, el aviso recuadrado «La operación entra en conflicto con el estado actual.».*
 
 #### Las credenciales comprometidas no se han sustituido
 
-Si la contraseña (y, cuando existían, el segundo factor y los códigos de respaldo) siguen siendo las mismas que en el momento de la suspensión, el comando se rechaza y la cuenta sigue suspendida. En el ejemplo, es lo que ocurre si se ejecuta la recuperación de la administradora antes del paso 15.
+Si la contraseña (y, cuando existían, el segundo factor y los códigos de respaldo) siguen siendo las mismas que en el momento de la suspensión, el comando se rechaza y la cuenta sigue suspendida. En el ejemplo, es lo que ocurre si se ejecuta la recuperación de la persona administradora antes del paso 15.
 
-![Terminal con la recuperación de la cuenta de la administradora rechazada](../capturas/cu-16/18-recuperar-sin-credenciales.webp)
+![Terminal con la recuperación de la cuenta de la persona administradora rechazada](../capturas/cu-16/18-recuperar-sin-credenciales.webp)
 
 *Es el mismo comando del paso 16. La salida «Recovery failed; verify identity, remediation, replaced compromised credentials and retained inactive account» y el código de salida 1 indican que no se ha cambiado nada.*
 
