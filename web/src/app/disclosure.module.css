@@ -1,5 +1,6 @@
 .trigger.trigger {
   justify-content: flex-start;
+  gap: var(--space-1);
   padding-inline: 0;
   border: 0;
   border-radius: 0;
@@ -17,4 +18,19 @@
   color: var(--text-muted);
   margin-inline-start: var(--space-2);
   font-size: var(--text-xs);
+}
+/* The chevron marks the title as something to open, and turns down while its content shows. */
+.chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition: rotate var(--duration-fast) var(--ease-standard);
+}
+.trigger[aria-expanded="true"] .chevron {
+  rotate: 90deg;
+  color: var(--foreground);
+}
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
 }
