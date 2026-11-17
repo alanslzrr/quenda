@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { accessibilityViolations } from "./axe-scan";
 
 const tenant = "00000000-0000-4000-8000-000000000001",
   unit = "00000000-0000-4000-8000-000000000002",
@@ -321,13 +321,7 @@ test("checkout remains accessible and a quota rejection never appears as a confi
   await expect(
     page.getByRole("heading", { name: "Revisa tu reserva" }),
   ).toBeVisible();
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
