@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { Capture, expect, signIn, test } from "./capture";
 import {
   choose,
+  freshAddress,
   localDate,
   pickDateTime,
   ribasanta,
@@ -127,6 +128,7 @@ test("CU-10 gestionar un convenio", async ({ page, browser }) => {
     await expect(theirs).toHaveCount(0);
 
     // Paso 3: con la revisión jurídica registrada, Valdeira activa la versión.
+    await freshAddress(page);
     await page.reload();
     await expect(page.getByText("APROBADO", { exact: true })).toBeVisible();
     await page
@@ -146,6 +148,8 @@ test("CU-10 gestionar un convenio", async ({ page, browser }) => {
     await snap(cu, page, "activado", { target: active });
 
     // Alternativa: un participante suspende el convenio con motivo.
+    await freshAddress(page);
+    await freshAddress(xoan);
     await xoan.reload();
     await expect(xoan.getByText("ACTIVADO", { exact: true })).toBeVisible();
     await xoan
@@ -190,6 +194,7 @@ test("CU-10 gestionar un convenio", async ({ page, browser }) => {
   }
 
   // Alternativa: reactivar exige una nueva versión con sus aprobaciones.
+  await freshAddress(page);
   await page.goto(version);
   await expect(page.getByText("SUSPENDIDO", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Crear nueva versión" }).click();
