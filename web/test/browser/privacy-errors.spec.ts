@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { accessibilityViolations } from "./axe-scan";
 import { test } from "./fixtures";
 
 const tenant = "00000000-0000-4000-8000-000000000001",
@@ -168,13 +168,7 @@ test("policy forms have no legal defaults, retain drafts after MFA rejection and
   await page.getByLabel("Referencia de aprobación").fill("Aprobación 7");
   await page.getByLabel("Motivo", { exact: true }).fill("Política aprobada");
   await page.getByRole("checkbox", { name: /Confirmo/ }).check();
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

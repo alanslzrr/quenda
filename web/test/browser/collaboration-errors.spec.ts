@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { accessibilityViolations } from "./axe-scan";
 import { pickDateTime } from "./date-fields";
 import { test } from "./fixtures";
 import { selectValue } from "./select-value";
@@ -149,13 +149,7 @@ test("new versions preserve precise dates, scope and configuration; stale reject
       name: /Confirmo (la configuración|a configuración)/,
     })
     .check();
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
