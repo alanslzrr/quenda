@@ -3,8 +3,10 @@ import { test } from "node:test";
 import {
   canReplace,
   invitationEvent,
+  invitationRecipient,
   municipalOnly,
   type StaffInvitation,
+  staffInvitationBody,
   validPermissions,
 } from "../src/features/municipal/staff-model.ts";
 
@@ -113,4 +115,85 @@ test("replacement is offered only for accepted unrevoked grants within recorded 
     ),
     false,
   );
+});
+test("history names the invited address until acceptance and the accepting account after it", () => {
+  const pending: StaffInvitation = {
+    ...invitation,
+    accountId: null,
+    recipientEmail: "nueva@example.test",
+  };
+  assert.deepEqual(invitationRecipient(pending), {
+    kind: "address",
+    email: "nueva@example.test",
+  });
+  assert.equal(invitationEvent(pending, now), "PENDING");
+  assert.equal(canReplace(pending, now), false);
+  assert.deepEqual(
+    invitationRecipient({
+      ...pending,
+      accountId: "accepted",
+      recipientEmail: null,
+    }),
+    { kind: "account", accountId: "accepted" },
+  );
+  // Invitations addressed to an account before email addressing still show it.
+  assert.deepEqual(invitationRecipient(invitation), {
+    kind: "account",
+    accountId: "account",
+  });
+  assert.deepEqual(invitationRecipient({ ...pending, recipientEmail: null }), {
+    kind: "withdrawn",
+  });
+});
+test("a new staff invitation is addressed to the trimmed email and a replacement names no recipient", () => {
+  const permissions = [
+    { operation: "RESERVATION_READ" as const, unitId: null },
+  ];
+  assert.deepEqual(
+    staffInvitationBody({
+      kind: "manager",
+      email: "  Persona@Example.test ",
+      expiresAt: "2026-10-24T10:00:00Z",
+      roleExpiresAt: "",
+      permissions,
+    }),
+    {
+      email: "Persona@Example.test",
+      expiresAt: "2026-10-24T10:00:00Z",
+      roleExpiresAt: null,
+      permissions,
+    },
+  );
+  assert.deepEqual(
+    staffInvitationBody({
+      kind: "administrator",
+      email: "admin@example.test",
+      expiresAt: "2026-10-24T10:00:00Z",
+      roleExpiresAt: "2026-12-01T00:00:00Z",
+      permissions,
+    }),
+    {
+      email: "admin@example.test",
+      expiresAt: "2026-10-24T10:00:00Z",
+      roleExpiresAt: "2026-12-01T00:00:00Z",
+    },
+  );
+  const replacement = staffInvitationBody({
+    kind: "manager",
+    email: "ignored@example.test",
+    expiresAt: "2026-10-24T10:00:00Z",
+    roleExpiresAt: "",
+    permissions,
+    replacement: invitation,
+    reason: " Nuevo alcance ",
+  });
+  assert.deepEqual(replacement, {
+    expiresAt: "2026-10-24T10:00:00Z",
+    roleExpiresAt: null,
+    permissions,
+    replacesInvitationId: "invitation",
+    reason: "Nuevo alcance",
+  });
+  assert.equal("email" in replacement, false);
+  assert.equal("accountId" in replacement, false);
 });
