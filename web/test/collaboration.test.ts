@@ -22,6 +22,10 @@ test("agreement cloning preserves seconds, milliseconds and the selected occurre
     );
     assert.equal(civilOptions(value, "Europe/Madrid").length, 2);
   }
+  assert.equal(
+    civilValue("2026-11-16T23:00:00.000Z", "Europe/Madrid"),
+    "2026-11-17T00:00",
+  );
   assert.deepEqual(civilOptions("2026-03-29T02:30", "Europe/Madrid"), []);
   assert.deepEqual(civilOptions("2026-02-30T10:00", "Europe/Madrid"), []);
   assert.deepEqual(civilOptions("2026-10-23T10:00", "Invalid/Zone"), []);
