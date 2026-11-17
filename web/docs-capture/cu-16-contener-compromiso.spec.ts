@@ -2,6 +2,7 @@ import { hashPassword } from "better-auth/crypto";
 import { pickDateTime } from "../test/browser/date-fields";
 import { access, Capture, expect, test } from "./capture";
 import {
+  alongside,
   apiSignIn,
   closeSql,
   command,
@@ -19,8 +20,10 @@ import {
 // (Concello de Lousadela) con su administradora y un gestor, todos creados
 // aquí: la administradora retira al gestor por seguridad, el operador suspende
 // a la administradora comprometida e invita a una sustituta, y el personal de
-// operación recupera el acceso personal de una vecina suspendida con el
-// comando de mantenimiento. No se suspende ni se retira a nadie sembrado.
+// operación recupera el acceso personal de esa misma administradora con el
+// comando de mantenimiento, sin devolverle el permiso. No se suspende ni se
+// retira a nadie sembrado. Las capturas siguen el orden de la guía: primero el
+// flujo principal y después las alternativas.
 
 test.afterAll(closeSql);
 
@@ -43,11 +46,6 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
   const rocio = await register("Rocío Tella Vidal", "rocio.tella@demo.test", {
     mfa: true,
   });
-  const sabela = await register(
-    "Sabela Quintas Lema",
-    "sabela.quintas@demo.test",
-    { mfa: false },
-  );
 
   // Preparación: el operador incorpora Lousadela, Iria acepta la
   // administración e invita a Damián como gestor, que también acepta.
@@ -117,10 +115,12 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
   });
   await tallShot(cu, admin, "retirada-local", { target: withdraw });
   await withdraw.click();
+  // The whole confirmation box, beside the button that produced it.
   const saved = admin
-    .getByRole("region", { name: "Gestión municipal" })
-    .getByText("Cambios guardados.");
+    .locator("form [data-lumen]")
+    .filter({ hasText: "Cambios guardados." });
   await expect(saved).toBeVisible();
+  await alongside(withdraw);
   await cu.shot(admin, "retirada-local-registrada", { target: saved });
   await admin.goto(`/administracion/${tenantId}/personal/gestores`);
   await expect(row).toContainText("Revocada");
@@ -221,6 +221,83 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
   });
   await rocioContext.close();
 
+  // D. Recuperación del acceso personal de la administradora suspendida.
+  const { databases } = await access();
+  const maintenance = { MIGRATION_DATABASE_URL: databases.migration };
+  const references = [
+    "turno-operacion-2",
+    "Comparecencia presencial con DNI, expediente SEG-2026-031",
+    "Contraseña y segundo factor renovados, expediente SEG-2026-031",
+    "Credenciales expuestas contenidas",
+  ];
+  const shownRecover = `pnpm -s account:recover ${iria.accountId} ${references
+    .map((value) => (value.includes(" ") ? `"${value}"` : value))
+    .join(" ")}`;
+  // Con las credenciales comprometidas todavía en uso, la recuperación se
+  // rechaza (la imagen se incluye entre las alternativas, más abajo).
+  const early = await command(
+    ["scripts/recover-account.ts", iria.accountId, ...references],
+    maintenance,
+    shownRecover,
+  );
+  expect(early.code).not.toBe(0);
+
+  // Sustitución controlada de credenciales, sin pantalla en Quenda: contraseña
+  // nueva y un segundo factor nuevo, ya verificado, con sus códigos de respaldo.
+  // El segundo factor se inscribe en una cuenta auxiliar y se traslada, porque
+  // su secreto se guarda cifrado con la clave del servidor.
+  const enrolment = await register(
+    "Renovación de credenciales",
+    "renovacion.credenciales@demo.test",
+    { mfa: true },
+  );
+  const password = `Nueva-clave-${Date.now()}`;
+  await sql(
+    `UPDATE auth.account SET password=$2, "updatedAt"=now() WHERE "userId"=$1 AND "providerId"='credential'`,
+    [iria.accountId, await hashPassword(password)],
+  );
+  await sql(
+    `UPDATE auth."twoFactor" t SET secret=d.secret, "backupCodes"=d."backupCodes", verified=true, "failedVerificationCount"=0, "lockedUntil"=NULL
+       FROM auth."twoFactor" d WHERE t."userId"=$1 AND d."userId"=$2`,
+    [iria.accountId, enrolment.accountId],
+  );
+  await sql(`DELETE FROM auth."twoFactor" WHERE "userId"=$1`, [
+    enrolment.accountId,
+  ]);
+  await sql(`UPDATE auth."user" SET "twoFactorEnabled"=false WHERE id=$1`, [
+    enrolment.accountId,
+  ]);
+
+  // Paso: el personal de operación recupera el acceso personal.
+  const recovered = await command(
+    ["scripts/recover-account.ts", iria.accountId, ...references],
+    maintenance,
+    shownRecover,
+  );
+  expect(recovered.code).toBe(0);
+  await cu.terminal(
+    page,
+    "recuperar-cuenta",
+    recovered.shown,
+    recovered.output,
+  );
+
+  // Paso: la administradora vuelve a entrar, sin su permiso administrativo.
+  const returnContext = await otherBrowser(browser);
+  const returning = await returnContext.newPage();
+  await signInAs(returning, {
+    email: iria.email,
+    secret: enrolment.secret,
+    password,
+  });
+  await returning.goto("/administracion");
+  const personal = returning.getByText(
+    "No tienes permisos municipales vigentes.",
+  );
+  await expect(personal).toBeVisible();
+  await cu.shot(returning, "acceso-recuperado", { target: personal });
+  await returnContext.close();
+
   // Alternativa: con un administrador habilitado no hay recuperación.
   await page.goto(`${view}/recuperar-responsable`);
   await page.getByLabel("Identificador del municipio").fill(tenantId);
@@ -233,70 +310,20 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
     .getByLabel("Referencia de verificación de autoridad")
     .fill("Decreto de alcaldía 2026/119");
   await page.getByRole("checkbox", { name: /Confirmo el ámbito/ }).check();
-  await page.getByRole("button", { name: "Invitar a un sustituto" }).click();
+  const again = page.getByRole("button", { name: "Invitar a un sustituto" });
+  await again.click();
   const conflict = page.locator("form").getByRole("alert").first();
   await expect(conflict).toBeVisible();
+  await alongside(again);
   await cu.shot(page, "recuperacion-rechazada", { target: conflict });
 
-  // D. Recuperación del acceso personal por el personal de operación.
-  // Una vecina con la cuenta comprometida ha sido suspendida por el operador.
-  expect(
-    (
-      await operatorApi.post(
-        `/api/platform/accounts/${sabela.accountId}/suspend`,
-        { data: { reason: "Acceso desde una ubicación no reconocida" } },
-      )
-    ).status(),
-  ).toBe(200);
-  const { databases } = await access();
-  const maintenance = { MIGRATION_DATABASE_URL: databases.migration };
-  const recoverArgs = [
-    sabela.accountId,
-    "turno-operacion-2",
-    "Comparecencia presencial con DNI, expediente SEG-2026-031",
-    "Contraseña sustituida por la titular, expediente SEG-2026-031",
-    "Suplantación contenida",
-  ];
-  const shownRecover = `MIGRATION_DATABASE_URL=$MIGRATION_DATABASE_URL node scripts/recover-account.ts ${sabela.accountId} turno-operacion-2 "Comparecencia presencial con DNI, expediente SEG-2026-031" "Contraseña sustituida por la titular, expediente SEG-2026-031" "Suplantación contenida"`;
-  // Alternativa: sin sustituir las credenciales comprometidas no se recupera.
-  const early = await command(
-    ["scripts/recover-account.ts", ...recoverArgs],
-    maintenance,
-    shownRecover,
-  );
-  expect(early.code).not.toBe(0);
+  // Alternativa: sin sustituir las credenciales la recuperación se rechaza.
   await cu.terminal(
     page,
     "recuperar-sin-credenciales",
     early.shown,
     early.output,
   );
-
-  // Sustitución de la contraseña por el procedimiento controlado (sin pantalla).
-  const replacement = `Nueva-clave-${Date.now()}`;
-  await sql(
-    `UPDATE auth.account SET password=$2, "updatedAt"=now() WHERE "userId"=$1 AND "providerId"='credential'`,
-    [sabela.accountId, await hashPassword(replacement)],
-  );
-  const recovered = await command(
-    ["scripts/recover-account.ts", ...recoverArgs],
-    maintenance,
-    shownRecover,
-  );
-  expect(recovered.code).toBe(0);
-  await cu.terminal(
-    page,
-    "recuperar-cuenta",
-    recovered.shown,
-    recovered.output,
-  );
-
-  const sabelaContext = await otherBrowser(browser);
-  const resident = await sabelaContext.newPage();
-  await signInAs(resident, { ...sabela, password: replacement });
-  await expect(resident).toHaveURL(/\/perfil/);
-  await cu.shot(resident, "acceso-recuperado");
-  await sabelaContext.close();
 
   // Alternativa: la recuperación excepcional de operadores exige que no quede
   // ninguno habilitado; con el operador actual activo, se rechaza.
@@ -309,7 +336,7 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
       "Sin operadores disponibles",
     ],
     maintenance,
-    `MIGRATION_DATABASE_URL=$MIGRATION_DATABASE_URL node scripts/recover-operator.ts ${rocio.accountId} turno-operacion-2 "Acta del comité de seguridad 2026/07" "Sin operadores disponibles"`,
+    `pnpm -s operator:recover ${rocio.accountId} turno-operacion-2 "Acta del comité de seguridad 2026/07" "Sin operadores disponibles"`,
   );
   expect(operatorRecovery.code).not.toBe(0);
   await cu.terminal(
