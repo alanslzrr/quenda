@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { accessibilityViolations } from "./axe-scan";
 import { test } from "./fixtures";
 
 const tenant = "00000000-0000-4000-8000-000000000091";
@@ -187,13 +187,7 @@ test("staff identity is readable and management settings can sign out", async ({
   await expect(
     page.getByRole("heading", { name: /Administración de la cuenta/ }),
   ).toContainText("María Pérez");
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.screenshot({
     path: `test-results/ux-personal-${info.project.name}.png`,
     fullPage: true,
