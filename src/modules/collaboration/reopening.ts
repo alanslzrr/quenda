@@ -32,19 +32,23 @@ export async function readUnitAgreementRestriction(
       { accountId: actor.accountId, tenantId },
       async (client) => {
         await requireAdministrator(client, actor);
+        // The agreement row is visible to an administrator of a participating municipality.
         const result = await client.query<{
           agreement_id: string;
+          agreement_name: string | null;
           version: number;
           has_remaining_assignment: boolean;
-        }>("SELECT * FROM domain.read_unit_agreement_restriction($1)", [
-          unitId,
-        ]);
+        }>(
+          "SELECT r.agreement_id,a.name AS agreement_name,r.version,r.has_remaining_assignment FROM domain.read_unit_agreement_restriction($1) r LEFT JOIN domain.agreement a ON a.id=r.agreement_id",
+          [unitId],
+        );
         const row = result.rows[0];
         return {
           unitId,
           restriction: row
             ? {
                 agreementId: row.agreement_id,
+                agreementName: row.agreement_name,
                 version: row.version,
                 hasRemainingAssignment: row.has_remaining_assignment,
               }
