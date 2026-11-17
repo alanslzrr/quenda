@@ -614,8 +614,9 @@
 /* The stepper stays put and animates its own progress; what follows it slides in from the side the journey moved to. */
 @media (prefers-reduced-motion: no-preference) {
   .steps[data-enter] ~ * {
+    /* Backwards, not both: a filling animation keeps each section in its own stacking context after it ends, which paints later sections over earlier floating panels. */
     animation: journey-enter var(--duration-considered) var(--ease-enter)
-      var(--journey-delay, 0ms) both;
+      var(--journey-delay, 0ms) backwards;
   }
 }
 .steps[data-enter="forward"] ~ * {
