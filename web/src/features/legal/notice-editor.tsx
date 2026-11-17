@@ -3,10 +3,10 @@ import { ArrowUpRight } from "lucide-react";
 import { useState } from "react";
 import { ActionForm, textField } from "../../app/action";
 import { api } from "../../app/api";
+import { DateField } from "../../app/date-fields";
 import { Failure, Loading } from "../../app/feedback";
 import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
-import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs/tabs";
 import { Textarea } from "../../ui/textarea/textarea";
@@ -119,19 +119,17 @@ function NoticeForm({
                   })),
                 ]}
               />
-              <Input
+              <DateField
                 label={t("Fecha de preparación", "Data de preparación")}
                 name="preparedOn"
-                type="date"
                 defaultValue={notice.body.preparedOn ?? ""}
               />
-              <Input
+              <DateField
                 label={t(
                   "Fecha de la última revisión",
                   "Data da última revisión",
                 )}
                 name="reviewedOn"
-                type="date"
                 defaultValue={notice.body.reviewedOn ?? ""}
               />
             </>
