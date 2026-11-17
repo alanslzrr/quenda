@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
+import { invitationAddressSchema } from "./invitation-address.ts";
 import { accountNameSchema } from "./platform-account-names.ts";
 import {
   acceptGlobalPrivacy,
@@ -57,13 +58,13 @@ export async function registerPrivacyPermissionRoutes(
         tags: ["Identity"],
         security,
         description:
-          "Operador con MFA reciente: invita con motivo a recibir permisos explícitos sobre identidad global. No concede acceso municipal ni sustituye la autorización de cada actuación. El destinatario debe aceptar con MFA.",
+          "Operador con MFA reciente: invita con motivo a un correo, normalizado, a recibir permisos explícitos sobre identidad global. No se busca ninguna cuenta y la respuesta es la misma exista o no una con ese correo. Solo puede aceptarla, con MFA reciente, la cuenta cuyo correo verificado coincida al aceptar. No concede acceso municipal ni sustituye la autorización de cada actuación.",
         body: {
           type: "object",
           additionalProperties: false,
-          required: ["accountId", "permissions", "reason", "expiresAt"],
+          required: ["email", "permissions", "reason", "expiresAt"],
           properties: {
-            accountId,
+            email: invitationAddressSchema,
             permissions,
             reason,
             expiresAt: { type: "string", format: "date-time" },
@@ -153,8 +154,8 @@ export async function registerPrivacyPermissionRoutes(
           tags: ["Identity"],
           security,
           description: own
-            ? "Invitaciones y permisos globales del usuario autenticado. No acepta otro titular como filtro."
-            : "Operador con MFA reciente: consulta concesiones explícitas de privacidad global sin acceder al contenido de los datos personales municipales.",
+            ? "Invitaciones y permisos globales del usuario autenticado: los dirigidos a su correo verificado actual y los vinculados a su cuenta. No acepta otro titular como filtro."
+            : "Operador con MFA reciente: consulta concesiones explícitas de privacidad global sin acceder al contenido de los datos personales municipales. recipientEmail es el correo de una invitación sin aceptar; accountId, la cuenta que la aceptó o a la que se dirigía una invitación anterior. Ambos son nulos cuando la conservación ya retiró el correo.",
           querystring: {
             type: "object",
             additionalProperties: false,
@@ -185,6 +186,7 @@ export async function registerPrivacyPermissionRoutes(
                         ? []
                         : [
                             "accountId",
+                            "recipientEmail",
                             "accountName",
                             "invitedBy",
                             "invitedByName",
@@ -213,7 +215,11 @@ export async function registerPrivacyPermissionRoutes(
                       ...(own
                         ? {}
                         : {
-                            accountId,
+                            accountId: { ...accountId, nullable: true },
+                            recipientEmail: {
+                              ...invitationAddressSchema,
+                              nullable: true,
+                            },
                             accountName: accountNameSchema,
                             invitedBy: accountId,
                             invitedByName: accountNameSchema,
