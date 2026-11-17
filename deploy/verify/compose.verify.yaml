@@ -1,0 +1,22 @@
+# Local stand-ins for what a real host gets from the Internet, used only by
+# `pnpm test:deploy`: a certificate from Caddy's own CA instead of an ACME one
+# and a Mailpit SMTP server that requires STARTTLS with a private CA.
+services:
+  caddy:
+    environment:
+      CADDY_TLS_MODE: local_certs
+
+  mailpit:
+    image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
+    environment:
+      MP_SMTP_TLS_CERT: /run/verify/smtp.crt
+      MP_SMTP_TLS_KEY: /run/verify/smtp.key
+      MP_SMTP_REQUIRE_STARTTLS: "true"
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+    volumes:
+      - ${QUENDA_VERIFY_DIR:?Set the verification directory}:/run/verify:ro
+    ports:
+      - "127.0.0.1:${QUENDA_VERIFY_MAIL_PORT:-8025}:8025"
+    networks:
+      edge:
+        ipv4_address: 172.28.10.30

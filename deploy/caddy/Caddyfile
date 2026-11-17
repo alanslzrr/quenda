@@ -1,0 +1,17 @@
+# TLS entry point for one Quenda installation. Caddy obtains and renews the
+# certificate for QUENDA_DOMAIN and forwards every request to the web container.
+{
+	email {$ACME_EMAIL}
+	# Empty in production; the local verification sets it to `local_certs`.
+	{$CADDY_TLS_MODE}
+}
+
+{$QUENDA_DOMAIN} {
+	# nginx enforces the exact limits (1 MiB, 9 MiB on photo uploads).
+	request_body {
+		max_size 10MB
+	}
+	# Caddy discards client X-Forwarded-* headers and sends its own, so nginx
+	# only has to trust this container's fixed address.
+	reverse_proxy web:8080
+}
