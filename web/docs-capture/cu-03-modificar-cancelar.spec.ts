@@ -186,7 +186,9 @@ test("CU-03 cambios que no se aplican", async ({ page }) => {
     .first();
   await expect(page.getByRole("heading", { name: "Avisos" })).toBeVisible();
   const older = page.getByRole("button", { name: "Ver más avisos" });
-  for (let round = 0; round < 15 && !(await municipal.isVisible()); round++) {
+  // Older notices load page by page until the municipal one appears or the
+  // list ends; how far down it is depends on the seeded history.
+  while (!(await municipal.isVisible()) && (await older.isVisible())) {
     await older.click();
     await page.waitForLoadState("networkidle");
   }
