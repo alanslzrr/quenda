@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { pickDateTime } from "../test/browser/date-fields";
 import { Capture, expect, test } from "./capture";
 import {
+  alongside,
   closeSql,
   code,
   expireMfa,
@@ -149,8 +150,12 @@ test("CU-06 incorporar un municipio", async ({ page, browser }) => {
     oscar.accountId,
   );
   await register$(page).click();
-  const invalid = page.getByText("Indica una zona horaria IANA válida.");
+  const invalid = page
+    .locator("form")
+    .getByRole("alert")
+    .filter({ hasText: "Indica una zona horaria IANA válida." });
   await expect(invalid).toBeVisible();
+  await alongside(register$(page));
   await cu.shot(page, "zona-horaria-invalida", { target: invalid });
 
   // Alternativa: identificador de cuenta inexistente.
@@ -163,6 +168,7 @@ test("CU-06 incorporar un municipio", async ({ page, browser }) => {
   await register$(page).click();
   const unknown = page.locator("form").getByRole("alert").first();
   await expect(unknown).toBeVisible();
+  await alongside(register$(page));
   await cu.shot(page, "cuenta-inexistente", { target: unknown });
 
   // Alternativa: la verificación en dos pasos ya no es reciente.
@@ -245,6 +251,7 @@ test("CU-06 incorporar un municipio", async ({ page, browser }) => {
   await page.getByRole("button", { name: "Sustituir invitación" }).click();
   const late = page.locator("form").getByRole("alert").first();
   await expect(late).toBeVisible();
+  await alongside(page.getByRole("button", { name: "Sustituir invitación" }));
   await cu.shot(page, "sustitucion-rechazada", { target: late });
 
   // Alternativa: el alta no da al operador acceso a los datos municipales.
