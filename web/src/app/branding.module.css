@@ -1,6 +1,9 @@
 /* A logo keeps its own proportions inside a square-ish slot and never stretches. */
 .logo {
   display: inline-grid;
+  /* Fixed tracks give the image a definite area, so its percentage limits
+     apply; an auto track would let it grow to its natural size. */
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   flex: none;
   place-items: center;
 }
@@ -15,12 +18,14 @@
   width: 28px;
   height: 28px;
 }
+/* The header slot is as wide as the logo at 28px high, up to 96px. */
 .logo[data-size="md"] {
+  grid-template-columns: auto;
   height: 28px;
 }
 .logo[data-size="md"] img {
   width: auto;
-  height: 100%;
+  height: 28px;
   max-width: 96px;
 }
 .logo[data-size="lg"] {
