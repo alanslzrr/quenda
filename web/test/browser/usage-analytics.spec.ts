@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { accessibilityViolations } from "./axe-scan";
 import { test } from "./fixtures";
 
 type Fixture = {
@@ -35,13 +35,7 @@ async function signIn(
 const day = (offset: number) =>
   new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
 const accessible = async (page: Page) =>
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
 const analyticsSettings = /^(Ajustes de la analítica|Axustes da analítica)$/;
 const region = (page: Page, name: RegExp) => page.getByRole("region", { name });
 
@@ -394,14 +388,9 @@ test("every occupancy step keeps its value readable in light and dark", async ({
     else await page.keyboard.press("Escape");
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await expect(page.locator('[role="menu"]')).toHaveCount(0);
-    expect(
-      (
-        await new AxeBuilder({ page })
-          .include("main")
-          .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-          .analyze()
-      ).violations,
-    ).toEqual([]);
+    expect(await accessibilityViolations(page, { include: "main" })).toEqual(
+      [],
+    );
     await demand.screenshot({
       path: `test-results/usage-analytics-steps-${info.project.name}-${theme}.png`,
     });
