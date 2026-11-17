@@ -505,7 +505,9 @@ test("an approval by another municipality shows that it exists without naming it
   await fixture(page, a);
   await page.goto(view);
   // The approver is named, never shown as a raw account identifier.
-  await expect(page.getByText(/Aprobada por Responsable de proba/)).toBeVisible();
+  await expect(
+    page.getByText(/Aprobada por Responsable de proba/),
+  ).toBeVisible();
   await expect(page.getByText(/Aprobada por responsable ·/)).toHaveCount(0);
   await expect(page.getByText(/^Aprobada · /)).toBeVisible();
   await expect(page.getByText("null")).toHaveCount(0);
