@@ -135,9 +135,9 @@ Si la destinataria no acepta antes de la fecha límite, la invitación deja de p
 
 El alta no da al operador acceso a la gestión ni a los datos del municipio. Si abre la dirección del municipio, Quenda le indica que no tiene acceso y le ofrece volver a Gestión.
 
-![Aviso No tienes acceso a este municipio con los botones Reintentar y Volver a Gestión](../capturas/cu-06/18-operador-sin-acceso-municipal.webp)
+![Página Gestión municipal con el aviso No tienes acceso a este municipio y el botón Volver a Gestión](../capturas/cu-06/18-operador-sin-acceso-municipal.webp)
 
-*Arriba aparece el aviso «No tienes acceso a este municipio.»; debajo, Reintentar y el enlace recuadrado Volver a Gestión.*
+*La página se abre dentro del marco de gestión, con el título «Gestión municipal» y solo las opciones de uso personal en el menú lateral. Muestra el aviso «No tienes acceso a este municipio.» y, recuadrado, el botón Volver a Gestión.*
 
 #### Una cuenta sin permiso de operador abre la plataforma
 
@@ -213,9 +213,9 @@ Sirve para cortar de inmediato un acceso que puede estar en manos equivocadas y,
 
 9. **La cuenta ya no puede entrar.** Sus sesiones abiertas dejan de valer y un nuevo inicio de sesión se rechaza, aunque la contraseña sea correcta.
 
-   ![Pantalla Accede a tu cuenta con el aviso La cuenta está dada de baja](../capturas/cu-16/09-acceso-suspendido.webp)
+   ![Pantalla Accede a tu cuenta con el aviso La cuenta no está activa](../capturas/cu-16/09-acceso-suspendido.webp)
 
-   *Al intentar entrar con su correo y su contraseña, la persona suspendida ve el aviso recuadrado «La cuenta está dada de baja.».*
+   *Al intentar entrar con su correo y su contraseña, la persona suspendida ve el aviso recuadrado «La cuenta no está activa. Si la diste de baja, puedes recuperarla con «Reactivar mi cuenta»; si no, contacta con el equipo que opera Quenda.». En una suspensión, la reactivación por su cuenta no sirve: el acceso se recupera con el equipo de operación, como en los pasos 15 a 17.*
 
 #### Recuperación del responsable municipal (operador)
 
