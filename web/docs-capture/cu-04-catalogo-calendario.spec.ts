@@ -82,34 +82,6 @@ test("CU-04 mantener catálogo y calendario", async ({ page, browser }) => {
     page.getByRole("main").getByText("Cambios guardados."),
   ).toBeVisible();
 
-  // Alternativa: otra persona guardó la ficha antes (versión obsoleta).
-  const other = await secondBrowser(browser, page, true);
-  try {
-    const colleague = await other.newPage();
-    await colleague.goto(page.url());
-    await colleague.getByRole("tab", { name: "Ficha", exact: true }).click();
-    const theirs = formWith(colleague, "Guardar ficha");
-    await theirs.getByLabel("Teléfono de contacto").fill("+34 981 000 121");
-    await theirs.getByRole("button", { name: "Guardar ficha" }).click();
-    await expect(
-      colleague.getByRole("main").getByText("Cambios guardados."),
-    ).toBeVisible();
-  } finally {
-    await other.close();
-  }
-  await profile
-    .getByLabel("Correo de contacto")
-    .fill("instalacions@valdeira.demo.test");
-  await profile.getByRole("button", { name: "Guardar ficha" }).click();
-  const stale = page.getByRole("main").getByRole("alert");
-  await expect(stale).toBeVisible();
-  await snap(cu, page, "ficha-version-obsoleta", { tall: true, target: stale });
-  await page.reload();
-  await page.getByRole("tab", { name: "Ficha", exact: true }).click();
-  await expect(
-    formWith(page, "Guardar ficha").getByLabel("Teléfono de contacto"),
-  ).toHaveValue("+34 981 000 121");
-
   // Paso 3: publicar la instalación con un motivo.
   await page
     .getByRole("button", { name: "Publicar instalación", exact: true })
@@ -147,15 +119,6 @@ test("CU-04 mantener catálogo y calendario", async ({ page, browser }) => {
   await expect(
     page.getByRole("heading", { name: "Pista do Souto", level: 1 }),
   ).toBeVisible();
-
-  // Alternativa: publicar sin normas mantiene el borrador.
-  await page.getByRole("button", { name: /Publicar unidad/ }).click();
-  const missing = page.getByText(
-    "Añade las normas de uso para publicar esta unidad",
-  );
-  await expect(missing).toBeVisible();
-  await snap(cu, page, "publicar-sin-normas", { target: missing });
-  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
 
   // Paso 5: ficha de la unidad: tipo, ubicación y aforo.
   await page.getByRole("tab", { name: "Ficha", exact: true }).click();
@@ -260,6 +223,69 @@ test("CU-04 mantener catálogo y calendario", async ({ page, browser }) => {
   await expect(card).toBeVisible();
   await snap(cu, page, "catalogo-publico", { target: card, fullPage: true });
 
+  // The alternatives open many pages: a new client address keeps the
+  // per-address limit of the public catalogue (and the municipal logo) away.
+  await page.context().setExtraHTTPHeaders(clientHeader());
+
+  // Alternativa: publicar una unidad sin normas mantiene el borrador.
+  await page.goto(facilityUrl);
+  await page.getByRole("link", { name: "Crear unidad", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Nueva unidad reservable" }),
+  ).toBeVisible();
+  const unitName = page.getByRole("textbox", { name: "Nombre", exact: true });
+  await expect(async () => {
+    await unitName.fill("Sala do Souto");
+    await expect(unitName).toHaveValue("Sala do Souto", { timeout: 1000 });
+  }).toPass();
+  const unitCreated = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" && /\/units$/.test(response.url()),
+    { timeout: 15000 },
+  );
+  await page.getByRole("button", { name: /Crear unidad/ }).click();
+  expect((await unitCreated).ok()).toBe(true);
+  await page.getByRole("link", { name: "Volver al catálogo" }).click();
+  await page.getByRole("link", { name: "Sala do Souto", exact: true }).click();
+  await page.getByRole("button", { name: /Publicar unidad/ }).click();
+  const missing = page.getByText(
+    "Añade las normas de uso para publicar esta unidad",
+  );
+  await expect(missing).toBeVisible();
+  await snap(cu, page, "publicar-sin-normas", { target: missing });
+  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
+
+  // Alternativa: otra persona guardó la ficha antes (versión obsoleta).
+  await page.goto(facilityUrl);
+  await page.getByRole("tab", { name: "Ficha", exact: true }).click();
+  // Alternativa: otra persona guardó la ficha antes (versión obsoleta).
+  const other = await secondBrowser(browser, page, true);
+  try {
+    const colleague = await other.newPage();
+    await colleague.goto(facilityUrl);
+    await colleague.getByRole("tab", { name: "Ficha", exact: true }).click();
+    const theirs = formWith(colleague, "Guardar ficha");
+    await theirs.getByLabel("Teléfono de contacto").fill("+34 981 000 121");
+    await theirs.getByRole("button", { name: "Guardar ficha" }).click();
+    await expect(
+      colleague.getByRole("main").getByText("Cambios guardados."),
+    ).toBeVisible();
+  } finally {
+    await other.close();
+  }
+  await profile
+    .getByLabel("Correo de contacto")
+    .fill("instalacions@valdeira.demo.test");
+  await profile.getByRole("button", { name: "Guardar ficha" }).click();
+  const stale = page.getByRole("main").getByRole("alert");
+  await expect(stale).toBeVisible();
+  await snap(cu, page, "ficha-version-obsoleta", { tall: true, target: stale });
+  await page.reload();
+  await page.getByRole("tab", { name: "Ficha", exact: true }).click();
+  await expect(
+    formWith(page, "Guardar ficha").getByLabel("Teléfono de contacto"),
+  ).toHaveValue("+34 981 000 121");
+
   // Alternativa: un bloqueo válido ocupa la agenda e impide reservar.
   const blockDate = localDate(9);
   await page.goto(`/administracion/${valdeira}/agenda`);
@@ -276,7 +302,11 @@ test("CU-04 mantener catálogo y calendario", async ({ page, browser }) => {
   await block.getByRole("button", { name: "Crear bloqueo" }).click();
   const created = page.getByText("Revisión del parqué", { exact: true });
   await expect(created).toBeVisible();
-  await snap(cu, page, "bloqueo-creado", { target: created, fullPage: true });
+  await snap(cu, page, "bloqueo-creado", {
+    target: created.locator(
+      "xpath=ancestor::*[.//button[normalize-space()='Liberar bloqueo']][1]",
+    ),
+  });
 
   // Alternativa: un bloqueo que coincide con una reserva confirmada se rechaza.
   const [taken] = await sql<{ starts_at: Date; ends_at: Date }>(
@@ -347,9 +377,6 @@ test("CU-04 mantener catálogo y calendario", async ({ page, browser }) => {
     .click();
 
   // Alternativa: retirar la unidad la oculta sin borrar reservas ni historial.
-  // This scenario opens many public pages: a new client address keeps the
-  // per-address limit of the public catalogue (and the municipal logo) away.
-  await page.context().setExtraHTTPHeaders(clientHeader());
   await page.goto(unitUrl);
   await page.getByRole("button", { name: "Retirar del catálogo" }).click();
   const withdraw = formWith(page, "Retirar");
