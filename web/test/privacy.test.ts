@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  accountKeyedFamily,
+  directoryAvailable,
   explicitPrivacy,
   families,
   period,
@@ -43,4 +45,23 @@ test("retention periods have no defaults and reject fractional or out-of-range v
     assert.throws(() => period(input));
   assert.equal(period("1"), 1);
   assert.equal(period("365000"), 365000);
+});
+test("privacy forms list linked people only where the actor already administers the municipality", () => {
+  assert.equal(
+    directoryAvailable({ global: false, administrator: true }),
+    true,
+  );
+  // A privacy permission alone never opens the municipal directory.
+  assert.equal(
+    directoryAvailable({ global: false, administrator: false }),
+    false,
+  );
+  assert.equal(
+    directoryAvailable({ global: true, administrator: true }),
+    false,
+  );
+  assert.deepEqual(families.map((f) => f.value).filter(accountKeyedFamily), [
+    "MUNICIPAL_PROFILE",
+    "AUTHORITY",
+  ]);
 });
