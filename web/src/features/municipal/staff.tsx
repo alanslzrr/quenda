@@ -500,7 +500,6 @@ function SecurityWithdrawal() {
     managerInvitations,
   ];
   const [selected, setSelected] = useState("");
-  const [done, setDone] = useState<string>();
   const rows = <T,>(q: { data?: { pages: { items: T[] }[] } }) =>
     q.data?.pages.flatMap((p) => p.items) ?? [];
   const candidates = securityCandidates({
@@ -536,15 +535,6 @@ function SecurityWithdrawal() {
           "Escolle entre quen administra ou xestiona este municipio ou ten unha invitación pendente. Unha invitación por correo que ninguén aceptou identifícase polo seu enderezo: revóganse todas as pendentes a ese enderezo neste municipio, sen consultar ningunha conta.",
         )}
       </p>
-      {done && (
-        <p role="status">
-          {t(
-            "Retirada por seguridad registrada",
-            "Retirada por seguridade rexistrada",
-          )}
-          : {done}
-        </p>
-      )}
       {queries.some((q) => q.isPending) ? (
         <Loading />
       ) : failed ? (
@@ -556,7 +546,6 @@ function SecurityWithdrawal() {
         />
       ) : (
         <MunicipalForm
-          key={done ?? ""}
           path={
             candidate
               ? securityWithdrawalRequest(endpoint(m.id), candidate, "").path
@@ -587,16 +576,9 @@ function SecurityWithdrawal() {
             const own =
               candidate?.kind === "account" &&
               candidate.accountId === account?.accountId;
-            setDone(
-              candidate?.kind === "address"
-                ? candidate.email
-                : candidate?.kind === "account"
-                  ? accountText(candidate.accountLabel, candidate.accountId)
-                  : undefined,
-            );
-            setSelected("");
+            // The form already refreshes the staff tables; a withdrawn person
+            // leaves the list and must be chosen again to repeat anything.
             await saved(own);
-            if (!own) for (const q of queries) await q.refetch();
           }}
         >
           <Select
