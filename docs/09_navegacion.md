@@ -94,6 +94,10 @@ minutos. Los errores recuperables de lectura mantienen los editores y borradores
 Las acreditaciones de uso se emiten desde la versión de un convenio y se revocan
 seleccionando una emisión propia. El listado está paginado y no revela referencias
 de verificación ni emisiones ajenas. Se conserva la entrada por referencia conocida.
+El informe conjunto mensual selecciona el convenio por su nombre entre los activados con
+informes conjuntos en los que participa el municipio; la lista es legible con
+`REPORT_READ` municipal y no requiere acceso a Convenios. La vinculación de una unidad
+nombra su convenio y versión; el identificador queda en «Identificador técnico».
 La revisión de privacidad selecciona convenio, mes preparado y destinatario. Solo
 expone metadatos de revisiones, nunca cifras ni causas de supresión. No equivale a
 publicar ni a conceder REPORT_READ. Para cuentas de otro municipio se solicita una

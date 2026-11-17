@@ -121,6 +121,8 @@ Una versión `ACTIVADO` con capacidad de informes puede entregar un mes cerrado 
 
 El informe no contiene nombres, identificadores de cuentas o reservas, unidades individuales ni desglose municipal. El número de reservas no mide asistencia.
 
+Para solicitarlo, el destinatario con `REPORT_READ` municipal consulta los convenios con una versión activada con informes en la que participa su municipio. Solo obtiene su nombre y versión: no ve otros participantes, unidades, meses preparados ni el estado de las revisiones.
+
 El sistema suprime el informe si el total o alguna contribución municipal tiene menos de 10 cuentas distintas. No publica totales alternativos que permitan reconstruir resultados suprimidos. La supresión se representa como «no publicable», nunca como cero.
 
 Antes de habilitar la capacidad se evalúan inferencias mediante información auxiliar, datos propios del destinatario y entregas anteriores. Las correcciones de un mes requieren revisar el riesgo de diferencias entre versiones. Cada entrega registra destinatario, corte y versión del control aplicado.

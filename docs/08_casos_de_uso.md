@@ -399,7 +399,7 @@ Este documento es la especificación de cada caso de uso. Para seguirlos en pant
 - **Precondiciones:** capacidad de informes habilitada, MFA, permiso municipal y evaluación favorable específica para el solicitante.
 
 **Flujo principal**
-1. El usuario solicita el informe de un convenio y mes publicado.
+1. El usuario elige por su nombre un convenio activado con informes conjuntos en el que participa su municipio, indica un mes publicado y solicita el informe.
 2. Quenda comprueba el permiso y la evaluación aplicable a su cuenta y municipio; entrega el agregado al propio solicitante.
 3. Registra destinatario, corte y versión del control aplicado.
 
