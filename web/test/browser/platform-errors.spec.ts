@@ -255,7 +255,9 @@ test("municipal replacement and recovery send exact scopes and a distinct verifi
     await page
       .getByLabel(/Identificador (del municipio|do municipio)/)
       .fill(id);
-    await page.getByLabel(/Identificador de (cuenta|conta)/).fill("recipient");
+    await page
+      .getByLabel(/Correo del destinatario|Correo do destinatario/)
+      .fill("  Recipient@Example.test ");
     await pickDateTime(page, "Aceptar antes de", future());
     await page.getByLabel("Motivo", { exact: true }).fill("Relevo autorizado");
     if (recovery)
@@ -277,6 +279,11 @@ test("municipal replacement and recovery send exact scopes and a distinct verifi
     `/api/municipalities/${id}/initial-administrator-invitation/replace`,
   );
   expect(sent[0].body).not.toHaveProperty("verificationReference");
+  // Both are addressed to the trimmed email, never to an account identifier.
+  for (const { body } of sent) {
+    expect(body.email).toBe("Recipient@Example.test");
+    expect(body).not.toHaveProperty("accountId");
+  }
   expect(sent[1].path).toBe(
     `/api/municipalities/${id}/administrator-recovery-invitations`,
   );
