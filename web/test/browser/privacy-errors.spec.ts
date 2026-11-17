@@ -64,18 +64,24 @@ async function select(
   await page.getByRole("combobox", { name: label, exact: true }).click();
   await page.getByRole("option", { name: option, exact: true }).click();
 }
-/** Administrators may pick a linked person; these tests type the exact reference. */
+/**
+ * The actor administers the municipality, so the form first offers the linked
+ * people; these tests switch to typing the exact reference. The selector is
+ * awaited, not probed, because it renders only after the scope and family load.
+ */
 async function exact(page: Page) {
   const mode = page.getByRole("combobox", {
     name: /Cómo indicar la cuenta|Como indicar a conta/,
   });
-  if (!(await mode.count())) return;
   await mode.click();
   await page
     .getByRole("option", {
       name: /Escribir el identificador exacto|Escribir o identificador exacto/,
     })
     .click();
+  await expect(mode).toContainText(
+    /Escribir el identificador exacto|Escribir o identificador exacto/,
+  );
 }
 async function authorize(page: Page) {
   await page

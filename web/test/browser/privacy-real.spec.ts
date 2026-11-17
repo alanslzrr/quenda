@@ -13,18 +13,24 @@ async function select(
   await page.getByRole("combobox", { name: label, exact: true }).click();
   await page.getByRole("option", { name: option, exact: true }).click();
 }
-/** Administrators may pick a linked person; these tests type the exact reference. */
+/**
+ * The actor administers the municipality, so the form first offers the linked
+ * people; these tests switch to typing the exact reference. The selector is
+ * awaited, not probed, because it renders only after the scope and family load.
+ */
 async function exact(page: Page) {
   const mode = page.getByRole("combobox", {
     name: /Cómo indicar la cuenta|Como indicar a conta/,
   });
-  if (!(await mode.count())) return;
   await mode.click();
   await page
     .getByRole("option", {
       name: /Escribir el identificador exacto|Escribir o identificador exacto/,
     })
     .click();
+  await expect(mode).toContainText(
+    /Escribir el identificador exacto|Escribir o identificador exacto/,
+  );
 }
 async function authorize(page: Page) {
   await page
@@ -35,10 +41,23 @@ async function authorize(page: Page) {
     .fill("Actuación sintética de prueba");
   await page.getByRole("checkbox", { name: /Confirmo/ }).check();
 }
-async function download(page: Page, view: string, subject: string) {
+async function download(
+  page: Page,
+  view: string,
+  subject: string,
+  directory = true,
+) {
   await page.goto(`${view}/descarga`);
-  await exact(page);
-  await page.getByLabel(/Identificador (de la cuenta|da conta)/).fill(subject);
+  if (directory) await exact(page);
+  const field = page.getByLabel(/Identificador (de la cuenta|da conta)/);
+  await field.fill(subject);
+  // The global scope has no directory to choose from.
+  if (!directory)
+    await expect(
+      page.getByRole("combobox", {
+        name: /Cómo indicar la cuenta|Como indicar a conta/,
+      }),
+    ).toHaveCount(0);
   await authorize(page);
   const finished = page.waitForEvent("download");
   await page
@@ -231,7 +250,12 @@ test("authorized privacy staff manages policies, holds, scoped copies and all in
     category: "MUNICIPAL_PROFILE",
     tenantId: f.tenant,
   });
-  const global = await download(page, "/plataforma/privacidad", f.accountId);
+  const global = await download(
+    page,
+    "/plataforma/privacidad",
+    f.accountId,
+    false,
+  );
   expect(global.scope).toEqual({ kind: "GLOBAL", tenantId: null });
   expect(
     global.records.every((r: { tenantId: unknown }) => r.tenantId === null),
