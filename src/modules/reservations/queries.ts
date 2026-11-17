@@ -184,9 +184,21 @@ export async function readReservation(
           "SELECT domain.record_reservation_reads($1::uuid[],'DETAIL',$2)",
           [[row.id], correlationId],
         );
+      // Names come from the reservation's own authority, not the public catalog, so they survive
+      // withdrawal of the space and do not spend the public request budget.
+      const place = (
+        await client.query<{
+          municipality_name: string;
+          facility_name: string;
+          unit_name: string;
+        }>("SELECT * FROM domain.reservation_place($1)", [reservationId])
+      ).rows[0];
       return {
         ...current(row, clock.now().getTime()),
         accountId: row.account_id,
+        municipalityName: place?.municipality_name ?? null,
+        facilityName: place?.facility_name ?? null,
+        unitName: place?.unit_name ?? null,
         arrivedAt: row.arrived_at?.toISOString() ?? null,
         pendingUsageRulesText:
           (

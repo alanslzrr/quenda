@@ -32,7 +32,7 @@ export async function registerReservationQueries(
         tags: ["Reservations"],
         security: [{ quendaSession: [] }],
         description:
-          "Estado actual de una reserva, independiente de resultados idempotentes anteriores. Acceso del titular o personal con RESERVATION_READ/MANAGE sobre la unidad y MFA. Conserva acceso a reservas de recursos retirados.",
+          "Estado actual de una reserva, independiente de resultados idempotentes anteriores. Acceso del titular o personal con RESERVATION_READ/MANAGE sobre la unidad y MFA. Conserva acceso a reservas de recursos retirados. Incluye los nombres actuales del municipio, la instalación y el espacio (municipalityName, facilityName, unitName), también si el espacio o la instalación se han retirado.",
         params: {
           type: "object",
           additionalProperties: false,
@@ -53,6 +53,9 @@ export async function registerReservationQueries(
               "id",
               "tenantId",
               "accountId",
+              "municipalityName",
+              "facilityName",
+              "unitName",
               "usageRulesText",
               "pendingUsageRulesText",
               "unitId",
@@ -70,6 +73,9 @@ export async function registerReservationQueries(
               id: uuid,
               tenantId: uuid,
               accountId: { type: "string" },
+              municipalityName: { type: "string", nullable: true },
+              facilityName: { type: "string", nullable: true },
+              unitName: { type: "string", nullable: true },
               arrivedAt: { ...instant, nullable: true },
               usageRulesText: { type: "string", nullable: true },
               pendingUsageRulesText: { type: "string", nullable: true },

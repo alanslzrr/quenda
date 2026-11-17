@@ -390,6 +390,8 @@ export function Checkout() {
                       "CONDITIONS_CHANGED",
                       "BOOKING_RULES_CHANGED",
                       "SLOT_UNAVAILABLE",
+                      // A change made elsewhere: the refresh rebuilds the form for the current revision.
+                      "RESERVATION_CHANGED",
                     ].includes(error.code)
                   ) {
                     setFailure(error);

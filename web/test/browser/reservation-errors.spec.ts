@@ -25,6 +25,9 @@ const reservation = {
   pendingUsageRulesVersion: null,
   pendingUsageRulesText: null,
   bookingPolicyVersion: 1,
+  municipalityName: "Oleiros",
+  facilityName: "Centro",
+  unitName: "Pista 1",
 };
 const detail = `/reservas/${tenant}/${id}`,
   path = `/api/municipalities/${tenant}/reservations`,
@@ -389,6 +392,131 @@ test("a deadline rejection leaves the reservation confirmed and never invents a 
   ).toHaveCount(0);
 });
 
+test("the reservation names its space from the private detail while public reads are rate limited", async ({
+  page,
+}) => {
+  let publicUnitReads = 0;
+  await page.route(
+    `**/api/public/municipalities/${tenant}/units/${unit}`,
+    (r) => {
+      publicUnitReads++;
+      return r.fulfill({
+        status: 429,
+        headers: { "retry-after": "60" },
+        json: {
+          error: { code: "RATE_LIMITED", message: "Espera para continuar" },
+        },
+      });
+    },
+  );
+  await page.goto(detail);
+  const summary = page.getByRole("complementary", {
+    name: "Resumen de la reserva",
+  });
+  await expect(
+    summary.getByRole("heading", { name: "Pista 1", exact: true }),
+  ).toBeVisible();
+  await expect(summary.getByText("Oleiros · Centro")).toBeVisible();
+  await expect(page.getByText("Espacio reservado")).toHaveCount(0);
+  expect(publicUnitReads).toBe(0);
+});
+const changed = {
+  error: {
+    code: "RESERVATION_CHANGED",
+    message:
+      "La reserva ha cambiado. Consulta su estado actual antes de continuar.",
+  },
+};
+test("a cancellation refused because the reservation changed elsewhere explains why and retries the current revision", async ({
+  page,
+}) => {
+  // Modified in another tab: one hour later, still cancellable, revision 2.
+  const later = {
+    ...reservation,
+    revision: 2,
+    startsAt: new Date(Date.parse(startsAt) + 3600000).toISOString(),
+    endsAt: new Date(Date.parse(endsAt) + 3600000).toISOString(),
+  };
+  let current: Record<string, unknown> = reservation;
+  const sent: unknown[] = [];
+  await page.route(`**${path}/${id}`, (r) => r.fulfill({ json: current }));
+  await page.route(`**${path}/${id}/cancel`, async (r) => {
+    sent.push(r.request().postDataJSON());
+    if (sent.length === 1) {
+      current = later;
+      return r.fulfill({ status: 409, json: changed });
+    }
+    current = { ...later, status: "CANCELADA", revision: 3 };
+    return r.fulfill({ json: current });
+  });
+  await page.goto(detail);
+  await page
+    .getByRole("button", { name: "Cancelar reserva", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByRole("button", { name: "Cancelar reserva", exact: true })
+    .click();
+  // The refresh to revision 2 keeps the dialog and the reason it failed.
+  await expect(dialog.getByText(changed.error.message)).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Cancelar reserva", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    dialog.getByRole("button", { name: "Mantener reserva", exact: true }),
+  ).toBeVisible();
+  await dialog
+    .getByRole("button", { name: "Cancelar reserva", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Reserva cancelada", exact: true }),
+  ).toBeVisible();
+  expect(sent).toEqual([{ expectedRevision: 1 }, { expectedRevision: 2 }]);
+});
+test("a cancellation refused because a change elsewhere ended the deadline explains why and only offers to close", async ({
+  page,
+}) => {
+  // Moved in another tab to start within the cancellation window: no longer cancellable.
+  const soon = {
+    ...reservation,
+    revision: 2,
+    startsAt: new Date(Date.now() + 3600000).toISOString(),
+    endsAt: new Date(Date.now() + 7200000).toISOString(),
+  };
+  let current: Record<string, unknown> = reservation,
+    posts = 0;
+  await page.route(`**${path}/${id}`, (r) => r.fulfill({ json: current }));
+  await page.route(`**${path}/${id}/cancel`, (r) => {
+    posts++;
+    current = soon;
+    return r.fulfill({ status: 409, json: changed });
+  });
+  await page.goto(detail);
+  await page
+    .getByRole("button", { name: "Cancelar reserva", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByRole("button", { name: "Cancelar reserva", exact: true })
+    .click();
+  await expect(dialog.getByText(changed.error.message)).toBeVisible();
+  await expect(
+    dialog.getByText("Ya no se puede cancelar: el plazo ha terminado."),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Cancelar reserva", exact: true }),
+  ).toBeDisabled();
+  await dialog
+    .getByRole("button", { name: "Cerrar", exact: true })
+    .last()
+    .click();
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByText(/Ya no se puede cancelar ni cambiar/),
+  ).toBeVisible();
+  expect(posts).toBe(1);
+});
 test("an expired session retains the pending command for explicit recovery after sign-in", async ({
   page,
 }) => {

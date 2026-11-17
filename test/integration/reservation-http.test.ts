@@ -315,6 +315,9 @@ test("reservation HTTP uses verified sessions, origin checks and replay across r
       assert.equal(detail.json().revision, 3);
       assert.equal(detail.json().usageRulesVersion, 1);
       assert.equal(detail.json().usageRulesText, "Synthetic fixture rules");
+      assert.equal(detail.json().unitName, "Unit");
+      assert.equal(detail.json().facilityName, "Facility");
+      assert.equal(detail.json().municipalityName, "Synthetic");
       assert.ok(detail.json().rulesAcceptedAt);
       assert.ok(detail.json().conditionsAcceptedAt);
       const snapshots = (

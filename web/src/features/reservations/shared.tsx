@@ -51,6 +51,10 @@ export interface Reservation {
   bookingPolicyVersion: number | null;
   /** Only in the reservation detail. */
   arrivedAt?: string | null;
+  /** Only in the reservation detail, also for a withdrawn space; null only if the space no longer exists. */
+  municipalityName?: string | null;
+  facilityName?: string | null;
+  unitName?: string | null;
 }
 export const reservationPath = (tenant: string, id: string) =>
   `/api/municipalities/${tenant}/reservations/${id}`;
@@ -106,39 +110,57 @@ export function PendingLink() {
     </p>
   ) : null;
 }
+/**
+ * A reservation command. `revision` is the reservation state the body was built from: when a refresh changes it, the
+ * fields start over for the new state (a consent given for the old one does not carry over) while the failure that
+ * caused the refresh stays visible, so the person can read why it failed and retry against the current state. The
+ * owner keeps this component mounted across that refresh and passes `unavailable` when the action no longer applies.
+ */
 export function ReservationAction({
   path,
   body,
   label,
   children,
   onFailure,
+  onSuccess,
   note,
   danger,
   secondary,
+  revision,
+  unavailable,
 }: {
   path: string;
   body: unknown;
   label: string;
   children?: ReactNode;
   onFailure?: (error: unknown) => Promise<void>;
+  /** Runs once the command is confirmed, before the reservation page is shown. */
+  onSuccess?: () => void;
   note?: string;
   danger?: boolean;
   secondary?: ReactNode;
+  revision?: number;
+  unavailable?: string;
 }) {
   const { account } = useSession();
   const { locale } = usePreferences();
   const client = useQueryClient();
   const navigate = useNavigate();
   const [uncertain, setUncertain] = useState(false);
+  const [failure, setFailure] = useState<{ error: unknown }>();
   if (uncertain || (account && readCommand(account.accountId)))
     return <PendingLink />;
   return (
     <ActionForm
+      key={revision}
+      initialError={failure?.error}
       label={label}
       danger={danger}
       secondary={secondary}
+      unavailable={unavailable}
       submit={async () => {
         if (!account) return;
+        setFailure(undefined);
         const policy = await api<CommandPolicy>(
           "/api/public/reservation-command-policy",
           { signal: AbortSignal.timeout(15000) },
@@ -158,6 +180,7 @@ export function ReservationAction({
           await client.invalidateQueries({
             queryKey: ["private", account.accountId],
           });
+          onSuccess?.();
           navigate(detailPath(result.tenantId, result.id), { replace: true });
           restoreFocus();
         } catch (error) {
@@ -165,6 +188,8 @@ export function ReservationAction({
             setUncertain(true);
             return;
           }
+          // Held before the refresh, so a form rebuilt for the new revision still shows it.
+          setFailure({ error });
           await onFailure?.(error);
           throw error;
         }

@@ -10,6 +10,7 @@ import {
 import { Alert } from "../ui/alert/alert";
 import { Button } from "../ui/button/button";
 import { announce } from "./announce";
+import { ApiError } from "./api";
 import { Failure } from "./feedback";
 import styles from "./layout.module.css";
 import { clearFields, trackValidity } from "./validity";
@@ -27,6 +28,7 @@ export function ActionForm({
   disabled = false,
   unavailable,
   secondary,
+  initialError,
 }: {
   children?: ReactNode;
   secondary?: ReactNode;
@@ -42,13 +44,23 @@ export function ActionForm({
   disabled?: boolean;
   /** Why the action cannot run yet; disables submission and is shown next to the button. */
   unavailable?: string;
+  /**
+   * A failure to show when the form mounts: an owner that rebuilds the form for refreshed data passes the failure
+   * that caused the refresh, so the person still sees why their submission did not go through.
+   */
+  initialError?: unknown;
 }) {
   const lock = useRef(false);
   const reasonId = useId();
   const blocked = disabled || !!unavailable;
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>();
+  const [error, setError] = useState<unknown>(initialError);
   const [done, setDone] = useState(false);
+  // A failure carried into a new form is shown together with it, which a live region does not announce reliably.
+  const carried = useRef(initialError);
+  useEffect(() => {
+    if (carried.current instanceof ApiError) announce(carried.current.message);
+  }, []);
   // The page announcer speaks the outcome once it is shown: a live region mounted together with its text is not
   // announced reliably. A form that unmounted meanwhile (its owner moved on) leaves the outcome to its owner.
   useEffect(() => {

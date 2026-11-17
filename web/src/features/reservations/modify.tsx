@@ -2,7 +2,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { ApiError, api, type Page } from "../../app/api";
-import { useMunicipality, usePublicAppearance } from "../../app/branding";
+import { usePublicAppearance } from "../../app/branding";
 import { Failure, Loading } from "../../app/feedback";
 import { isUuid } from "../../app/ids.ts";
 import { usePreferences } from "../../app/preferences-provider";
@@ -13,6 +13,7 @@ import booking from "../catalog/booking.module.css";
 import { municipalToday } from "../catalog/dates";
 import { useFacilities } from "../catalog/search";
 import { type Unit, UnitAvailability } from "../catalog/unit";
+import { placeContext, placeUnitName } from "./detail-model";
 import { detailPath, PendingLink, useReservation } from "./shared";
 
 export function ModifyReservation() {
@@ -23,8 +24,9 @@ export function ModifyReservation() {
   const { account } = useSession();
   const [search, setSearch] = useSearchParams();
   const reservation = useReservation(tenantId, reservationId);
-  const municipality = useMunicipality(tenantId);
   const facilities = useFacilities(tenantId);
+  // The public view of the current space only preselects it for a new time; its names come from the reservation,
+  // which keeps them for a withdrawn space and does not depend on the public request budget.
   const current = useQuery({
     queryKey: [
       "public",
@@ -116,7 +118,6 @@ export function ModifyReservation() {
       />
     );
   if (!r) return null;
-  const currentFacility = current.data?.facilityName;
   const unitOptions =
     units.data?.pages
       .flatMap((p) => p.items)
@@ -140,16 +141,11 @@ export function ModifyReservation() {
       <PendingLink />
       <div className={booking.split}>
         <BookingSummary
-          context={[
-            t("Reserva actual", "Reserva actual"),
-            municipality.data?.name,
-            currentFacility,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-          unitName={
-            current.data?.name ?? t("Espacio reservado", "Espazo reservado")
-          }
+          context={placeContext(r, t("Reserva actual", "Reserva actual"))}
+          unitName={placeUnitName(
+            r,
+            t("Espacio reservado", "Espazo reservado"),
+          )}
           startsAt={r.startsAt}
           endsAt={r.endsAt}
           timeZone={r.timeZone}
