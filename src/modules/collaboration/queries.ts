@@ -3,6 +3,7 @@ import { command } from "../../database/command.ts";
 import { HttpError } from "../../http/errors.ts";
 import {
   type AuthenticatedAccount,
+  accountLabels,
   requireAdministrator,
 } from "../identity/index.ts";
 
@@ -124,6 +125,12 @@ export async function readAgreementVersion(
         "SELECT tenant_id,approved_by,approved_at,correlation_id FROM domain.agreement_approval WHERE agreement_id=$1 AND version=$2 ORDER BY tenant_id",
         [agreementId, version],
       );
+      const approvers = await accountLabels(
+        client,
+        approvals.rows
+          .filter((a) => a.tenant_id === tenantId)
+          .map((a) => a.approved_by),
+      );
       // As with approvals, the author is disclosed only to its own municipality.
       const own = await client.query(
         "SELECT 1 FROM domain.municipal_administrator WHERE tenant_id=$1 AND account_id=$2",
@@ -154,6 +161,10 @@ export async function readAgreementVersion(
           tenantId: a.tenant_id,
           // Another participant's approver is that municipality's own data; evidence of its approval remains.
           approvedBy: a.tenant_id === tenantId ? a.approved_by : null,
+          approvedByLabel:
+            a.tenant_id === tenantId
+              ? (approvers.get(a.approved_by) ?? null)
+              : null,
           approvedAt: a.approved_at.toISOString(),
           correlationId: a.correlation_id,
         })),
