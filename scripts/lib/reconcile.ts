@@ -106,6 +106,12 @@ export async function reconcileRestore(client: Client, directory: string) {
       count(*) FILTER(WHERE accepted_at IS NOT NULL)::int AS accepted,
       count(*) FILTER(WHERE exhausted_at IS NOT NULL)::int AS exhausted FROM domain.reservation_email`)
     ).rows[0];
+    // Invitation notices still queued in the copy would be sent on reopening.
+    const invitationMail = (
+      await client.query(`SELECT count(*) FILTER(WHERE exhausted_at IS NULL)::int AS pending,
+      count(*) FILTER(WHERE lease_token IS NOT NULL)::int AS leased,
+      count(*) FILTER(WHERE exhausted_at IS NOT NULL)::int AS exhausted FROM domain.invitation_email`)
+    ).rows[0];
     const database = (
       await client.query(
         "SELECT current_database() AS name, datconnlimit FROM pg_database WHERE datname=current_database()",
@@ -123,6 +129,7 @@ export async function reconcileRestore(client: Client, directory: string) {
       connectionLimit: database.datconnlimit,
       checks,
       mail,
+      invitationMail,
       status: Object.values(checks).some((n) => n !== 0)
         ? "INCONSISTENT"
         : "CHECKED_REQUIRES_REVIEW",
