@@ -1,7 +1,7 @@
 import { useParams } from "react-router";
 import { textField } from "../../app/action";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink as Link } from "../../app/link-button";
+import { BackLink } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { ManagementPage } from "../municipal/page";
@@ -39,7 +39,9 @@ function Restriction() {
     <ManagementPage
       title={t("Vinculación de la unidad", "Vinculación da unidade")}
       breadcrumb={
-        <Link to={agreementPath(m.id)}>{t("Convenios", "Convenios")}</Link>
+        <BackLink to={agreementPath(m.id)}>
+          {t("Convenios", "Convenios")}
+        </BackLink>
       }
       description={t(
         "Retirar la vinculación no publica la unidad ni modifica horarios, reservas o bloqueos.",

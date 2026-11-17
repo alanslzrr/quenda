@@ -2,7 +2,7 @@ import { useState } from "react";
 import { textField } from "../../app/action";
 import { ApiError } from "../../app/api";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink as Link } from "../../app/link-button";
+import { BackLink } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
@@ -69,9 +69,9 @@ export function AgreementEditor({ original }: { original?: Agreement }) {
           : t("Nuevo convenio", "Novo convenio")
       }
       breadcrumb={
-        <Link to={agreementPath(m.id)}>
+        <BackLink to={agreementPath(m.id)}>
           {t("Consultar versiones", "Consultar versións")}
-        </Link>
+        </BackLink>
       }
     >
       {original && (
