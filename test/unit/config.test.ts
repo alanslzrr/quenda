@@ -19,6 +19,16 @@ test("configuration has safe defaults and rejects invalid values without secrets
       .idempotencyRetentionSeconds,
     3600,
   );
+  assert.equal(readConfig(env).authClearSiteCookies, false);
+  assert.equal(
+    readConfig({ ...env, AUTH_CLEAR_SITE_COOKIES: "" }).authClearSiteCookies,
+    false,
+  );
+  assert.equal(
+    readConfig({ ...env, AUTH_CLEAR_SITE_COOKIES: "true" })
+      .authClearSiteCookies,
+    true,
+  );
   for (const override of [
     { IDEMPOTENCY_RETENTION_SECONDS: "0" },
     { IDEMPOTENCY_RETENTION_SECONDS: "1.5" },
@@ -38,6 +48,8 @@ test("configuration has safe defaults and rejects invalid values without secrets
     { AUTH_ORIGIN: "http://quenda.example.org" },
     { AUTH_ORIGIN: "https://quenda.example.org/redirect" },
     { AUTH_SECRET: "short" },
+    { AUTH_CLEAR_SITE_COOKIES: "1" },
+    { AUTH_CLEAR_SITE_COOKIES: "TRUE" },
     { NODE_ENV: "production" },
   ]) {
     assert.throws(

@@ -13,6 +13,7 @@ async function start(): Promise<void> {
   const identityConfig = {
     origin: config.authOrigin,
     secret: config.authSecret,
+    clearSiteCookiesOnSignOut: config.authClearSiteCookies,
   };
   const authentication = createAuthentication(
     database.auth,

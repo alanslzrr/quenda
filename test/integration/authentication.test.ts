@@ -31,6 +31,7 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
     const config = {
       origin: "https://quenda.test",
       secret: randomBytes(32).toString("hex"),
+      clearSiteCookiesOnSignOut: true,
     };
     const identity = createAuthentication(auth, config, mail);
     const database = {
@@ -1378,6 +1379,74 @@ test("Better Auth with real HTTP, PostgreSQL and local delivery", {
           >[]) {
             for (const operation of Object.values(operations))
               assert.ok(operation.responses["503"]);
+          }
+        },
+      );
+      await t.test(
+        "sign-out clears site cookies only on success and only when configured",
+        async () => {
+          const client = browser(app, "192.0.2.130");
+          const email = "site-data@example.test";
+          await signup(client, email);
+          await verify(client, email);
+          const signIn = () =>
+            client.request("/api/auth/sign-in/email", { email, password });
+          assert.equal((await signIn()).statusCode, 200);
+          const session = client.cookie();
+          assert.match(session, /session_token=/);
+          const forged = await client.request(
+            "/api/auth/sign-out",
+            {},
+            { origin: "https://attacker.test" },
+          );
+          assert.equal(forged.statusCode, 403, forged.body);
+          assert.equal(forged.headers["clear-site-data"], undefined);
+          assert.equal(client.cookie(), session);
+          const signedOut = await client.request("/api/auth/sign-out", {});
+          assert.equal(signedOut.statusCode, 200, signedOut.body);
+          assert.equal(signedOut.headers["clear-site-data"], '"cookies"');
+          // The directive never names storage, and Better Auth still expires
+          // its own cookies for browsers that ignore Clear-Site-Data.
+          const expired = [signedOut.headers["set-cookie"] ?? []].flat();
+          assert.ok(
+            expired.some(
+              (cookie) =>
+                /session_token=;/.test(cookie) && /max-age=0/i.test(cookie),
+            ),
+            expired.join("\n"),
+          );
+          assert.equal(client.cookie(), "");
+          assert.equal(
+            (await client.request("/api/me")).statusCode,
+            401,
+            "the revoked session must not authenticate",
+          );
+          const unconfigured = await buildApp({
+            database,
+            domain,
+            logLevel: "silent",
+            identity: {
+              authentication: identity,
+              config: { origin: config.origin, secret: config.secret },
+            },
+          });
+          try {
+            const other = browser(unconfigured, "192.0.2.131");
+            assert.equal(
+              (
+                await other.request("/api/auth/sign-in/email", {
+                  email,
+                  password,
+                })
+              ).statusCode,
+              200,
+            );
+            const plain = await other.request("/api/auth/sign-out", {});
+            assert.equal(plain.statusCode, 200, plain.body);
+            assert.equal(plain.headers["clear-site-data"], undefined);
+            assert.equal(other.cookie(), "");
+          } finally {
+            await unconfigured.close();
           }
         },
       );

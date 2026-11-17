@@ -356,7 +356,15 @@ export async function registerAuthentication(
           .header("content-language", locale)
           .send({ error: { code, message }, requestId: request.id });
       }
-      if (path === "/sign-out" && response.ok)
+      // Only cookies: browser storage keeps per-device preferences across
+      // sign-out. Browsers clear cookies for the whole registrable domain
+      // (sibling subdomains included), hence the explicit opt-in. Better Auth
+      // expires its own cookies with Set-Cookie either way.
+      if (
+        path === "/sign-out" &&
+        response.ok &&
+        config.clearSiteCookiesOnSignOut
+      )
         reply.header("clear-site-data", '"cookies"');
       return reply.send(text || null);
     },

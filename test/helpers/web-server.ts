@@ -30,6 +30,7 @@ await withDatabase(async ({ auth, domain, migration, worker }) => {
   const config = {
     origin: "http://127.0.0.1:5173",
     secret: randomBytes(32).toString("hex"),
+    clearSiteCookiesOnSignOut: true,
   };
   const authentication = createAuthentication(
     auth,

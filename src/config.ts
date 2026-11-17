@@ -17,6 +17,12 @@ export interface Config {
   databasePoolMax: number;
   authOrigin: string;
   authSecret: string;
+  /**
+   * Browsers apply `Clear-Site-Data: "cookies"` to the whole registrable domain,
+   * so it is sent on sign-out only when the operator confirms that the domain
+   * serves nothing but this instance.
+   */
+  authClearSiteCookies: boolean;
   mail: MailConfiguration;
 }
 
@@ -100,6 +106,9 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
     throw new ConfigurationError("AUTH_ORIGIN");
   if (!env.AUTH_SECRET || env.AUTH_SECRET.length < 32)
     throw new ConfigurationError("AUTH_SECRET");
+  const clearSiteCookies = env.AUTH_CLEAR_SITE_COOKIES || "false";
+  if (clearSiteCookies !== "true" && clearSiteCookies !== "false")
+    throw new ConfigurationError("AUTH_CLEAR_SITE_COOKIES");
   let mail: MailConfiguration;
   try {
     mail = readMailConfiguration(env);
@@ -134,6 +143,7 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
     authDatabaseUrl: auth.href,
     authOrigin: origin.origin,
     authSecret: env.AUTH_SECRET,
+    authClearSiteCookies: clearSiteCookies === "true",
     mail,
   };
 }

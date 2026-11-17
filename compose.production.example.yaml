@@ -85,6 +85,7 @@ services:
       DOMAIN_DATABASE_URL: postgresql://quenda_domain:${DOMAIN_DATABASE_PASSWORD}@db:5432/quenda
       AUTH_DATABASE_URL: postgresql://quenda_auth:${AUTH_DATABASE_PASSWORD}@db:5432/quenda
       TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-172.28.10.10/32}
+      AUTH_CLEAR_SITE_COOKIES: ${AUTH_CLEAR_SITE_COOKIES:-false}
     networks: [data, edge]
     depends_on:
       migrate: { condition: service_completed_successfully }

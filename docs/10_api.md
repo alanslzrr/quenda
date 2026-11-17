@@ -32,6 +32,8 @@ Better Auth utiliza el esquema `auth`, con migraciones ejecutadas fuera del proc
 
 Las rutas habilitadas están bajo `/api/auth`; `GET /api/auth/open-api/generate-schema` devuelve su contrato OpenAPI. `GET /api/me` devuelve la identidad verificada y si la sesión ha superado MFA. Las cookies son Secure, HttpOnly y SameSite=Lax; fuera del desarrollo en loopback se requiere HTTPS. La autenticación no concede permisos municipales.
 
+`POST /api/auth/sign-out` revoca la sesión y responde con `Set-Cookie` que caduca las cookies de sesión. Si `AUTH_CLEAR_SITE_COOKIES=true`, una respuesta `200` incluye también `Clear-Site-Data: "cookies"`; las respuestas de error nunca la incluyen. La directiva no afecta al almacenamiento local, pero el navegador la aplica a todas las cookies del dominio registrable, incluidos otros subdominios; véanse [sesiones](05_seguridad_y_cumplimiento.md#sesiones-y-protección-de-peticiones) y [operación](12_operacion.md). Solo admite `true` o `false` (por defecto); otro valor impide arrancar la API.
+
 ## Administración municipal por API
 
 `POST /api/municipalities` recibe `name`, `timezone`, `administratorEmail` e `invitationExpiresAt` (ISO 8601). Requiere una sesión del operador con MFA y devuelve `tenantId` e `invitationId`. El alta no concede permisos todavía.
