@@ -102,9 +102,11 @@ test("operator invitation preserves draft after MFA rejection and never adds a r
   await expect(
     page.getByText("MFA reciente requerido", { exact: true }),
   ).toBeVisible();
+  // The draft survives; an email field drops the surrounding spaces typed
+  // into it, so the kept value is the sanitized address.
   await expect(
     page.getByLabel(/Correo del destinatario|Correo do destinatario/),
-  ).toHaveValue(" Recipient@Example.test ");
+  ).toHaveValue("Recipient@Example.test");
   // Addressed to the trimmed email, never to an account identifier.
   expect(body?.email).toBe("Recipient@Example.test");
   expect(Object.keys(body ?? {}).sort()).toEqual(["email", "expiresAt"]);
