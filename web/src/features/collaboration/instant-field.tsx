@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useFieldErrorAnnouncement } from "../../app/announce";
+import { DateTimeField } from "../../app/date-fields";
+import styles from "../../app/date-fields.module.css";
 import { usePreferences } from "../../app/preferences-provider";
-import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
 import { civilOptions, civilValue } from "./model";
 export function InstantField({
@@ -36,17 +37,15 @@ export function InstantField({
       : undefined;
   const announceError = useFieldErrorAnnouncement(label, error);
   return (
-    <div>
-      <Input
+    <div className={styles.stack}>
+      <DateTimeField
         label={label}
         required
-        type="datetime-local"
-        step="0.001"
         value={value}
         error={error}
         onBlur={announceError}
-        onChange={(e) => {
-          setValue(e.target.value);
+        onValueChange={(next) => {
+          setValue(next);
           setChoice("");
         }}
       />
