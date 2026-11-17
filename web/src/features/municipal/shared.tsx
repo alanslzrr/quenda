@@ -348,13 +348,23 @@ export function MunicipalLayout() {
   }
   if (query.isError && (!query.data || discardEditor(query.error)))
     return (
-      <>
-        <Failure error={query.error} retry={() => void query.refetch()} />
-        {/* The management shell is not drawn here, so offer the way out. */}
+      // A neutral frame: no permissions are assumed, so the menu only offers
+      // personal use, and the page still has its header and a way back.
+      <ResourceShell
+        municipality={{
+          id: tenantId,
+          name: t("Gestión municipal", "Xestión municipal"),
+          administrator: false,
+          permissions: [],
+        }}
+      >
+        <h1>{t("Gestión municipal", "Xestión municipal")}</h1>
+        {/* Access or existence failures: retrying would only repeat them. */}
+        <Failure error={query.error} />
         <LinkButton to="/administracion">
           {t("Volver a Gestión", "Volver a Xestión")}
         </LinkButton>
-      </>
+      </ResourceShell>
     );
   const context = query.data;
   if (!context) return null;
