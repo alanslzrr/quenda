@@ -1,0 +1,17 @@
+.field {
+  min-width: 0;
+}
+/* The date takes the room; the typed time needs only "hh:mm". Both labels share the first row. */
+.dateTime {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(6.5rem, 8rem);
+  align-items: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+/* A field with a follow-up control (such as the UTC offset of a repeated hour) keeps the form's spacing between them. */
+.stack {
+  display: grid;
+  gap: 1.4rem;
+  min-width: 0;
+}
