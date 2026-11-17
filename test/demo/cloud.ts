@@ -607,6 +607,9 @@ export async function seedCloudDemo(
   await migration.query(
     "UPDATE domain.reservation_email SET accepted_at=created_at WHERE accepted_at IS NULL",
   );
+  // Seeded invitations are history too: no notice reaches a demo address.
+  // A delivered notice leaves no row, so attending one removes it.
+  await migration.query("DELETE FROM domain.invitation_email");
 
   // The resident's account: language and a calendar subscription.
   await saveAccountPreferences(domain, lucia, "gl");
