@@ -286,11 +286,11 @@ test("agreement drafts preserve participant ownership and do not activate capabi
       async () => {
         await assert.rejects(approve(2, "outsider"), { code: "NOT_FOUND" });
         await assert.rejects(approve(0, "missing-unit", agreement, []), {
-          code: "CONFLICT",
+          code: "AGREEMENT_STATE_CONFLICT",
         });
         await assert.rejects(
           approve(0, "foreign-unit", agreement, [units[1] as string]),
-          { code: "CONFLICT" },
+          { code: "AGREEMENT_STATE_CONFLICT" },
         );
         await assert.rejects(
           approveAgreement(
@@ -433,7 +433,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
           [id],
         );
         await assert.rejects(approve(0, "cannot-reapprove", id), {
-          code: "CONFLICT",
+          code: "AGREEMENT_STATE_CONFLICT",
         });
       },
     );
@@ -526,7 +526,9 @@ test("agreement drafts preserve participant ownership and do not activate capabi
           status: "BORRADOR",
         });
         assert.deepEqual((await version("version-two")).result, saved.result);
-        await assert.rejects(version("stale-version"), { code: "CONFLICT" });
+        await assert.rejects(version("stale-version"), {
+          code: "STALE_VERSION",
+        });
         assert.deepEqual(
           (
             await migration.query(
@@ -567,7 +569,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
           input.timeZone,
         );
         await assert.rejects(approve(0, "obsolete-approval"), {
-          code: "CONFLICT",
+          code: "STALE_VERSION",
         });
         const approveNew = (i: number) =>
           approveAgreement(
@@ -617,7 +619,8 @@ test("agreement drafts preserve participant ownership and do not activate capabi
         );
         assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
         for (const r of results)
-          if (r.status === "rejected") assert.equal(r.reason.code, "CONFLICT");
+          if (r.status === "rejected")
+            assert.equal(r.reason.code, "STALE_VERSION");
         assert.deepEqual(
           (
             await migration.query(
@@ -661,7 +664,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
         ]);
         assert.equal(revision.status, "fulfilled");
         if (approval.status === "rejected")
-          assert.equal(approval.reason.code, "CONFLICT");
+          assert.equal(approval.reason.code, "STALE_VERSION");
         assert.equal(
           (
             await migration.query(
@@ -690,7 +693,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
           2,
         );
         await assert.rejects(approve(1, "approve-obsolete-after-edit", id), {
-          code: "CONFLICT",
+          code: "STALE_VERSION",
         });
       },
     );
