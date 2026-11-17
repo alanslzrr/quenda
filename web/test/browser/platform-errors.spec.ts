@@ -33,10 +33,12 @@ async function invite(page: Page, privacy = false) {
   await page.goto(
     `${view}/${privacy ? "invitar-privacidad" : "invitar-operador"}`,
   );
-  await page.getByLabel(/Identificador de (cuenta|conta)/).fill("recipient");
+  await page
+    .getByLabel(/Correo del destinatario|Correo do destinatario/)
+    .fill(" Recipient@Example.test ");
   await pickDateTime(page, "Aceptar antes de", future());
   await page
-    .getByRole("checkbox", { name: /Confirmo la cuenta|Confirmo a conta/ })
+    .getByRole("checkbox", { name: /Confirmo el correo|Confirmo o correo/ })
     .check();
 }
 test("municipal or privacy authority cannot open operator controls or query platform lists", async ({
@@ -100,11 +102,12 @@ test("operator invitation preserves draft after MFA rejection and never adds a r
   await expect(
     page.getByText("MFA reciente requerido", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel(/Identificador de (cuenta|conta)/)).toHaveValue(
-    "recipient",
-  );
-  expect(body?.accountId).toBe("recipient");
-  expect(Object.keys(body ?? {}).sort()).toEqual(["accountId", "expiresAt"]);
+  await expect(
+    page.getByLabel(/Correo del destinatario|Correo do destinatario/),
+  ).toHaveValue(" Recipient@Example.test ");
+  // Addressed to the trimmed email, never to an account identifier.
+  expect(body?.email).toBe("Recipient@Example.test");
+  expect(Object.keys(body ?? {}).sort()).toEqual(["email", "expiresAt"]);
   await expect(
     page.getByRole("button", { name: "Enviar invitación" }),
   ).toBeEnabled();
@@ -139,9 +142,10 @@ test("privacy grants require explicit independent permissions and omit unchecked
   expect(sent).toMatchObject({
     permissions: ["PRIVACY_READ"],
     roleExpiresAt: null,
-    accountId: "recipient",
+    email: "Recipient@Example.test",
     reason: "Autorización específica",
   });
+  expect(sent).not.toHaveProperty("accountId");
 });
 test("lost platform responses stay blocked across reload and never persist the payload", async ({
   page,
@@ -166,7 +170,7 @@ test("lost platform responses stay blocked across reload and never persist the p
     JSON.stringify({ ...sessionStorage }),
   );
   expect(stored).toContain("pending");
-  expect(stored).not.toContain("recipient");
+  expect(stored).not.toContain("Example.test");
   expect(stored).not.toContain("expiresAt");
   await page.getByRole("checkbox", { name: /He comprobado|Comprobei/ }).check();
   await page
@@ -283,7 +287,7 @@ test("municipal replacement and recovery send exact scopes and a distinct verifi
   );
   expect(sent[1].body.verificationReference).toBe("Acto 27");
 });
-test("suspending the current identity warns before confirmation and exits after session revocation", async ({
+test("suspending the current identity by its email warns before confirmation and exits after session revocation", async ({
   page,
 }) => {
   await fixture(page);
@@ -306,8 +310,9 @@ test("suspending the current identity warns before confirmation and exits after 
           },
     );
   });
-  await page.route("**/api/platform/accounts/operator/suspend", async (r) => {
+  await page.route("**/api/platform/account-suspensions", async (r) => {
     expect(r.request().postDataJSON()).toEqual({
+      email: "Operator@Example.test",
       reason: "Cuenta comprometida",
     });
     suspended = true;
@@ -316,7 +321,9 @@ test("suspending the current identity warns before confirmation and exits after 
     });
   });
   await page.goto(`${view}/suspender`);
-  await page.getByLabel(/Identificador de (cuenta|conta)/).fill("operator");
+  await page
+    .getByRole("textbox", { name: /Correo de la cuenta|Correo da conta/ })
+    .fill(" Operator@Example.test ");
   await expect(page.getByRole("alert")).toContainText(/propia|propio/);
   await page.getByLabel("Motivo", { exact: true }).fill("Cuenta comprometida");
   await page.getByRole("checkbox", { name: /Confirmo/ }).check();
@@ -325,6 +332,38 @@ test("suspending the current identity warns before confirmation and exits after 
     .click();
   await expect(page).toHaveURL(/\/acceso/);
   expect(suspended).toBe(true);
+});
+test("suspending by identifier sends only the reason to the identified account", async ({
+  page,
+}) => {
+  await fixture(page);
+  let sent: unknown;
+  await page.route("**/api/platform/accounts/other%2Fid/suspend", async (r) => {
+    sent = r.request().postDataJSON();
+    await r.fulfill({
+      json: { accountId: "other/id", suspendedAt: new Date().toISOString() },
+    });
+  });
+  await page.goto(`${view}/suspender`);
+  await page
+    .getByRole("combobox", {
+      name: /Identificar la cuenta por|Identificar a conta por/,
+    })
+    .click();
+  await page
+    .getByRole("option", { name: /Identificador de (cuenta|conta)/ })
+    .click();
+  await page
+    .getByRole("textbox", { name: /Identificador de (cuenta|conta)/ })
+    .fill("other/id");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await page.getByLabel("Motivo", { exact: true }).fill("Cuenta comprometida");
+  await page.getByRole("checkbox", { name: /Confirmo/ }).check();
+  await page
+    .getByRole("button", { name: /Suspender cuenta|Suspender conta/ })
+    .click();
+  await expect(page.getByRole("status")).toContainText(/suspendida/);
+  expect(sent).toEqual({ reason: "Cuenta comprometida" });
 });
 test("withdrawing the current operator returns to personal access and refreshes platform navigation", async ({
   page,
