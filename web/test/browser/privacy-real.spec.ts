@@ -175,6 +175,20 @@ test("authorized privacy staff manages policies, holds, scoped copies and all in
       name: /Excepciones y conflictos|Excepcións e conflitos/,
     })
     .click();
+  // Scan the view once its entrance fade has settled, not its intermediate colours.
+  const holds = page.getByRole("heading", {
+    name: /Excepciones activas|Excepcións activas/,
+  });
+  await expect(holds).toBeVisible();
+  await expect
+    .poll(() =>
+      holds.evaluate((node) => {
+        for (let el: Element | null = node; el; el = el.parentElement)
+          if (getComputedStyle(el).opacity !== "1") return false;
+        return true;
+      }),
+    )
+    .toBe(true);
   expect(
     (
       await new AxeBuilder({ page })
