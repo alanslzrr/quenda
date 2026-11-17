@@ -20,13 +20,30 @@ import {
 const run = promisify(execFile);
 const root = path.resolve("..");
 
-/** The month that closed three months ago (`YYYY-MM`), before the seeded history. */
-function closedMonth() {
+/** A closed month (`YYYY-MM`), `back` months before the current one. */
+function closedMonth(back: number) {
   const now = new Date();
   const month = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 3, 1),
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1),
   );
   return month.toISOString().slice(0, 7);
+}
+
+/** Midnight in Madrid at the start of a `YYYY-MM` month, as an instant. */
+function madridMonthStart(month: string) {
+  const guess = new Date(`${month}-01T00:00:00Z`);
+  const offset = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Madrid",
+    timeZoneName: "longOffset",
+  })
+    .formatToParts(guess)
+    .find((part) => part.type === "timeZoneName")
+    ?.value.match(/GMT([+-])(\d{2}):(\d{2})/);
+  const minutes = offset
+    ? (offset[1] === "-" ? -1 : 1) *
+      (Number(offset[2]) * 60 + Number(offset[3]))
+    : 0;
+  return new Date(guess.getTime() - minutes * 60000).toISOString();
 }
 
 /**
@@ -43,9 +60,14 @@ async function agreementWithHistory(month: string) {
   const end = new Date(
     Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1),
   );
-  // Madrid midnight of both month boundaries, as the agreement agreed them.
-  const from = new Date(start.getTime() - 2 * 3600000).toISOString();
-  const to = new Date(end.getTime() - 3600000).toISOString();
+  // From Madrid midnight of the month to the end of the following one: the
+  // following month has no bookings attributed to the agreement.
+  const from = madridMonthStart(month);
+  const to = madridMonthStart(
+    new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 1))
+      .toISOString()
+      .slice(0, 7),
+  );
   const marta = await accountId("administracion@valdeira.demo.test");
   const prefix = `informe-${month}-`;
   await sql(
@@ -221,53 +243,27 @@ async function review(
 test("CU-18 consultar un informe conjunto", async ({ page, browser }) => {
   test.setTimeout(300000);
   const cu = new Capture("CU-18");
-  const month = closedMonth();
+  const month = closedMonth(3);
+  const following = closedMonth(2);
   const agreement = await agreementWithHistory(month);
 
-  // Preparación del mes cerrado: el proceso mensual calcula el agregado.
+  // Precondición: al cerrarse cada mes, Quenda prepara su agregado.
   const { databases } = await access();
-  const command = `node src/monthly-report-worker.ts ${agreement} ${month} 0`;
-  const prepared = await run(
-    "node",
-    ["src/monthly-report-worker.ts", agreement, month, "0"],
-    {
-      cwd: root,
-      env: { ...process.env, WORKER_DATABASE_URL: databases.worker },
-    },
-  );
-  await cu.terminal(
-    page,
-    "preparar-mes",
-    `WORKER_DATABASE_URL=… ${command}`,
-    prepared.stdout,
-  );
+  for (const closed of [month, following])
+    await run(
+      "node",
+      ["src/monthly-report-worker.ts", agreement, closed, "0"],
+      {
+        cwd: root,
+        env: { ...process.env, WORKER_DATABASE_URL: databases.worker },
+      },
+    );
 
-  // Paso 1: el gestor solicita el informe de un convenio y un mes publicado.
-  await signIn(page, "manager");
   const brais = await accountId("xestion@valdeira.demo.test");
-  await page
-    .getByRole("navigation", { name: "Navegación principal" })
-    .getByRole("link", { name: "Gestión", exact: true })
-    .click();
-  await page
-    .getByRole("navigation", { name: "Gestión municipal" })
-    .getByRole("link", { name: "Informes conjuntos", exact: true })
-    .click();
-  const field = await agreementField(page, agreement);
-  await snap(cu, page, "identificador-convenio", { target: field });
-  await pickMonth(page, "Mes publicado", month);
-  const submit = page.getByRole("button", { name: "Consultar informe" });
-  await snap(cu, page, "solicitar-informe", { target: submit });
-  await submit.click();
-
-  // Alternativa: sin evaluación favorable para esta cuenta, «no publicable».
-  const blocked = page.getByRole("heading", { name: /No publicable/ });
-  await expect(blocked).toBeVisible();
-  await snap(cu, page, "no-publicable", { tall: true, target: blocked });
-
-  // Revisores: cada administración participante evalúa el riesgo para él.
+  await page.goto("/");
   const admins = await secondBrowser(browser, page);
   try {
+    // Paso 1: cada administración participante evalúa el riesgo para él.
     const marta = await admins.newPage();
     await signIn(marta, "administrator");
     await review(marta, valdeira, agreement, month, brais, "Favorable", cu);
@@ -277,8 +273,24 @@ test("CU-18 consultar un informe conjunto", async ({ page, browser }) => {
       await signIn(xoan, "partner");
       await review(xoan, ribasanta, agreement, month, brais, "Favorable");
 
-      // Paso 2: con todas las evaluaciones favorables, el informe se entrega.
-      await consult(page, agreement, month);
+      // Paso 2: el gestor solicita el informe de un convenio y un mes publicado.
+      await signIn(page, "manager");
+      await page
+        .getByRole("navigation", { name: "Navegación principal" })
+        .getByRole("link", { name: "Gestión", exact: true })
+        .click();
+      await page
+        .getByRole("navigation", { name: "Gestión municipal" })
+        .getByRole("link", { name: "Informes conjuntos", exact: true })
+        .click();
+      const field = await agreementField(page, agreement);
+      await snap(cu, page, "identificador-convenio", { target: field });
+      await pickMonth(page, "Mes publicado", month);
+      const submit = page.getByRole("button", { name: "Consultar informe" });
+      await snap(cu, page, "solicitar-informe", { target: submit });
+      await submit.click();
+
+      // Paso 3: con todas las evaluaciones favorables, el informe se entrega.
       const authorized = page.getByRole("heading", {
         name: "Informe autorizado",
         exact: true,
@@ -288,6 +300,12 @@ test("CU-18 consultar un informe conjunto", async ({ page, browser }) => {
         tall: true,
         target: authorized,
       });
+
+      // Alternativa: un mes sin evaluación ni umbral es «no publicable».
+      await consult(page, agreement, following);
+      const blocked = page.getByRole("heading", { name: /No publicable/ });
+      await expect(blocked).toBeVisible();
+      await snap(cu, page, "no-publicable", { tall: true, target: blocked });
 
       // Alternativa: una evaluación desfavorable posterior impide la entrega.
       await review(xoan, ribasanta, agreement, month, brais, "Desfavorable");
