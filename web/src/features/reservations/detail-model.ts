@@ -19,3 +19,26 @@ export function placeContext(
 export function placeUnitName(place: ReservationPlace, fallback: string) {
   return place.unitName?.trim() ? place.unitName : fallback;
 }
+
+/**
+ * Whether the holder can still cancel: allowed until the accepted deadline, otherwise why not. A cancellation dialog
+ * that stays open after its reservation changed elsewhere states this instead of offering the action.
+ */
+export function cancellation(
+  reservation: {
+    status: "CONFIRMADA" | "CANCELADA" | "FINALIZADA";
+    startsAt: string;
+    cancellationMinutes: number;
+  },
+  holder: boolean,
+  now: number,
+): "allowed" | "cancelled" | "closed" {
+  if (reservation.status === "CANCELADA") return "cancelled";
+  const start = Date.parse(reservation.startsAt);
+  return holder &&
+    reservation.status === "CONFIRMADA" &&
+    start > now &&
+    now <= start - reservation.cancellationMinutes * 60000
+    ? "allowed"
+    : "closed";
+}
