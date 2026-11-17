@@ -930,7 +930,7 @@ Sirve para descargar una copia de los datos de tu cuenta que Quenda puede entreg
 
    ![Fragmento de «records» con un registro de ejemplo de cada categoría](../capturas/cu-19/03-registros-por-categoria.webp)
 
-   *El fragmento muestra un registro de cada categoría, abreviado: «AUTHENTICATION» (accesos y seguridad), «COMMUNICATIONS» (avisos y correos), «IDENTITY» (tu nombre, tu correo y tus preferencias), «MUNICIPAL_PROFILE» (cada municipio donde tienes relación) y «RESERVATIONS» (tus reservas, empezando por el espacio reservado). Los puntos suspensivos señalan lo que se ha omitido.*
+   *El fragmento muestra un registro de cada categoría, abreviado: «AUTHENTICATION» (accesos y seguridad), «COMMUNICATIONS» (avisos y correos), «IDENTITY» (tu nombre, tu correo y tus preferencias), «MUNICIPAL_PROFILE» (cada municipio donde tienes relación) y «RESERVATIONS» (tus reservas y sus datos asociados; aquí, lo que una reserva consume dentro de un convenio, con su horario y su espacio). Los puntos suspensivos señalan lo que se ha omitido.*
 
 ### Si algo no sale como se espera
 
