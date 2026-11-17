@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { accessibilityViolations } from "./axe-scan";
 import { pickDate } from "./date-fields";
 import { test } from "./fixtures";
 
@@ -45,12 +45,6 @@ async function mockPublic(page: Page, notices: Record<string, unknown> = {}) {
     return route.fulfill({ json: { items: [], nextCursor: null } });
   });
 }
-const scan = async (page: Page) =>
-  (
-    await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze()
-  ).violations;
 
 test("an instance without published texts still explains what the application does and what it stores", async ({
   page,
@@ -79,7 +73,7 @@ test("an instance without published texts still explains what the application do
   ).toHaveCount(0);
   await expect(page.getByText("quenda.municipality")).toBeVisible();
   await expect(page.getByText("quenda.reservation-command")).toBeVisible();
-  expect(await scan(page)).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
 
   // The footer lists the three legal pages only; the source offer lives in the legal notice.
   const footer = page.getByRole("navigation", { name: "Información legal" });
@@ -95,7 +89,7 @@ test("an instance without published texts still explains what the application do
       name: /^(Descargar el código fuente|Descargar o código fonte)/,
     }),
   ).toHaveAttribute("href", "/legal/source");
-  expect(await scan(page)).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.goto("/accesibilidad");
   await expect(
     page.getByText(/Real Decreto 1112\/2018|Real decreto 1112\/2018/).first(),
@@ -105,7 +99,7 @@ test("an instance without published texts still explains what the application do
       name: /^(Situación de cumplimiento|Situación de cumprimento)$/,
     }),
   ).toHaveCount(0);
-  expect(await scan(page)).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
 });
 
 test("a municipality's published text appears in the active language with fallback and the footer links to it", async ({
@@ -148,14 +142,14 @@ test("a municipality's published text appears in the active language with fallba
   // The Galician page has no "rights" text, so the Spanish one is shown instead of nothing.
   await expect(page.getByText("Escrito al registro municipal")).toBeVisible();
   await expect(page.getByText(/Texto pendiente|Texto pendente/)).toHaveCount(0);
-  expect(await scan(page)).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
 
   await page.goto(`/municipios/${tenant}/accesibilidad`);
   await expect(
     page.getByText(/Parcialmente conforme con WCAG 2\.1 nivel AA/),
   ).toBeVisible();
   await expect(page.getByText("accesibilidad@oleiros.example")).toBeVisible();
-  expect(await scan(page)).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
 
   await page.goto("/");
   await expect(
