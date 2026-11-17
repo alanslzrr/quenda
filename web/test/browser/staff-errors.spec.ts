@@ -274,7 +274,7 @@ test("a successful security withdrawal empties the reason without marking it inv
   });
   await submit.click();
   await expect(
-    page.getByText(/Cambios guardados|Cambios gardados/),
+    page.getByRole("main").getByText(/Cambios guardados|Cambios gardados/),
   ).toBeVisible();
   expect(sent).toEqual([{ reason: "Contención del compromiso local" }]);
   // The cleared field is neutral: neither the browser's :user-invalid nor aria-invalid flags it.
