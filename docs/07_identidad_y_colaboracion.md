@@ -16,7 +16,7 @@ Las instancias independientes mantienen cuentas y sesiones propias. La federaci�
 
 | Ámbito | Concesión | Límite |
 |---|---|---|
-| Municipio | El administrador invita mediante el mecanismo de permisos existente; el destinatario acepta con MFA. | Todo el municipio, sin limitar por unidad reservable ni extenderse a otros municipios. |
+| Municipio | El administrador invita al correo del destinatario mediante el mecanismo de permisos existente; acepta con MFA la cuenta con ese correo verificado. | Todo el municipio, sin limitar por unidad reservable ni extenderse a otros municipios. |
 | Identidad global | Un operador invita con permisos y motivo explícitos; el destinatario acepta con MFA. | Datos de identidad y seguridad de la instancia, no actividad municipal. |
 
 Ser administrador, operador o disponer de exportación deportiva no concede estos permisos. Un administrador u operador que los necesite recibe y acepta una concesión explícita, igual que cualquier destinatario. La asignación no acredita por sí sola una autorización jurídica para cada actuación ni designa al usuario como delegado de protección de datos.
@@ -52,7 +52,9 @@ El usuario actualiza sus campos permitidos sin modificar identificadores ni evid
 3. Verifica el nuevo correo.
 4. El sistema aplica el cambio atómicamente, revoca las sesiones y registra la operación.
 
-Los enlaces son de un solo uso, caducan y quedan vinculados a la cuenta, solicitud y credenciales. Cambiar contraseña, factores, correo o estado de cuenta invalida las comprobaciones anteriores. El correo no se sustituye mientras falte una confirmación. Solicitar un cambio a una dirección ya ocupada sigue la misma secuencia y respuesta: la comprobación de unicidad solo se comunica después de acreditar control de ambos correos.
+Los enlaces son de un solo uso, caducan y quedan vinculados a la cuenta, solicitud y credenciales. Cambiar contraseña, factores, correo o estado de cuenta invalida las comprobaciones anteriores.
+
+Las invitaciones municipales pendientes se dirigen a una dirección, no a una cuenta. Tras el cambio, la cuenta deja de ver y poder aceptar las invitaciones dirigidas a su correo anterior y pasa a ver las dirigidas al nuevo. Las ya aceptadas permanecen vinculadas a la cuenta. El correo no se sustituye mientras falte una confirmación. Solicitar un cambio a una dirección ya ocupada sigue la misma secuencia y respuesta: la comprobación de unicidad solo se comunica después de acreditar control de ambos correos.
 
 Si el usuario perdió acceso al correo anterior, una intervención operativa controlada comprueba su identidad y registra responsable, evidencia y motivo. El usuario debe verificar el nuevo correo y sus credenciales; la intervención no acepta esos controles en su nombre. Ningún permiso municipal permite cambiar unilateralmente el correo global.
 
@@ -207,6 +209,9 @@ Una política municipal no autoriza a destruir consumos, acreditaciones o refere
 
 Los listados de personal, invitaciones y perfiles municipales pueden proyectar nombre
 y correo exclusivamente para cuentas ya vinculadas a ese ámbito o a sus invitaciones.
+Una invitación pendiente dirigida a un correo muestra la dirección escrita por el
+emisor, nunca el nombre ni el identificador de una cuenta que la use; la cuenta
+aparece solo después de aceptarla.
 Esta proyección requiere administrador vigente y MFA reciente; no proporciona acceso
 a credenciales, otros roles o actividad de otros municipios. Se resuelve por lotes de
 la página mediante una función acotada y no concede lectura directa de tablas de
