@@ -1,8 +1,9 @@
 import { localDateTime } from "../../app/dates";
 import { Failure, Loading } from "../../app/feedback";
-import { ActionLink as Link } from "../../app/link-button";
+import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
-import styles from "../municipal/municipal.module.css";
+import { Badge } from "../../ui/badge/badge";
+import { RecordCard, RecordList } from "../../ui/record-card/record-card";
 import { usePrivacyQuery, usePrivacyScope } from "./context";
 import {
   type Category,
@@ -40,53 +41,69 @@ export function Policies() {
           )}
         </p>
       )}
-      {q.data.policies.map((p) => (
-        <section className={styles.section} key={p.policyId}>
-          <h3>
-            <Family value={p.category} />
-          </h3>
-          <p>
-            {p.revokedAt
-              ? t("Retirada", "Retirada")
-              : p.supersededAt
-                ? t("Sustituida", "Substituída")
-                : t("Activa", "Activa")}{" "}
-            ·{" "}
-            {p.action === "BLOCK"
-              ? t("Bloqueo", "Bloqueo")
-              : t("Supresión", "Supresión")}{" "}
-            · {p.retentionDays} {t("días", "días")}
-          </p>
-          <p>{p.policyId}</p>
-          <dl>
-            {[
-              [t("Finalidad", "Finalidade"), p.purpose],
-              [t("Responsable", "Responsable"), p.controllerReference],
-              [t("Aprobación", "Aprobación"), p.approvalReference],
-              [t("Motivo", "Motivo"), p.reason],
-              [t("Registro", "Rexistro"), localDateTime(p.approvedAt, locale)],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <dt>
-                  <strong>{label}</strong>
-                </dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-          {p.blockDays !== null && (
-            <p>
-              {t("Archivo restringido", "Arquivo restrinxido")}: {p.blockDays}{" "}
-              {t("días", "días")}
-            </p>
-          )}
-          {s.execute && !p.revokedAt && !p.supersededAt && (
-            <Link to={`${s.view}/retirar?id=${p.policyId}`} danger>
-              {t("Retirar política", "Retirar política")}
-            </Link>
-          )}
-        </section>
-      ))}
+      <RecordList>
+        {q.data.policies.map((p) => (
+          <RecordCard
+            key={p.policyId}
+            title={<Family value={p.category} />}
+            status={
+              p.revokedAt ? (
+                <Badge size="sm" tone="danger">
+                  {t("Retirada", "Retirada")}
+                </Badge>
+              ) : p.supersededAt ? (
+                <Badge size="sm">{t("Sustituida", "Substituída")}</Badge>
+              ) : (
+                <Badge size="sm" tone="success">
+                  {t("Activa", "Activa")}
+                </Badge>
+              )
+            }
+            details={[
+              {
+                label: t("Actuación", "Actuación"),
+                value: `${p.action === "BLOCK" ? t("Bloqueo", "Bloqueo") : t("Supresión", "Supresión")} · ${p.retentionDays} ${t("días", "días")}`,
+              },
+              ...(p.blockDays !== null
+                ? [
+                    {
+                      label: t("Archivo restringido", "Arquivo restrinxido"),
+                      value: `${p.blockDays} ${t("días", "días")}`,
+                    },
+                  ]
+                : []),
+              { label: t("Política", "Política"), value: p.policyId },
+              { label: t("Finalidad", "Finalidade"), value: p.purpose },
+              {
+                label: t("Responsable", "Responsable"),
+                value: p.controllerReference,
+              },
+              {
+                label: t("Aprobación", "Aprobación"),
+                value: p.approvalReference,
+              },
+              { label: t("Motivo", "Motivo"), value: p.reason },
+              {
+                label: t("Registro", "Rexistro"),
+                value: localDateTime(p.approvedAt, locale),
+              },
+            ]}
+            actions={
+              s.execute &&
+              !p.revokedAt &&
+              !p.supersededAt && (
+                <LinkButton
+                  variant="danger"
+                  size="sm"
+                  to={`${s.view}/retirar?id=${p.policyId}`}
+                >
+                  {t("Retirar política", "Retirar política")}
+                </LinkButton>
+              )
+            }
+          />
+        ))}
+      </RecordList>
     </>
   );
 }
@@ -116,32 +133,39 @@ export function RetentionOverview() {
           )}
         </p>
       )}
-      {q.data.holds.map((h) => (
-        <section className={styles.section} key={h.holdId}>
-          <h3>
-            <Family value={h.category} />
-          </h3>
-          <p>
-            {t("Excepción", "Excepción")}: {h.holdId}
-          </p>
-          <p>
-            {h.subjectId
-              ? t("Interesado", "Interesado")
-              : t("Registro", "Rexistro")}
-            : {h.subjectId ?? h.targetKey}
-          </p>
-          <p>{h.reason}</p>
-          <p>
-            {t("Autorización", "Autorización")}: {h.authorizationReference}
-          </p>
-          <p>{localDateTime(h.createdAt, locale)}</p>
-          {s.execute && (
-            <Link to={`${s.view}/levantar?id=${h.holdId}`}>
-              {t("Levantar excepción", "Levantar excepción")}
-            </Link>
-          )}
-        </section>
-      ))}
+      <RecordList>
+        {q.data.holds.map((h) => (
+          <RecordCard
+            key={h.holdId}
+            title={<Family value={h.category} />}
+            details={[
+              { label: t("Excepción", "Excepción"), value: h.holdId },
+              {
+                label: h.subjectId
+                  ? t("Interesado", "Interesado")
+                  : t("Registro", "Rexistro"),
+                value: h.subjectId ?? h.targetKey,
+              },
+              {
+                label: t("Autorización", "Autorización"),
+                value: h.authorizationReference,
+              },
+              {
+                label: t("Alta", "Alta"),
+                value: localDateTime(h.createdAt, locale),
+              },
+              { label: t("Motivo", "Motivo"), value: h.reason },
+            ]}
+            actions={
+              s.execute && (
+                <LinkButton size="sm" to={`${s.view}/levantar?id=${h.holdId}`}>
+                  {t("Levantar excepción", "Levantar excepción")}
+                </LinkButton>
+              )
+            }
+          />
+        ))}
+      </RecordList>
       <h2>{t("Conflictos de conservación", "Conflitos de conservación")}</h2>
       {q.data.hasMoreConflicts && (
         <p role="status">
@@ -159,24 +183,23 @@ export function RetentionOverview() {
           )}
         </p>
       )}
-      {q.data.conflicts.map((c) => (
-        <section
-          className={styles.section}
-          key={`${c.policyId}:${c.category}:${c.targetKey}`}
-        >
-          <h3>
-            <Family value={c.category} />
-          </h3>
-          <p>
-            {t("Política", "Política")}: {c.policyId}
-          </p>
-          <p>
-            {t("Registro", "Rexistro")}: {c.targetKey}
-          </p>
-          <p>{c.reason}</p>
-          <p>{localDateTime(c.lastSeenAt, locale)}</p>
-        </section>
-      ))}
+      <RecordList>
+        {q.data.conflicts.map((c) => (
+          <RecordCard
+            key={`${c.policyId}:${c.category}:${c.targetKey}`}
+            title={<Family value={c.category} />}
+            details={[
+              { label: t("Política", "Política"), value: c.policyId },
+              { label: t("Registro", "Rexistro"), value: c.targetKey },
+              {
+                label: t("Última detección", "Última detección"),
+                value: localDateTime(c.lastSeenAt, locale),
+              },
+              { label: t("Motivo", "Motivo"), value: c.reason },
+            ]}
+          />
+        ))}
+      </RecordList>
     </>
   );
 }
