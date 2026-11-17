@@ -481,7 +481,7 @@ Sirve para ver todas tus reservas, pasadas y futuras, y la situación actual de 
 
    ![Lista filtrada por Concello de Ribasanta con reservas Confirmada, Cancelada y Finalizada, y una finalizada recuadrada](../capturas/cu-08/03-reservas-de-ribasanta.webp)
 
-   *Con el filtro en «Concello de Ribasanta», la lista muestra solo reservas de ese municipio, de la más lejana a la más antigua. Cada una indica espacio, municipio, fecha y hora, y una etiqueta con su estado: «Confirmada», «Cancelada» o «Finalizada». El recuadro marca una reserva finalizada.*
+   *Con el filtro en «Concello de Ribasanta», la lista muestra solo reservas de ese municipio, ordenadas de la fecha más lejana a la más antigua. Cada una indica espacio, municipio, fecha y hora, y una etiqueta con su estado: «Confirmada», «Cancelada» o «Finalizada». El recuadro marca una reserva finalizada.*
 
 3. **Consulta una reserva.** Al abrirla, se ven su estado, el registro de llegada si lo hubo y las normas aceptadas.
 
@@ -813,7 +813,7 @@ Sirve para desactivar voluntariamente tu cuenta en toda la instalación de Quend
 
    ![Intento de acceso con el mensaje «La cuenta no está activa…»](../capturas/cu-14/04-acceso-tras-la-baja.webp)
 
-   *Si intentas entrar después, el mensaje recuadrado dice que la cuenta no está activa: si la diste de baja, puedes recuperarla con «Reactivar mi cuenta»; si no, hay que contactar con el equipo que opera Quenda. Para volver a usarla, sigue [CU-15](#cu-15--reactivar-una-cuenta).*
+   *Arriba sigue el aviso «Cuenta desactivada.». Si intentas entrar después, el mensaje recuadrado dice que la cuenta no está activa: si la diste de baja, puedes recuperarla con «Reactivar mi cuenta»; si no, hay que contactar con el equipo que opera Quenda. Para volver a usarla, sigue [CU-15](#cu-15--reactivar-una-cuenta).*
 
 ### Si algo no sale como se espera
 
