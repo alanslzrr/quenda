@@ -46,7 +46,7 @@ test("public discovery and own navigation preserve authority boundaries and pagi
       const item = await createMunicipality(domain, actor("operator"), {
         name: `Municipio ${i}`,
         timezone: "Europe/Madrid",
-        administratorId: "admin",
+        administratorEmail: "admin@example.test",
         invitationExpiresAt: new Date(Date.now() + 3600000).toISOString(),
       });
       await acceptAdministratorInvitation(
@@ -100,7 +100,7 @@ test("public discovery and own navigation preserve authority boundaries and pagi
       ),
     );
     const invite = await inviteManager(domain, actor("admin"), tenantId, {
-      accountId: "manager",
+      email: "manager@example.test",
       expiresAt: new Date(Date.now() + 3600000).toISOString(),
       permissions: [{ operation: "PRIVACY_READ", unitId: null }],
     });
