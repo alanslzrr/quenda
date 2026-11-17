@@ -19,8 +19,8 @@ export function EmailField() {
       />
       <p>
         {t(
-          "Solo puede aceptar la invitación, desde «Mi cuenta › Invitaciones», la cuenta cuyo correo verificado sea esta dirección; no hace falta que exista todavía. La respuesta es la misma tenga o no una cuenta registrada con ese correo.",
-          "Só pode aceptar a invitación, desde «A miña conta › Invitacións», a conta cuxo correo verificado sexa este enderezo; non fai falta que exista aínda. A resposta é a mesma teña ou non unha conta rexistrada con ese correo.",
+          "Solo puede aceptar la invitación, desde «Mi cuenta › Invitaciones», la cuenta cuyo correo verificado sea esta dirección; no hace falta que exista todavía. La respuesta es la misma tenga o no una cuenta registrada con ese correo. Quenda envía a la dirección un aviso con el rol, el ámbito y el plazo, igual en ambos casos y sin enlace de aceptación.",
+          "Só pode aceptar a invitación, desde «A miña conta › Invitacións», a conta cuxo correo verificado sexa este enderezo; non fai falta que exista aínda. A resposta é a mesma teña ou non unha conta rexistrada con ese correo. Quenda envía ao enderezo un aviso co rol, o ámbito e o prazo, igual nos dous casos e sen ligazón de aceptación.",
         )}
       </p>
     </>
