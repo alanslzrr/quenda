@@ -17,7 +17,7 @@ Las instancias independientes mantienen cuentas y sesiones propias. La federaci�
 | Ámbito | Concesión | Límite |
 |---|---|---|
 | Municipio | El administrador invita al correo del destinatario mediante el mecanismo de permisos existente; acepta con MFA la cuenta con ese correo verificado. | Todo el municipio, sin limitar por unidad reservable ni extenderse a otros municipios. |
-| Identidad global | Un operador invita con permisos y motivo explícitos; el destinatario acepta con MFA. | Datos de identidad y seguridad de la instancia, no actividad municipal. |
+| Identidad global | Un operador invita al correo del destinatario con permisos y motivo explícitos; acepta con MFA la cuenta con ese correo verificado. | Datos de identidad y seguridad de la instancia, no actividad municipal. |
 
 Ser administrador, operador o disponer de exportación deportiva no concede estos permisos. Un administrador u operador que los necesite recibe y acepta una concesión explícita, igual que cualquier destinatario. La asignación no acredita por sí sola una autorización jurídica para cada actuación ni designa al usuario como delegado de protección de datos.
 
@@ -217,3 +217,22 @@ a credenciales, otros roles o actividad de otros municipios. Se resuelve por lot
 la página mediante una función acotada y no concede lectura directa de tablas de
 autenticación. Las identidades suprimidas se muestran como no disponibles; los IDs
 siguen siendo las claves internas y referencias técnicas, nunca la prueba de un permiso.
+
+### Referencias de cuenta en los formularios del personal
+
+El personal no escribe identificadores opacos de cuenta cuando existe una
+alternativa que respeta estos límites. Cada formulario resuelve a la persona así:
+
+| Formulario | Cómo se indica la persona | Por qué |
+|---|---|---|
+| Invitaciones de autoridad: primer administrador, administradores, gestores, sustituto de recuperación, operadores y privacidad global | Correo del destinatario. | Crearla no consulta cuentas; solo la acepta la cuenta con ese correo verificado. |
+| Retirada municipal por seguridad | Selector con administradores, gestores y destinatarios de invitaciones pendientes del municipio; una invitación por correo sin aceptar se elige por su dirección. | Son los datos que el administrador ya ve en «Personal y permisos». La API sigue admitiendo el identificador de cuenta y añade la retirada por dirección, que no resuelve la dirección a una cuenta. |
+| Suspensión global de una identidad | Correo exacto o identificador. | Coincidencia exacta reservada al operador con MFA reciente, dentro de la suspensión auditada; un correo desconocido responde igual que un identificador desconocido. |
+| Excepciones por interesado, actuaciones individuales sobre perfiles municipales o permisos y copias administrativas, en un municipio | Selector de personas vinculadas al municipio solo si quien actúa es además administrador vigente de ese municipio; en todos los casos, el identificador exacto como alternativa. | El listado de perfiles municipales exige administrador vigente. `PRIVACY_READ` y `PRIVACY_EXECUTE` no autorizan esa consulta y no se amplía su alcance: el personal de privacidad sin administración indica el identificador que consta en la solicitud o el expediente. |
+| Las mismas operaciones en el ámbito global | Identificador exacto. | No existe un directorio global de cuentas. |
+| Acreditaciones de convenio | Selector de cuentas vinculadas al municipio emisor o «Usar una referencia conocida». | Ya se limita al servicio municipal propio; se mantiene sin cambios. |
+| Destinatarios de la revisión del informe mensual en otros municipios | Referencia facilitada por ese destinatario. | Ofrecer sus cuentas crearía un directorio intermunicipal; se mantiene así a propósito. |
+
+Las familias cuya referencia de registro no es una cuenta (reservas,
+comunicaciones, acreditaciones, accesos de privacidad o direcciones de
+invitaciones retiradas) conservan su referencia exacta.
