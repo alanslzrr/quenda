@@ -1,8 +1,36 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import type { AuthConfiguration, Authentication } from "./auth.ts";
+import { invitationAddressSchema } from "./invitation-address.ts";
 import { createRequestActor } from "./request-actor.ts";
-import { suspendAccount } from "./security.ts";
+import { suspendAccount, suspendAccountByEmail } from "./security.ts";
+
+const reason = {
+  type: "object",
+  additionalProperties: false,
+  required: ["reason"],
+  properties: {
+    reason: { type: "string", minLength: 1, maxLength: 500 },
+  },
+} as const;
+const response = {
+  ...Object.fromEntries(
+    [400, 401, 403, 404, 409, 429, 500, 503].map((status) => [
+      status,
+      { $ref: "ErrorResponse#" },
+    ]),
+  ),
+  200: {
+    type: "object",
+    additionalProperties: false,
+    required: ["accountId", "suspendedAt"],
+    properties: {
+      accountId: { type: "string" },
+      suspendedAt: { type: "string", format: "date-time" },
+    },
+  },
+};
+
 export async function registerAccountSecurityRoutes(
   app: FastifyInstance,
   pool: Pool,
@@ -18,7 +46,7 @@ export async function registerAccountSecurityRoutes(
         tags: ["Identity"],
         security: [{ quendaSession: [] }],
         description:
-          "Operador con MFA reciente: suspende la identidad global, revoca sesiones y permisos propios e invalida invitaciones pendientes. No cancela reservas ni borra historial. La recuperación es operativa y verificada; no admite reactivación ciudadana.",
+          "Operador con MFA reciente: suspende la identidad global, revoca sesiones y permisos propios e invalida invitaciones pendientes, también las dirigidas a su correo verificado. No cancela reservas ni borra historial. La recuperación es operativa y verificada; no admite reactivación ciudadana.",
         params: {
           type: "object",
           additionalProperties: false,
@@ -27,31 +55,8 @@ export async function registerAccountSecurityRoutes(
             accountId: { type: "string", minLength: 1, maxLength: 128 },
           },
         },
-        body: {
-          type: "object",
-          additionalProperties: false,
-          required: ["reason"],
-          properties: {
-            reason: { type: "string", minLength: 1, maxLength: 500 },
-          },
-        },
-        response: {
-          ...Object.fromEntries(
-            [400, 401, 403, 404, 409, 429, 500, 503].map((status) => [
-              status,
-              { $ref: "ErrorResponse#" },
-            ]),
-          ),
-          200: {
-            type: "object",
-            additionalProperties: false,
-            required: ["accountId", "suspendedAt"],
-            properties: {
-              accountId: { type: "string" },
-              suspendedAt: { type: "string", format: "date-time" },
-            },
-          },
-        },
+        body: reason,
+        response,
       },
     },
     async (request, reply) => {
@@ -60,6 +65,38 @@ export async function registerAccountSecurityRoutes(
         pool,
         await actor(request, reply),
         request.params.accountId,
+        request.body.reason,
+        request.id,
+      );
+    },
+  );
+  app.post<{ Body: { email: string; reason: string } }>(
+    "/api/platform/account-suspensions",
+    {
+      schema: {
+        operationId: "suspendAccountByEmail",
+        tags: ["Identity"],
+        security: [{ quendaSession: [] }],
+        description:
+          "Operador con MFA reciente: igual que suspendAccount, pero identifica la cuenta por su correo exacto (sin espacios ni distinción de mayúsculas). No es una búsqueda: sin coincidencias parciales ni listados. Un correo desconocido responde 404 igual que un identificador desconocido; la suspensión queda auditada con la cuenta afectada.",
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["email", "reason"],
+          properties: {
+            email: invitationAddressSchema,
+            reason: reason.properties.reason,
+          },
+        },
+        response,
+      },
+    },
+    async (request, reply) => {
+      reply.header("cache-control", "no-store");
+      return suspendAccountByEmail(
+        pool,
+        await actor(request, reply),
+        request.body.email,
         request.body.reason,
         request.id,
       );
