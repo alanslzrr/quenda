@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 import { totp } from "../../../test/helpers/auth-client";
 import { login } from "./account-helpers";
+import { accessibilityViolations } from "./axe-scan";
 import { test } from "./fixtures";
 
 async function select(
@@ -175,27 +175,13 @@ test("authorized privacy staff manages policies, holds, scoped copies and all in
       name: /Excepciones y conflictos|Excepcións e conflitos/,
     })
     .click();
-  // Scan the view once its entrance fade has settled, not its intermediate colours.
-  const holds = page.getByRole("heading", {
-    name: /Excepciones activas|Excepcións activas/,
-  });
-  await expect(holds).toBeVisible();
-  await expect
-    .poll(() =>
-      holds.evaluate((node) => {
-        for (let el: Element | null = node; el; el = el.parentElement)
-          if (getComputedStyle(el).opacity !== "1") return false;
-        return true;
-      }),
-    )
-    .toBe(true);
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  await expect(
+    page.getByRole("heading", {
+      name: /Excepciones activas|Excepcións activas/,
+    }),
+  ).toBeVisible();
+  // The scan waits for the route entrance fade, not its intermediate colours.
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.screenshot({
     path: `test-results/privacy-holds-${info.project.name}.png`,
     fullPage: true,

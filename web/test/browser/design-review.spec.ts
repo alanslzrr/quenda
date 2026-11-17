@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
+import { accessibilityViolations, settleAnimations } from "./axe-scan";
 import { test } from "./fixtures";
 
 const tenant = "00000000-0000-4000-8000-000000000001";
@@ -201,19 +201,7 @@ async function appearance(page: Page, theme: "light" | "dark") {
 }
 async function audit(page: Page, name: string) {
   // Audit the settled state, not intermediate colors during the calendar handoff.
-  await expect
-    .poll(() =>
-      page.evaluate(() =>
-        document
-          .getAnimations()
-          .every(
-            (animation) =>
-              animation.playState !== "running" ||
-              animation.effect?.getTiming().iterations === Infinity,
-          ),
-      ),
-    )
-    .toBe(true);
+  await settleAnimations(page);
   await expect
     .poll(() =>
       page.evaluate(
@@ -221,13 +209,7 @@ async function audit(page: Page, name: string) {
       ),
     )
     .toBe(true);
-  expect(
-    (
-      await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        .analyze()
-    ).violations,
-  ).toEqual([]);
+  expect(await accessibilityViolations(page)).toEqual([]);
   await page.screenshot({
     path: `test-results/review-${name}.png`,
     fullPage: true,
