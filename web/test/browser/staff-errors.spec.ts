@@ -6,13 +6,13 @@ import { test } from "./fixtures";
 const tenant = "00000000-0000-4000-8000-000000000001",
   unit = "00000000-0000-4000-8000-000000000003";
 const root = `/api/municipalities/${tenant}`;
+// A pending invitation is addressed to an email: no account is named until
+// someone accepts it.
 const invitation = {
   invitationId: "00000000-0000-4000-8000-000000000005",
-  accountId: "destinatario",
-  accountLabel: {
-    name: "Persona destinataria",
-    email: "destinatario@demo.test",
-  },
+  accountId: null,
+  recipientEmail: "destinatario@demo.test",
+  accountLabel: null,
   invitedBy: "responsable",
   expiresAt: "2090-01-01T00:00:00Z",
   roleExpiresAt: null,
@@ -58,10 +58,12 @@ async function fixture(page: Page, administrator = true) {
 }
 async function fill(page: Page) {
   await page.goto(`/administracion/${tenant}/personal/invitar`);
-  await page.getByLabel(/Identificador de (cuenta|conta)/).fill("destinatario");
+  await page
+    .getByLabel(/Correo del destinatario|Correo do destinatario/)
+    .fill("destinatario@demo.test");
   await pickDateTime(page, "Aceptar antes de", "2080-01-01T10:00");
   await page
-    .getByRole("checkbox", { name: /Confirmo (la cuenta|a conta)/ })
+    .getByRole("checkbox", { name: /Confirmo (el correo|o correo)/ })
     .check();
 }
 async function select(page: Page, name: string, option: string | RegExp) {
@@ -158,15 +160,18 @@ test("permission selection preserves exact scope and explicit privacy grants", a
     { operation: "PRIVACY_READ", unitId: null },
   ]);
   expect(sent?.roleExpiresAt).toBeNull();
-  expect(sent?.accountId).toBe("destinatario");
+  expect(sent?.email).toBe("destinatario@demo.test");
+  expect(sent).not.toHaveProperty("accountId");
   failNext = true;
-  await page.getByLabel(/Identificador de (cuenta|conta)/).fill("otra-cuenta");
+  await page
+    .getByLabel(/Correo del destinatario|Correo do destinatario/)
+    .fill("otra@demo.test");
   await pickDateTime(page, "Aceptar antes de", "2080-01-01T10:00");
   await page
     .getByRole("button", { name: /Añadir permiso|Engadir permiso/ })
     .click();
   await page
-    .getByRole("checkbox", { name: /Confirmo (la cuenta|a conta)/ })
+    .getByRole("checkbox", { name: /Confirmo (el correo|o correo)/ })
     .check();
   await page.getByRole("button", { name: "Enviar invitación" }).click();
   await expect(
@@ -202,9 +207,9 @@ test("MFA expiry keeps the invitation draft and does not retry the write", async
   await expect(
     page.getByText("Verifica de nuevo el segundo factor."),
   ).toBeVisible();
-  await expect(page.getByLabel(/Identificador de (cuenta|conta)/)).toHaveValue(
-    "destinatario",
-  );
+  await expect(
+    page.getByLabel(/Correo del destinatario|Correo do destinatario/),
+  ).toHaveValue("destinatario@demo.test");
   await expect(fieldValue(page, "Aceptar antes de")).toHaveValue("2080-01-01");
   await expect(
     page.getByRole("textbox", { name: "Aceptar antes de · hora", exact: true }),
@@ -319,6 +324,7 @@ test("staff history paginates without claiming accepted grants are currently aut
                 ...invitation,
                 invitationId: unit,
                 accountId: "segunda",
+                recipientEmail: null,
                 accountLabel: {
                   name: "Segunda persona",
                   email: "segunda@demo.test",
@@ -354,7 +360,8 @@ test("staff history paginates without claiming accepted grants are currently aut
     path: `test-results/staff-history-${info.project.name}.png`,
     fullPage: true,
   });
-  await page.getByRole("button", { name: /Persona destinataria/ }).click();
+  // The pending row names the invited address; the accepted one, the account.
+  await page.getByRole("button", { name: /destinatario@demo\.test/ }).click();
   await page
     .getByRole("checkbox", {
       name: /Confirmo la revocación|Confirmo a revogación/,
