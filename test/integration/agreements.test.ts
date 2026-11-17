@@ -1163,7 +1163,7 @@ test("agreement drafts preserve participant ownership and do not activate capabi
             randomUUID(),
             3600,
           ),
-          { code: "CONFLICT" },
+          { code: "AGREEMENT_STATE_CONFLICT" },
         );
         await assert.rejects(
           readUnitAgreementRestriction(
