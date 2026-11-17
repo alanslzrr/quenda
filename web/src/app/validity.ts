@@ -1,7 +1,7 @@
 type NativeField = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
 /**
- * Radix validates a required checkbox or select through a hidden native mirror (aria-hidden, tabIndex -1) rendered right
+ * Radix validates a required checkbox or select, and the date fields a required date, through a hidden native mirror (aria-hidden, tabIndex -1) rendered right
  * after its visible button. The mirror cannot take focus or show a bubble, so the button stands in for it.
  */
 function mirroredControl(target: EventTarget | null) {
@@ -19,7 +19,9 @@ function mirroredControl(target: EventTarget | null) {
   )
     if (
       node instanceof HTMLButtonElement &&
-      node.matches('[role="checkbox"], [role="combobox"]')
+      node.matches(
+        '[role="checkbox"], [role="combobox"], [aria-haspopup="dialog"]',
+      )
     )
       return node;
   return null;
