@@ -94,6 +94,8 @@ test("CU-01 consultar catálogo y disponibilidad", async ({ page }) => {
 // Cada prueba es un cliente distinto: el catálogo público limita las
 // consultas por dirección y minuto.
 test("CU-01 alternativas de la consulta", async ({ page }) => {
+  // Same «today» as the main flow.
+  await morningClock(page);
   // Alternativa: buscar por día y hora en todas las instalaciones.
   await page.goto(`/municipios/${valdeira.id}`);
   const search = page.getByRole("link", { name: "Buscar por día y hora" });
@@ -136,9 +138,9 @@ test("CU-01 alternativas de la consulta", async ({ page }) => {
   await page.goto(`/municipios/${valdeira.id}/unidades/${valdeira.padel1}`);
   const late = await openDay(page, midweek(34));
   await expect(late).toBeDisabled();
+  // The next step opens another page, which closes the calendar. (With the
+  // pinned clock its exit transition does not finish on Escape.)
   await shot(cu, page, "dia-fuera-de-plazo", { target: late });
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toHaveCount(0);
 
   // Alternativa: instalación sin espacios reservables. En la lista del
   // municipio aparece sin enlace y con el motivo.
