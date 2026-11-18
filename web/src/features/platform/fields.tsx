@@ -3,6 +3,7 @@ import { Deadline } from "../../app/deadline";
 import { Disclosure } from "../../app/disclosure";
 import { usePreferences } from "../../app/preferences-provider";
 import { Input } from "../../ui/input/input";
+import { browserTimeZone } from "../../ui/lib/intl-cache.ts";
 /**
  * Recipient of a platform invitation (initial or recovery administrator,
  * operator or global privacy), addressed by email. No directory is consulted.
@@ -33,8 +34,7 @@ export function InvitationDeadline({ role = false }: { role?: boolean }) {
   return (
     <>
       <p>
-        {t("Zona horaria", "Zona horaria")}:{" "}
-        {Intl.DateTimeFormat().resolvedOptions().timeZone}
+        {t("Zona horaria", "Zona horaria")}: {browserTimeZone()}
       </p>
       <Deadline
         name="expiresAt"

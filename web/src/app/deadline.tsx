@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { localInstants } from "../features/municipal/local-instants";
+import { browserTimeZone } from "../ui/lib/intl-cache.ts";
 import { Select } from "../ui/select/select";
 import { useFieldErrorAnnouncement } from "./announce";
 import { DateTimeField } from "./date-fields";
@@ -20,7 +21,7 @@ export function Deadline({
   const { t } = usePreferences();
   const [value, setValue] = useState("");
   const [choice, setChoice] = useState("");
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const zone = browserTimeZone();
   const instants = localInstants(value, zone);
   const utc =
     instants.length === 1
