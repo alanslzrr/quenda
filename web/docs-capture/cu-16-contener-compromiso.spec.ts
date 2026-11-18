@@ -141,9 +141,18 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
   const manager = await damianContext.newPage();
   await signInAs(manager, damian);
   await manager.goto("/administracion");
-  const none = manager.getByText("No tienes permisos municipales vigentes.");
-  await expect(none).toBeVisible();
-  await cu.shot(manager, "gestor-sin-permisos", { target: none });
+  await expect(
+    manager.getByText("No tienes permisos municipales vigentes."),
+  ).toBeVisible();
+  // His own account, named at the foot of «Mi cuenta», keeps the withdrawn
+  // permission only as history.
+  await manager.goto("/perfil/invitaciones");
+  const withdrawn = manager
+    .locator("li")
+    .filter({ hasText: "Concello de Lousadela" })
+    .first();
+  await expect(withdrawn).toBeVisible();
+  await cu.shot(manager, "gestor-sin-permisos", { target: withdrawn });
   await damianContext.close();
 
   // B. Suspensión global: el operador suspende a la administradora.
@@ -302,11 +311,19 @@ test("CU-16 contener un compromiso y recuperar acceso", async ({
     password,
   });
   await returning.goto("/administracion");
-  const personal = returning.getByText(
-    "No tienes permisos municipales vigentes.",
-  );
-  await expect(personal).toBeVisible();
-  await cu.shot(returning, "acceso-recuperado", { target: personal });
+  await expect(
+    returning.getByText("No tienes permisos municipales vigentes."),
+  ).toBeVisible();
+  // Her own account page, with her name and address: she is signed in again.
+  await returning.goto("/perfil/datos");
+  const own = returning
+    .locator("section")
+    .filter({
+      has: returning.getByRole("heading", { name: "Correo electrónico" }),
+    })
+    .getByText(iria.email, { exact: true });
+  await expect(own).toBeVisible();
+  await tallShot(cu, returning, "acceso-recuperado", { target: own });
   await returnContext.close();
 
   // Alternativa: con un administrador habilitado no hay recuperación.
