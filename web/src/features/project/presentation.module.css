@@ -1,6 +1,4 @@
 .presentation {
-  display: grid;
-  gap: var(--space-4);
   margin: 0;
   scroll-margin-top: 104px;
 }
@@ -17,17 +15,4 @@
   height: auto;
   aspect-ratio: 16 / 9;
   background: var(--surface-muted);
-}
-.caption {
-  display: grid;
-  gap: var(--space-1);
-  max-width: 760px;
-  font-size: var(--text-sm);
-  line-height: 1.55;
-}
-.caption strong {
-  font-weight: 500;
-}
-.caption span {
-  color: var(--text-secondary);
 }
