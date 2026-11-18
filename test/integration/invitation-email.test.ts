@@ -18,7 +18,10 @@ import {
   inviteManager,
   revokeManager,
 } from "../../src/modules/identity/manager.ts";
-import { revokeAddressInvitationsForSecurity } from "../../src/modules/identity/municipal-continuity.ts";
+import {
+  recoverMunicipalAdministrator,
+  revokeAddressInvitationsForSecurity,
+} from "../../src/modules/identity/municipal-continuity.ts";
 import {
   acceptAdministratorInvitation,
   createMunicipality,
@@ -511,6 +514,82 @@ test("invitation notices are queued per address, never reveal accounts and stop 
           renewed.invitationId,
           "Fin de la prueba",
         );
+      },
+    );
+
+    await t.test(
+      "operator-issued invitations are counted apart from the municipal allowance",
+      async () => {
+        const relay = await createMunicipality(domain, actor("operator"), {
+          name: "Concello de Recuperación",
+          timezone: "Europe/Madrid",
+          administratorEmail: "staff@example.test",
+          invitationExpiresAt: deadline,
+        });
+        const quota = async (scope: string) =>
+          (
+            await migration.query<{ queued: number }>(
+              "SELECT queued FROM domain.invitation_email_quota WHERE scope=$1",
+              [scope],
+            )
+          ).rows[0]?.queued ?? 0;
+        // The initial invitation is the operator's: it uses the platform
+        // allowance and leaves the municipal one untouched.
+        assert.equal((await queued(migration, relay.invitationId)).length, 1);
+        assert.equal(await quota(relay.tenantId), 0);
+        await acceptAdministratorInvitation(
+          domain,
+          actor("staff"),
+          relay.tenantId,
+          relay.invitationId,
+        );
+        // A compromised administrator spends the municipal allowance.
+        await migration.query(
+          `INSERT INTO domain.invitation_email_quota(scope,window_started_at,queued) VALUES($1,now(),100)
+           ON CONFLICT(scope) DO UPDATE SET window_started_at=now(),queued=100`,
+          [relay.tenantId],
+        );
+        const spent = await inviteManager(
+          domain,
+          actor("staff"),
+          relay.tenantId,
+          { email: "spent@example.test", expiresAt: deadline, permissions },
+        );
+        assert.equal((await queued(migration, spent.invitationId)).length, 0);
+        // Once no administrator remains, the recovery substitute is still
+        // notified.
+        await migration.query(
+          "UPDATE domain.municipal_administrator SET revoked_at=now() WHERE tenant_id=$1",
+          [relay.tenantId],
+        );
+        const municipal = await quota(relay.tenantId);
+        const platform = await quota("platform");
+        const recovery = await recoverMunicipalAdministrator(
+          domain,
+          actor("operator"),
+          relay.tenantId,
+          {
+            email: "substitute@example.test",
+            expiresAt: deadline,
+            reason: "Sin administradores habilitados",
+            verificationReference: "Acta de verificación 7",
+          },
+        );
+        assert.deepEqual(
+          (await queued(migration, recovery.invitationId)).map((row) => [
+            row.kind,
+            row.tenant_id,
+            row.recipient_email,
+          ]),
+          [["ADMINISTRATOR", relay.tenantId, "substitute@example.test"]],
+        );
+        assert.equal(await quota("platform"), platform + 1);
+        assert.equal(await quota(relay.tenantId), municipal);
+        await migration.query(
+          "UPDATE domain.administrator_invitation SET revoked_at=now() WHERE tenant_id=$1 AND id=$2",
+          [relay.tenantId, recovery.invitationId],
+        );
+        assert.equal((await queued(migration)).length, 0);
       },
     );
 
