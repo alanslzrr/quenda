@@ -35,6 +35,28 @@ export function madridDate(offset = 0, from = Date.now()) {
   }).format(new Date(from + offset * 86400000));
 }
 
+/** The instant of a civil date and time in Europe/Madrid. */
+export function madridInstant(date: string, time: string) {
+  const guess = new Date(`${date}T${time}:00Z`);
+  const offset = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Madrid",
+    timeZoneName: "longOffset",
+  })
+    .formatToParts(guess)
+    .find((part) => part.type === "timeZoneName")
+    ?.value.replace("GMT", "");
+  return new Date(`${date}T${time}:00${offset || "+00:00"}`);
+}
+
+/**
+ * The browser's clock at 09:00 tomorrow in the municipality, so that a page
+ * that opens on «today» shows a whole day of free slots whatever the time of
+ * the run. The server keeps its own clock; tomorrow is a valid day for it.
+ */
+export async function morningClock(page: Page) {
+  await page.clock.setFixedTime(madridInstant(madridDate(1), "09:00"));
+}
+
 /**
  * First Wednesday or Thursday at least `offset` days ahead: a calendar cell
  * in the middle of its row, so its outline is never cut by the popover edge.
