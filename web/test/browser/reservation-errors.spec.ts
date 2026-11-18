@@ -144,6 +144,10 @@ test("changed conditions clear acceptance and require explicit review without co
   await expect(
     page.getByRole("checkbox", { name: /He leído y acepto las normas de uso/ }),
   ).not.toBeChecked();
+  // The rebuilt form takes the focus the submit button had, on the consent to give again.
+  await expect(
+    page.getByRole("checkbox", { name: /He leído y acepto las normas de uso/ }),
+  ).toBeFocused();
   expect(posts).toBe(1);
   await expect(page).toHaveURL(/\/reservar\?/);
 });
@@ -456,6 +460,10 @@ test("a cancellation refused because the reservation changed elsewhere explains 
   await expect(
     dialog.getByRole("button", { name: "Cancelar reserva", exact: true }),
   ).toBeEnabled();
+  // The form rebuilt for revision 2 keeps the keyboard on the action to retry.
+  await expect(
+    dialog.getByRole("button", { name: "Cancelar reserva", exact: true }),
+  ).toBeFocused();
   await expect(
     dialog.getByRole("button", { name: "Mantener reserva", exact: true }),
   ).toBeVisible();
@@ -501,6 +509,10 @@ test("a cancellation refused because a change elsewhere ended the deadline expla
   await expect(
     dialog.getByRole("button", { name: "Cancelar reserva", exact: true }),
   ).toBeDisabled();
+  // Only closing is left: the keyboard lands there instead of on the page.
+  await expect(
+    dialog.getByRole("button", { name: "Cerrar", exact: true }).last(),
+  ).toBeFocused();
   await dialog
     .getByRole("button", { name: "Cerrar", exact: true })
     .last()
@@ -806,4 +818,122 @@ test("document titles follow route headings after navigation", async ({
   await page.getByRole("link", { name: /Pista 1/ }).click();
   await expect(page).toHaveURL(new RegExp(detail));
   await expect(page).toHaveTitle(/Reserva.*Quenda/);
+});
+
+const pendingRules = {
+  ...reservation,
+  rulesAcceptedAt: null,
+  usageRulesVersion: null,
+  usageRulesUnitId: null,
+  usageRulesText: null,
+  pendingUsageRulesVersion: 7,
+  pendingUsageRulesText: "Normas de la nueva pista",
+};
+const acceptRules = (page: import("@playwright/test").Page) =>
+  page.getByRole("checkbox", { name: /acepto las normas de este espacio/ });
+const acceptButton = (page: import("@playwright/test").Page) =>
+  page.getByRole("button", { name: "Aceptar normas", exact: true });
+test("an acceptance refused because the reservation changed elsewhere keeps the keyboard on the rebuilt consent", async ({
+  page,
+}) => {
+  // Moved in another tab: revision 2, the new rules still pending.
+  let current: Record<string, unknown> = pendingRules;
+  const sent: unknown[] = [];
+  await page.route(`**${path}/${id}`, (r) => r.fulfill({ json: current }));
+  await page.route(`**${path}/${id}/accept-usage-rules`, (r) => {
+    sent.push(r.request().postDataJSON());
+    current = { ...pendingRules, revision: 2 };
+    return r.fulfill({ status: 409, json: changed });
+  });
+  await page.goto(detail);
+  await acceptRules(page).check();
+  await acceptButton(page).focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page
+      .getByRole("region", { name: "Resolver el problema" })
+      .getByText(changed.error.message),
+  ).toBeVisible();
+  // The consent starts over for revision 2 and keeps the keyboard focus the submit button had.
+  await expect(acceptRules(page)).toBeFocused();
+  await expect(acceptRules(page)).not.toBeChecked();
+  await page.keyboard.press("Space");
+  await expect(acceptRules(page)).toBeChecked();
+  expect(sent).toEqual([
+    { expectedRevision: 1, unitId: unit, usageRulesVersion: 7 },
+  ]);
+});
+test("an acceptance refused because the rules were accepted elsewhere moves focus to the reason", async ({
+  page,
+}) => {
+  let current: Record<string, unknown> = pendingRules;
+  await page.route(`**${path}/${id}`, (r) => r.fulfill({ json: current }));
+  await page.route(`**${path}/${id}/accept-usage-rules`, (r) => {
+    current = {
+      ...pendingRules,
+      revision: 2,
+      rulesAcceptedAt: new Date().toISOString(),
+      usageRulesUnitId: unit,
+      usageRulesVersion: 7,
+      usageRulesText: pendingRules.pendingUsageRulesText,
+      pendingUsageRulesVersion: null,
+      pendingUsageRulesText: null,
+    };
+    return r.fulfill({ status: 409, json: changed });
+  });
+  await page.goto(detail);
+  await acceptRules(page).check();
+  await acceptButton(page).click();
+  await expect(
+    page.getByText("Ya no hay normas pendientes de aceptar."),
+  ).toBeVisible();
+  await expect(acceptButton(page)).toBeDisabled();
+  // No control is left to retry with: focus rests on the failure, not the page.
+  await expect(
+    page.locator("form [tabindex='-1']", { hasText: changed.error.message }),
+  ).toBeFocused();
+});
+test("a failed acceptance that did not change the reservation is not shown again after a later background refresh", async ({
+  page,
+}) => {
+  const unavailable = {
+    error: {
+      code: "INVALID_INPUT",
+      message: "No se ha podido registrar la aceptación.",
+    },
+  };
+  let current: Record<string, unknown> = pendingRules;
+  await page.route(`**${path}/${id}`, (r) => r.fulfill({ json: current }));
+  await page.route(`**${path}/${id}/accept-usage-rules`, (r) =>
+    r.fulfill({ status: 400, json: unavailable }),
+  );
+  await page.goto(detail);
+  await acceptRules(page).check();
+  await acceptButton(page).click();
+  await expect(page.getByText(unavailable.error.message)).toBeVisible();
+  // The refresh after the failure found revision 1: nothing rebuilt the form or moved focus.
+  await expect(acceptButton(page)).toBeFocused();
+  // Later, and unrelated to the failure, the reservation changes and the page refreshes it on focus.
+  current = {
+    ...pendingRules,
+    revision: 2,
+    pendingUsageRulesText: "Normas revisadas de la nueva pista",
+  };
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    window.dispatchEvent(new Event("visibilitychange"));
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    window.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(
+    page.getByText("Normas revisadas de la nueva pista"),
+  ).toBeVisible();
+  await expect(page.getByText(unavailable.error.message)).toHaveCount(0);
+  await expect(acceptRules(page)).not.toBeChecked();
 });
