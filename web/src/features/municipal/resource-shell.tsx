@@ -25,6 +25,7 @@ import { SidebarRail } from "../../ui/blocks/sidebar-rail/sidebar-rail";
 import { MfaNotice } from "../account/mfa-dialog";
 import { useBookingEntry } from "../catalog/journey";
 import { allowed, canEnter } from "../reporting/model";
+import { activeSection } from "./active-section";
 import { type MunicipalContext, municipalPath } from "./shared";
 
 export function ResourceShell({
@@ -169,20 +170,14 @@ export function ResourceShell({
       ],
     },
   ].filter((s) => s.items.length);
-  // A reservation opened from the agenda (or from its access code) belongs to the agenda.
-  const current = pathname.startsWith(`${base}/reservas/`)
-    ? `${base}/agenda`
-    : pathname;
   return (
     <SidebarRail
       sections={sections}
-      active={
-        sections
-          .flatMap((section) => section.items)
-          .map((item) => item.id)
-          .filter((id) => current === id || current.startsWith(`${id}/`))
-          .sort((a, b) => b.length - a.length)[0] ?? base
-      }
+      active={activeSection(
+        sections.flatMap((section) => section.items).map((item) => item.id),
+        pathname,
+        base,
+      )}
       onSelect={navigate}
       municipality={m.name}
       mark={
