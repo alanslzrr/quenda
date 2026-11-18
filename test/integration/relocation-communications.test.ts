@@ -301,9 +301,18 @@ test("relocation communications separate accepted rules from pending rules and p
     assert.doesNotMatch(modified?.text ?? "", /Renamed administrator/);
     assert.ok(modified);
     assert.match(modified.text, /Normas pendientes de aceptación/);
+    // The pending rules name the destination space, not its identifier.
+    const destinationName = (
+      await migration.query(
+        "SELECT name FROM domain.reservable_unit WHERE id=$1",
+        [destinationUnit],
+      )
+    ).rows[0]?.name;
+    assert.ok(destinationName);
     assert.ok(
-      modified.text.includes(`Unidad de las normas: ${destinationUnit}`),
+      modified.text.includes(`Espacio de las normas: ${destinationName}`),
     );
+    assert.ok(!modified.text.includes(destinationUnit));
     assert.match(modified.text, /Versión de las normas: 1/);
     assert.doesNotMatch(modified.text, /Versión de las normas: 2/);
     assert.ok(!modified.text.includes(originalUnit));
