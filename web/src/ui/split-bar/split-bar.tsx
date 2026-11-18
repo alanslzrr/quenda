@@ -19,6 +19,7 @@ import {
   useTransform,
   type MotionValue,
 } from "motion/react";
+import { numberFormat, type NumberFormatter } from "../lib/intl-cache";
 import { numberLocales } from "../lib/locale-text";
 import { motionTokens } from "../motion-tokens";
 import { describeShares, readShare, splitBarText } from "./labels";
@@ -116,7 +117,7 @@ function Segment({
   active: boolean;
   dimmed: boolean;
   name: string;
-  formatter: Intl.NumberFormat;
+  formatter: NumberFormatter;
   reduced: boolean;
 }) {
   const start = useMotionValue(slice.start),
@@ -247,7 +248,7 @@ export function SplitBar({
   const measureText = useTextMeasure(probe),
     number = useMemo(
       () =>
-        new Intl.NumberFormat(numberLocales(locale), {
+        numberFormat(numberLocales(locale), {
           maximumFractionDigits: 0,
           ...format,
           numberingSystem: "latn",
@@ -256,7 +257,7 @@ export function SplitBar({
     ),
     percent = useMemo(
       () =>
-        new Intl.NumberFormat(numberLocales(locale), {
+        numberFormat(numberLocales(locale), {
           style: "percent",
           minimumFractionDigits: 1,
           maximumFractionDigits: 1,

@@ -7,6 +7,7 @@ import {
   useMotionValue,
   useTransform,
 } from "motion/react";
+import type { NumberFormatter } from "../lib/intl-cache";
 import { motionTokens } from "../motion-tokens";
 import styles from "./split-bar.module.css";
 function Glyph({
@@ -80,7 +81,7 @@ export function RollingNumber({
   reduced,
 }: {
   value: number;
-  formatter: Intl.NumberFormat;
+  formatter: NumberFormatter;
   reduced: boolean;
 }) {
   const [last, setLast] = useState({ value, direction: 1 });
