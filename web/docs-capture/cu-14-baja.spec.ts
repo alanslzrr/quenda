@@ -34,8 +34,8 @@ test("CU-14 dar de baja la cuenta", async ({ page }) => {
   // Paso 1: la sección «Privacidad y baja».
   await page.goto("/perfil/privacidad");
   await expect(section).toBeVisible();
-  await section.evaluate((node) => node.scrollIntoView({ block: "start" }));
-  await shot(cu, page, "seccion-de-baja", { target: section });
+  // The whole page, so that no paragraph above the section is cut in half.
+  await shot(cu, page, "seccion-de-baja", { target: section, fullPage: true });
 
   // Paso 2: contraseña, casilla y confirmación.
   await current.fill(newPassword);
