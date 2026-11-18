@@ -9,7 +9,7 @@ import { useAgreementOptions } from "../collaboration/agreement-select";
 import { ManagementPage } from "../municipal/page";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
 import { MonthlyFields, useReportAgreementsPath } from "./fields";
-import { allowed, type Monthly } from "./model";
+import { allowed, type Monthly, minuteDecimals, monthName } from "./model";
 import styles from "./reporting.module.css";
 export function MonthlyReport() {
   const m = useMunicipality();
@@ -67,7 +67,7 @@ function Report() {
           aria-label={t("Resultado del informe", "Resultado do informe")}
         >
           <p>
-            {result.agreementName} · {result.month}
+            {result.agreementName} · {monthName(result.month, locale)}
           </p>
           <Disclosure
             title={t("Identificador técnico", "Identificador técnico")}
@@ -99,7 +99,7 @@ function Report() {
                   label={t("Minutos reservados", "Minutos reservados")}
                   value={result.report.reservedMinutes}
                   locale={locale}
-                  decimals={2}
+                  decimals={minuteDecimals(result.report.reservedMinutes)}
                   context={t(
                     "Intersección con el mes del convenio",
                     "Intersección co mes do convenio",
