@@ -343,6 +343,10 @@ test("municipal onboarding replacement security suspension and recovery preserve
       .getByLabel("Motivo", { exact: true })
       .fill("Identidad sintética comprometida");
     await confirm(page, /Suspender cuenta|Suspender conta/);
+    // The receipt names the account as the operator entered it.
+    await expect(
+      page.getByRole("status").getByText(f.recipient.email, { exact: false }),
+    ).toBeVisible();
     expect((await recipient.request.get("/api/me")).status()).toBe(401);
     await page.goto(`${view}/recuperar-responsable`);
     await page

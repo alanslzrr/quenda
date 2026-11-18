@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import { Deadline } from "../../app/deadline";
+import { Disclosure } from "../../app/disclosure";
 import { usePreferences } from "../../app/preferences-provider";
 import { Input } from "../../ui/input/input";
 /**
@@ -79,28 +81,38 @@ export function MunicipalityField({
 export function Receipt({
   result,
   message,
+  children,
 }: {
   result: { tenantId?: string; invitationId?: string; accountId?: string };
   message: string;
+  /** What the person entered, so the receipt names it in their terms. */
+  children?: ReactNode;
 }) {
   const { t } = usePreferences();
   return (
     <section role="status">
       <h2>{message}</h2>
+      {children}
+      {/* The new municipality's identifier is the next step's input. */}
       {result.tenantId && (
         <p>
           {t("Municipio", "Municipio")}: {result.tenantId}
         </p>
       )}
-      {result.invitationId && (
-        <p>
-          {t("Invitación", "Invitación")}: {result.invitationId}
-        </p>
-      )}
-      {result.accountId && (
-        <p>
-          {t("Cuenta", "Conta")}: {result.accountId}
-        </p>
+      {(result.invitationId || result.accountId) && (
+        <Disclosure title={t("Identificador técnico", "Identificador técnico")}>
+          {result.invitationId && (
+            <p>
+              {t("Invitación", "Invitación")}:{" "}
+              <code>{result.invitationId}</code>
+            </p>
+          )}
+          {result.accountId && (
+            <p>
+              {t("Cuenta", "Conta")}: <code>{result.accountId}</code>
+            </p>
+          )}
+        </Disclosure>
       )}
     </section>
   );

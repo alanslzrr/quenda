@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { textField } from "../../app/action";
 import { ApiError } from "../../app/api";
+import { localDateTime } from "../../app/dates";
 import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { Checkbox } from "../../ui/checkbox/checkbox";
@@ -203,7 +204,7 @@ export function Revoke({
   );
 }
 export function SuspendAccount() {
-  const { t } = usePreferences();
+  const { t, locale } = usePreferences();
   const { account } = useSession();
   const client = useQueryClient();
   const [by, setBy] = useState<"email" | "account">("email");
@@ -212,6 +213,8 @@ export function SuspendAccount() {
   const [result, setResult] = useState<{
     accountId: string;
     suspendedAt: string;
+    /** The email or identifier the operator entered. */
+    entered: { by: "email" | "account"; value: string };
   }>();
   if (result)
     return (
@@ -221,7 +224,18 @@ export function SuspendAccount() {
           "Cuenta suspendida. Las reservas se conservan.",
           "Conta suspendida. As reservas consérvanse.",
         )}
-      />
+      >
+        <p>
+          {result.entered.by === "email"
+            ? t("Correo de la cuenta", "Correo da conta")
+            : t("Identificador de cuenta", "Identificador de conta")}
+          : {result.entered.value}
+        </p>
+        <p>
+          {t("Suspendida", "Suspendida")}:{" "}
+          {localDateTime(result.suspendedAt, locale)}
+        </p>
+      </Receipt>
     );
   return (
     <>
@@ -243,7 +257,7 @@ export function SuspendAccount() {
         danger
         body={(d) => suspensionRequest(by, id, textField(d, "reason")).body}
         onResult={async (r) => {
-          setResult(r);
+          setResult({ ...r, entered: { by, value: id.trim() } });
           if (r.accountId === account?.accountId)
             await client.invalidateQueries({ queryKey: ["session"] });
         }}
