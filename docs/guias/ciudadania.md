@@ -491,9 +491,9 @@ Sirve para ver todas tus reservas, pasadas y futuras, y la situación actual de 
 
 3. **Consulta una reserva.** Al abrirla, se ven su estado, el registro de llegada si lo hubo y las normas aceptadas.
 
-   ![Página «Reserva finalizada» con la llegada registrada, el aviso sobre asistencia y las normas aceptadas](../capturas/cu-08/04-detalle-finalizada.webp)
+   ![Página «Reserva finalizada» con el aviso sobre asistencia y las normas aceptadas](../capturas/cu-08/04-detalle-finalizada.webp)
 
-   *En «Acceso a la instalación» se lee «Llegada registrada» con la fecha y la hora en que el personal registró tu llegada. «Cancelación y cambios» aclara que el horario ya ha pasado y que el estado «Finalizada» no acredita la asistencia; debajo están las normas aceptadas con su fecha.*
+   *«Cancelación y cambios» aclara que el horario ya ha pasado y que el estado «Finalizada» no acredita la asistencia; debajo están las normas aceptadas con su fecha. A la derecha, el espacio, el día, la hora y la referencia. Si el personal registró tu llegada, la página añade «Acceso a la instalación» con «Llegada registrada» y la hora.*
 
    ![Página «Reserva cancelada» con el texto «La reserva está cancelada y el horario ha quedado libre.»](../capturas/cu-08/05-detalle-cancelada.webp)
 
