@@ -642,7 +642,7 @@ test("municipal continuity protects lasting responsibility and separates securit
       },
     );
     await t.test(
-      "security withdrawal also withdraws pending invitations sent to the account's verified address",
+      "security withdrawal of an account with its own tie also withdraws invitations to its verified address, and reveals no other account's address",
       async () => {
         const tenant = await municipality();
         const grant = await inviteManager(domain, actor("a"), tenant, {
@@ -702,27 +702,57 @@ test("municipal continuity protects lasting responsibility and separates securit
           )?.status,
           "PENDING",
         );
-        // An account whose only tie is an invitation to its address is
-        // withdrawn too; the command does not report NOT_FOUND and roll back.
+        // An account with no tie of its own here cannot be matched to an
+        // invited address: the answer and the invitation do not depend on
+        // whether its email is the one invited.
         const only = await inviteAdministrator(domain, actor("a"), tenant, {
           email: "pending@example.test",
           expiresAt: expiry(),
         });
-        await revokeMunicipalAccessForSecurity(
-          domain,
-          actor("a"),
-          tenant,
-          "pending",
-          "Compromised mailbox",
+        const onlyManager = await inviteManager(domain, actor("a"), tenant, {
+          email: "pending@example.test",
+          expiresAt: expiry(),
+          permissions: [{ operation: "UNIT_BLOCK", unitId: null }],
+        });
+        for (const target of ["pending", "c"])
+          await assert.rejects(
+            revokeMunicipalAccessForSecurity(
+              domain,
+              actor("a"),
+              tenant,
+              target,
+              "Probing an address",
+            ),
+            { code: "NOT_FOUND" },
+          );
+        assert.equal(
+          (
+            await migration.query(
+              `SELECT 1 FROM domain.identity_event WHERE tenant_id=$1 AND invitation_id=$2 AND operation='REVOKE_INVITATION'
+               UNION ALL SELECT 1 FROM domain.manager_event WHERE tenant_id=$1 AND invitation_id=$3 AND operation='REVOKE_MANAGER_INVITATION'`,
+              [tenant, only.invitationId, onlyManager.invitationId],
+            )
+          ).rowCount,
+          0,
         );
-        await assert.rejects(
-          acceptAdministratorInvitation(
-            domain,
-            actor("pending"),
-            tenant,
-            only.invitationId,
-          ),
-          { code: "NOT_FOUND" },
+        for (const status of [
+          (await listOwnAdministratorInvitations(domain, actor("pending")))
+            .items,
+          (await listOwnManagerInvitations(domain, actor("pending"))).items,
+        ].map(
+          (items) =>
+            items.find(
+              (row) =>
+                row.invitationId === only.invitationId ||
+                row.invitationId === onlyManager.invitationId,
+            )?.status,
+        ))
+          assert.equal(status, "PENDING");
+        await acceptAdministratorInvitation(
+          domain,
+          actor("pending"),
+          tenant,
+          only.invitationId,
         );
       },
     );
