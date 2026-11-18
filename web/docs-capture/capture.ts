@@ -134,7 +134,12 @@ export class Capture {
           node.dataset.captureStyle = node.getAttribute("style") ?? "";
           Object.assign(
             node.style,
-            /^(TD|TH)$/.test(node.tagName) ? cell : style,
+            // Cells, side navigation and list options are clipped by their
+            // container.
+            /^(TD|TH|NAV)$/.test(node.tagName) ||
+              node.getAttribute("role") === "option"
+              ? cell
+              : style,
           );
         },
         [highlightStyle, cellHighlightStyle] as const,
