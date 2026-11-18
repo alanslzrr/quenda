@@ -238,7 +238,17 @@ test("municipal administrator handover needs an accepted indefinite successor", 
   ).toBeVisible();
   await expect(page).toHaveURL(base);
   await invite(page, f.administrator.tenant, f.recipient.email, true);
+  await expect(
+    page.getByText(/^(Sin fecha de permiso|Sen data de permiso)/),
+  ).toBeVisible();
   await pickDateTime(page, /Permiso válido (hasta|ata)/, tomorrow(10));
+  // With a date, the help describes the expiry instead of its absence.
+  await expect(
+    page.getByText(/^(Sin fecha de permiso|Sen data de permiso)/),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(/^(El permiso caduca automáticamente|O permiso caduca)/),
+  ).toBeVisible();
   await confirmInvitation(page);
   const other = await browser.newContext({
     baseURL: "http://127.0.0.1:5173",
@@ -275,6 +285,15 @@ test("municipal administrator handover needs an accepted indefinite successor", 
         ),
       })
       .click();
+    // The originating invitation is a technical identifier, kept inside its
+    // collapsed disclosure until someone asks for it.
+    const origin = page.getByText(/Invitación de (origen|orixe)/);
+    await expect(origin).toBeHidden();
+    await page
+      .getByRole("button", { name: /^Identificador técnico/ })
+      .first()
+      .click();
+    await expect(origin).toBeVisible();
     const indefinite = await formAction(
       page,
       /Convertir en indefinido|Converter en indefinido/,
