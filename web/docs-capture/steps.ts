@@ -587,10 +587,12 @@ export async function activeAgreement(
     .getByRole("button", { name: "Añadir unidad", exact: true })
     .click();
   await marta.getByRole("button", { name: "Añadir participante" }).click();
-  await marta.getByLabel("Municipio 2", { exact: true }).fill(ribasanta);
+  await choose(marta, "Municipio 2", "Concello de Ribasanta");
+  await choose(marta, "Instalación · 2", "Polideportivo do Porto");
+  await choose(marta, "Unidad · 2", "Pista polideportiva");
   await marta
-    .getByLabel("Unidades: un identificador por línea · 2", { exact: true })
-    .fill(units.sportsCourt);
+    .getByRole("button", { name: "Añadir unidad · 2", exact: true })
+    .click();
   await marta
     .getByRole("checkbox", { name: "Confirmo la configuración del borrador" })
     .check();
