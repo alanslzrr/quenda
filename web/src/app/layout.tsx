@@ -225,6 +225,7 @@ export function Layout() {
                   {kindShort[kind][locale === "gl" ? 1 : 0]}
                 </Link>
               ))}
+              <Link to="/proyecto">{t("Sobre Quenda", "Sobre Quenda")}</Link>
             </nav>
           </footer>
         )}
