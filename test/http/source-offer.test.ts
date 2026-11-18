@@ -6,7 +6,10 @@ import path from "node:path";
 import test from "node:test";
 import { gzipSync } from "node:zlib";
 import { buildApp } from "../../src/app.ts";
-import { loadSourceOffer } from "../../src/http/source-offer.ts";
+import {
+  loadSourceOffer,
+  maximumSourceArchiveBytes,
+} from "../../src/http/source-offer.ts";
 
 const database = {
   check: async () => {
@@ -92,7 +95,7 @@ test("source loader rejects checksum mismatch, non-gzip payload and oversized fi
     for (const [bytes, suppliedHash] of [
       [gzipSync("fixture"), "0".repeat(64)],
       [Buffer.from("not gzip"), undefined],
-      [Buffer.alloc(16 * 1024 * 1024 + 1), undefined],
+      [Buffer.alloc(maximumSourceArchiveBytes + 1), undefined],
       [Buffer.alloc(0), undefined],
     ] as const) {
       await writeFile(filename, bytes);

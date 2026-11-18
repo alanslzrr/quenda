@@ -9,7 +9,9 @@ export interface SourceOffer {
   sha256: string;
   bytes: Buffer;
 }
-const maximumBytes = 16 * 1024 * 1024;
+// The archive is the whole tracked tree, including documentation media; the bound keeps the copy held in memory
+// predictable while leaving room for the presentation video and captures.
+export const maximumSourceArchiveBytes = 64 * 1024 * 1024;
 export async function loadSourceOffer(
   env: NodeJS.ProcessEnv,
 ): Promise<SourceOffer | undefined> {
@@ -32,7 +34,11 @@ export async function loadSourceOffer(
     const file = await open(filename, "r");
     try {
       const stat = await file.stat();
-      if (!stat.isFile() || stat.size < 3 || stat.size > maximumBytes)
+      if (
+        !stat.isFile() ||
+        stat.size < 3 ||
+        stat.size > maximumSourceArchiveBytes
+      )
         throw new Error("Invalid archive size");
       const bytes = Buffer.alloc(stat.size);
       let offset = 0;
