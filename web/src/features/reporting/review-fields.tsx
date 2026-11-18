@@ -1,4 +1,3 @@
-import { monthName } from "./model";
 import { useState } from "react";
 import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
@@ -11,6 +10,7 @@ import {
   useMunicipality,
   useMunicipalPages,
 } from "../municipal/shared";
+import { monthName } from "./model";
 
 type ReviewOption = {
   month: string;

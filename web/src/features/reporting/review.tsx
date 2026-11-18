@@ -113,8 +113,7 @@ function Review() {
           <h2>{t("Contexto de evaluación", "Contexto de avaliación")}</h2>
           <p>
             {labels.agreement} · {monthName(context.month, locale)} ·{" "}
-            {t("Revisión", "Revisión")}{" "}
-            {context.revision}
+            {t("Revisión", "Revisión")} {context.revision}
           </p>
           <p>
             {t("Municipio destinatario", "Municipio destinatario")}:{" "}
