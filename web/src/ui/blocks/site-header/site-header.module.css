@@ -1,0 +1,69 @@
+/* The header is its own size container, so the layout folds by the space it has rather than the viewport. */
+.header { position: sticky; top: 0; z-index: 20; container: site-header / inline-size; border-bottom: 1px solid transparent; background: transparent; color: var(--foreground); font-family: var(--font-body); letter-spacing: var(--tracking-body); transition: background-color var(--duration-standard) var(--ease-standard), border-color var(--duration-standard) var(--ease-standard), box-shadow var(--duration-standard) var(--ease-standard); }
+.header[data-scrolled] { border-bottom-color: var(--border); background: color-mix(in oklab, var(--background) 82%, transparent); -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4); }
+
+.inner { position: relative; max-width: 1200px; margin: 0 auto; padding: 0 var(--space-6); }
+.bar { display: flex; height: 64px; align-items: center; gap: var(--space-2); }
+.brandSlot { display: flex; min-width: 0; }
+.brand { display: inline-flex; align-items: center; gap: var(--space-2); border: 0; border-radius: 12px; padding: var(--space-2) var(--space-2) var(--space-2) 0; background: none; color: var(--foreground); font: inherit; font-size: var(--text-base); font-weight: 500; text-decoration: none; cursor: pointer; }
+.brandMark { width: 22px; height: 22px; flex: none; }
+
+.nav { min-width: 0; margin-left: var(--space-4); }
+.navList { display: flex; align-items: center; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.navCell { display: flex; }
+.navItem { position: relative; isolation: isolate; display: inline-flex; height: 36px; align-items: center; gap: 4px; border: 0; border-radius: 12px; padding: 0 var(--space-3); background: none; color: var(--text-secondary); font: inherit; font-size: var(--text-sm); font-weight: 500; text-decoration: none; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard); }
+.navItem[data-current] { color: var(--foreground); }
+@media (hover: hover) and (pointer: fine) { .navItem:hover { color: var(--foreground); } }
+.navLabel { position: relative; }
+.hover { position: absolute; z-index: -1; inset: 0; border-radius: inherit; background: var(--surface-muted); }
+.indicator { position: absolute; right: var(--space-3); bottom: 4px; left: var(--space-3); height: 2px; border-radius: 2px; background: var(--accent); }
+
+.wideOnly { display: flex; align-items: center; gap: var(--space-2); }
+.actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+.action { display: inline-flex; height: 36px; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: var(--radius-control); padding: 0 14px; font: inherit; font-size: var(--text-sm); font-weight: 500; text-decoration: none; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard); }
+.action:active { transform: scale(.97); }
+.secondary { background: none; color: var(--text-secondary); }
+.primary { background: var(--foreground); color: var(--background); }
+@media (hover: hover) and (pointer: fine) {
+  .secondary:hover { background: var(--surface-muted); color: var(--foreground); }
+  .primary:hover { opacity: .9; }
+}
+.menuButton { padding: 0; font: inherit; position: relative; display: none; width: 40px; height: 40px; place-items: center; border: 0; border-radius: 12px; background: none; color: var(--foreground); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--duration-fast) var(--ease-standard); }
+.menuButton:active { background: var(--surface-muted); }
+.menuIcon { display: grid; place-items: center; }
+
+/* Mobile sheet: drops from the bar and pushes nothing; the scrim closes it. */
+.scrim { position: absolute; top: 100%; right: 0; left: 0; height: 100dvh; background: oklch(0% 0 0 / .16); }
+.sheet { position: absolute; top: 100%; right: 0; left: 0; overflow: hidden; border-bottom: 1px solid var(--border); background: var(--background); }
+/* --site-header-sheet-max lets a header inside a fixed height scroller keep its actions in view. */
+.sheetInner { max-height: var(--site-header-sheet-max, calc(100dvh - 65px)); overflow-y: auto; overscroll-behavior: contain; padding: var(--space-2) var(--space-4) var(--space-5); }
+.sheetList { margin: 0; padding: 0; list-style: none; }
+.sheetItem { border-bottom: 1px solid var(--border-subtle); }
+.sheetRow { display: flex; width: 100%; min-height: 52px; align-items: center; justify-content: space-between; gap: var(--space-3); border: 0; padding: 0 var(--space-1); background: none; color: var(--foreground); font: inherit; font-size: var(--text-base); font-weight: 500; text-align: left; text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.sheetChevron { color: var(--text-muted); transition: transform var(--duration-standard) var(--ease-standard); }
+.sheetRow[aria-expanded="true"] .sheetChevron { transform: rotate(180deg); }
+.sheetDot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.sheetGroup { overflow: hidden; }
+.sheetGroup ul { display: grid; margin: 0; padding: 0 0 var(--space-3); list-style: none; }
+.sheetLink { display: flex; width: 100%; min-height: 44px; align-items: center; gap: var(--space-3); border: 0; border-radius: 12px; padding: 0 var(--space-2); background: none; color: var(--text-secondary); font: inherit; font-size: var(--text-sm); text-align: left; text-decoration: none; cursor: pointer; }
+.sheetLink:active { background: var(--surface-muted); color: var(--foreground); }
+.sheetActions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-top: var(--space-5); }
+.sheetActions .action { height: var(--control-height-md); }
+.sheetActions .secondary { border-color: var(--border); }
+
+@container site-header (max-width: 759px) {
+  .inner { padding: 0 var(--space-4); }
+  .nav, .wideOnly { display: none; }
+  .menuButton { display: grid; }
+  }
+@container site-header (min-width: 760px) {
+  .sheet, .scrim { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header, .navItem { transition: none; }
+}
+
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.sheetActions > * { justify-content: center; }
