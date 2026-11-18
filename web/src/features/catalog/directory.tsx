@@ -4,6 +4,7 @@ import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
 import { useMunicipalTheme } from "../../app/theme-provider";
 import { Input } from "../../ui/input/input";
+import { compareText } from "../../ui/lib/intl-cache.ts";
 import styles from "./booking.module.css";
 import {
   BookingSteps,
@@ -27,7 +28,7 @@ export function Home() {
   const query = useJourneyQuery();
   const municipalities = useMunicipalities();
   const items = municipalities.items.toSorted((a, b) =>
-    a.name.localeCompare(b.name, locale),
+    compareText(a.name, b.name, locale),
   );
   const chosen = items.find((item) => item.id === favorite);
   const needle = filter.trim().toLocaleLowerCase(locale);

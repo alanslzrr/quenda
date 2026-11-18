@@ -5,6 +5,7 @@ import { ApiError } from "../../app/api";
 import { usePreferences } from "../../app/preferences-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
+import { isTimeZone } from "../../ui/lib/intl-cache.ts";
 import { Reason } from "../municipal/shared";
 import {
   EmailField,
@@ -49,10 +50,7 @@ export function NewMunicipality() {
         label={t("Registrar municipio", "Rexistrar municipio")}
         body={(d) => {
           const timezone = textField(d, "timezone").trim();
-          try {
-            if (/^[+-]/.test(timezone)) throw new Error();
-            new Intl.DateTimeFormat("es", { timeZone: timezone });
-          } catch {
+          if (!isTimeZone(timezone)) {
             throw new ApiError(
               400,
               "INVALID_INPUT",

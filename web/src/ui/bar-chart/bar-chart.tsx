@@ -28,6 +28,7 @@ import {
   type Variants,
 } from "motion/react";
 import { chartText, withUnit } from "../lib/chart-text";
+import { numberFormat } from "../lib/intl-cache";
 import { MISSING_MARK, numberLocales } from "../lib/locale-text";
 import { motionTokens } from "../lib/motion-tokens";
 import { useLiveReducedMotion } from "../lib/use-live-reduced-motion";
@@ -572,7 +573,7 @@ export function BarChart({
   const reduced = useReducedMotionSafe();
   const text = useMemo(() => chartText(locale), [locale]);
   const grouped = useMemo(
-    () => new Intl.NumberFormat(numberLocales(locale), { maximumFractionDigits: 0 }),
+    () => numberFormat(numberLocales(locale), { maximumFractionDigits: 0 }),
     [locale],
   );
   const formatValue = formatValueProp ?? ((value: number) => grouped.format(value));

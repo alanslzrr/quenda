@@ -1,3 +1,4 @@
+import { compareText } from "../../ui/lib/intl-cache.ts";
 import type { AccountLabelValue } from "./account-label";
 export const staffOperations = {
   CATALOG_CREATE: ["Crear catálogo", "Crear catálogo"],
@@ -171,11 +172,12 @@ export function securityCandidates(
   }
   return [
     ...[...accounts.values()].sort((a, b) =>
-      (a.accountLabel?.email ?? a.accountId).localeCompare(
+      compareText(
+        a.accountLabel?.email ?? a.accountId,
         b.accountLabel?.email ?? b.accountId,
       ),
     ),
-    ...[...addresses.values()].sort((a, b) => a.value.localeCompare(b.value)),
+    ...[...addresses.values()].sort((a, b) => compareText(a.value, b.value)),
   ];
 }
 /**

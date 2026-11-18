@@ -8,6 +8,7 @@ import { usePreferences } from "../../app/preferences-provider";
 import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
+import { browserTimeZone } from "../../ui/lib/intl-cache.ts";
 import { Select } from "../../ui/select/select";
 import { Textarea } from "../../ui/textarea/textarea";
 import { useMunicipalities } from "../catalog/journey";
@@ -47,9 +48,7 @@ const unitIds = (text: string) => [
 export function AgreementEditor({ original }: { original?: Agreement }) {
   const m = useMunicipality();
   const { t } = usePreferences();
-  const [zone, setZone] = useState(
-    original?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-  );
+  const [zone, setZone] = useState(original?.timeZone ?? browserTimeZone());
   const [eligibility, setEligibility] = useState(
     original?.eligibility ?? "acceso_abierto",
   );

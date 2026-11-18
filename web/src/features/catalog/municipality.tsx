@@ -7,6 +7,7 @@ import { useFavorite } from "../../app/favorite";
 import { Failure, Loading } from "../../app/feedback";
 import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
+import { compareText } from "../../ui/lib/intl-cache.ts";
 import { BackLink } from "./booking";
 import styles from "./booking.module.css";
 import {
@@ -88,7 +89,7 @@ export function MunicipalityPage() {
   const items = facilities.items.toSorted(
     (a, b) =>
       Number(b.units > 0) - Number(a.units > 0) ||
-      a.name.localeCompare(b.name, locale),
+      compareText(a.name, b.name, locale),
   );
   const bookable = items.filter((item) => item.units > 0);
   // Covers are shown once any facility has a photo, so the list is either all images or none.

@@ -34,6 +34,7 @@ import {
 } from "../../app/themes";
 import { Button } from "../../ui/button/button";
 import { DropdownMenu } from "../../ui/dropdown-menu/dropdown-menu";
+import { compareText } from "../../ui/lib/intl-cache.ts";
 import SegmentedControl from "../../ui/segmented-control/segmented-control";
 import styles from "./appearance.module.css";
 import { MunicipalIdentity } from "./identity";
@@ -96,9 +97,7 @@ const settingsOf = ({ version: _, ...settings }: Appearance): Settings =>
 /** Same settings regardless of key order, so a reordered object is not "unsaved". */
 function same(a: Settings, b: Settings) {
   const colors = (value: ColorOverrides) =>
-    JSON.stringify(
-      Object.entries(value).sort(([x], [y]) => x.localeCompare(y)),
-    );
+    JSON.stringify(Object.entries(value).sort(([x], [y]) => compareText(x, y)));
   return (
     a.theme === b.theme &&
     a.font === b.font &&

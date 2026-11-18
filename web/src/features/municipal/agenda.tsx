@@ -20,6 +20,7 @@ import { Badge } from "../../ui/badge/badge";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { EmptyState } from "../../ui/empty-state/empty-state";
 import { Input } from "../../ui/input/input";
+import { dateTimeFormat } from "../../ui/lib/intl-cache.ts";
 import { Select } from "../../ui/select/select";
 import { SortableDataTable } from "../../ui/sortable-data-table/sortable-data-table";
 import {
@@ -693,8 +694,8 @@ function Arrival({ reservation: r }: { reservation: Reservation }) {
               )
             : now < opens
               ? t(
-                  `Todavía no da acceso: la llegada se puede registrar desde las ${new Date(opens).toLocaleTimeString(locale === "gl" ? "gl-ES" : "es-ES", { hour: "2-digit", minute: "2-digit", timeZone: r.timeZone })}.`,
-                  `Aínda non dá acceso: a chegada pódese rexistrar desde as ${new Date(opens).toLocaleTimeString(locale === "gl" ? "gl-ES" : "es-ES", { hour: "2-digit", minute: "2-digit", timeZone: r.timeZone })}.`,
+                  `Todavía no da acceso: la llegada se puede registrar desde las ${dateTimeFormat(locale === "gl" ? "gl-ES" : "es-ES", { hour: "2-digit", minute: "2-digit", timeZone: r.timeZone }).format(new Date(opens))}.`,
+                  `Aínda non dá acceso: a chegada pódese rexistrar desde as ${dateTimeFormat(locale === "gl" ? "gl-ES" : "es-ES", { hour: "2-digit", minute: "2-digit", timeZone: r.timeZone }).format(new Date(opens))}.`,
                 )
               : t("Esta reserva ya ha terminado.", "Esta reserva xa rematou.")}
         </p>

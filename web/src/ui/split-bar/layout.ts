@@ -1,3 +1,4 @@
+import type { NumberFormatter } from "../lib/intl-cache";
 import type { SplitSegment } from "./split-bar";
 export type Slice = {
   id: string;
@@ -13,7 +14,7 @@ export function layoutShares(
   active: string | null,
   width: number,
   measure: (text: string) => number,
-  percent: Intl.NumberFormat,
+  percent: NumberFormatter,
 ): Slice[] {
   const lengths = new Map(shares);
   if (active && width > 0) {
@@ -70,7 +71,7 @@ export function outsideLabels(
   slices: readonly Slice[],
   width: number,
   measure: (text: string) => number,
-  percent: Intl.NumberFormat,
+  percent: NumberFormatter,
 ): Outside[] {
   const collect = (names: boolean) =>
     slices

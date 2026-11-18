@@ -11,7 +11,7 @@ export function pickText<T>(locale: string, text: Record<UiLanguage, T>): T {
   return text[uiLanguage(locale)];
 }
 
-/** Intl locale list: the requested locale first, then Spanish, which shares Galician separators, for runtimes without Galician data. */
+/** Intl locale list: the requested locale first, then Spanish for an unsupported or empty tag. Galician is handled by `intl-cache.ts`. */
 export function numberLocales(locale: string): string[] {
   const tag = locale.trim();
   return tag && tag !== "es-ES" ? [tag, "es-ES"] : ["es-ES"];

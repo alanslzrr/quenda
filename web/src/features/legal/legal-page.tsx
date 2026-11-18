@@ -7,6 +7,7 @@ import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
 import { storageEntries } from "../../app/storage-keys";
 import { useMunicipalTheme } from "../../app/theme-provider";
+import { dateTimeFormat } from "../../ui/lib/intl-cache.ts";
 import styles from "./legal.module.css";
 import {
   conformanceLabel,
@@ -155,7 +156,7 @@ function Content({
   const label = (key: string) =>
     noticeFields[kind].find((item) => item.key === key)?.label[lang] ?? key;
   const published = notice.publishedAt
-    ? new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
+    ? dateTimeFormat(locale, { dateStyle: "long" }).format(
         new Date(notice.publishedAt),
       )
     : undefined;

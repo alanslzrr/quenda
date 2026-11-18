@@ -22,6 +22,7 @@ import { unreadNoticesKey, useUnreadNotices } from "../../app/unread-notices";
 import { Badge } from "../../ui/badge/badge";
 import { Button } from "../../ui/button/button";
 import { EmptyState } from "../../ui/empty-state/empty-state";
+import { browserTimeZone } from "../../ui/lib/intl-cache.ts";
 import { PageTitle } from "../account/shared";
 import { endsNextDay, intervalLabel } from "../catalog/dates";
 import styles from "./notices.module.css";
@@ -103,7 +104,7 @@ export function Notices() {
   const { account } = useSession();
   const { locale, t } = usePreferences();
   // When something happened is told in the reader's own time; the booked slot stays in the municipality's.
-  const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const browserZone = browserTimeZone();
   const client = useQueryClient();
   const unread = useUnreadNotices();
   const key = ["private", account?.accountId, "notices", locale];

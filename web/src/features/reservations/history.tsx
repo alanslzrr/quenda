@@ -11,6 +11,7 @@ import { useMunicipalTheme } from "../../app/theme-provider";
 import { Badge } from "../../ui/badge/badge";
 import { Button } from "../../ui/button/button";
 import { EmptyState } from "../../ui/empty-state/empty-state";
+import { compareText } from "../../ui/lib/intl-cache.ts";
 import { Select } from "../../ui/select/select";
 import { PageTitle } from "../account/shared";
 import { endsNextDay, intervalLabel } from "../catalog/dates";
@@ -89,7 +90,7 @@ export function ReservationHistory() {
         ? `${m.name} · ${m.tenantId.slice(-6)}`
         : m.name,
     ])
-    .sort((a, b) => a[1].localeCompare(b[1], locale));
+    .sort((a, b) => compareText(a[1], b[1], locale));
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
   const status = (value: Reservation["status"]) =>
     value === "CONFIRMADA"

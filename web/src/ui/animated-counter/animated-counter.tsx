@@ -80,8 +80,7 @@ const reveal = {
 
 /** Split a formatted number into columns keyed by place value, so 999 → 1,000 keeps the ones column the ones column. */
 function partsFor(value: number, decimals: number, locale: string): Part[] {
-  // Some browsers ship no Galician data; Spanish uses the same separators.
-  const parts = numberFormat(locale.startsWith("gl") ? [locale, "es"] : locale, {
+  const parts = numberFormat(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
     numberingSystem: "latn",

@@ -13,6 +13,7 @@ import { SecuritySection } from "../../ui/blocks/security-settings/security-sect
 import security from "../../ui/blocks/security-settings/security-settings.module.css";
 import { Button } from "../../ui/button/button";
 import { Input } from "../../ui/input/input";
+import { browserTimeZone } from "../../ui/lib/intl-cache.ts";
 import { dateTime } from "../reservations/shared";
 import { FactorField, verifyFactor } from "./factor";
 import flat from "./security.module.css";
@@ -352,12 +353,7 @@ export function AccountSecurity() {
                         {item.token === auth.session.token
                           ? t("Esta sesión", "Esta sesión")
                           : t("Otra sesión", "Outra sesión")}{" "}
-                        ·{" "}
-                        {dateTime(
-                          item.createdAt,
-                          Intl.DateTimeFormat().resolvedOptions().timeZone,
-                          locale,
-                        )}
+                        · {dateTime(item.createdAt, browserTimeZone(), locale)}
                       </p>
                     </div>
                     {item.token !== auth.session.token && (
