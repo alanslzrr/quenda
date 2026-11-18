@@ -4,6 +4,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from "react";
 import { ArrowUp } from "lucide-react";
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, type Transition, type Variants } from "motion/react";
+import { collator as cachedCollator } from "../lib/intl-cache";
 import { motionTokens } from "../lib/motion-tokens";
 import styles from "./sortable-data-table.module.css";
 
@@ -134,7 +135,7 @@ export function SortableDataTable<T extends Record<string, unknown>>({ rows, col
   const [internalSelection, setInternalSelection] = useState<string[]>(defaultSelectedKeys ?? []);
   const selection = useMemo(() => new Set(selectedKeys ?? internalSelection), [internalSelection, selectedKeys]);
 
-  const collator = useMemo(() => new Intl.Collator(locale, { numeric: true, sensitivity: "base" }), [locale]);
+  const collator = useMemo(() => cachedCollator(locale, { numeric: true, sensitivity: "base" }), [locale]);
   const sortedRows = useMemo(() => {
     if (!sort) return rows;
     return rows.map((row, index) => ({ row, index })).sort((a, b) => {
