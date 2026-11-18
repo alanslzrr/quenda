@@ -210,7 +210,7 @@ export function ReservationDetail() {
                     onSuccess={() => setAcceptFailed(false)}
                     onFailure={async () => {
                       setAcceptFailed(true);
-                      await query.refetch();
+                      return (await query.refetch()).data;
                     }}
                   >
                     {acceptable && (
@@ -325,9 +325,7 @@ export function ReservationDetail() {
                   </DialogClose>
                 }
                 onSuccess={() => setCancelling(false)}
-                onFailure={async () => {
-                  await query.refetch();
-                }}
+                onFailure={async () => (await query.refetch()).data}
               />
             </DialogContent>
           </Dialog>
