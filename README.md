@@ -27,6 +27,14 @@
 
 ---
 
+## Presentación
+
+<p align="center">
+  <a href="docs/media/quenda-presentacion.mp4"><img src="docs/media/quenda-presentacion.jpg" width="880" alt="Vídeo de presentación de Quenda: reserva ciudadana, gestión, analítica, configuración e identidad municipal y modelos de despliegue"></a>
+</p>
+
+Recorrido de dos minutos grabado sobre la aplicación real con los datos de demostración: la reserva ciudadana hasta el código de acceso, la agenda y la analítica municipal, la configuración de condiciones, horarios y permisos, la identidad de cada municipio y los dos modelos de despliegue. [Ver el vídeo](docs/media/quenda-presentacion.mp4) (MP4, 1080p).
+
 ## Visión general
 
 Muchos ayuntamientos, sobre todo los de menor tamaño, siguen gestionando sus pistas, salas y pabellones por teléfono, correo electrónico o atención presencial, con poca visibilidad de la disponibilidad real y procesos de modificación y cancelación poco ágiles. Quenda ofrece a la ciudadanía un servicio web para consultar, reservar, modificar y cancelar, y al personal municipal las herramientas para mantener instalaciones, horarios, normas e indicadores.
