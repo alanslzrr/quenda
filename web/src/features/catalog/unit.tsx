@@ -8,6 +8,7 @@ import { usePreferences } from "../../app/preferences-provider";
 import { useSession } from "../../app/session";
 import { Alert } from "../../ui/alert/alert";
 import { calendarLabel } from "../../ui/lib/calendar-labels";
+import { browserTimeZone } from "../../ui/lib/intl-cache.ts";
 import {
   bookingQuery,
   DateField,
@@ -199,7 +200,7 @@ export function UnitAvailability({
         locale,
       ),
   });
-  const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const browserZone = browserTimeZone();
   const day = calendarLabel(calendarDate(date), locale, "day");
   const headingId = `slots-${unit.id}`;
   const facility = { id: unit.facilityId, name: unit.facilityName };

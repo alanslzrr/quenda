@@ -9,6 +9,7 @@ import { useSession } from "../../app/session";
 import { Badge } from "../../ui/badge/badge";
 import { Button } from "../../ui/button/button";
 import { EmptyState } from "../../ui/empty-state/empty-state";
+import { browserTimeZone, compareText } from "../../ui/lib/intl-cache.ts";
 import { staffOperations } from "../municipal/staff-model";
 import { dateTime } from "../reservations/shared";
 import styles from "./invitations.module.css";
@@ -81,7 +82,7 @@ export function Invitations() {
   const pending = entries.filter((entry) => entry.status === "PENDING");
   const history = entries
     .filter((entry) => entry.status !== "PENDING")
-    .sort((a, b) => b.expiresAt.localeCompare(a.expiresAt));
+    .sort((a, b) => compareText(b.expiresAt, a.expiresAt));
   const more = queries.filter((query) => query.hasNextPage);
   return (
     <>
@@ -183,7 +184,7 @@ function InvitationCard({ entry }: { entry: Entry }) {
   const { account } = useSession();
   const { t, locale } = usePreferences();
   const client = useQueryClient();
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const zone = browserTimeZone();
   const date = (value: string) => dateTime(value, zone, locale);
   const role = {
     administrator: t("Administración municipal", "Administración municipal"),

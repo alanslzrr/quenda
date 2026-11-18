@@ -7,6 +7,7 @@ import { usePreferences } from "../../app/preferences-provider";
 import { Alert } from "../../ui/alert/alert";
 import { Button } from "../../ui/button/button";
 import { calendarLabel } from "../../ui/lib/calendar-labels";
+import { browserTimeZone, compareText } from "../../ui/lib/intl-cache.ts";
 import { Select } from "../../ui/select/select";
 import {
   bookingQuery,
@@ -169,14 +170,14 @@ export function AvailabilitySearch({
       (a, b) =>
         (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
           (order.get(b.id) ?? Number.MAX_SAFE_INTEGER) ||
-        a.name.localeCompare(b.name, locale),
+        compareText(a.name, b.name, locale),
     )
     .map((group) => ({
       ...group,
-      units: group.units.sort((a, b) => a.name.localeCompare(b.name, locale)),
+      units: group.units.sort((a, b) => compareText(a.name, b.name, locale)),
     }));
   const day = calendarLabel(calendarDate(params.date), locale, "day");
-  const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const browserZone = browserTimeZone();
   const facilityDropped =
     !!params.facility && !all.loading && !all.isError && facility === "";
   const durationDropped =
