@@ -12,6 +12,7 @@ import { usePreferences } from "../../app/preferences-provider";
 import { Badge } from "../../ui/badge/badge";
 import { BarChart } from "../../ui/bar-chart/bar-chart";
 import { EmptyState } from "../../ui/empty-state/empty-state";
+import { compareText } from "../../ui/lib/intl-cache.ts";
 import { LineChart } from "../../ui/line-chart/line-chart";
 import { MetricCard } from "../../ui/metric-card/metric-card";
 import SegmentedControl from "../../ui/segmented-control/segmented-control";
@@ -447,13 +448,13 @@ function groups(units: UnitUsage[]) {
     map.set(key, group);
   }
   return [...map.values()]
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => compareText(a.name, b.name))
     .map((group) => ({
       ...group,
       units: group.units.sort(
         (a, b) =>
           (b.occupancyPercent ?? -1) - (a.occupancyPercent ?? -1) ||
-          (a.name ?? "").localeCompare(b.name ?? ""),
+          compareText(a.name ?? "", b.name ?? ""),
       ),
     }));
 }
