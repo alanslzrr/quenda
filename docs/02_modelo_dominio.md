@@ -189,7 +189,7 @@ Existe una política vigente por ámbito y familia. Una nueva aprobación sustit
 | `MUNICIPAL_PROFILE` | Municipio | Última actividad conservada de perfil, reservas, comunicaciones, permisos o acreditaciones del servicio. |
 | `AUTHENTICATION` | Global | Fecha del evento de seguridad; para sesiones y comprobaciones temporales, vencimiento. |
 | `IDENTITY` | Global | Baja voluntaria de la cuenta. |
-| `AUTHORITY` | Municipio o global | Última evidencia de la concesión o fecha del evento de acceso correspondiente. |
+| `AUTHORITY` | Municipio o global | Última evidencia de la concesión o fecha del evento de acceso correspondiente; para la dirección de una invitación no aceptada, su revocación o, si no la hubo, su vencimiento. |
 | `ACCREDITATIONS` | Municipio emisor | Revocación, si existe; en otro caso, fin de vigencia. |
 
 El servidor compara el instante de referencia con una duración entera positiva en días de 24 horas, calculada en UTC. No convierte meses o años legales en un número aproximado de días. Los selectores y referencias temporales son fijos; las políticas no ejecutan expresiones, SQL ni filtros aportados por usuarios. La aprobación debe cubrir la familia completa del ámbito. Finalidades incompatibles dentro de una familia requieren resolver su clasificación o registrar la excepción correspondiente antes de automatizar su eliminación.
