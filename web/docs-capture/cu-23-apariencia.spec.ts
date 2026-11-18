@@ -27,6 +27,26 @@ async function logo(width: number, height: number) {
 const saveBar = (page: Page) =>
   page.getByRole("button", { name: "Guardar", exact: true });
 
+/**
+ * Scrolls the editor to its end, where the floating save bar rests below the
+ * last section instead of over it.
+ */
+async function barAtEnd(page: Page) {
+  await saveBar(page).evaluate((button) => {
+    let box = button.parentElement;
+    while (
+      box &&
+      !(
+        /(auto|scroll)/.test(getComputedStyle(box).overflowY) &&
+        box.scrollHeight > box.clientHeight
+      )
+    )
+      box = box.parentElement;
+    if (box) box.scrollTop = box.scrollHeight;
+    else document.scrollingElement?.scrollTo(0, document.body.scrollHeight);
+  });
+}
+
 // CU-23 — Configurar la apariencia pública. La administración de Ribasanta
 // cambia su identidad y su tema. Al terminar restaura el nombre, el logo para
 // fondo oscuro y el tema neutro, como estaban en el sembrado.
@@ -75,7 +95,15 @@ test("CU-23 configurar la apariencia pública", async ({ page, browser }) => {
   // Paso 2: elegir un tema del catálogo; se aplica al momento.
   const viewing = page.getByRole("group", { name: "Modo que estás viendo" });
   await viewing.getByRole("radio", { name: "Claro", exact: true }).check();
-  await page.getByRole("button", { name: "Neutro", exact: true }).click();
+  // The trigger near the top of the window, so that the theme menu opens
+  // downwards, clear of the top bar.
+  const themes = page.getByRole("button", { name: "Neutro", exact: true });
+  await themes.evaluate((element) => {
+    (element as HTMLElement).style.scrollMarginTop = "160px";
+    element.scrollIntoView({ block: "start" });
+    (element as HTMLElement).style.scrollMarginTop = "";
+  });
+  await themes.click();
   const blue = page.getByRole("menuitem", { name: "Azul", exact: true });
   await expect(blue).toBeVisible();
   await snap(cu, page, "catalogo-de-temas", { target: blue });
@@ -101,6 +129,7 @@ test("CU-23 configurar la apariencia pública", async ({ page, browser }) => {
 
   // Paso 3: guardar; Quenda comprueba permisos, contraste y revisión.
   const save = saveBar(page);
+  await barAtEnd(page);
   await snap(cu, page, "guardar", { target: save });
   await save.click();
   const stored = page.getByText("Apariencia guardada");
@@ -221,6 +250,7 @@ test("CU-23 configurar la apariencia pública", async ({ page, browser }) => {
   const conflict = page.getByRole("alert").filter({ hasText: /\S/ }).last();
   await expect(conflict).toBeVisible();
   const discard = page.getByRole("button", { name: "Descartar", exact: true });
+  await barAtEnd(page);
   await snap(cu, page, "revision-obsoleta", { target: discard });
   await discard.click();
   await expect(
@@ -232,6 +262,7 @@ test("CU-23 configurar la apariencia pública", async ({ page, browser }) => {
     name: "Restaurar valores predeterminados",
   });
   await restore.click();
+  await barAtEnd(page);
   await snap(cu, page, "restaurar", { target: saveBar(page) });
   await saveBar(page).click();
   await expect(page.getByText("Apariencia guardada")).toBeVisible();
