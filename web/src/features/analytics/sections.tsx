@@ -32,6 +32,7 @@ import {
   formatNumber,
   formatPercent,
   highlights,
+  metricSuffix,
   type Period,
   peakText,
   periodName,
@@ -293,7 +294,7 @@ export function Summary({
               locale={locale}
               decimals={card.key === "hours" && (card.value ?? 0) < 10 ? 1 : 0}
               {...(card.value !== null && card.suffix
-                ? { suffix: card.suffix === "%" ? " %" : " h" }
+                ? { suffix: metricSuffix(card.suffix === "%" ? "%" : "h") }
                 : {})}
               context={card.context}
               {...(shown ? { comparison: shown } : {})}

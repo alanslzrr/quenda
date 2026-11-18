@@ -247,6 +247,12 @@ export function formatHours(minutes: number, locale: Language) {
 export function formatPercent(value: number | null, locale: Language) {
   return value === null ? "—" : `${formatNumber(value, locale, 0)} %`;
 }
+/**
+ * Unit after a large summary figure, separated as in the rest of the page
+ * («82 %», «844 h»). A no-break space survives the counter's inline boxes,
+ * where an ordinary leading space collapses.
+ */
+export const metricSuffix = (unit: "%" | "h") => `\u00a0${unit}`;
 
 /* ---------- Comparison with the previous period ---------- */
 
