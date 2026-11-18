@@ -22,6 +22,7 @@ import {
 } from "motion/react";
 import { chartText } from "../lib/chart-text";
 import { hasValue, lastValueIndex, mixGapped, sampleAt, type Point } from "../lib/gapped-series";
+import { numberFormat } from "../lib/intl-cache";
 import { MISSING_MARK, numberLocales } from "../lib/locale-text";
 import { motionTokens } from "../lib/motion-tokens";
 import { useLiveReducedMotion } from "../lib/use-live-reduced-motion";
@@ -256,7 +257,7 @@ export function Sparkline(props: SparklineProps) {
   const label = props.label ?? "";
   const interactive = !decorative && (props.interactive ?? true);
   const text = useMemo(() => chartText(locale), [locale]);
-  const grouped = useMemo(() => new Intl.NumberFormat(numberLocales(locale)), [locale]);
+  const grouped = useMemo(() => numberFormat(numberLocales(locale)), [locale]);
   const readings = data.map((item) => (hasValue(item) ? item : null));
   // With nothing to draw there is nothing to scrub; a lone point spans the width as a flat line.
   const empty = !readings.some((item) => item !== null);
