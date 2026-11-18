@@ -1,0 +1,70 @@
+.footer { --footer-pad: max(var(--space-6), calc((100% - 1200px) / 2)); position: relative; container: site-footer / inline-size; overflow: hidden; border-top: 1px solid var(--border); padding: var(--space-12) var(--footer-pad) var(--space-6); background: var(--background); color: var(--foreground); font-family: var(--font-body); letter-spacing: var(--tracking-body); }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: var(--space-12); }
+.intro { display: grid; align-content: start; gap: var(--space-3); min-width: 0; }
+.tagline { max-width: 320px; margin: 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-body); }
+
+.columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); }
+.column h2 { margin: 0 0 var(--space-3); font-size: var(--text-sm); font-weight: 500; }
+.column h2 { font-family: var(--font-display); line-height: var(--leading-display); letter-spacing: var(--tracking-display); }
+.column ul, .inline { margin: 0; padding: 0; list-style: none; }
+.column ul { display: grid; gap: var(--space-2); }
+.link { display: inline-flex; align-items: center; gap: 3px; border: 0; padding: 2px 0; background: none; color: var(--text-secondary); font: inherit; font-size: var(--text-sm); text-align: left; text-decoration: none; cursor: pointer; transition: color var(--duration-fast) var(--ease-standard); }
+.link:active, .link:focus-visible { color: var(--foreground); }
+.external { color: var(--text-muted); transition: transform var(--duration-fast) var(--ease-standard); }
+@media (hover: hover) and (pointer: fine) {
+  .link:hover { color: var(--foreground); }
+  .link:hover .external { transform: translate(1px, -1px); }
+}
+
+.bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-6); margin-top: var(--space-12); border-top: 1px solid var(--border-subtle); padding-top: var(--space-5); }
+.inline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); }
+.copyright { color: var(--text-muted); font-size: var(--text-sm); }
+/* The closing lockup sits whole under the legal row. */
+.logo { padding-bottom: 0; }
+
+@container site-footer (max-width: 760px) {
+  .top { grid-template-columns: minmax(0, 1fr); gap: var(--space-10); }
+}
+@container site-footer (max-width: 520px) {
+  .columns { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8) var(--space-4); }
+  .bottom { flex-direction: column; align-items: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link, .external { transition: none; }
+}
+
+/* Closing wordmark: full width, whole, resting on the bottom edge of the page so the descender of the "q" stays visible. */
+.wordStage {
+  position: relative;
+  container: wordmark / inline-size;
+  margin: var(--space-12) calc(50% - 50vw) 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+.grainDefs { position: absolute; width: 0; height: 0; }
+.word {
+  display: flex;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 27.5cqi;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.04;
+}
+/* Tight tracking comes from margins, so each clipped slot still holds its whole glyph. */
+.letterSlot { display: inline-block; overflow: hidden; padding-inline: 0.04em; margin-inline: -0.072em; }
+.letter {
+  display: inline-block;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--foreground) 12%, var(--background)) 0%,
+    color-mix(in oklab, var(--foreground) 6%, var(--background)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
