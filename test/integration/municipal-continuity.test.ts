@@ -685,14 +685,16 @@ test("municipal continuity protects lasting responsibility and separates securit
           acceptManager(domain, actor("b"), tenant, manager.invitationId),
           { code: "NOT_FOUND" },
         );
-        assert.equal(
+        // "b" never accepted that invitation: the revocation keeps actor and
+        // reason but does not record the account behind the address.
+        assert.deepEqual(
           (
             await migration.query(
-              "SELECT subject_id FROM domain.identity_event WHERE tenant_id=$1 AND invitation_id=$2 AND operation='REVOKE_INVITATION'",
+              "SELECT actor_id,subject_id,reason FROM domain.identity_event WHERE tenant_id=$1 AND invitation_id=$2 AND operation='REVOKE_INVITATION'",
               [tenant, admin.invitationId],
             )
-          ).rows[0]?.subject_id,
-          "b",
+          ).rows,
+          [{ actor_id: "a", subject_id: null, reason: "Compromised mailbox" }],
         );
         assert.equal(
           (await listOwnManagerInvitations(domain, actor("c"))).items.find(

@@ -344,14 +344,16 @@ test("operator and global privacy invitations follow a verified email and never 
             [unrelated.invitationId]: false,
           },
         );
-        assert.equal(
+        // The withdrawal is recorded on the invitation without naming the
+        // account, which never accepted it.
+        assert.deepEqual(
           (
             await migration.query(
-              "SELECT 1 FROM domain.global_privacy_permission_event WHERE invitation_id=$1 AND operation='ACCOUNT_WITHDRAWAL' AND actor_id='compromised'",
+              "SELECT actor_id FROM domain.global_privacy_permission_event WHERE invitation_id=$1 AND operation='ACCOUNT_WITHDRAWAL'",
               [privacyInvitation.invitationId],
             )
-          ).rowCount,
-          1,
+          ).rows,
+          [{ actor_id: null }],
         );
         await revokeOperatorInvitation(
           domain,
@@ -712,6 +714,111 @@ test("operator and global privacy invitations follow a verified email and never 
               item.invitationId === manager.invitationId &&
               item.status === "PENDING",
           ),
+        );
+      },
+    );
+
+    await t.test(
+      "withdrawal by address leaves invitations that already expired untouched",
+      async () => {
+        const municipality = await createMunicipality(domain, operator, {
+          name: "Lapsed address withdrawal",
+          timezone: "Europe/Madrid",
+          administratorEmail: "admin@example.test",
+          invitationExpiresAt: expiry(),
+        });
+        const tenant = municipality.tenantId;
+        await acceptAdministratorInvitation(
+          domain,
+          actor("admin"),
+          tenant,
+          municipality.invitationId,
+        );
+        const administrator = await inviteAdministrator(
+          domain,
+          actor("admin"),
+          tenant,
+          { email: "lapsed@example.test", expiresAt: expiry() },
+        );
+        const manager = await inviteManager(domain, actor("admin"), tenant, {
+          email: "lapsed@example.test",
+          expiresAt: expiry(),
+          permissions: [{ operation: "RESERVATION_READ", unitId: null }],
+        });
+        const roleEnded = await inviteManager(domain, actor("admin"), tenant, {
+          email: "lapsed@example.test",
+          expiresAt: expiry(),
+          permissions: [{ operation: "UNIT_BLOCK", unitId: null }],
+        });
+        // Acceptance deadlines, and the role of the last one, are already past.
+        await migration.query(
+          "UPDATE domain.administrator_invitation SET created_at=now()-interval '2 hours',expires_at=now()-interval '1 hour' WHERE id=$1",
+          [administrator.invitationId],
+        );
+        await migration.query(
+          "UPDATE domain.manager_invitation SET created_at=now()-interval '2 hours',expires_at=now()-interval '1 hour' WHERE id=$1",
+          [manager.invitationId],
+        );
+        await migration.query(
+          "UPDATE domain.manager_invitation SET created_at=now()-interval '2 hours',role_expires_at=now()-interval '1 hour' WHERE id=$1",
+          [roleEnded.invitationId],
+        );
+        await assert.rejects(
+          revokeAddressInvitationsForSecurity(
+            domain,
+            actor("admin"),
+            tenant,
+            "lapsed@example.test",
+            "Dirección comprometida",
+          ),
+          { code: "NOT_FOUND" },
+        );
+        // Their revocation instant, which anchors address retention, stays
+        // empty and no withdrawal is recorded.
+        assert.deepEqual(
+          (
+            await migration.query(
+              `SELECT revoked_at FROM domain.administrator_invitation WHERE id=$1
+               UNION ALL SELECT revoked_at FROM domain.manager_invitation WHERE id=ANY($2::uuid[])`,
+              [
+                administrator.invitationId,
+                [manager.invitationId, roleEnded.invitationId],
+              ],
+            )
+          ).rows,
+          [{ revoked_at: null }, { revoked_at: null }, { revoked_at: null }],
+        );
+        assert.equal(
+          (
+            await migration.query(
+              `SELECT 1 FROM domain.identity_event WHERE tenant_id=$1 AND operation='REVOKE_INVITATION'
+               UNION ALL SELECT 1 FROM domain.manager_event WHERE tenant_id=$1 AND operation='REVOKE_MANAGER_INVITATION'`,
+              [tenant],
+            )
+          ).rowCount,
+          0,
+        );
+        // A pending invitation to the same address is still withdrawn.
+        const pending = await inviteManager(domain, actor("admin"), tenant, {
+          email: "lapsed@example.test",
+          expiresAt: expiry(),
+          permissions: [{ operation: "RESERVATION_READ", unitId: null }],
+        });
+        await revokeAddressInvitationsForSecurity(
+          domain,
+          actor("admin"),
+          tenant,
+          "lapsed@example.test",
+          "Dirección comprometida",
+        );
+        assert.deepEqual(
+          (
+            await migration.query(
+              "SELECT id FROM domain.manager_invitation WHERE tenant_id=$1 AND revoked_at IS NOT NULL",
+              [tenant],
+            )
+          ).rows,
+          [{ id: pending.invitationId }],
         );
       },
     );
