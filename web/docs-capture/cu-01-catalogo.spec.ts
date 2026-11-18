@@ -127,7 +127,9 @@ test("CU-01 alternativas de la consulta", async ({ page }) => {
     empty.getByRole("heading", { name: "Próximos horarios libres" }),
   ).toBeVisible();
   await expect(empty.getByRole("link").first()).toBeVisible();
-  await shot(cu, page, "dia-sin-horarios", { target: empty });
+  await shot(cu, page, "dia-sin-horarios", {
+    target: empty.getByText(/No quedan horarios libres/),
+  });
 
   // Alternativa: los días posteriores al plazo de antelación aparecen
   // desactivados en el calendario.
@@ -172,6 +174,8 @@ test.describe("en el móvil", () => {
   });
 
   test("CU-01 menú y calendario en el móvil", async ({ page }) => {
+    // Same «today» as the desktop captures.
+    await morningClock(page);
     // Menú de navegación del móvil: «Reservar» y el menú «Ajustes».
     await page.goto(`/municipios/${valdeira.id}`);
     const menu = page.getByRole("button", { name: "Ajustes", exact: true });
