@@ -9,6 +9,7 @@ import { motionTokens } from "../motion-tokens";
 import { useToday } from "../lib/use-today";
 import styles from "./calendar.module.css";
 import { calendarLabel } from "../lib/calendar-labels";
+import { dateTimeFormat } from "../lib/intl-cache";
 
 export type CalendarDateMatcher = (date: Date) => boolean;
 
@@ -311,7 +312,7 @@ export function Calendar({
         </h2>
         <span className={styles.srOnly} aria-live="polite">{direction ? monthLabel : ""}</span>
         <div className={styles.navigation}>
-          {showToday && <button type="button" className={styles.todayButton} aria-disabled={todayIdle || undefined} aria-label={today ? `Today, ${today.toLocaleDateString(locale, { dateStyle: "full" })}` : "Today"} onClick={goToToday}>Today</button>}
+          {showToday && <button type="button" className={styles.todayButton} aria-disabled={todayIdle || undefined} aria-label={today ? `Today, ${dateTimeFormat(locale, { dateStyle: "full" }).format(today)}` : "Today"} onClick={goToToday}>Today</button>}
           <button type="button" className={styles.navButton} aria-label={locale.startsWith("gl") ? "Mes anterior" : locale.startsWith("es") ? "Mes anterior" : "Previous month"} aria-disabled={previousDisabled || undefined} onClick={() => { if (!previousDisabled && previousMonth) changeMonth(previousMonth); }}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" /></button>
           <button type="button" className={styles.navButton} aria-label={locale.startsWith("gl") ? "Mes seguinte" : locale.startsWith("es") ? "Mes siguiente" : "Next month"} aria-disabled={nextDisabled || undefined} onClick={() => { if (!nextDisabled && nextMonth) changeMonth(nextMonth); }}><ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" /></button>
         </div>
