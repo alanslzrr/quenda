@@ -39,3 +39,38 @@
   color: var(--text-muted);
   font-size: 0.875rem;
 }
+/* A participant's municipality and units, shown by name. */
+.value {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.value > span {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.unitList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.25rem;
+}
+.unitList li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.quiet {
+  margin: 0;
+  color: var(--text-muted);
+}
+.technical {
+  display: grid;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  overflow-wrap: anywhere;
+}
