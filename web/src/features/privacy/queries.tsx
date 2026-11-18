@@ -7,6 +7,7 @@ import { RecordCard, RecordList } from "../../ui/record-card/record-card";
 import { usePrivacyQuery, usePrivacyScope } from "./context";
 import {
   type Category,
+  conflictReason,
   families,
   type Policy,
   type RetentionStatus,
@@ -195,7 +196,10 @@ export function RetentionOverview() {
                 label: t("Última detección", "Última detección"),
                 value: localDateTime(c.lastSeenAt, locale),
               },
-              { label: t("Motivo", "Motivo"), value: c.reason },
+              {
+                label: t("Motivo", "Motivo"),
+                value: conflictReason(c.reason, locale),
+              },
             ]}
           />
         ))}
