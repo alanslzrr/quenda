@@ -17,6 +17,7 @@
 </p>
 
 <p align="center">
+  <a href="#presentación">Presentación</a> ·
   <a href="#funcionalidades">Funcionalidades</a> ·
   <a href="#arquitectura">Arquitectura</a> ·
   <a href="#puesta-en-marcha">Puesta en marcha</a> ·
@@ -194,6 +195,8 @@ La integración continua de GitHub Actions ejecuta en cada pull request las comp
 | [Desarrollo y pruebas](docs/11_desarrollo.md) | Entorno local, aplicación web y comprobaciones |
 | [Despliegue y operación](docs/12_operacion.md) | Imágenes, despliegue, workers, métricas, copias y recuperación |
 | [Despliegue en la nube](docs/13_despliegue_nube.md) | Infraestructura por nube, validación local con emuladores, publicación por SSH y demostración |
+
+Los casos de uso también se explican paso a paso, con capturas de pantalla, en guías por perfil: [Ciudadanía](docs/guias/ciudadania.md), [Personal municipal](docs/guias/personal-municipal.md), [Operación de plataforma](docs/guias/plataforma.md) y [Privacidad y operación](docs/guias/privacidad-operacion.md).
 
 El contrato OpenAPI se genera sin base de datos con `pnpm --silent openapi`.
 
