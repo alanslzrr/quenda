@@ -38,7 +38,8 @@ export async function suspendAccount(
  * Suspends the account whose email is exactly this address, after trimming
  * and lower-casing. Only an operator with recent MFA reaches the lookup, which
  * runs inside the audited suspension; an unknown address answers NOT_FOUND
- * exactly like an unknown identifier. The address is not format-checked so a
+ * exactly like an unknown identifier. Beyond the 3 to 320 character bounds
+ * enforced by the route schema, the address is not format-checked, so a
  * malformed one cannot be told apart from an unknown one either.
  */
 export async function suspendAccountByEmail(
