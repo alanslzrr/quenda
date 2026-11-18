@@ -30,11 +30,7 @@
 
 ## Presentación
 
-<p align="center">
-  <a href="docs/media/quenda-presentacion.mp4"><img src="docs/media/quenda-presentacion.webp" width="880" alt="Presentación de Quenda en movimiento: reserva ciudadana, gestión, analítica, configuración e identidad municipal y modelos de despliegue"></a>
-</p>
-
-Recorrido de dos minutos grabado sobre la aplicación real con los datos de demostración: la reserva ciudadana hasta el código de acceso, la agenda y la analítica municipal, la configuración de condiciones, horarios y permisos, la identidad de cada municipio y los dos modelos de despliegue. La animación reproduce la presentación completa sin sonido; [el vídeo con música](docs/media/quenda-presentacion.mp4) está en MP4 (1080p, 9,7 MB).
+https://github.com/user-attachments/assets/0bc4fe8a-f117-4a17-a7b1-28e18f68d9b9
 
 ## Visión general
 
