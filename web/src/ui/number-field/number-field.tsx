@@ -26,6 +26,7 @@ import {
   type Ref,
 } from "react";
 import { flushSync } from "react-dom";
+import { numberFormat } from "../lib/intl-cache";
 import { numberLocales, pickText } from "../lib/locale-text";
 import { motionTokens } from "../motion-tokens";
 import styles from "./number-field.module.css";
@@ -159,11 +160,11 @@ function extendedFormatter(locale: string[], min: number, max: number, grouping:
   }
   min = Math.floor(min);
   max = Math.floor(max);
-  const wholeFormat = new Intl.NumberFormat(locale, {
+  const wholeFormat = numberFormat(locale, {
     minimumFractionDigits: 0, maximumFractionDigits: 0,
     useGrouping: grouping, numberingSystem: "latn",
   });
-  const separator = new Intl.NumberFormat(locale, { numberingSystem: "latn" })
+  const separator = numberFormat(locale, { numberingSystem: "latn" })
     .formatToParts(1.1).find((part) => part.type === "decimal")?.value ?? ".";
   const formatToParts = (value: number): Intl.NumberFormatPart[] => {
     if (!Number.isFinite(value)) return wholeFormat.formatToParts(value);
@@ -840,7 +841,7 @@ export function NumberField({
   const format = useMemo(
     () => maxFraction > 100
       ? extendedFormatter(locales, minFraction, maxFraction, grouping)
-      : new Intl.NumberFormat(locales, {
+      : numberFormat(locales, {
         minimumFractionDigits: minFraction,
         maximumFractionDigits: maxFraction,
         useGrouping: grouping,
@@ -849,7 +850,7 @@ export function NumberField({
     [locales, minFraction, maxFraction, grouping],
   );
   const symbols = useMemo(() => {
-    const parts = new Intl.NumberFormat(locales, { numberingSystem: "latn" }).formatToParts(-1234.5);
+    const parts = numberFormat(locales, { numberingSystem: "latn" }).formatToParts(-1234.5);
     return {
       group: parts.find((part) => part.type === "group")?.value ?? ",",
       decimal: parts.find((part) => part.type === "decimal")?.value ?? ".",

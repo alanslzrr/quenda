@@ -39,6 +39,7 @@ import {
   type MaybeValue,
   type Point,
 } from "../lib/gapped-series";
+import { numberFormat } from "../lib/intl-cache";
 import { MISSING_MARK, numberLocales } from "../lib/locale-text";
 import { motionTokens } from "../lib/motion-tokens";
 import { useLiveReducedMotion } from "../lib/use-live-reduced-motion";
@@ -316,8 +317,8 @@ export function LineChart({
   const numbers = useMemo(() => {
     const locales = numberLocales(locale);
     return {
-      grouped: new Intl.NumberFormat(locales, { maximumFractionDigits: 1 }),
-      compact: new Intl.NumberFormat(locales, { notation: "compact", maximumFractionDigits: 1 }),
+      grouped: numberFormat(locales, { maximumFractionDigits: 1 }),
+      compact: numberFormat(locales, { notation: "compact", maximumFractionDigits: 1 }),
     };
   }, [locale]);
   const formatTick = formatTickProp ?? ((value: number) => numbers.compact.format(value));
