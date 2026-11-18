@@ -61,9 +61,16 @@ export { expect };
 // Close to the element so that the box never covers a neighbouring label.
 const highlightStyle = {
   outline: "3px solid #d9480f",
-  outlineOffset: "2px",
+  outlineOffset: "4px",
   borderRadius: "6px",
-  boxShadow: "0 0 0 5px rgb(217 72 15 / 0.18)",
+  boxShadow: "0 0 0 4px rgb(217 72 15 / 0.18)",
+};
+// A table cell is clipped by its table: its box is drawn inside it.
+const cellHighlightStyle = {
+  outline: "3px solid #d9480f",
+  outlineOffset: "-3px",
+  borderRadius: "6px",
+  boxShadow: "none",
 };
 
 type ShotOptions = {
@@ -121,11 +128,17 @@ export class Capture {
         return true;
       });
       if (moved) await settle(page);
-      await target.evaluate((element, style) => {
-        const node = element as HTMLElement;
-        node.dataset.captureStyle = node.getAttribute("style") ?? "";
-        Object.assign(node.style, style);
-      }, highlightStyle);
+      await target.evaluate(
+        (element, [style, cell]) => {
+          const node = element as HTMLElement;
+          node.dataset.captureStyle = node.getAttribute("style") ?? "";
+          Object.assign(
+            node.style,
+            /^(TD|TH)$/.test(node.tagName) ? cell : style,
+          );
+        },
+        [highlightStyle, cellHighlightStyle] as const,
+      );
     }
     try {
       const png = options.clip
