@@ -124,9 +124,25 @@ test("stale appearance retains its draft and expected version until explicit rel
   await chooseBlue();
   version = 2;
   await save.click();
-  await expect(
-    page.getByText("La versión cambió. Consulta la configuración actual."),
-  ).toBeVisible();
+  const changed = page.getByText(
+    "La versión cambió. Consulta la configuración actual.",
+  );
+  await expect(changed).toBeVisible();
+  // The message takes its own line in the bar; both buttons stay together
+  // on the line below it.
+  const discardBox = await page
+    .getByRole("button", { name: "Descartar", exact: true })
+    .boundingBox();
+  const saveBox = await save.boundingBox();
+  const changedBox = await changed.boundingBox();
+  expect(discardBox && saveBox && changedBox).toBeTruthy();
+  if (discardBox && saveBox && changedBox) {
+    expect(Math.abs(discardBox.y - saveBox.y)).toBeLessThan(2);
+    expect(discardBox.x).toBeLessThan(saveBox.x);
+    expect(discardBox.y).toBeGreaterThanOrEqual(
+      changedBox.y + changedBox.height,
+    );
+  }
   // The draft stays as it was, ready to retry or discard.
   await expect(
     page.getByRole("button", { name: "Azul", exact: true }),

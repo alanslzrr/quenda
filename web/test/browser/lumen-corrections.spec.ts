@@ -191,6 +191,22 @@ for (const personal of ["light", "dark"] as const) {
       preview === "light" ? "rgb(249, 251, 255)" : "rgb(20, 29, 43)",
     );
     await expect(page.getByText("Cambios sin guardar")).toBeVisible();
+    // The floating save bar never hides what is scrolled into view: a heading
+    // brought to the bottom edge stops above the bar.
+    const bar = page.getByText("Cambios sin guardar").locator("xpath=..");
+    const heading = page.getByRole("heading", { name: "Estilo visual" });
+    await heading.evaluate((element) =>
+      element.scrollIntoView({ block: "end" }),
+    );
+    await expect
+      .poll(async () => {
+        const [top, bottom] = await Promise.all([
+          bar.evaluate((element) => element.getBoundingClientRect().top),
+          heading.evaluate((element) => element.getBoundingClientRect().bottom),
+        ]);
+        return bottom <= top;
+      })
+      .toBe(true);
     await page.getByRole("button", { name: "Ajustes", exact: true }).click();
     await expect(page.getByRole("menu")).toHaveCSS(
       "color",
