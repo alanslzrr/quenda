@@ -10,6 +10,7 @@ import { useSession } from "../../app/session";
 import { Button } from "../../ui/button/button";
 import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
+import { browserTimeZone } from "../../ui/lib/intl-cache.ts";
 import { Select } from "../../ui/select/select";
 import { AccountLabel } from "./account-label";
 import styles from "./municipal.module.css";
@@ -277,8 +278,7 @@ export function StaffInvite({
           />
         )}
         <p>
-          {t("Zona horaria", "Zona horaria")}:{" "}
-          {Intl.DateTimeFormat().resolvedOptions().timeZone}
+          {t("Zona horaria", "Zona horaria")}: {browserTimeZone()}
         </p>
         <Deadline
           name="expiresAt"
