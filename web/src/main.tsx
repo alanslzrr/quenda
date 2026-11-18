@@ -36,6 +36,11 @@ const FacilityPage = lazy(() =>
 const UnitPage = lazy(() =>
   import("./features/catalog/unit").then((m) => ({ default: m.UnitPage })),
 );
+const ProjectPage = lazy(() =>
+  import("./features/project/project-page").then((m) => ({
+    default: m.ProjectPage,
+  })),
+);
 const SignIn = lazy(() =>
   import("./features/account/sign-in").then((m) => ({ default: m.SignIn })),
 );
@@ -257,6 +262,7 @@ createRoot(root).render(
                 <RouteBoundary>
                   <Suspense fallback={<Loading />}>
                     <Routes>
+                      <Route path="proyecto" element={<ProjectPage />} />
                       <Route element={<Layout />}>
                         <Route index element={<Home />} />
                         <Route path="reservar" element={<Home />} />

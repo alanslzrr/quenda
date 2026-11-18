@@ -1,0 +1,125 @@
+.figure {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+}
+.figure figcaption {
+  max-width: 760px;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+.scroller {
+  overflow-x: auto;
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background:
+    radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0) 0 0 /
+    20px 20px,
+    var(--surface);
+}
+.svg {
+  display: block;
+  width: 100%;
+  min-width: 920px;
+  height: auto;
+  font-family: var(--font-body);
+}
+
+.columns text {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.node {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.node[data-tone="primary"] {
+  stroke: var(--border-strong);
+}
+.node[data-tone="data"] {
+  fill: var(--surface-muted);
+}
+.title {
+  fill: var(--foreground);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+}
+.detail {
+  fill: var(--text-secondary);
+  font-size: 12px;
+}
+.caption {
+  fill: var(--text-muted);
+  font-size: 11px;
+}
+.chip {
+  fill: var(--surface-muted);
+  stroke: var(--border);
+}
+.chipText {
+  fill: var(--foreground);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-anchor: middle;
+}
+.role {
+  fill: var(--surface);
+  stroke: var(--border);
+}
+.roleText {
+  fill: var(--foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+}
+
+.edge {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.arrow {
+  fill: var(--border-strong);
+}
+/* A short dash travels along each connection in the direction of the request. */
+.flow {
+  fill: none;
+  stroke: var(--foreground);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 2 22;
+  animation: travel 1.6s linear infinite;
+}
+@keyframes travel {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+.pill {
+  fill: var(--background);
+  stroke: var(--border);
+}
+.pillText {
+  fill: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  text-anchor: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .scroller {
+    padding: var(--space-4);
+  }
+}

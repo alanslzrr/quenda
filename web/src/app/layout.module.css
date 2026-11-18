@@ -194,17 +194,25 @@
   font-size: var(--text-xs);
   color: var(--text-secondary);
 }
-.legalLinks {
+/* The legal pages, and beside them the discreet link to the project page. */
+.footerLinks {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
   margin-top: 6px;
 }
-.legalLinks a {
+.legalLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.legalLinks a,
+.about {
   color: inherit;
   text-underline-offset: 3px;
 }
-.legalLinks a:focus-visible {
+.legalLinks a:focus-visible,
+.about:focus-visible {
   outline: 2px solid var(--foreground);
   outline-offset: 2px;
 }
