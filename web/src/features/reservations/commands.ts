@@ -232,3 +232,41 @@ export function commandResultPath(item: PendingCommand, result: CommandResult) {
     ? review
     : `/administracion/${result.tenantId}/reservas/${result.id}`;
 }
+/**
+ * A failed reservation command whose refresh may rebuild the form for another revision. While the refresh runs the
+ * failure is carried into any revision other than the one it happened on (the page may show the new data before the
+ * refresh resolves); once it resolves, only into the revision it returned, never into a later one.
+ */
+export interface CarriedFailure {
+  error: unknown;
+  from?: number;
+  to?: number;
+}
+export function carriedFailure(
+  failure: CarriedFailure | undefined,
+  revision: number | undefined,
+) {
+  if (!failure) return undefined;
+  return (
+    failure.to === undefined
+      ? failure.from !== revision
+      : failure.to === revision
+  )
+    ? failure
+    : undefined;
+}
+/** After the refresh: the failure to keep carrying, or none when the refresh found the same revision or none. */
+export function settledFailure(
+  error: unknown,
+  from: number | undefined,
+  refreshed: unknown,
+): CarriedFailure | undefined {
+  const to =
+    typeof refreshed === "object" &&
+    refreshed !== null &&
+    "revision" in refreshed &&
+    typeof refreshed.revision === "number"
+      ? refreshed.revision
+      : undefined;
+  return to !== undefined && to !== from ? { error, from, to } : undefined;
+}

@@ -9,7 +9,10 @@ import { initializeOperator } from "../../scripts/lib/initialize-operator.ts";
 import { migrate } from "../../scripts/lib/migrations.ts";
 import { transaction } from "../../src/database/transaction.ts";
 import { inviteAdministrator } from "../../src/modules/identity/invitations.ts";
-import { inviteManager } from "../../src/modules/identity/manager.ts";
+import {
+  acceptManager,
+  inviteManager,
+} from "../../src/modules/identity/manager.ts";
 import { revokeMunicipalAccessForSecurity } from "../../src/modules/identity/municipal-continuity.ts";
 import {
   acceptAdministratorInvitation,
@@ -34,9 +37,10 @@ type Fixture = {
   privacyInvitation: string;
 };
 
-// An administrator withdraws "pending", whose only tie with the municipality
-// is a pending invitation to its verified address, and an operator suspends
-// "holder", whose only global tie is a privacy invitation to its address.
+// An administrator withdraws "pending", a manager who also has pending
+// invitations to its verified address that it never accepted, and an operator
+// suspends "holder", whose only global tie is a privacy invitation to its
+// address.
 async function withdrawAddressees(
   domain: Pool,
   auth: Pool,
@@ -66,6 +70,12 @@ async function withdrawAddressees(
     tenant,
     municipality.invitationId,
   );
+  const grant = await inviteManager(domain, actor("a"), tenant, {
+    email: "pending@example.test",
+    expiresAt: expiry(),
+    permissions: [{ operation: "UNIT_BLOCK", unitId: null }],
+  });
+  await acceptManager(domain, actor("pending"), tenant, grant.invitationId);
   const administrator = await inviteAdministrator(domain, actor("a"), tenant, {
     email: "pending@example.test",
     expiresAt: expiry(),
@@ -103,15 +113,23 @@ async function withdrawAddressees(
   };
 }
 
-// Every audit row that names an account which never accepted an invitation.
-async function namedAddressees(migration: Pool) {
+// Every audit row of an invitation sent to an address that names the account
+// using that address, which never accepted it.
+async function namedAddressees(migration: Pool, fixture: Fixture) {
   return (
     await migration.query<{ source: string; account: string }>(
       `SELECT 'identity' AS source,coalesce(subject_id,actor_id) AS account FROM domain.identity_event
-        WHERE subject_id IN ('pending','holder') OR actor_id IN ('pending','holder')
-       UNION ALL SELECT 'manager',actor_id FROM domain.manager_event WHERE actor_id IN ('pending','holder')
-       UNION ALL SELECT 'privacy',actor_id FROM domain.global_privacy_permission_event WHERE actor_id IN ('pending','holder')
+        WHERE invitation_id=ANY($1::uuid[]) AND (subject_id IN ('pending','holder') OR actor_id IN ('pending','holder'))
+       UNION ALL SELECT 'manager',actor_id FROM domain.manager_event WHERE invitation_id=ANY($1::uuid[]) AND actor_id IN ('pending','holder')
+       UNION ALL SELECT 'privacy',actor_id FROM domain.global_privacy_permission_event WHERE invitation_id=ANY($1::uuid[]) AND actor_id IN ('pending','holder')
        ORDER BY 1,2`,
+      [
+        [
+          fixture.administratorInvitation,
+          fixture.managerInvitation,
+          fixture.privacyInvitation,
+        ],
+      ],
     )
   ).rows;
 }
@@ -157,7 +175,7 @@ test("withdrawing an account revokes invitations to its address without recordin
         { actor_id: null, operation: "ACCOUNT_WITHDRAWAL" },
       ],
     );
-    assert.deepEqual(await namedAddressees(migration), []);
+    assert.deepEqual(await namedAddressees(migration, fixture), []);
     // The address keys withdraw the addresses; nothing is left that links
     // either invitation to the accounts that used those addresses.
     for (const [tenant, key] of [
@@ -190,7 +208,7 @@ test("withdrawing an account revokes invitations to its address without recordin
         { recipient_email: null },
       ],
     );
-    assert.deepEqual(await namedAddressees(migration), []);
+    assert.deepEqual(await namedAddressees(migration, fixture), []);
   });
 });
 
@@ -208,7 +226,7 @@ test("0130 removes the account from earlier revocations of invitations it never 
     await withDatabase(async ({ domain, auth, migration }) => {
       const fixture = await withdrawAddressees(domain, auth, migration);
       // Rows written by the earlier functions name both accounts.
-      assert.deepEqual(await namedAddressees(migration), [
+      assert.deepEqual(await namedAddressees(migration, fixture), [
         { source: "identity", account: "pending" },
         { source: "privacy", account: "holder" },
       ]);
@@ -221,7 +239,7 @@ test("0130 removes the account from earlier revocations of invitations it never 
       } finally {
         await owner.end();
       }
-      assert.deepEqual(await namedAddressees(migration), []);
+      assert.deepEqual(await namedAddressees(migration, fixture), []);
       // The revocations themselves are kept, with actor, reason and instant.
       assert.deepEqual(
         (

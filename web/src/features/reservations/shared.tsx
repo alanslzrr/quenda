@@ -20,8 +20,10 @@ import {
   municipalToday,
 } from "../catalog/dates";
 import {
+  type CarriedFailure,
   type CommandPolicy,
   type CommandResult,
+  carriedFailure,
   commandResultPath,
   commandReviewPath,
   commandTime,
@@ -29,6 +31,7 @@ import {
   readCommand,
   retryAllowed,
   sendCommand,
+  settledFailure,
 } from "./commands";
 import local from "./reservations.module.css";
 export interface Reservation {
@@ -111,10 +114,14 @@ export function PendingLink() {
   ) : null;
 }
 /**
- * A reservation command. `revision` is the reservation state the body was built from: when a refresh changes it, the
- * fields start over for the new state (a consent given for the old one does not carry over) while the failure that
- * caused the refresh stays visible, so the person can read why it failed and retry against the current state. The
- * owner keeps this component mounted across that refresh and passes `unavailable` when the action no longer applies.
+ * A reservation command. `revision` is the reservation state the body was built from: when the refresh that
+ * `onFailure` runs (and resolves with the refreshed reservation) changes it, the fields start over for the new state
+ * (a consent given for the old one does not carry over) while the failure that caused the refresh stays visible and
+ * keyboard focus moves into the rebuilt form, so the person can read why it failed and retry against the current
+ * state. A failure is carried only into the revision its own refresh returned: a later change found by a background
+ * refresh rebuilds the form without it. The owner keeps this component mounted across that refresh and passes
+ * `unavailable` when the action no longer applies. An owner that rebuilds this component itself after a failure
+ * passes `refocus` instead.
  */
 export function ReservationAction({
   path,
@@ -128,12 +135,14 @@ export function ReservationAction({
   secondary,
   revision,
   unavailable,
+  refocus = false,
 }: {
   path: string;
   body: unknown;
   label: string;
   children?: ReactNode;
-  onFailure?: (error: unknown) => Promise<void>;
+  /** Refreshes after a failure; resolving with the refreshed reservation carries the failure into its revision. */
+  onFailure?: (error: unknown) => Promise<unknown>;
   /** Runs once the command is confirmed, before the reservation page is shown. */
   onSuccess?: () => void;
   note?: string;
@@ -141,19 +150,23 @@ export function ReservationAction({
   secondary?: ReactNode;
   revision?: number;
   unavailable?: string;
+  /** This component was rebuilt by its owner after a failed submission: focus returns into the form. */
+  refocus?: boolean;
 }) {
   const { account } = useSession();
   const { locale } = usePreferences();
   const client = useQueryClient();
   const navigate = useNavigate();
   const [uncertain, setUncertain] = useState(false);
-  const [failure, setFailure] = useState<{ error: unknown }>();
+  const [failure, setFailure] = useState<CarriedFailure>();
+  const carried = carriedFailure(failure, revision);
   if (uncertain || (account && readCommand(account.accountId)))
     return <PendingLink />;
   return (
     <ActionForm
       key={revision}
-      initialError={failure?.error}
+      initialError={carried?.error}
+      focusOnMount={refocus || carried !== undefined}
       label={label}
       danger={danger}
       secondary={secondary}
@@ -188,9 +201,10 @@ export function ReservationAction({
             setUncertain(true);
             return;
           }
-          // Held before the refresh, so a form rebuilt for the new revision still shows it.
-          setFailure({ error });
-          await onFailure?.(error);
+          // Held before the refresh, so a form rebuilt for the new revision shows it even if it renders first. Once the
+          // refresh resolves it is kept only for the revision it returned: if unchanged, this form shows it itself.
+          setFailure({ error, from: revision });
+          setFailure(settledFailure(error, revision, await onFailure?.(error)));
           throw error;
         }
       }}

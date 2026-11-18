@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  carriedFailure,
   commandPath,
   commandResultPath,
   commandReviewPath,
@@ -10,6 +11,7 @@ import {
   readCommand,
   retryAllowed,
   sendCommand,
+  settledFailure,
 } from "../src/features/reservations/commands.ts";
 
 const storage = () => {
@@ -395,5 +397,30 @@ test("creation command recovery accepts only exact endpoints and routes to the c
       { tenantId: tenant, facilityId: facility, unitId: unit },
     ),
     `/administracion/${tenant}/unidades/${unit}`,
+  );
+});
+
+test("a failed command is carried only into the revision its own refresh returned", () => {
+  const error = new Error("RESERVATION_CHANGED");
+  // While the refresh runs, a form rebuilt for any other revision shows it.
+  const pending = { error, from: 1 };
+  assert.equal(carriedFailure(pending, 1), undefined);
+  assert.equal(carriedFailure(pending, 2), pending);
+  // The refresh returned revision 2: carried there, never into a later one.
+  const settled = settledFailure(error, 1, { revision: 2, status: "X" });
+  assert.deepEqual(settled, { error, from: 1, to: 2 });
+  assert.equal(carriedFailure(settled, 2), settled);
+  assert.equal(carriedFailure(settled, 3), undefined);
+  assert.equal(carriedFailure(settled, 1), undefined);
+  // An unchanged or missing refresh leaves nothing to carry: the form shows the failure itself.
+  assert.equal(settledFailure(error, 1, { revision: 1 }), undefined);
+  assert.equal(settledFailure(error, 1, undefined), undefined);
+  assert.equal(settledFailure(error, 1, { revision: "2" }), undefined);
+  assert.equal(settledFailure(error, undefined, undefined), undefined);
+  assert.equal(carriedFailure(undefined, 2), undefined);
+  // Without a revision (an owner that rebuilds the form itself) nothing is carried.
+  assert.equal(
+    carriedFailure({ error, from: undefined }, undefined),
+    undefined,
   );
 });

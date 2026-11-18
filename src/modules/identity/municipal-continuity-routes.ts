@@ -39,7 +39,7 @@ export async function registerMunicipalContinuityRoutes(
       path: "accounts/:accountId/revoke-access-for-security",
       operationId: "revokeMunicipalAccessForSecurity",
       description:
-        "Administrador municipal con MFA reciente: retira por seguridad todos los permisos e invitaciones pendientes de la cuenta en este municipio, incluso el último administrador. No suspende la identidad global ni modifica otros municipios.",
+        "Administrador municipal con MFA reciente: retira por seguridad todos los permisos e invitaciones pendientes de la cuenta en este municipio, incluso el último administrador, y entonces también las invitaciones pendientes a su correo verificado. 404 si la cuenta no tenía permisos ni invitaciones propios que retirar, aunque haya invitaciones a su correo: esas se retiran con invitation-addresses/revoke-for-security. No suspende la identidad global ni modifica otros municipios.",
       run: revokeMunicipalAccessForSecurity,
     },
   ]) {

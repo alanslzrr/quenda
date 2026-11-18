@@ -60,6 +60,8 @@ export function Checkout() {
   const { locale, t } = usePreferences();
   const [failure, setFailure] = useState<unknown>();
   const [generation, setGeneration] = useState(0);
+  // The generation whose form replaces one the person was using, after a failure; focus returns into it.
+  const [refocus, setRefocus] = useState<number>();
   const municipality = useMunicipality(tenantId);
   usePublicAppearance(tenantId);
   const original = useReservation(tenantId, reservationId);
@@ -367,7 +369,10 @@ export function Checkout() {
                     ),
                   )
                 }
-                retry={() => void refresh()}
+                retry={() => {
+                  setRefocus(generation + 1);
+                  void refresh();
+                }}
               />
             ) : (
               <ReservationAction
@@ -383,6 +388,7 @@ export function Checkout() {
                   "Al confirmar comprobamos de nuevo que el horario sigue libre.",
                   "Ao confirmar comprobamos de novo que o horario segue libre.",
                 )}
+                refocus={refocus === generation}
                 onFailure={async (error) => {
                   if (
                     error instanceof ApiError &&
@@ -395,6 +401,8 @@ export function Checkout() {
                     ].includes(error.code)
                   ) {
                     setFailure(error);
+                    // The refresh rebuilds the form; focus returns into it instead of falling to the page.
+                    setRefocus(generation + 1);
                     await refresh();
                   } else setFailure(undefined);
                 }}
