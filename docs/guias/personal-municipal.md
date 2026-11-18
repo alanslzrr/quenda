@@ -1,6 +1,6 @@
 # Guía de casos de uso · Personal municipal
 
-Esta guía es para el personal de los ayuntamientos que usan Quenda. La **administración municipal** configura el municipio: sus instalaciones, su personal, sus convenios con otros municipios y su apariencia. La **gestión municipal** trabaja con los permisos que la administración le concede, por ejemplo consultar el uso de los espacios o bloquear una pista. Cuando un convenio lo prevé, el municipio **emisor** registra acreditaciones de uso y las personas con permiso de informes consultan el informe conjunto mensual. Cada caso de uso explica qué hacer, qué se ve en pantalla y qué hacer si algo no sale como se espera. En las imágenes, el recuadro naranja señala dónde hay que pulsar o escribir.
+Esta guía es para el personal de los ayuntamientos que usan Quenda. La **administración municipal** configura el municipio: sus instalaciones, su personal, sus convenios con otros municipios y su apariencia. La **gestión municipal** trabaja con los permisos que la administración le concede, por ejemplo consultar el uso de los espacios o bloquear una pista. Cuando un convenio lo prevé, el municipio **emisor** registra acreditaciones de uso y las personas con permiso de informes consultan el informe conjunto mensual. Cada caso de uso explica qué hacer, qué se ve en pantalla y qué hacer si algo no sale como se espera. En las imágenes, el recuadro naranja señala dónde hay que pulsar o escribir, o el mensaje o resultado que hay que comprobar.
 
 ## Índice
 
@@ -36,7 +36,7 @@ El catálogo es lo que la ciudadanía puede reservar. Cada **instalación** (un 
 
    ![Ficha pública de la instalación con todos los campos completados y el botón «Guardar ficha» señalado](../capturas/cu-04/03-ficha-instalacion.webp)
 
-   *Se ve la ficha completa tal como la verá la ciudadanía al elegir la instalación. La pantalla recuerda que no se deben incluir datos personales. Tras pulsar el botón señalado aparece «Cambios guardados».*
+   *Es el formulario de la ficha, con todos los campos completados; el texto de «Ficha pública» explica que es lo que verá la ciudadanía al elegir la instalación y recuerda que no se deben incluir datos personales. Al pulsar el botón señalado, Quenda confirma el guardado con el mensaje «Cambios guardados».*
 
 4. **Publica la instalación.** Pulsa **Publicar instalación**, escribe el motivo y confirma con **Publicar instalación**.
 
@@ -66,7 +66,7 @@ El catálogo es lo que la ciudadanía puede reservar. Cada **instalación** (un 
 
    ![Pestaña «Horarios» con duraciones, antelación de 21 días, tres franjas semanales, una excepción cerrada el 25 de diciembre y «Guardar horarios» señalado](../capturas/cu-04/08-horarios.webp)
 
-   *Hay franjas los lunes y miércoles de 16:00 a 22:00 y los sábados de 10:00 a 14:00, y una excepción que cierra todo el día de Navidad. Cada franja se quita con «Quitar franja» y cada excepción con «Quitar excepción». Las horas son las locales del municipio; una excepción sustituye el horario semanal de su fecha.*
+   *Hay franjas los lunes y miércoles de 16:00 a 22:00 y los sábados de 10:00 a 14:00, y una excepción que cierra todo el día de Navidad. Cada franja se quita con su botón «Quitar franja» y cada excepción con el suyo, «Quitar excepción», numerados. Las horas son las locales del municipio; una excepción sustituye el horario semanal de su fecha.*
 
 9. **Publica la unidad.** Pulsa **Publicar unidad**, escribe el motivo, marca la casilla que confirma que la unidad es independiente y no se solapa con otro espacio reservable, y pulsa **Publicar unidad**.
 
@@ -86,6 +86,32 @@ El catálogo es lo que la ciudadanía puede reservar. Cada **instalación** (un 
 
     *La cabecera muestra el logo y el nombre del municipio. La tarjeta de la instalación muestra la dirección de su ficha y «1 espacio reservable»; desde aquí la ciudadanía sigue el recorrido de reserva.*
 
+### Otras formas de hacerlo
+
+#### Cerrar una unidad unas horas
+
+Un bloqueo impide nuevas reservas en su intervalo, por ejemplo para mantenimiento. En **Agenda diaria**, elige el día, y en **Nuevo bloqueo** elige la unidad, el inicio y el fin, escribe el motivo, marca **Confirmo el bloqueo** y pulsa **Crear bloqueo**.
+
+![Formulario «Nuevo bloqueo» para «Pista do Souto» de 10:00 a 12:00, con el botón «Crear bloqueo» señalado](../capturas/cu-04/14-bloqueo.webp)
+
+*El formulario avisa de que el bloqueo no cancela reservas y de que se rechaza si coincide con una ocupación incompatible.*
+
+![Sección «Bloqueos» de la agenda con la entrada del bloqueo de «Pista do Souto» señalada](../capturas/cu-04/15-bloqueo-creado.webp)
+
+*El recuadro marca la entrada del bloqueo en la sección «Bloqueos» del día: la unidad, el horario, el motivo «Revisión del parqué» y el formulario para liberarlo más adelante, con motivo y confirmación.*
+
+#### Dejar de ofrecer una unidad
+
+Retirar una unidad la oculta del catálogo público sin borrar sus reservas ni su historial. Pulsa **Retirar del catálogo**, escribe el motivo, marca **Confirmo la retirada** y pulsa **Retirar**.
+
+![Ventana «Retirar del catálogo» con el motivo «Fin de la temporada», la confirmación marcada y el botón «Retirar» señalado](../capturas/cu-04/18-retirar-unidad.webp)
+
+*La ventana explica que la retirada impide nuevas reservas y que las reservas existentes y su historial se conservan.*
+
+![Unidad «Pista do Souto» con la etiqueta «Retirada del catálogo público» señalada y el botón «Volver a publicar unidad»](../capturas/cu-04/19-unidad-retirada.webp)
+
+*La etiqueta cambia a «Retirada del catálogo público» y aparece «Volver a publicar unidad» por si se quiere ofrecer de nuevo. Retirar no es lo mismo que cerrar un día ni que borrar datos.*
+
 ### Si algo no sale como se espera
 
 #### Intentas publicar una unidad sin normas
@@ -104,45 +130,21 @@ Si otra persona del municipio guarda la misma ficha mientras tú la editas, tu g
 
 *La instalación ya está publicada. El mensaje, encima de «Guardar ficha», explica que se han guardado otros cambios mientras editabas, quizá desde otra pestaña, y pide recargar para ver la versión actual y volver a aplicar tus cambios; tu correo de contacto modificado no se guarda. La ficha se guarda completa: si dejas un campo vacío, ese dato desaparece de la ficha pública.*
 
-#### Necesitas cerrar una unidad unas horas
-
-Un bloqueo impide nuevas reservas en su intervalo, por ejemplo para mantenimiento. En **Agenda diaria**, elige el día, y en **Nuevo bloqueo** elige la unidad, el inicio y el fin, escribe el motivo, marca **Confirmo el bloqueo** y pulsa **Crear bloqueo**.
-
-![Formulario «Nuevo bloqueo» para «Pista do Souto» de 10:00 a 12:00, con el botón «Crear bloqueo» señalado](../capturas/cu-04/14-bloqueo.webp)
-
-*El formulario avisa de que el bloqueo no cancela reservas y de que se rechaza si coincide con una ocupación incompatible.*
-
-![Sección «Bloqueos» de la agenda con la entrada del bloqueo de «Pista do Souto» señalada](../capturas/cu-04/15-bloqueo-creado.webp)
-
-*El recuadro marca la entrada del bloqueo en la sección «Bloqueos» del día: la unidad, el horario, el motivo «Revisión del parqué» y el formulario para liberarlo más adelante, con motivo y confirmación.*
-
 #### El bloqueo coincide con una reserva confirmada
 
-Quenda no bloquea encima de reservas confirmadas. Si hace falta cerrar ese horario, primero hay que resolver esas reservas (cambiarlas o cancelarlas, como explica CU-03) y después crear el bloqueo.
+Quenda no bloquea encima de reservas confirmadas. Si hace falta cerrar ese horario, primero hay que resolver esas reservas (cambiarlas o cancelarlas, como explica [CU-03](ciudadania.md#cu-03--modificar-o-cancelar-una-reserva)) y después crear el bloqueo.
 
 ![Formulario de bloqueo para «Pista de pádel 1» en la hora de una reserva confirmada, con el error «Este horario ya no está libre. Elige otro horario.» señalado](../capturas/cu-04/16-bloqueo-con-reservas.webp)
 
-*El mensaje aparece sobre «Crear bloqueo» y no se crea nada.*
+*Arriba, la agenda del día lista sus reservas, entre ellas la reserva confirmada de la Pista de pádel 1 con la que coincide el formulario «Nuevo bloqueo» de abajo. El mensaje aparece sobre «Crear bloqueo» y no se crea nada.*
 
 #### Un cambio de horario deja fuera reservas confirmadas
 
 Si quitas franjas en una unidad que ya tiene reservas confirmadas en esos horarios, el cambio se rechaza entero. Pulsa **Descartar borrador y recargar horarios** para volver al horario guardado y resuelve antes esas reservas.
 
-![Pestaña «Horarios» de una unidad con reservas, sin franjas semanales, y el mensaje «El nuevo horario dejaría fuera reservas confirmadas…» señalado](../capturas/cu-04/17-horario-con-reservas.webp)
+![Pestaña «Horarios» de una unidad con reservas, con las últimas excepciones de fechas y el mensaje «El nuevo horario dejaría fuera reservas confirmadas…» señalado](../capturas/cu-04/17-horario-con-reservas.webp)
 
-*Se han quitado todas las franjas semanales y solo quedan las excepciones de fechas, cada una con su «Quitar excepción». Al guardar, el mensaje señalado explica que el nuevo horario dejaría fuera reservas confirmadas y propone cancelarlas o reubicarlas antes, o ampliar el horario para cubrirlas. El horario guardado no cambia.*
-
-#### Quieres dejar de ofrecer una unidad
-
-Retirar una unidad la oculta del catálogo público sin borrar sus reservas ni su historial. Pulsa **Retirar del catálogo**, escribe el motivo, marca **Confirmo la retirada** y pulsa **Retirar**.
-
-![Ventana «Retirar del catálogo» con el motivo «Fin de la temporada», la confirmación marcada y el botón «Retirar» señalado](../capturas/cu-04/18-retirar-unidad.webp)
-
-*La ventana explica que la retirada impide nuevas reservas y que las reservas existentes y su historial se conservan.*
-
-![Unidad «Pista do Souto» con la etiqueta «Retirada del catálogo público» señalada y el botón «Volver a publicar unidad»](../capturas/cu-04/19-unidad-retirada.webp)
-
-*La etiqueta cambia a «Retirada del catálogo público» y aparece «Volver a publicar unidad» por si se quiere ofrecer de nuevo. Retirar no es lo mismo que cerrar un día ni que borrar datos.*
+*Se han quitado las franjas semanales (más arriba, fuera de la imagen); al final del formulario se ven las últimas excepciones de fechas (de la 3 a la 5), cada una con su «Quitar excepción», y el motivo «Cierre de la pista». Al guardar, el mensaje señalado explica que el nuevo horario dejaría fuera reservas confirmadas y propone cancelarlas o reubicarlas antes, o ampliar el horario para cubrirlas. El horario guardado no cambia.*
 
 ### Resultado
 
@@ -192,7 +194,7 @@ La instalación y su unidad quedan en el catálogo con su ficha, sus normas y su
 
    ![Sección «Cuándo hay más demanda» con la ocupación por día de la semana y hora](../capturas/cu-05/08-demanda.webp)
 
-   *Cuanto más oscura la casilla, más ocupada esa hora. «—» significa que no hubo horario ofertado, no que la ocupación fuera cero.*
+   *Cada fila es un día de la semana y cada columna, una hora, de las 07:00 a la medianoche. Cuanto más oscura la casilla, más ocupada esa hora. «—» significa que no hubo horario ofertado, no que la ocupación fuera cero.*
 
    ![Sección «¿Se cumplen las reservas?» con cancelaciones, antelación y llegadas registradas](../capturas/cu-05/09-cumplimiento.webp)
 
@@ -208,7 +210,7 @@ La instalación y su unidad quedan en el catálogo con su ficha, sus normas y su
 
    *Toda la pantalla pasa a describir solo ese espacio, sin pulsar ningún otro botón: las cifras de «Lo más destacado» son ya solo las de esa pista. Para volver a todos, usa la «×» del campo.*
 
-5. **Exporta las reservas.** Abre **Exportar reservas**. Elige el ámbito (todo el municipio o una unidad), el día inicial (incluido) y el final (excluido) y el formato: **Hoja de cálculo** o **Datos completos para otros sistemas**. Marca **Confirmo la descarga de datos del ámbito autorizado** y pulsa el botón de descarga.
+5. **Exporta las reservas.** Exportar exige además el permiso de exportar datos: en el ejemplo, la gestora de los pasos anteriores no lo tiene (ver «No ves «Exportar reservas»»), así que la exportación la hace la administración del municipio. Abre **Exportar reservas**. Elige el ámbito (todo el municipio o una unidad), el día inicial (incluido) y el final (excluido) y el formato: **Hoja de cálculo** o **Datos completos para otros sistemas**. Marca **Confirmo la descarga de datos del ámbito autorizado** y pulsa el botón de descarga.
 
    ![Formulario «Exportar reservas» con todo el municipio, una semana de periodo, formato «Hoja de cálculo» y el botón «Descargar hoja de cálculo» señalado](../capturas/cu-05/12-exportar-formulario.webp)
 
@@ -216,13 +218,13 @@ La instalación y su unidad quedan en el catálogo con su ficha, sus normas y su
 
    ![Formulario de exportación con el mensaje «Archivo preparado para descargar.» señalado](../capturas/cu-05/13-exportar-descargado.webp)
 
-   *El mensaje confirma la descarga; el navegador guarda el archivo en la carpeta de descargas.*
+   *El mensaje indica que el archivo está listo para descargar; el navegador lo guarda en la carpeta de descargas.*
 
 6. **Abre el archivo.** El archivo descargado se abre con cualquier programa de hojas de cálculo. Tiene una fila por reserva y la primera fila nombra las columnas.
 
    ![Archivo «quenda-reservations-v3.csv» abierto en una hoja de cálculo, con la fila de nombres de columna y cinco reservas](../capturas/cu-05/14-exportar-archivo.webp)
 
-   *Se ven las primeras columnas: «id» es el identificador de la reserva, «unitId» el del espacio, «accountId» el de la persona titular (nunca su nombre ni su correo), «startsAt» y «endsAt» el inicio y el fin con su zona horaria, «timeZone» la zona del municipio, «status» el estado (por ejemplo, «FINALIZADA») y «revision» el número de revisión, que aumenta con cada cambio. Más a la derecha siguen las versiones del calendario, de las normas y de las condiciones, y las fechas en que se aceptaron. Así se distinguen las normas aceptadas (con versión y fecha), las pendientes («pendingUsageRulesVersion» con valor) y la evidencia ausente (columnas vacías).*
+   *Se ven las primeras columnas: «id» es el identificador de la reserva, «unitId» el del espacio, «accountId» el de la persona titular (nunca su nombre ni su correo), «startsAt» y «endsAt» el inicio y el fin, «timeZone» la zona del municipio, «status» el estado (por ejemplo, «FINALIZADA») y «revision» el número de revisión, que aumenta con cada cambio. Las columnas que siguen, fuera de la imagen, recogen las versiones del calendario, de las normas y de las condiciones aceptadas y sus fechas, de modo que se distinguen las normas aceptadas, las pendientes y la evidencia ausente.*
 
 ### Si algo no sale como se espera
 
@@ -244,7 +246,7 @@ Si te concedieron el permiso sobre espacios concretos, solo puedes elegir esos e
 
 ![Pantalla de uso de una persona gestora con permiso sobre dos espacios y la lista de espacios abierta, que solo contiene «Pista de pádel 1» y «Pista de pádel 2»](../capturas/cu-05/17-gestor-algunos-espacios.webp)
 
-*La lista señalada ofrece únicamente los dos espacios autorizados y no incluye «Todos los espacios».*
+*Con el campo «Espacio» señalado abierto, la lista ofrece únicamente los dos espacios autorizados y no incluye «Todos los espacios».*
 
 #### El periodo de la exportación es demasiado largo
 
@@ -266,7 +268,7 @@ Obtienes los indicadores del ámbito que tienes autorizado, con el periodo y la 
 
 Un convenio permite a varios municipios compartir instalaciones con unas condiciones acordadas: quién puede reservar, cuántas reservas por semana y durante qué vigencia. La administración de uno de los municipios redacta la versión, cada municipio aprueba esa misma versión y sus propias unidades, y después se activa.
 
-**Antes de empezar:** necesitas ser administrador de tu municipio con verificación en dos pasos, conocer el identificador del otro municipio y de sus unidades y tener la referencia de la revisión jurídica. **Especificación:** [CU-10](../08_casos_de_uso.md#cu-10--gestionar-un-convenio).
+**Antes de empezar:** necesitas ser administrador de tu municipio con verificación en dos pasos, saber qué municipios participan y qué unidades aporta cada uno, y tener la referencia de la revisión jurídica. **Especificación:** [CU-10](../08_casos_de_uso.md#cu-10--gestionar-un-convenio).
 
 ### Paso a paso
 
@@ -276,11 +278,11 @@ Un convenio permite a varios municipios compartir instalaciones con unas condici
 
    *La tabla lista las versiones en las que participa el municipio; todavía no hay ninguna.*
 
-2. **Redacta la versión.** Escribe el nombre, la vigencia (inicio y fin), la finalidad, la base jurídica, las responsabilidades y la conservación acordada. Elige el acceso (abierto o con acreditación) y, si quieres, un máximo de reservas por cuenta y semana. Añade tus unidades con **Añadir unidad municipal** y **Añadir unidad**. Con **Añadir participante**, escribe el identificador del otro municipio y de sus unidades. Marca **Confirmo la configuración del borrador** y pulsa **Crear borrador**.
+2. **Redacta la versión.** Escribe el nombre, la vigencia (inicio y fin), la finalidad, la base jurídica, las responsabilidades y la conservación acordada. Elige el acceso (abierto o con acreditación) y, si quieres, un máximo de reservas por cuenta y semana. Añade tus unidades con **Añadir unidad municipal** y **Añadir unidad**. Con **Añadir participante**, elige el otro municipio en **Municipio 2** y añade sus unidades eligiendo la **Instalación** y la **Unidad** de su catálogo público y pulsando **Añadir unidad · 2**. Una unidad que el otro municipio todavía no ha publicado se añade por el identificador que os hayáis comunicado, desplegando «Identificador técnico» en ese participante. Marca **Confirmo la configuración del borrador** y pulsa **Crear borrador**.
 
    ![Formulario «Nuevo convenio» completo con dos participantes, una unidad por municipio y el botón «Crear borrador» señalado](../capturas/cu-10/02-nuevo-convenio.webp)
 
-   *El convenio tiene acceso abierto y un máximo de 2 reservas por cuenta y semana. El texto bajo ese campo recuerda que cambiar de versión no reinicia los consumos. Cada participante se indica por su identificador y, al escribirlo, el formulario muestra el nombre del municipio y, bajo las unidades, sus nombres («Pista de tenis», «Pista polideportiva · Polideportivo do Porto»).*
+   *El convenio tiene acceso abierto y un máximo de 2 reservas por cuenta y semana. El texto bajo ese campo recuerda que cambiar de versión no reinicia los consumos. Cada participante aparece por su nombre (Concello de Valdeira y Concello de Ribasanta) con sus unidades («Pista de tenis», «Pista polideportiva · Polideportivo do Porto»), cada una con «Quitar». Los códigos de municipios y unidades quedan plegados en «Identificador técnico».*
 
 3. **Aprueba tu parte.** El borrador se abre en su página. Al final, marca **Confirmo esta versión y mis unidades** y pulsa **Aprobar versión**.
 
@@ -306,11 +308,11 @@ Un convenio permite a varios municipios compartir instalaciones con unas condici
 
    ![Versión 1 con la etiqueta «ACTIVADO» señalada](../capturas/cu-10/07-activado.webp)
 
-   *La etiqueta pasa a «ACTIVADO». Más abajo, la ficha añade la referencia de la revisión jurídica (se ve en la imagen de la suspensión, más abajo).*
+   *La etiqueta pasa a «ACTIVADO». La referencia de la revisión jurídica aparece más abajo en la ficha.*
 
-### Si algo no sale como se espera
+### Otras formas de hacerlo
 
-#### Un participante necesita suspender el convenio
+#### Suspender el convenio
 
 Cualquier participante puede suspenderlo con un motivo. En la versión activa, escribe el motivo en **Suspender convenio**, marca la confirmación y pulsa **Suspender convenio**.
 
@@ -322,25 +324,25 @@ Cualquier participante puede suspenderlo con un motivo. En la versión activa, e
 
 *La etiqueta cambia a «SUSPENDIDO» y al final se lee que, para reactivar, hay que crear una nueva versión y solicitar sus aprobaciones y su activación. El vencimiento de la vigencia tiene el mismo efecto sobre las reservas nuevas.*
 
-#### La unidad no vuelve sola al acceso abierto
+#### Reabrir la unidad al acceso abierto
 
 Tras suspender o vencer el convenio, cada unidad sigue vinculada a él. Para que la ciudadanía pueda volver a reservarla con normalidad, cada municipio retira la vinculación de sus unidades: pulsa **Consultar vinculación** junto a la unidad, escribe el motivo, confirma y pulsa **Retirar vinculación**.
 
 ![Pantalla «Vinculación de la unidad» con el motivo «Reapertura de la pista al público general» y el botón «Retirar vinculación» señalado](../capturas/cu-10/10-vinculacion.webp)
 
-*La pantalla indica por su nombre el convenio y la versión que vinculan la unidad («Red deportiva Valdeira–Ribasanta · versión 1»), guarda su código en «Identificador técnico» y aclara que retirar la vinculación no publica la unidad ni cambia horarios, reservas o bloqueos, y que las reservas confirmadas se mantienen.*
+*La pantalla indica por su nombre la unidad («Pista polideportiva») y el convenio y la versión que la vinculan («Red deportiva Valdeira–Ribasanta · versión 1»); sus códigos pueden consultarse desplegando «Identificador técnico». Aclara que retirar la vinculación no publica la unidad ni cambia horarios, reservas o bloqueos, y que las reservas confirmadas se mantienen.*
 
 ![Pantalla «Vinculación de la unidad» con el mensaje «Sin vinculación restrictiva registrada.» señalado](../capturas/cu-10/11-vinculacion-retirada.webp)
 
 *La unidad ya no tiene ninguna vinculación con el convenio.*
 
-#### Hay que cambiar o reactivar el convenio
+#### Cambiar o reactivar el convenio
 
 Una versión aprobada no se edita: se crea otra. En la versión, pulsa **Crear nueva versión**, revisa los datos, marca la confirmación y pulsa **Crear versión**. La nueva versión necesita sus propias aprobaciones y su activación; la anterior se conserva.
 
 ![Formulario «Nueva versión del convenio» con los datos de la versión 1 y el botón «Crear versión» señalado](../capturas/cu-10/12-nueva-version.webp)
 
-*El formulario parte de los datos de la versión 1, con las horas de vigencia, los participantes por su nombre y los nombres de sus unidades. El aviso superior indica que la nueva versión no hereda aprobaciones ni activa capacidades; el nombre y la zona no cambian.*
+*El formulario parte de los datos de la versión 1, con las horas de vigencia y los participantes y sus unidades por su nombre. El aviso superior indica que la nueva versión no hereda aprobaciones ni activa capacidades; el nombre y la zona no cambian.*
 
 ![Versión 2 en «BORRADOR» sin aprobaciones registradas](../capturas/cu-10/13-version-2-borrador.webp)
 
@@ -349,6 +351,8 @@ Una versión aprobada no se edita: se crea otra. En la versión, pulsa **Crear n
 ![Lista de convenios con la versión 1 «SUSPENDIDO» y la versión 2 «BORRADOR» señalada](../capturas/cu-10/14-versiones.webp)
 
 *La tabla conserva las dos versiones con su estado; el recuadro marca la nueva. El estado registrado no indica por sí solo cuál es la versión efectiva.*
+
+### Si algo no sale como se espera
 
 #### Has aprobado pero el convenio no se activa
 
@@ -380,7 +384,7 @@ La administración municipal decide quién gestiona el municipio y con qué perm
 
    ![Página «Datos personales» de la persona invitada con su correo electrónico señalado](../capturas/cu-12/02-correo-de-la-persona.webp)
 
-   *El recuadro marca el correo de la cuenta, «nerea.pazos@valdeira.demo.test». Solo la cuenta con ese correo verificado podrá aceptar la invitación.*
+   *El recuadro marca el correo de la cuenta, «nerea.pazos@valdeira.demo.test». Solo la cuenta con ese correo verificado podrá aceptar la invitación. Al pie se ve el identificador de la cuenta, que solo hace falta si lo pide soporte.*
 
 3. **Envía la invitación.** En **Invitar**, elige el tipo (**Gestor municipal** o **Administrador municipal**), escribe el correo de la persona en **Correo del destinatario** e indica hasta cuándo puede aceptarla. Si el permiso debe caducar, rellena **Permiso válido hasta**. Añade cada permiso eligiendo la operación y el ámbito (todo el municipio o una unidad) y pulsando **Añadir permiso**. Marca **Confirmo el correo, el alcance y la vigencia** y pulsa **Enviar invitación**.
 
@@ -408,7 +412,21 @@ La administración municipal decide quién gestiona el municipio y con qué perm
 
    ![Agenda diaria de la persona recién incorporada con el menú lateral, que solo contiene «Agenda diaria», señalado](../capturas/cu-12/07-gestora-con-permisos.webp)
 
-   *El menú señalado solo ofrece «Agenda diaria» y el uso personal; la agenda muestra las reservas del día que puede consultar (en el ejemplo, a última hora ya no queda ninguna).*
+   *El menú señalado solo ofrece «Agenda diaria» y el uso personal. Con su permiso de consulta en todo el municipio, la agenda del día elegido muestra las reservas de todas las unidades.*
+
+### Otras formas de hacerlo
+
+#### Retirar los permisos de un gestor
+
+En **Gestores**, pulsa sobre la persona: se abre el **Detalle de la invitación** con su concesión. Escribe el motivo, marca **Confirmo la revocación** y pulsa **Revocar concesión**.
+
+![Pestaña «Gestores» con el detalle de la concesión de Nerea Pazos Rey, el motivo escrito y el botón «Revocar concesión» señalado](../capturas/cu-12/09-revocar-concesion.webp)
+
+*El detalle muestra a quién se dirigió, quién invitó, cuándo se aceptó y los permisos concedidos, con el nombre de la unidad cuando el permiso se limita a una («Unidad: Pista central»). El código de la invitación queda plegado en «Identificador técnico». «Sustituir permisos» permite cambiarlos; la persona debe aceptar la nueva invitación.*
+
+![Pantalla «Gestión municipal» con el mensaje «No tienes acceso a este municipio.» señalado y el botón «Volver a Gestión»](../capturas/cu-12/10-acceso-retirado.webp)
+
+*Después de la revocación, la persona ya no puede abrir la gestión del municipio: su menú solo conserva el uso personal y la pantalla ofrece volver a Gestión.*
 
 ### Si algo no sale como se espera
 
@@ -420,25 +438,13 @@ Gestionar el personal es una facultad de la administración. Un gestor que abre 
 
 *El menú lateral de esa persona sigue mostrando solo «Agenda diaria».*
 
-#### Hay que retirar los permisos de un gestor
-
-En **Gestores**, pulsa sobre la persona para ver el detalle de su concesión. Escribe el motivo, marca **Confirmo la revocación** y pulsa **Revocar concesión**.
-
-![Pestaña «Gestores» con el detalle de la concesión de Nerea Pazos Rey, el motivo escrito y el botón «Revocar concesión» señalado](../capturas/cu-12/09-revocar-concesion.webp)
-
-*El detalle muestra quién invitó, cuándo se aceptó y los permisos concedidos, con el nombre de la unidad cuando el permiso se limita a una («Unidad: Pista central»). «Sustituir permisos» permite cambiarlos; la persona debe aceptar la nueva invitación.*
-
-![Pantalla «Gestión municipal» con el mensaje «No tienes acceso a este municipio.» señalado y el botón «Volver a Gestión»](../capturas/cu-12/10-acceso-retirado.webp)
-
-*Después de la revocación, la persona ya no puede abrir la gestión del municipio: su menú solo conserva el uso personal y la pantalla ofrece volver a Gestión.*
-
 #### Quieres dejar la administración, pero eres el único responsable
 
 Para relevar a quien administra, primero hay que invitar a otro administrador. En **Invitar**, elige **Administrador municipal**. Si el permiso es temporal, indica **Permiso válido hasta**.
 
 ![Formulario de invitación de «Administrador municipal» con fecha en «Permiso válido hasta» y el botón «Enviar invitación» señalado](../capturas/cu-12/11-invitar-administrador.webp)
 
-*El aviso del formulario aclara que la administración permite configurar el municipio y asignar permisos, pero no incluye permisos de privacidad.*
+*Con una fecha en «Permiso válido hasta», el texto de debajo indica que el permiso caduca automáticamente en esa fecha y puede revocarse antes. El aviso del formulario aclara que la administración permite configurar el municipio y asignar permisos, pero no incluye permisos de privacidad.*
 
 Mientras el otro administrador solo tenga un permiso temporal (o su invitación siga pendiente), tu retirada se rechaza.
 
@@ -458,15 +464,15 @@ Si el sustituto ya tiene el permiso adecuado no necesita otra invitación: su pe
 
 #### Completar el relevo
 
-Con dos responsables habilitados sin caducidad, cualquiera de los dos puede retirarse. Quien se va abre su propia cuenta en la tabla, escribe el motivo, marca **Confirmo la retirada ordinaria** y pulsa **Retirar administración**.
+Con dos responsables habilitados sin caducidad, cualquiera de los dos puede retirarse. Quien se va abre su propia cuenta en la tabla, escribe el motivo, marca **Confirmo la retirada ordinaria** y pulsa **Retirar administración**. En el ejemplo, Marta Couceiro completa ahora la retirada que antes se rechazó.
 
-![Detalle «Administración de la cuenta» de la propia cuenta con el motivo «Fin de la sustitución» y el botón «Retirar administración» señalado](../capturas/cu-12/15-retirada-ordinaria.webp)
+![Detalle «Administración de la cuenta» de Marta Couceiro con el motivo «Cambio de destino» y el botón «Retirar administración» señalado](../capturas/cu-12/15-retirada-ordinaria.webp)
 
-*En el ejemplo se retira David Mosquera Gil desde su propia sesión («tu cuenta») y Marta Couceiro sigue como responsable. El texto recuerda que se retira el rol y se invalidan sus invitaciones pendientes, pero no se cierra la cuenta ni se borran reservas.*
+*Marta Couceiro se retira desde su propia sesión («tu cuenta») con el motivo «Cambio de destino»; en la tabla, David Mosquera Gil figura habilitado y sin caducidad, y seguirá como responsable. El texto recuerda que se retira el rol y se invalidan sus invitaciones pendientes, pero no se cierra la cuenta ni se borran reservas.*
 
 ![Pantalla «Gestión municipal» con el mensaje «No tienes permisos municipales vigentes.» señalado](../capturas/cu-12/16-retirada-completada.webp)
 
-*La persona que se retira vuelve a la pantalla de gestión sin municipios; el otro responsable sigue habilitado.*
+*Marta vuelve a la pantalla de gestión sin municipios que gestionar. El municipio queda a cargo de David Mosquera Gil, habilitado sin caducidad (imagen anterior).*
 
 #### La verificación en dos pasos ya no es reciente
 
@@ -474,7 +480,7 @@ Las operaciones sensibles, como aceptar una invitación, exigen haber verificado
 
 ![Página de invitaciones con el aviso «Confirma tu identidad para continuar» y el botón «Verificar acceso» señalado, y el mensaje «Vuelve a verificar el segundo factor para realizar esta operación.» en la invitación](../capturas/cu-12/17-verificacion-caducada.webp)
 
-*En la imagen, la persona abre una nueva invitación («Consultar reservas · Todo el municipio») más de cinco minutos después de verificar su acceso. La invitación sigue pendiente y el aviso superior indica que la sesión sigue abierta y que los cambios se conservan.*
+*En la imagen, la persona intenta aceptar otra invitación («Consultar reservas · Todo el municipio») más de cinco minutos después de verificar su acceso. La invitación sigue pendiente y el aviso superior indica que la sesión sigue abierta y que los cambios se conservan.*
 
 ![Ventana «Verificar acceso» con el código de seis cifras escrito y el botón «Verificar acceso» señalado](../capturas/cu-12/18-verificar-de-nuevo.webp)
 
@@ -529,17 +535,9 @@ Cuando un convenio exige acreditación, solo pueden reservar sus espacios las pe
 
    *Con la acreditación vigente, la reserva se confirma como cualquier otra.*
 
-### Si algo no sale como se espera
+### Otras formas de hacerlo
 
-#### La persona no tiene acreditación
-
-Sin una acreditación vigente que cubra toda la reserva, la reserva no se confirma y la persona ve a quién dirigirse.
-
-![Paso «Revisa tu reserva» de la Pista de tenis con el error «Necesitas una acreditación vigente que cubra toda la reserva. Contacta con tu ayuntamiento.» señalado](../capturas/cu-17/06-reserva-sin-acreditacion.webp)
-
-*La persona ha aceptado las normas, pero al pulsar «Confirmar reserva» aparece el mensaje señalado y no se reserva nada. Lo mismo ocurre si la acreditación es insuficiente o de un emisor no autorizado, y si falla la comprobación: un fallo técnico tampoco concede el derecho.*
-
-#### Hay que revocar una acreditación
+#### Revocar una acreditación
 
 En **Acreditaciones de uso**, elige la acreditación emitida (o usa su identificador con **Usar una referencia conocida**), escribe el motivo, marca **Confirmo la revocación** y pulsa **Revocar acreditación**.
 
@@ -555,7 +553,17 @@ Desde ese momento, la acreditación ya no sirve para nuevas reservas o cambios:
 
 ![Paso «Revisa tu reserva» de la persona cuya acreditación se revocó, con el error «Necesitas una acreditación vigente que cubra toda la reserva.» señalado](../capturas/cu-17/09-reserva-tras-revocar.webp)
 
-*La misma persona que reservó en el paso 5 ya no puede confirmar otra reserva en el espacio del convenio.*
+*Con la acreditación revocada, la persona beneficiaria intenta reservar otra hora en la Pista de tenis, un espacio del convenio: al pulsar «Confirmar reserva» aparece el mensaje señalado y no se reserva nada.*
+
+### Si algo no sale como se espera
+
+#### La persona no tiene acreditación
+
+Sin una acreditación vigente que cubra toda la reserva, la reserva no se confirma y la persona ve a quién dirigirse.
+
+![Paso «Revisa tu reserva» de la Pista de tenis con el error «Necesitas una acreditación vigente que cubra toda la reserva. Contacta con tu ayuntamiento.» señalado](../capturas/cu-17/06-reserva-sin-acreditacion.webp)
+
+*La persona ha aceptado las normas, pero al pulsar «Confirmar reserva» aparece el mensaje señalado y no se reserva nada. Lo mismo ocurre si la acreditación es insuficiente o de un emisor no autorizado, y si falla la comprobación: un fallo técnico tampoco concede el derecho.*
 
 #### Otros casos
 
@@ -605,9 +613,9 @@ Si un convenio tiene habilitados los informes agregados, Quenda prepara automát
 
 4. **Recibe el informe.** Con el permiso y todas las evaluaciones favorables, aparece **Informe autorizado** con las cifras del mes.
 
-   ![Resultado «Informe autorizado» señalado, con revisión, versión del control, corte, 24 reservas confirmadas y 1440,00 minutos reservados](../capturas/cu-18/06-informe-autorizado.webp)
+   ![Resultado «Informe autorizado» señalado, con revisión, versión del control, corte, 24 reservas confirmadas y 1440 minutos reservados](../capturas/cu-18/06-informe-autorizado.webp)
 
-   *Encima del resultado se lee el convenio y el mes («Ligas escolares comarcales · 2026-07»), con su código en «Identificador técnico». Además de las cifras, el informe muestra la revisión, la versión del control aplicado y el corte, es decir, el momento al que corresponden los datos. Cada entrega queda registrada con su destinatario.*
+   *Encima del resultado se leen el convenio y el mes consultado («Ligas escolares comarcales · » seguido del mes y el año), con su código en «Identificador técnico». Además de las cifras, el informe muestra la revisión, la versión del control aplicado y el corte, es decir, el momento al que corresponden los datos. Cada entrega queda registrada con su destinatario.*
 
 ### Si algo no sale como se espera
 
@@ -617,7 +625,7 @@ Mientras falte una evaluación favorable para tu cuenta, o si el total o la cont
 
 ![Resultado «No publicable» señalado al consultar el mes siguiente del mismo convenio](../capturas/cu-18/07-no-publicable.webp)
 
-*Para el mes siguiente no hay evaluación para esta cuenta ni reservas atribuidas al convenio, así que no se muestra ninguna cifra. Si esperabas un informe, pide a las administraciones participantes que lo revisen para tu cuenta.*
+*Para el mes siguiente no hay evaluación favorable para esta cuenta, así que no se muestra ninguna cifra. Si esperabas un informe, pide a las administraciones participantes que lo revisen para tu cuenta.*
 
 #### Una evaluación posterior es desfavorable
 
@@ -664,7 +672,7 @@ La administración municipal da al municipio su nombre visible, su logo y su ide
 
    ![Lista de temas abierta con «Neutro», «Pizarra», «Azul», «Atlántico» y otros, con «Azul» señalado](../capturas/cu-23/04-catalogo-de-temas.webp)
 
-   *Cada tema trae su versión clara y oscura.*
+   *Elige «Azul», recuadrado. Cada tema trae su versión clara y su versión oscura, así que no hay que elegirlas por separado.*
 
    ![Pantalla de apariencia con el tema «Azul» aplicado, el selector de tema señalado y la barra «Cambios sin guardar»](../capturas/cu-23/05-tema-azul.webp)
 
@@ -691,6 +699,16 @@ La administración municipal da al municipio su nombre visible, su logo y su ide
    ![Página pública «Elige una instalación» de Ribasanta do Mar con el tema azul aplicado](../capturas/cu-23/09-pagina-publica.webp)
 
    *Una persona sin sesión ya ve el logo y el nuevo nombre en la cabecera y en el recorrido de reserva, y el fondo y los botones del tema elegido.*
+
+### Otras formas de hacerlo
+
+#### Volver a la apariencia por defecto
+
+Pulsa **Restaurar valores predeterminados** y después **Guardar**. Vuelve el tema neutro sin ajustes y el modo claro.
+
+![Tema «Neutro» con los colores por defecto y el botón «Guardar» señalado en la barra «Cambios sin guardar»](../capturas/cu-23/16-restaurar.webp)
+
+*Restaurar solo cambia el borrador: hasta pulsar «Guardar» no se publica.*
 
 ### Si algo no sale como se espera
 
@@ -736,15 +754,7 @@ Si otra persona (u otra pestaña) guarda la apariencia mientras tú editas, tu g
 
 ![Barra inferior con el mensaje «Se han guardado otros cambios mientras editabas…» y el botón «Descartar» señalado](../capturas/cu-23/15-revision-obsoleta.webp)
 
-*El mensaje explica que se han guardado otros cambios mientras editabas, quizá desde otra pestaña. Las esquinas «Suaves» elegidas en esta pestaña no se guardan; al descartar se muestran las que guardó la otra pestaña.*
-
-#### Quieres volver a la apariencia por defecto
-
-Pulsa **Restaurar valores predeterminados** y después **Guardar**. Vuelve el tema neutro sin ajustes y el modo claro.
-
-![Tema «Neutro» con los colores por defecto y el botón «Guardar» señalado en la barra «Cambios sin guardar»](../capturas/cu-23/16-restaurar.webp)
-
-*Restaurar solo cambia el borrador: hasta pulsar «Guardar» no se publica.*
+*El mensaje, en la barra inferior, explica que se han guardado otros cambios mientras editabas, quizá desde otra pestaña, y pide recargar para ver la versión actual: «Descartar», recuadrado, hace precisamente eso sin salir de la pantalla. Los ajustes hechos en esta pestaña (el acento, el texto y las esquinas «Suaves») no se guardan; al descartar se muestran los que guardó la otra pestaña.*
 
 #### Otros casos
 

@@ -1,3 +1,4 @@
+import { dateTimeFormat } from "../../ui/lib/intl-cache.ts";
 export interface Authority {
   administrator: boolean;
   permissions: { operation: string; unitId: string | null }[];
@@ -55,3 +56,14 @@ export interface ReviewContext {
   recipientAccountId: string;
   historyDigest: string;
 }
+/** «julio de 2026»: a report month named as the month picker shows it. */
+export function monthName(month: string, locale: string) {
+  const [year, number] = month.split("-").map(Number);
+  if (!year || !number || number < 1 || number > 12) return month;
+  return dateTimeFormat(locale, { month: "long", year: "numeric" }).format(
+    new Date(year, number - 1, 1),
+  );
+}
+/** Whole minutes without decimals; a fraction keeps two. */
+export const minuteDecimals = (minutes: number) =>
+  Number.isInteger(minutes) ? 0 : 2;

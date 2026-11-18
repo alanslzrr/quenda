@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   accountKeyedFamily,
+  conflictReason,
   directoryAvailable,
   explicitPrivacy,
   families,
@@ -64,4 +65,17 @@ test("privacy forms list linked people only where the actor already administers 
     "MUNICIPAL_PROFILE",
     "AUTHORITY",
   ]);
+});
+
+test("retention conflict codes read as sentences in both languages", () => {
+  assert.equal(
+    conflictReason("LEGAL_HOLD", "es"),
+    "Hay una excepción de conservación activa",
+  );
+  assert.equal(
+    conflictReason("RETAINED_SERVICE_DEPENDENCIES", "gl"),
+    "Datos do servizo que deben conservarse dependen deste rexistro",
+  );
+  assert.equal(conflictReason("SOMETHING_NEW", "es"), "SOMETHING_NEW");
+  assert.equal(conflictReason("toString", "es"), "toString");
 });

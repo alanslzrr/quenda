@@ -5,6 +5,7 @@ import { Failure, Loading } from "../../app/feedback";
 import { BackLink } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
 import { Checkbox } from "../../ui/checkbox/checkbox";
+import { UnitName } from "../municipal/names";
 import { ManagementPage } from "../municipal/page";
 import {
   Denied,
@@ -62,6 +63,9 @@ function Restriction() {
       ) : (
         <>
           <p>
+            {t("Unidad", "Unidade")}: <UnitName tenantId={m.id} id={unitId} />
+          </p>
+          <p>
             {t("Convenio", "Convenio")}:{" "}
             {r.agreementName ??
               t(
@@ -73,7 +77,12 @@ function Restriction() {
           <Disclosure
             title={t("Identificador técnico", "Identificador técnico")}
           >
-            <code>{r.agreementId}</code>
+            <p>
+              {t("Convenio", "Convenio")}: <code>{r.agreementId}</code>
+            </p>
+            <p>
+              {t("Unidad", "Unidade")}: <code>{unitId}</code>
+            </p>
           </Disclosure>
           {r.hasRemainingAssignment ? (
             <p>

@@ -5,6 +5,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { Appearance, ColorOverrides } from "../../app/api";
@@ -157,6 +158,24 @@ function AppearanceForm({
     (personal === "system" ? systemTheme : personal) ?? initial.defaultTheme,
   );
   const dirty = !same(settingsOf(draft), settingsOf(saved));
+  // The floating save bar must not hide what a person focuses or is pointed
+  // to: its height becomes the scroll margin of everything above it.
+  const editor = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = bar.current;
+    const root = editor.current;
+    if (!dirty || !node || !root || typeof ResizeObserver === "undefined")
+      return;
+    const observer = new ResizeObserver(() =>
+      root.style.setProperty("--save-bar-space", `${node.offsetHeight}px`),
+    );
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--save-bar-space");
+    };
+  }, [dirty]);
   // The whole application shows the draft while this editor is open.
   useAppearancePreview(draft, mode);
   useEffect(() => {
@@ -245,7 +264,11 @@ function AppearanceForm({
     })[problem];
 
   return (
-    <div className={styles.editor}>
+    <div
+      ref={editor}
+      className={styles.editor}
+      data-save-bar={dirty || undefined}
+    >
       {restored && dirty && (
         <p className={styles.notice} role="status">
           {t(
@@ -431,6 +454,7 @@ function AppearanceForm({
 
       {dirty && (
         <div
+          ref={bar}
           className={styles.saveBar}
           data-problem={problems.length > 0 || undefined}
           data-pinned-end=""

@@ -180,19 +180,21 @@ function Administrators() {
             {t("Administración de la cuenta", "Administración da conta")}:{" "}
             <AccountLabel id={item.accountId} label={item.accountLabel} />
           </h3>
-          <Disclosure
-            title={t("Identificador técnico", "Identificador técnico")}
-          >
-            <code>{item.accountId}</code>
-          </Disclosure>
           <p>
             {t("Concedida", "Concedida")}:{" "}
             {localDateTime(item.grantedAt, locale)}
           </p>
-          <p>
-            {t("Invitación de origen", "Invitación de orixe")}:{" "}
-            {item.invitationId}
-          </p>
+          <Disclosure
+            title={t("Identificador técnico", "Identificador técnico")}
+          >
+            <p>
+              {t("Cuenta", "Conta")}: <code>{item.accountId}</code>
+            </p>
+            <p>
+              {t("Invitación de origen", "Invitación de orixe")}:{" "}
+              <code>{item.invitationId}</code>
+            </p>
+          </Disclosure>
           {item.revokedAt && (
             <p>
               {t("Revocada", "Revogada")}:{" "}
@@ -343,9 +345,11 @@ function InvitationHistory({ kind }: { kind: "administrator" | "manager" }) {
       {item && (
         <section className={styles.section} key={item.invitationId}>
           <h3>{t("Detalle de la invitación", "Detalle da invitación")}</h3>
-          <p>
-            {t("Identificador", "Identificador")}: {item.invitationId}
-          </p>
+          <Disclosure
+            title={t("Identificador técnico", "Identificador técnico")}
+          >
+            <code>{item.invitationId}</code>
+          </Disclosure>
           <p>
             {t("Destinatario", "Destinatario")}: <Recipient item={item} />
           </p>

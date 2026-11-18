@@ -16,7 +16,7 @@ import {
 import { ManagementPage } from "../municipal/page";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
 import type { CommandResult } from "../reservations/commands";
-import type { ReviewContext } from "./model";
+import { monthName, type ReviewContext } from "./model";
 import { ReviewFields } from "./review-fields";
 export function MonthlyReview() {
   const m = useMunicipality();
@@ -112,8 +112,8 @@ function Review() {
         <>
           <h2>{t("Contexto de evaluación", "Contexto de avaliación")}</h2>
           <p>
-            {labels.agreement} · {context.month} · {t("Revisión", "Revisión")}{" "}
-            {context.revision}
+            {labels.agreement} · {monthName(context.month, locale)} ·{" "}
+            {t("Revisión", "Revisión")} {context.revision}
           </p>
           <p>
             {t("Municipio destinatario", "Municipio destinatario")}:{" "}

@@ -141,3 +141,110 @@ export interface PersonalData {
   };
   [key: string]: unknown;
 }
+
+/**
+ * Reasons a retention cycle or an individual action leaves a record in place,
+ * as people read them. The stored code stays in the audit trail; an unknown
+ * code is shown as it is.
+ */
+const conflictReasons: Record<string, [es: string, gl: string]> = {
+  ACTIVE_ACCREDITATION: [
+    "Hay una acreditación vigente",
+    "Hai unha acreditación vixente",
+  ],
+  ACTIVE_AUTHORITY: [
+    "La persona conserva permisos vigentes",
+    "A persoa conserva permisos vixentes",
+  ],
+  ACTIVE_RESERVATIONS: ["Hay reservas vigentes", "Hai reservas vixentes"],
+  ARCHIVED_MUNICIPAL_EVIDENCE_REQUIRES_IDENTITY: [
+    "Hay evidencias municipales archivadas que dependen de la identidad",
+    "Hai evidencias municipais arquivadas que dependen da identidade",
+  ],
+  AUTHENTICATION_HOLD: [
+    "La autenticación está bajo una excepción de conservación",
+    "A autenticación está baixo unha excepción de conservación",
+  ],
+  COMMUNICATIONS_RETENTION: [
+    "Las comunicaciones aún deben conservarse",
+    "As comunicacións aínda deben conservarse",
+  ],
+  EMAIL_IN_FLIGHT: [
+    "Hay un correo pendiente de envío",
+    "Hai un correo pendente de envío",
+  ],
+  GLOBAL_SECURITY_SCOPE_REQUIRED: [
+    "Requiere el ámbito global de seguridad",
+    "Require o ámbito global de seguridade",
+  ],
+  IDEMPOTENCY_WINDOW: [
+    "Hay una operación reciente que aún puede repetirse",
+    "Hai unha operación recente que aínda pode repetirse",
+  ],
+  IDENTITY_EVIDENCE_HELD: [
+    "Las evidencias de identidad están bajo una excepción de conservación",
+    "As evidencias de identidade están baixo unha excepción de conservación",
+  ],
+  IDENTITY_NOT_DUE: [
+    "La identidad aún no ha cumplido su plazo de conservación",
+    "A identidade aínda non cumpriu o seu prazo de conservación",
+  ],
+  INCOMPLETE_AUTHENTICATION_AUDIT: [
+    "La auditoría de autenticación está incompleta",
+    "A auditoría de autenticación está incompleta",
+  ],
+  INVALID_SCOPE: [
+    "El ámbito no corresponde a esta familia de datos",
+    "O ámbito non corresponde a esta familia de datos",
+  ],
+  INVALID_TARGET: [
+    "El registro indicado no admite esta actuación",
+    "O rexistro indicado non admite esta actuación",
+  ],
+  LEGAL_HOLD: [
+    "Hay una excepción de conservación activa",
+    "Hai unha excepción de conservación activa",
+  ],
+  MUNICIPAL_EVIDENCE_REQUIRES_IDENTITY: [
+    "Hay evidencias municipales que dependen de la identidad",
+    "Hai evidencias municipais que dependen da identidade",
+  ],
+  MUNICIPAL_SCOPE_REQUIRED: [
+    "Requiere el ámbito de un municipio",
+    "Require o ámbito dun municipio",
+  ],
+  NOT_DUE: [
+    "Aún no ha vencido el plazo de conservación",
+    "Aínda non venceu o prazo de conservación",
+  ],
+  NOT_ELIGIBLE_OR_HELD: [
+    "No procede o hay una excepción de conservación",
+    "Non procede ou hai unha excepción de conservación",
+  ],
+  PROTECTED_DEPENDENCY: [
+    "Otros datos protegidos dependen de este registro",
+    "Outros datos protexidos dependen deste rexistro",
+  ],
+  RETAINED_REFERENCE: [
+    "Una referencia compartida debe conservarse",
+    "Unha referencia compartida debe conservarse",
+  ],
+  RETAINED_SERVICE_DEPENDENCIES: [
+    "Datos del servicio que deben conservarse dependen de este registro",
+    "Datos do servizo que deben conservarse dependen deste rexistro",
+  ],
+  SECURITY_REVIEW_REQUIRED: [
+    "Requiere una revisión de seguridad",
+    "Require unha revisión de seguridade",
+  ],
+  SHARED_CONTROLLER_REVIEW: [
+    "Requiere la revisión de los corresponsables",
+    "Require a revisión dos corresponsables",
+  ],
+};
+export function conflictReason(code: string, locale: "es" | "gl") {
+  const text = Object.hasOwn(conflictReasons, code)
+    ? conflictReasons[code]
+    : undefined;
+  return text ? text[locale === "gl" ? 1 : 0] : code;
+}

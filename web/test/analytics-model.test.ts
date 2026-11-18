@@ -8,6 +8,7 @@ import {
   defaultView,
   demand,
   highlights,
+  metricSuffix,
   parseView,
   peak,
   peakText,
@@ -405,4 +406,9 @@ test("without opening hours the highlights still say how many reservations start
       "1 reserva comezou neste período (3 fronte aos 7 días anteriores).",
     ],
   );
+});
+
+test("summary figures separate their unit with a no-break space", () => {
+  assert.equal(metricSuffix("%"), "\u00a0%");
+  assert.equal(metricSuffix("h"), "\u00a0h");
 });

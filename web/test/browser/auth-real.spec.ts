@@ -35,6 +35,17 @@ test("verified account signs in and persists preferences through the real API", 
     .toBe(true);
   await page.goto(verification);
   await expect(page).toHaveURL(/\/acceso/);
+  // Wrong credentials on the sign-in page are not a lost session: the error
+  // offers no «sign in again» button pointing back to the same page.
+  await page.getByLabel("Correo electrónico", { exact: true }).fill(email);
+  await page.getByLabel(/^(Contraseña|Contrasinal)$/).fill(`${password}x`);
+  await page.getByRole("button", { name: "Entrar", exact: true }).click();
+  await expect(
+    page.getByText(/Correo o contraseña incorrectos|incorrectos/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Volver a iniciar sesión|Volver iniciar/ }),
+  ).toHaveCount(0);
   await page.getByLabel("Correo electrónico", { exact: true }).fill(email);
   await page.getByLabel(/^(Contraseña|Contrasinal)$/).fill(password);
   await page.getByRole("button", { name: "Entrar", exact: true }).click();

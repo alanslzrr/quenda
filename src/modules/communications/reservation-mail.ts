@@ -15,26 +15,31 @@ export interface ReservationMailEvent {
   timeZone: string;
   unitId: string;
   pendingUsageRulesVersion: number | null;
+  /** Names read when the message is sent; absent ones are left out. */
+  municipalityName?: string | null;
+  facilityName?: string | null;
+  unitName?: string | null;
 }
 const copy = {
   es: {
     CONFIRMADA: "Reserva confirmada",
     MODIFICADA: "Reserva modificada",
     CANCELADA: "Reserva cancelada",
-    reservation: "Reserva",
-    revision: "Revisión",
+    reference: "Referencia",
+    municipality: "Municipio",
+    facility: "Instalación",
+    unit: "Espacio",
     event: "Fecha del evento",
     author: "Intervención administrativa de",
     unknownAuthor: "Administración municipal (nombre no registrado)",
     reason: "Motivo",
     start: "Inicio",
     end: "Fin",
-    zone: "Zona horaria",
     historical:
       "Este mensaje describe el evento indicado. La reserva puede haber cambiado posteriormente.",
     current: "Consultar el estado actual",
     pendingRules: "Normas pendientes de aceptación en este cambio",
-    rulesUnit: "Unidad de las normas",
+    rulesUnit: "Espacio de las normas",
     rulesVersion: "Versión de las normas",
     reviewRules:
       "Consulta el estado actual de la reserva para revisar y aceptar las normas que sigan pendientes.",
@@ -43,20 +48,21 @@ const copy = {
     CONFIRMADA: "Reserva confirmada",
     MODIFICADA: "Reserva modificada",
     CANCELADA: "Reserva cancelada",
-    reservation: "Reserva",
-    revision: "Revisión",
+    reference: "Referencia",
+    municipality: "Municipio",
+    facility: "Instalación",
+    unit: "Espazo",
     event: "Data do evento",
     author: "Intervención administrativa de",
     unknownAuthor: "Administración municipal (nome non rexistrado)",
     reason: "Motivo",
     start: "Inicio",
     end: "Fin",
-    zone: "Fuso horario",
     historical:
       "Esta mensaxe describe o evento indicado. A reserva pode ter cambiado posteriormente.",
     current: "Consultar o estado actual",
     pendingRules: "Normas pendentes de aceptación neste cambio",
-    rulesUnit: "Unidade das normas",
+    rulesUnit: "Espazo das normas",
     rulesVersion: "Versión das normas",
     reviewRules:
       "Consulta o estado actual da reserva para revisar e aceptar as normas que sigan pendentes.",
@@ -115,17 +121,33 @@ export function reservationMail(
     Date.parse(event.startsAt) >= Date.parse(event.endsAt)
   )
     throw new Error("Invalid event interval");
+  // Civil date and time where the space is, with the short zone name (CET,
+  // CEST…) so that a time repeated by a clock change stays unambiguous.
   const format = new Intl.DateTimeFormat(locale === "gl" ? "gl-ES" : "es-ES", {
     timeZone: event.timeZone,
+    weekday: "long",
     year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
+    month: "long",
+    day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
     hourCycle: "h23",
-    timeZoneName: "longOffset",
+    timeZoneName: "short",
   });
+  // Catalogue names are single-line text; anything else would break a line.
+  const name = (value: string | null | undefined) =>
+    typeof value === "string" &&
+    value.trim() &&
+    !Array.from(value).some(
+      (char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127,
+    )
+      ? value.trim()
+      : null;
+  const places = [
+    ["municipality", name(event.municipalityName)],
+    ["facility", name(event.facilityName)],
+    ["unit", name(event.unitName)],
+  ] as const;
   const label = copy[locale];
   const href = new URL(
     `/reservas/${event.tenantId}/${event.reservationId}`,
@@ -136,8 +158,13 @@ export function reservationMail(
     subject: `Quenda — ${label[event.kind]}`,
     text: [
       label[event.kind],
-      `${label.reservation}: ${event.reservationId}`,
-      `${label.revision}: ${event.revision}`,
+      // The same short reference the reservation page shows.
+      `${label.reference}: ${event.reservationId.slice(0, 8).toUpperCase()}`,
+      ...places.flatMap(([key, value]) =>
+        value ? [`${label[key]}: ${value}`] : [],
+      ),
+      `${label.start}: ${format.format(new Date(event.startsAt))}`,
+      `${label.end}: ${format.format(new Date(event.endsAt))}`,
       `${label.event}: ${format.format(new Date(event.occurredAt))}`,
       ...(event.administrative
         ? [
@@ -145,14 +172,11 @@ export function reservationMail(
             `${label.reason}: ${event.reason ?? "—"}`,
           ]
         : []),
-      `${label.start}: ${format.format(new Date(event.startsAt))}`,
-      `${label.end}: ${format.format(new Date(event.endsAt))}`,
-      `${label.zone}: ${event.timeZone}`,
       ...(event.kind === "MODIFICADA" && event.pendingUsageRulesVersion !== null
         ? [
             "",
             `${label.pendingRules}:`,
-            `${label.rulesUnit}: ${event.unitId}`,
+            `${label.rulesUnit}: ${name(event.unitName) ?? event.unitId}`,
             `${label.rulesVersion}: ${event.pendingUsageRulesVersion}`,
             label.reviewRules,
           ]

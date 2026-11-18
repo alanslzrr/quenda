@@ -378,9 +378,7 @@ test("report readers choose the agreement by name without the administrator list
   await page
     .getByRole("button", { name: "Consultar informe", exact: true })
     .click();
-  await expect(
-    page.getByText("Convenio de pruebas · 2024-03", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText(/^Convenio de pruebas · \S/)).toBeVisible();
   await expect(page.getByText(agreement, { exact: true })).toBeHidden();
   expect(listings).not.toContain(`${base}/agreements`);
   expect(listings).toContain(`${base}/report-agreements`);

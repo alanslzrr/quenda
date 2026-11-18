@@ -72,6 +72,10 @@ test("CU-11 recibir y consultar avisos de reserva", async ({ page }) => {
     .filter({ hasText: "Reserva confirmada · Pista central" })
     .first();
   await expect(latest).toBeVisible();
+  // The menu button keeps the focus ring after closing: move focus away.
+  await page.evaluate(() =>
+    (document.activeElement as HTMLElement | null)?.blur(),
+  );
   await shot(cu, page, "lista-de-avisos", { target: latest });
 
   // Paso 3: el aviso lleva a la reserva y su estado actual.

@@ -4,6 +4,7 @@ import {
   dayLabel,
   madridDate,
   midweek,
+  morningClock,
   openDay,
   pickDay,
   ribasanta,
@@ -18,6 +19,9 @@ const cu = new Capture("CU-01");
 const day = midweek(3);
 
 test("CU-01 consultar catálogo y disponibilidad", async ({ page }) => {
+  // The space page opens on «today»: its free slots must not depend on the
+  // hour of the run.
+  await morningClock(page);
   // Paso 1: elegir municipio.
   await page.goto("/");
   const municipality = page.getByRole("link", {
@@ -46,9 +50,10 @@ test("CU-01 consultar catálogo y disponibilidad", async ({ page }) => {
     page.getByRole("heading", { name: "Pista de pádel 1", level: 1 }),
   ).toBeVisible();
   const dayField = page.getByRole("group", { name: "Día", exact: true });
-  await expect(
-    page.getByRole("region", { name: "Horarios libres" }),
-  ).toBeVisible();
+  const today = page.getByRole("region", { name: "Horarios libres" });
+  await expect(today).toBeVisible();
+  // The capture waits for the day's slots, not for the loading placeholder.
+  await expect(today.getByRole("link").first()).toBeVisible();
   await shot(cu, page, "pagina-del-espacio", { target: dayField });
 
   const cell = await openDay(page, day);
@@ -89,6 +94,8 @@ test("CU-01 consultar catálogo y disponibilidad", async ({ page }) => {
 // Cada prueba es un cliente distinto: el catálogo público limita las
 // consultas por dirección y minuto.
 test("CU-01 alternativas de la consulta", async ({ page }) => {
+  // Same «today» as the main flow.
+  await morningClock(page);
   // Alternativa: buscar por día y hora en todas las instalaciones.
   await page.goto(`/municipios/${valdeira.id}`);
   const search = page.getByRole("link", { name: "Buscar por día y hora" });
@@ -117,17 +124,23 @@ test("CU-01 alternativas de la consulta", async ({ page }) => {
   await expect(
     empty.getByText(dayLabel(sunday), { exact: false }),
   ).toBeVisible();
-  await expect(empty.getByRole("link")).toHaveCount(0);
-  await shot(cu, page, "dia-sin-horarios", { target: empty });
+  // The later free slots load after the empty day: wait for them.
+  await expect(
+    empty.getByRole("heading", { name: "Próximos horarios libres" }),
+  ).toBeVisible();
+  await expect(empty.getByRole("link").first()).toBeVisible();
+  await shot(cu, page, "dia-sin-horarios", {
+    target: empty.getByText(/No quedan horarios libres/),
+  });
 
   // Alternativa: los días posteriores al plazo de antelación aparecen
   // desactivados en el calendario.
   await page.goto(`/municipios/${valdeira.id}/unidades/${valdeira.padel1}`);
-  const late = await openDay(page, midweek(32));
+  const late = await openDay(page, midweek(34));
   await expect(late).toBeDisabled();
+  // The next step opens another page, which closes the calendar. (With the
+  // pinned clock its exit transition does not finish on Escape.)
   await shot(cu, page, "dia-fuera-de-plazo", { target: late });
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toHaveCount(0);
 
   // Alternativa: instalación sin espacios reservables. En la lista del
   // municipio aparece sin enlace y con el motivo.
@@ -163,6 +176,8 @@ test.describe("en el móvil", () => {
   });
 
   test("CU-01 menú y calendario en el móvil", async ({ page }) => {
+    // Same «today» as the desktop captures.
+    await morningClock(page);
     // Menú de navegación del móvil: «Reservar» y el menú «Ajustes».
     await page.goto(`/municipios/${valdeira.id}`);
     const menu = page.getByRole("button", { name: "Ajustes", exact: true });

@@ -70,7 +70,16 @@ test("CU-05 consultar el uso de los espacios y exportar reservas", async ({
   ] as const) {
     const part = region(page, name);
     await expect(part).toBeVisible();
-    await snap(cu, page, slug, { tall: true, clip: part });
+    // The demand table scrolls sideways at the usual width: a wider window
+    // shows every hour up to the last column.
+    const size = page.viewportSize() ?? { width: 1280, height: 800 };
+    if (slug === "demanda")
+      await page.setViewportSize({ width: 1600, height: size.height });
+    try {
+      await snap(cu, page, slug, { tall: true, clip: part });
+    } finally {
+      await page.setViewportSize(size);
+    }
   }
 
   // Paso 2 (continuación): elegir un espacio por su nombre.

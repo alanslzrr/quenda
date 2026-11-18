@@ -88,10 +88,12 @@ test("CU-10 gestionar un convenio", async ({ page, browser }) => {
     .getByRole("button", { name: "Añadir unidad", exact: true })
     .click();
   await page.getByRole("button", { name: "Añadir participante" }).click();
-  await page.getByLabel("Municipio 2", { exact: true }).fill(ribasanta);
+  await choose(page, "Municipio 2", "Concello de Ribasanta");
+  await choose(page, "Instalación · 2", "Polideportivo do Porto");
+  await choose(page, "Unidad · 2", "Pista polideportiva");
   await page
-    .getByLabel("Unidades: un identificador por línea · 2", { exact: true })
-    .fill(units.sportsCourt);
+    .getByRole("button", { name: "Añadir unidad · 2", exact: true })
+    .click();
   await page
     .getByRole("checkbox", { name: "Confirmo la configuración del borrador" })
     .check();

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { Capture, expect, signIn, test } from "./capture";
+import { account, Capture, expect, roles, signIn, test } from "./capture";
 import {
   ageMfaProof,
   choose,
@@ -9,6 +9,7 @@ import {
   freshAccount,
   freshCode,
   localDate,
+  pickDate,
   pickDateTime,
   secondBrowser,
   signInAs,
@@ -139,6 +140,12 @@ test("CU-12 delegar permisos y relevar responsables", async ({
     await expect(
       sections.getByRole("link", { name: "Agenda diaria" }),
     ).toBeVisible();
+    // A day ahead, so that the agenda holds bookings whatever the hour of
+    // the run: today's depend on how much of the day has passed.
+    await pickDate(recipient, "Fecha de la agenda", localDate(2));
+    await expect(
+      recipient.getByText("No hay reservas para este día y ámbito."),
+    ).toHaveCount(0);
     await snap(cu, recipient, "gestora-con-permisos", { target: sections });
 
     // Alternativa: una gestora no puede gestionar el personal.
@@ -207,6 +214,7 @@ test("CU-12 delegar permisos y relevar responsables", async ({
   await sendAdmin.click();
   await expect(page.getByText("Invitación registrada").first()).toBeVisible();
 
+  let martaCookie = "";
   const successor = await secondBrowser(browser, page);
   try {
     const davidPage = await successor.newPage();
@@ -269,37 +277,60 @@ test("CU-12 delegar permisos y relevar responsables", async ({
       target: davidRow.getByRole("cell", { name: "Sin caducidad" }),
     });
 
-    // Relevo completado: un responsable se retira y el otro sigue habilitado.
-    await davidPage.goto(staff);
-    const own = davidPage
-      .getByRole("table", { name: "Administradores", exact: true })
-      .getByRole("button", { name: /tu cuenta/ });
-    await own.click();
-    const retire = formWith(davidPage, "Retirar administración");
+    // Relevo completado: Marta se retira por su cambio de destino y David
+    // sigue como responsable.
+    await page.goto(staff);
+    await admins.getByRole("button", { name: /tu cuenta/ }).click();
+    const retire = formWith(page, "Retirar administración");
     await retire
       .getByLabel("Motivo", { exact: true })
-      .fill("Fin de la sustitución");
+      .fill("Cambio de destino");
     await retire
       .getByRole("checkbox", { name: /Confirmo la retirada ordinaria/ })
       .check();
-    await snap(cu, davidPage, "retirada-ordinaria", {
+    await snap(cu, page, "retirada-ordinaria", {
       tall: true,
       target: retire.getByRole("button", { name: "Retirar administración" }),
     });
     await retire
       .getByRole("button", { name: "Retirar administración" })
       .click();
-    await expect(davidPage).toHaveURL(/\/administracion$/);
-    const without = davidPage.getByText(/No tienes permisos municipales/);
+    await expect(page).toHaveURL(/\/administracion$/);
+    const without = page.getByText(/No tienes permisos municipales/);
     await expect(without).toBeVisible();
-    await snap(cu, davidPage, "retirada-completada", { target: without });
+    await snap(cu, page, "retirada-completada", { target: without });
+
+    // Later scenarios act as the seeded administrator: David gives her the
+    // administration back through an ordinary invitation, and she accepts it
+    // with a fresh second factor.
+    const { email } = await account(roles.administrator);
+    const { invitationId } = await command(
+      await cookieOf(davidPage),
+      `/api/municipalities/${valdeira}/administrator-invitations`,
+      {
+        email,
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+        roleExpiresAt: null,
+      },
+    );
+    const back = await secondBrowser(browser, page);
+    const returning = await back.newPage();
+    await signIn(returning, "administrator");
+    martaCookie = await cookieOf(returning);
+    await command(
+      martaCookie,
+      `/api/municipalities/${valdeira}/administrator-invitations/${invitationId}/accept`,
+      {},
+    );
+    await back.close();
   } finally {
     await successor.close();
   }
 
   // Alternativa: la verificación en dos pasos ya no es reciente al aceptar.
+  // The seeded administrator again, with the session she accepted with.
   await command(
-    await cookieOf(page),
+    martaCookie,
     `/api/municipalities/${valdeira}/manager-invitations`,
     {
       email: nerea.email,

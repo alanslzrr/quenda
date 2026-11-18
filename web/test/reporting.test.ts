@@ -4,6 +4,8 @@ import {
   allowed,
   canEnter,
   canExport,
+  minuteDecimals,
+  monthName,
   validPeriod,
 } from "../src/features/reporting/model.ts";
 
@@ -38,4 +40,12 @@ test("reporting periods validate calendar dates and the exclusive 366-day bound"
     ["2024-03-02", "2024-01-01"],
   ])
     assert.equal(validPeriod(pair[0], pair[1]), false);
+});
+
+test("a report names its month and whole minutes as people read them", () => {
+  assert.equal(monthName("2026-07", "es"), "julio de 2026");
+  assert.equal(monthName("2026-07", "gl"), "xullo de 2026");
+  assert.equal(monthName("invalid", "es"), "invalid");
+  assert.equal(minuteDecimals(1440), 0);
+  assert.equal(minuteDecimals(1440.5), 2);
 });

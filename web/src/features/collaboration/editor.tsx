@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { textField } from "../../app/action";
 import { ApiError } from "../../app/api";
+import { Disclosure } from "../../app/disclosure";
 import { Failure, Loading } from "../../app/feedback";
 import { BackLink } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
@@ -9,6 +10,7 @@ import { Checkbox } from "../../ui/checkbox/checkbox";
 import { Input } from "../../ui/input/input";
 import { Select } from "../../ui/select/select";
 import { Textarea } from "../../ui/textarea/textarea";
+import { useMunicipalities } from "../catalog/journey";
 import styles from "../municipal/municipal.module.css";
 import { MunicipalityName, UnitName } from "../municipal/names";
 import { ManagementPage } from "../municipal/page";
@@ -29,8 +31,19 @@ import {
   validParticipants,
   validZone,
 } from "./model";
+import { PartnerUnits } from "./partner-units";
 
 type Row = Participant & { key: number; locked: boolean; unitsText: string };
+const uuid = new RegExp(`^${uuidPattern}$`);
+/** Unit identifiers of a participant, one per line, without repetitions. */
+const unitIds = (text: string) => [
+  ...new Set(
+    text
+      .split(/\s+/)
+      .filter((id) => uuid.test(id))
+      .map((id) => id.toLowerCase()),
+  ),
+];
 export function AgreementEditor({ original }: { original?: Agreement }) {
   const m = useMunicipality();
   const { t } = usePreferences();
@@ -58,6 +71,7 @@ export function AgreementEditor({ original }: { original?: Agreement }) {
     `${endpoint(m.id)}/agenda/units`,
   );
   const [unit, setUnit] = useState("");
+  const municipalities = useMunicipalities();
   const patch = (key: number, data: Partial<Row>) =>
     setRows((old) => old.map((p) => (p.key === key ? { ...p, ...data } : p)));
   const error = (es: string, gl: string) =>
@@ -253,115 +267,192 @@ export function AgreementEditor({ original }: { original?: Agreement }) {
         <h2>{t("Participantes y unidades", "Participantes e unidades")}</h2>
         <p>
           {t(
-            "Cada municipio aprueba sus propias unidades. Utiliza los identificadores acordados; no se consultan datos privados de otros municipios.",
-            "Cada municipio aproba as súas propias unidades. Utiliza os identificadores acordados; non se consultan datos privados doutros municipios.",
+            "Cada municipio aprueba sus propias unidades. Los demás municipios y sus unidades se eligen del catálogo público; no se consultan datos privados de otros municipios. Una unidad no publicada se añade por el identificador acordado, en «Identificador técnico».",
+            "Cada municipio aproba as súas propias unidades. Os demais municipios e as súas unidades escóllense do catálogo público; non se consultan datos privados doutros municipios. Unha unidade non publicada engádese polo identificador acordado, en «Identificador técnico».",
           )}
         </p>
-        {rows.map((p, i) => (
-          <fieldset className={ui.participant} key={p.key}>
-            <legend>
-              {t("Participante", "Participante")} {i + 1}
-              {new RegExp(`^${uuidPattern}$`).test(p.tenantId) && (
-                <>
-                  {" · "}
-                  <MunicipalityName id={p.tenantId} />
-                </>
+        {rows.map((p, i) => {
+          const ids = unitIds(p.unitsText);
+          const chosen = uuid.test(p.tenantId);
+          const remove = (id: string) =>
+            patch(p.key, {
+              unitsText: ids.filter((x) => x !== id).join("\n"),
+            });
+          const add = (id: string) =>
+            patch(p.key, {
+              unitsText: [...ids, id].join("\n"),
+            });
+          return (
+            <fieldset className={ui.participant} key={p.key}>
+              <legend>
+                {t("Participante", "Participante")} {i + 1}
+              </legend>
+              {p.locked ? (
+                <div className={ui.value}>
+                  <span>{`${t("Municipio", "Municipio")} ${i + 1}`}</span>
+                  <strong>
+                    <MunicipalityName id={p.tenantId} />
+                  </strong>
+                </div>
+              ) : (
+                <Select
+                  label={`${t("Municipio", "Municipio")} ${i + 1}`}
+                  value={chosen ? p.tenantId.toLowerCase() : ""}
+                  placeholder={t(
+                    "Selecciona un municipio",
+                    "Selecciona un municipio",
+                  )}
+                  onValueChange={(tenantId) =>
+                    patch(p.key, { tenantId, unitsText: "" })
+                  }
+                  options={[
+                    ...municipalities.items
+                      .filter(
+                        (x) =>
+                          x.id !== m.id &&
+                          !rows.some(
+                            (r) =>
+                              r.key !== p.key &&
+                              r.tenantId.toLowerCase() === x.id,
+                          ),
+                      )
+                      .map((x) => ({ value: x.id, label: x.name })),
+                    // A municipality entered by identifier stays selectable.
+                    ...(chosen &&
+                    !municipalities.items.some(
+                      (x) => x.id === p.tenantId.toLowerCase(),
+                    )
+                      ? [
+                          {
+                            value: p.tenantId.toLowerCase(),
+                            label: p.tenantId.toLowerCase(),
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
               )}
-            </legend>
-            <Input
-              label={`${t("Municipio", "Municipio")} ${i + 1}`}
-              required
-              pattern={uuidPattern}
-              value={p.tenantId}
-              readOnly={p.locked}
-              onChange={(e) => patch(p.key, { tenantId: e.target.value })}
-            />
-            <Checkbox
-              label={`${t("Emisor de acreditaciones", "Emisor de acreditacións")} ${i + 1}`}
-              checked={p.accreditationIssuer}
-              onCheckedChange={(v) =>
-                patch(p.key, { accreditationIssuer: v === true })
-              }
-            />
-            <Textarea
-              label={`${t("Unidades: un identificador por línea", "Unidades: un identificador por liña")} · ${i + 1}`}
-              value={p.unitsText}
-              onChange={(e) => patch(p.key, { unitsText: e.target.value })}
-            />
-            {/* The identifiers stay editable; their names confirm the choice. */}
-            {(() => {
-              const valid = new RegExp(`^${uuidPattern}$`);
-              const ids = p.unitsText
-                .split(/\s+/)
-                .filter((id) => valid.test(id));
-              return (
-                valid.test(p.tenantId) &&
-                ids.length > 0 && (
-                  <ul className={ui.unitNames}>
+              <Checkbox
+                label={`${t("Emisor de acreditaciones", "Emisor de acreditacións")} ${i + 1}`}
+                checked={p.accreditationIssuer}
+                onCheckedChange={(v) =>
+                  patch(p.key, { accreditationIssuer: v === true })
+                }
+              />
+              <div className={ui.value}>
+                <span>{`${t("Unidades", "Unidades")} · ${i + 1}`}</span>
+                {ids.length && chosen ? (
+                  <ul className={ui.unitList}>
                     {ids.map((id) => (
                       <li key={id}>
-                        <UnitName tenantId={p.tenantId} id={id} />
+                        <UnitName tenantId={p.tenantId.toLowerCase()} id={id} />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => remove(id)}
+                        >
+                          {t("Quitar", "Quitar")}
+                        </Button>
                       </li>
                     ))}
                   </ul>
-                )
-              );
-            })()}
-            {p.locked ? (
-              <>
-                <Select
-                  label={t(
-                    "Añadir unidad municipal",
-                    "Engadir unidade municipal",
-                  )}
-                  value={unit}
-                  onValueChange={setUnit}
-                  placeholder={t(
-                    "Selecciona una unidad",
-                    "Selecciona unha unidade",
-                  )}
-                  options={(
-                    units.data?.pages.flatMap((x) => x.items) ?? []
-                  ).map((u) => ({ value: u.id, label: u.name }))}
-                />
-                {units.isPending ? (
-                  <Loading />
-                ) : units.isError ? (
-                  <Failure
-                    error={units.error}
-                    retry={() => void units.refetch()}
-                  />
                 ) : (
-                  <More query={units} />
+                  <p className={ui.quiet}>
+                    {t("Todavía no hay unidades.", "Aínda non hai unidades.")}
+                  </p>
                 )}
+              </div>
+              {p.locked ? (
+                <>
+                  <Select
+                    label={t(
+                      "Añadir unidad municipal",
+                      "Engadir unidade municipal",
+                    )}
+                    value={unit}
+                    onValueChange={setUnit}
+                    placeholder={t(
+                      "Selecciona una unidad",
+                      "Selecciona unha unidade",
+                    )}
+                    options={(
+                      units.data?.pages.flatMap((x) => x.items) ?? []
+                    ).map((u) => ({ value: u.id, label: u.name }))}
+                  />
+                  {units.isPending ? (
+                    <Loading />
+                  ) : units.isError ? (
+                    <Failure
+                      error={units.error}
+                      retry={() => void units.refetch()}
+                    />
+                  ) : (
+                    <More query={units} />
+                  )}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!unit || ids.includes(unit)}
+                    onClick={() => add(unit)}
+                  >
+                    {t("Añadir unidad", "Engadir unidade")}
+                  </Button>
+                </>
+              ) : (
+                chosen && (
+                  <PartnerUnits
+                    tenantId={p.tenantId.toLowerCase()}
+                    index={i + 1}
+                    taken={ids}
+                    onAdd={add}
+                  />
+                )
+              )}
+              {/* Identifiers stay available for support and for units that
+                  are not published, without standing in for the names. */}
+              <Disclosure
+                title={t("Identificador técnico", "Identificador técnico")}
+              >
+                <div className={ui.technical}>
+                  {p.locked ? (
+                    <p>
+                      {`${t("Municipio", "Municipio")} ${i + 1}`}:{" "}
+                      <code>{p.tenantId}</code>
+                    </p>
+                  ) : (
+                    <Input
+                      label={`${t("Identificador del municipio", "Identificador do municipio")} ${i + 1}`}
+                      pattern={uuidPattern}
+                      value={p.tenantId}
+                      onChange={(e) =>
+                        patch(p.key, { tenantId: e.target.value.trim() })
+                      }
+                    />
+                  )}
+                  <Textarea
+                    label={`${t("Unidades: un identificador por línea", "Unidades: un identificador por liña")} · ${i + 1}`}
+                    value={p.unitsText}
+                    onChange={(e) =>
+                      patch(p.key, { unitsText: e.target.value })
+                    }
+                  />
+                </div>
+              </Disclosure>
+              {!p.locked && (
                 <Button
                   type="button"
-                  variant="secondary"
-                  disabled={!unit || p.unitsText.split(/\s+/).includes(unit)}
+                  variant="danger-ghost"
                   onClick={() =>
-                    patch(p.key, {
-                      unitsText: [p.unitsText.trim(), unit]
-                        .filter(Boolean)
-                        .join("\n"),
-                    })
+                    setRows((old) => old.filter((x) => x.key !== p.key))
                   }
                 >
-                  {t("Añadir unidad", "Engadir unidade")}
+                  {t("Quitar participante", "Quitar participante")} {i + 1}
                 </Button>
-              </>
-            ) : (
-              <Button
-                type="button"
-                variant="danger-ghost"
-                onClick={() =>
-                  setRows((old) => old.filter((x) => x.key !== p.key))
-                }
-              >
-                {t("Quitar participante", "Quitar participante")} {i + 1}
-              </Button>
-            )}
-          </fieldset>
-        ))}
+              )}
+            </fieldset>
+          );
+        })}
         <Button
           type="button"
           variant="secondary"

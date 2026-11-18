@@ -34,7 +34,8 @@ test("reservation messages localize all events and distinguish history from curr
         message.subject,
         /^Quenda — Reserva (confirmada|modificada|cancelada)$/,
       );
-      assert.match(message.text, /Revisión: 2/);
+      assert.match(message.text, /^Referencia: 00000000$/m);
+      assert.doesNotMatch(message.text, /Revisión|Fuso horario|Zona horaria/);
       assert.ok(
         message.text.includes(
           locale === "gl" ? "Data do evento" : "Fecha del evento",
@@ -49,8 +50,15 @@ test("reservation messages localize all events and distinguish history from curr
         message.text,
         /https:\/\/quenda\.test\/reservas\/00000000-0000-4000-8000-000000000001\/00000000-0000-4000-8000-000000000002/,
       );
-      assert.match(message.text, /GMT\+02:00/);
-      assert.match(message.text, /GMT\+01:00/);
+      // The repeated 02:30 of the clock change stays distinguishable.
+      assert.match(
+        message.text,
+        /^Inicio: domingo, 27 de (octubre|outubro) de 2030, 02:30 CEST$/m,
+      );
+      assert.match(
+        message.text,
+        /^Fin: domingo, 27 de (octubre|outubro) de 2030, 02:30 CET$/m,
+      );
       assert.ok(!("html" in message));
       assert.doesNotMatch(message.text, /Normas (pendientes|pendentes)/);
     }
@@ -102,6 +110,17 @@ test("relocation mail identifies pending rules without treating them as accepted
     assert.deepEqual(data, before);
     assert.match(message.text, /Normas (pendientes|pendentes) de aceptación/);
     assert.ok(message.text.includes(`: ${event.unitId}`));
+    const named = reservationMail(
+      "citizen@example.test",
+      "https://quenda.test",
+      locale,
+      { ...data, unitName: "Pista de pádel 1" },
+    );
+    assert.match(
+      named.text,
+      /(Espacio de las|Espazo das) normas: Pista de pádel 1/,
+    );
+    assert.doesNotMatch(named.text, new RegExp(event.unitId));
     assert.match(message.text, /Versión (de las|das) normas: 7/);
     assert.doesNotMatch(message.text, /normas aceptadas|reserva pendiente/i);
     const cancelled = reservationMail(
@@ -157,7 +176,7 @@ test("administrative mail includes captured author, motive and event time in bot
     );
     assert.match(message.text, /Municipal operator/);
     assert.match(message.text, /Court maintenance/);
-    assert.match(message.text, /26\/10\/2030/);
+    assert.match(message.text, /26 de (octubre|outubro) de 2030/);
     const ordinary = reservationMail(
       "citizen@example.test",
       "https://quenda.test",
@@ -171,4 +190,50 @@ test("administrative mail includes captured author, motive and event time in bot
     );
     assert.doesNotMatch(ordinary.text, /Hidden/);
   }
+});
+
+test("reservation mail names the municipality, facility and space it was booked in", () => {
+  const place = {
+    ...event,
+    kind: "CONFIRMADA" as const,
+    municipalityName: "Concello de Valdeira",
+    facilityName: "Complejo Deportivo A Fontela",
+    unitName: "Pista de pádel 1",
+  };
+  const es = reservationMail(
+    "citizen@example.test",
+    "https://quenda.test",
+    "es",
+    place,
+  ).text;
+  assert.match(es, /^Municipio: Concello de Valdeira$/m);
+  assert.match(es, /^Instalación: Complejo Deportivo A Fontela$/m);
+  assert.match(es, /^Espacio: Pista de pádel 1$/m);
+  assert.match(
+    reservationMail("citizen@example.test", "https://quenda.test", "gl", place)
+      .text,
+    /^Espazo: Pista de pádel 1$/m,
+  );
+  // The reference is the one the reservation page shows; the link keeps the
+  // full identifiers.
+  const reference = reservationMail(
+    "citizen@example.test",
+    "https://quenda.test",
+    "es",
+    { ...place, reservationId: "8227396c-1f2e-4d3c-9b8a-7f6e5d4c3b2a" },
+  ).text;
+  assert.match(reference, /^Referencia: 8227396C$/m);
+  assert.match(
+    reference,
+    /\/reservas\/00000000-0000-4000-8000-000000000001\/8227396c-1f2e-4d3c-9b8a-7f6e5d4c3b2a$/m,
+  );
+  // Missing or multi-line names are left out instead of breaking the message.
+  const partial = reservationMail(
+    "citizen@example.test",
+    "https://quenda.test",
+    "es",
+    { ...place, facilityName: null, unitName: "Pista\nBcc: other" },
+  ).text;
+  assert.doesNotMatch(partial, /^Instalación:|^Espacio:|Bcc/m);
+  assert.match(partial, /^Municipio: Concello de Valdeira$/m);
 });

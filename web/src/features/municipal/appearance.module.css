@@ -57,6 +57,10 @@
   font-size: var(--text-xs);
   line-height: var(--leading-body);
 }
+/* A message under a row's help (a rejected logo) keeps clear of the text. */
+.rowHint + * {
+  margin-top: var(--space-3);
+}
 .rowControl {
   display: flex;
   align-items: center;
@@ -295,11 +299,26 @@
   border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
 }
 .saveActions,
-.saveBar form {
+.saveBar form > div:last-child {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-2);
+  margin-inline-start: auto;
+}
+/* The form's parts join the bar: a message from saving (a newer version, a
+   rejection) takes the whole first line, the buttons stay together at the end. */
+.saveBar form {
+  display: contents;
+}
+.saveBar form > :not(:last-child) {
+  flex: 1 1 100%;
+  order: -1;
+}
+/* Whatever is focused or scrolled into view stops above the floating bar. */
+.editor[data-save-bar] * {
+  scroll-margin-bottom: calc(var(--save-bar-space, 5rem) + var(--space-6));
 }
 
 @media (max-width: 40rem) {

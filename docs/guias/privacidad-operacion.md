@@ -1,6 +1,6 @@
 # Guía de casos de uso · Privacidad y operación
 
-Esta guía es para el personal municipal con permisos de privacidad, que aplica las políticas de conservación aprobadas y ejecuta actuaciones individuales de supresión o bloqueo, y para el personal de operación que recupera una instancia a partir de una copia sin devolver al uso datos ya suprimidos o restringidos. Los permisos de privacidad son explícitos: ni la administración del municipio ni el permiso de operador los incluyen. En las imágenes, el recuadro naranja señala dónde hay que pulsar o escribir.
+Esta guía es para el personal municipal con permisos de privacidad, que aplica las políticas de conservación aprobadas y ejecuta actuaciones individuales de supresión o bloqueo, y para el personal de operación que recupera una instancia a partir de una copia sin devolver al uso datos ya suprimidos o restringidos. Los permisos de privacidad son explícitos: ni la administración del municipio ni el permiso de operador los incluyen. En las imágenes, el recuadro naranja señala dónde hay que pulsar o escribir, o el mensaje o resultado que hay que comprobar.
 
 ## Índice
 
@@ -56,21 +56,21 @@ Sirve para que Quenda elimine o bloquee automáticamente los datos de una famili
 
    *El mensaje recuadrado «Excepción registrada» incluye el identificador que se usará para levantarla.*
 
-7. **Quenda procesa los vencimientos.** El proceso de segundo plano (el worker) revisa las políticas activas cada minuto, selecciona los registros vencidos y vuelve a comprobar excepciones y dependencias de cada uno antes de actuar. No hay nada que pulsar. Si el equipo de operación necesita forzar una revisión, puede ejecutar un único ciclo del worker con la configuración del propio worker: `node dist/email-worker.js --once` en la instancia (en un entorno local, `pnpm -s worker:local --once`):
+7. **Quenda procesa los vencimientos.** El proceso de segundo plano (el worker) revisa las políticas activas cada minuto, selecciona los registros vencidos y vuelve a comprobar excepciones y dependencias de cada uno antes de actuar. No hay nada que pulsar. Si el equipo de operación necesita forzar una revisión, puede ejecutar un único ciclo del worker con la configuración del propio worker: `node dist/email-worker.js --once`.
 
    ![Terminal con un ciclo del worker que procesa la conservación](../capturas/cu-20/08-worker-conservacion.webp)
 
-   *La imagen muestra el equivalente local. La línea EMAIL_WORKER_READY indica que el worker ha arrancado y la línea RETENTION_BATCH resume el ciclo: ha examinado 2 registros vencidos, ha aplicado la actuación a 1 y ha dejado 1 en conflicto. En el mismo ciclo el worker también envía un correo pendiente (EMAIL_ATTEMPT) y EMAIL_QUEUE_HEALTH resume la cola de correo de reservas (2 pendientes, ninguno agotado) e INVITATION_EMAIL_QUEUE_HEALTH, la de avisos de invitación, vacía.*
+   *La línea EMAIL_WORKER_READY indica que el worker ha arrancado y la línea RETENTION_BATCH resume el ciclo: ha examinado 2 registros vencidos, ha aplicado la actuación a 1 y ha dejado 1 en conflicto. En el mismo ciclo el worker envía también un correo pendiente (EMAIL_ATTEMPT con «ACCEPTED»), y EMAIL_QUEUE_HEALTH resume la cola de correo de reservas e INVITATION_EMAIL_QUEUE_HEALTH, la de avisos de invitación: los recuentos «pending», «leased» y «exhausted» indican cuántos mensajes esperan, se están enviando o han agotado sus intentos.*
 
-8. **Revisa excepciones y conflictos.** En **Excepciones y conflictos**, el registro protegido aparece como conflicto con su motivo; sus datos no se han tocado. El otro perfil vencido se ha bloqueado.
+8. **Revisa excepciones y conflictos.** En **Excepciones y conflictos**, el registro protegido aparece como conflicto con su motivo; sus datos no se han tocado. Según el resumen del ciclo, el otro perfil vencido sí recibió la actuación de la política: se ha bloqueado.
 
    ![Excepciones activas y Conflictos de conservación del Concello de Riomaior](../capturas/cu-20/09-excepciones-y-conflictos.webp)
 
-   *Arriba, la excepción activa con su interesado, autorización y motivo, y el botón Levantar excepción. Debajo, en «Conflictos de conservación», la tarjeta recuadrada muestra el conflicto de la misma persona: la política que lo detectó, el registro, la fecha de la última detección y el motivo LEGAL_HOLD (excepción de conservación).*
+   *Arriba, la excepción activa con su interesado, autorización y motivo, y el botón Levantar excepción. Debajo, en «Conflictos de conservación», la tarjeta recuadrada muestra el conflicto de la misma persona: la política que lo detectó, el registro, la fecha de la última detección y el motivo, «Hay una excepción de conservación activa». El interesado y el registro se muestran por el identificador de la cuenta: estas pantallas no dan acceso al listado de personas.*
 
-### Si algo no sale como se espera
+### Otras formas de hacerlo
 
-#### Hay una nueva aprobación para la misma familia
+#### Sustituir la política por una nueva aprobación
 
 Cada familia tiene una sola política activa por municipio. Registra la nueva aprobación como en el paso 3: sustituye a la anterior sin rehacer lo que ya se aplicó.
 
@@ -78,7 +78,7 @@ Cada familia tiene una sola política activa por municipio. Registra la nueva ap
 
 *Arriba, la nueva política (Supresión · 1095 días) como Activa; abajo, recuadrada, la anterior marcada como Sustituida, que ya no ofrece Retirar política.*
 
-#### La excepción ya no es necesaria
+#### Levantar una excepción
 
 Levantar una excepción exige también autorización y motivo. En **Excepciones y conflictos**, pulsa **Levantar excepción** en su tarjeta.
 
@@ -96,15 +96,7 @@ Completa la referencia de autorización y el motivo, marca la confirmación y pu
 
 *El mensaje recuadrado «Levantamiento registrado» confirma la operación. Si la política sigue activa, el registro se evaluará de nuevo en la próxima revisión.*
 
-#### El interesado o el registro de la excepción no existe
-
-Una excepción tiene que referirse a un registro o a un interesado existente. Si el identificador no corresponde a ninguno, Quenda la rechaza.
-
-![Aviso No se ha encontrado el recurso al registrar una excepción](../capturas/cu-20/14-excepcion-sin-interesado.webp)
-
-*Con «cuenta-que-no-existe» como identificador, el aviso recuadrado, sobre el botón Registrar excepción, indica «No se ha encontrado el recurso.» y no se registra ninguna excepción.*
-
-#### La aprobación se revoca
+#### Retirar la política cuando se revoca la aprobación
 
 Si el responsable revoca la aprobación, retira la política: Quenda deja de actuar sobre los registros ordinarios de esa familia. No se recuperan los datos ya suprimidos ni se amplía la conservación de los archivos ya bloqueados. En **Políticas**, pulsa **Retirar política** en la política activa.
 
@@ -122,21 +114,31 @@ Indica el motivo, confirma y pulsa **Retirar política**.
 
 *El mensaje recuadrado «Retirada registrada» confirma la retirada con el identificador de la política.*
 
+#### Ámbito global
+
+Las familias de identidad global, autenticación y permisos de plataforma se gestionan igual desde **Plataforma › Conservación y derechos**, con permisos de privacidad globales concedidos por un operador. Cada municipio conserva su propia política aunque comparta instancia.
+
+### Si algo no sale como se espera
+
+#### El interesado o el registro de la excepción no existe
+
+Una excepción tiene que referirse a un registro o a un interesado existente. Si el identificador no corresponde a ninguno, Quenda la rechaza.
+
+![Aviso No se ha encontrado el recurso al registrar una excepción](../capturas/cu-20/14-excepcion-sin-interesado.webp)
+
+*Con un identificador de cuenta que no corresponde a ninguna persona del municipio, el aviso recuadrado, sobre el botón Registrar excepción, indica «No se ha encontrado el recurso.» y no se registra ninguna excepción.*
+
 #### Una persona sin permisos de privacidad abre estos controles
 
 Administrar el municipio no da permisos de privacidad. Una persona administradora que abre la dirección de **Conservación y derechos** solo ve un aviso.
 
 ![Aviso No tienes permiso para esta operación para la persona administradora del municipio](../capturas/cu-20/18-administrador-sin-permiso.webp)
 
-*El menú lateral de la persona administradora no incluye Conservación y derechos y el contenido es el aviso recuadrado «No tienes permiso para esta operación.».*
+*El menú lateral de la persona administradora no incluye Conservación y derechos, así que ninguna de sus secciones aparece marcada, y el contenido es el aviso recuadrado «No tienes permiso para esta operación.».*
 
 #### Un conflicto no detiene el resto
 
 Cuando un registro tiene una excepción, una reserva vigente u otra dependencia protegida, Quenda lo deja tal cual, anota el conflicto y sigue con los demás registros vencidos, como muestra el resumen del paso 7.
-
-#### Ámbito global
-
-Las familias de identidad global, autenticación y permisos de plataforma se gestionan igual desde **Plataforma › Conservación y derechos**, con permisos de privacidad globales concedidos por un operador. Cada municipio conserva su propia política aunque comparta instancia.
 
 ### Resultado
 
@@ -156,11 +158,11 @@ Sirve para suprimir o bloquear un conjunto concreto de datos cuando el responsab
 
    *La página se abre en Políticas; la opción recuadrada abre el formulario de actuación.*
 
-2. **Identifica el registro y la actuación.** Elige la familia de datos, escribe la referencia exacta del registro (para un perfil municipal, el identificador de la cuenta), elige **Suprimir**, indica la referencia de autorización y el motivo, marca la confirmación y pulsa **Ejecutar actuación**.
+2. **Identifica el registro y la actuación.** Elige la familia de datos, escribe la referencia exacta del registro (para un perfil municipal, el identificador de la cuenta; quien además administra el municipio puede elegir a la persona en una lista), elige **Suprimir**, indica la referencia de autorización y el motivo, marca la confirmación y pulsa **Ejecutar actuación**.
 
    ![Formulario Actuación individual para suprimir un perfil municipal](../capturas/cu-21/02-formulario-supresion.webp)
 
-   *El formulario avisa de que se respetan reservas vigentes, excepciones y evidencias protegidas y de que no se admiten búsquedas ni filtros libres. El botón recuadrado ejecuta la actuación.*
+   *El formulario avisa de que se respetan reservas vigentes, excepciones y evidencias protegidas y de que no se admiten consultas ni filtros libres. El botón recuadrado ejecuta la actuación.*
 
 3. **Comprueba el resultado.** Si nada lo impide, Quenda aplica la actuación y la registra en la auditoría.
 
@@ -168,9 +170,9 @@ Sirve para suprimir o bloquear un conjunto concreto de datos cuando el responsab
 
    *El resultado recuadrado «Actuación aplicada» indica el número del evento de auditoría que la acredita.*
 
-### Si algo no sale como se espera
+### Otras formas de hacerlo
 
-#### Hay que conservar los datos restringidos en lugar de suprimirlos
+#### Bloquear y conservar restringido en lugar de suprimir
 
 Elige **Bloquear y conservar restringido** e indica la duración autorizada del archivo bloqueado. Los datos salen del uso ordinario y se guardan en un archivo restringido hasta su destrucción autorizada.
 
@@ -184,21 +186,23 @@ Elige **Bloquear y conservar restringido** e indica la duración autorizada del 
 
 Los permisos de privacidad no permiten leer ese archivo: solo se accede a él con un procedimiento de mantenimiento autorizado y auditado.
 
+### Si algo no sale como se espera
+
 #### Una excepción de conservación lo impide
 
 Si el registro o el interesado tienen una excepción vigente, Quenda no actúa y lo registra como conflicto.
 
-![Resultado Conflicto: actuación no aplicada con el motivo LEGAL_HOLD](../capturas/cu-21/06-conflicto-excepcion.webp)
+![Resultado «Conflicto: actuación no aplicada» con el motivo «Hay una excepción de conservación activa»](../capturas/cu-21/06-conflicto-excepcion.webp)
 
-*El resultado recuadrado «Conflicto: actuación no aplicada» indica su evento de auditoría y el motivo registrado LEGAL_HOLD, que corresponde a una excepción de conservación. La excepción se gestiona como en [CU-20](#cu-20--aplicar-una-política-de-conservación).*
+*El resultado recuadrado «Conflicto: actuación no aplicada» indica su evento de auditoría y el motivo registrado: «Hay una excepción de conservación activa». La excepción se gestiona como en [CU-20](#cu-20--aplicar-una-política-de-conservación).*
 
 #### Hay dependencias vigentes
 
 Las reservas, los permisos, las invitaciones o las acreditaciones que la persona conserva en el municipio impiden suprimir su perfil por separado. En el ejemplo, el perfil es el de la persona administradora del municipio.
 
-![Resultado Conflicto: actuación no aplicada con el motivo RETAINED_SERVICE_DEPENDENCIES](../capturas/cu-21/07-conflicto-dependencias.webp)
+![Resultado «Conflicto: actuación no aplicada» con el motivo de las dependencias que se conservan](../capturas/cu-21/07-conflicto-dependencias.webp)
 
-*El motivo registrado RETAINED_SERVICE_DEPENDENCIES indica que el perfil tiene relaciones de servicio que se conservan. No se ha suprimido nada.*
+*El motivo registrado, «Datos del servicio que deben conservarse dependen de este registro», indica que el perfil tiene relaciones de servicio que se conservan. No se ha suprimido nada.*
 
 #### El conjunto ya no existe
 
@@ -214,7 +218,7 @@ Si han pasado más de cinco minutos desde la última verificación, Quenda no ej
 
 ![Aviso Confirma tu identidad para continuar sobre el formulario de actuación](../capturas/cu-21/09-verificacion-caducada.webp)
 
-*El aviso aparece encima de la página con el botón recuadrado Verificar acceso; debajo sigue el formulario con los datos escritos.*
+*El aviso aparece encima de la página con el botón recuadrado Verificar acceso. Debajo sigue el formulario con los datos escritos (familia, referencia del registro, actuación, autorización y motivo) y, encima del botón Ejecutar actuación, el aviso «Vuelve a verificar el segundo factor para realizar esta operación.» con el botón «Ir a la verificación».*
 
 #### Qué no hace una actuación individual
 
@@ -258,13 +262,13 @@ Los comandos se ejecutan desde la raíz del código de Quenda. `PG_BIN` (la carp
 
    ![Terminal con la conexión del rol de la aplicación rechazada](../capturas/cu-22/04-destino-cerrado.webp)
 
-   *psql termina con «permission denied for database "quenda_recuperada"» y «User does not have CONNECT privilege»: el acceso ordinario está cerrado.*
+   *psql llega al servidor de base de datos («db.interno» en el ejemplo), pero este rechaza la conexión con «permission denied for database "quenda_recuperada"» y «User does not have CONNECT privilege»; el código de salida 2 confirma que el acceso ordinario está cerrado.*
 
 5. **Revisa lo que contiene la copia antigua.** Con el administrador, consulta la base restaurada. En el ejemplo, el perfil suprimido después de la copia sigue ahí, la barrera de recuperación está activa y la política de conservación restaurada sigue vigente.
 
    ![Terminal con la consulta de la base restaurada antes de reproducir el checkpoint](../capturas/cu-22/05-copia-antigua.webp)
 
-   *perfiles vale 1 (la copia conserva el perfil suprimido), servicio_habilitado vale f (la barrera impide que la API y los workers arranquen) y la política de perfiles municipales figura con retirada en f.*
+   *La columna «perfiles» vale 1 (la copia conserva el perfil suprimido), servicio_habilitado vale f (la barrera impide que la API y los workers arranquen) y la política de perfiles municipales figura con retirada en f.*
 
 6. **Reproduce las actuaciones de privacidad posteriores.** Indica el checkpoint, su SHA-256 y la referencia de la autorización de recuperación.
 
@@ -276,7 +280,7 @@ Los comandos se ejecutan desde la raíz del código de Quenda. `PG_BIN` (la carp
 
    ![Terminal con la consulta de la base restaurada después de reproducir el checkpoint](../capturas/cu-22/07-tras-reproducir.webp)
 
-   *perfiles vale ahora 0: la supresión posterior a la copia se ha vuelto a aplicar. La barrera sigue activa (servicio_habilitado en f) y la política restaurada queda retirada (retirada en t) hasta que el responsable la revise.*
+   *La columna «perfiles» vale ahora 0: la supresión posterior a la copia se ha vuelto a aplicar. La barrera sigue activa (servicio_habilitado en f) y la política restaurada queda retirada (retirada en t) hasta que el responsable la revise.*
 
 8. **Concilia la integridad.** Con el administrador, ejecuta la conciliación de solo lectura sobre la base restaurada.
 
@@ -290,11 +294,11 @@ Los comandos se ejecutan desde la raíz del código de Quenda. `PG_BIN` (la carp
 
 #### El SHA-256 de la copia no coincide
 
-La restauración comprueba la copia antes de crear nada. Si el checksum no coincide, se detiene y no crea la base.
+La restauración comprueba la copia antes de cargarla. Si el checksum no coincide, se detiene sin restaurar nada; si la base de destino llegara a crearse, queda cerrada a la espera de revisión.
 
 ![Terminal con la restauración rechazada por un checksum que no coincide](../capturas/cu-22/09-restaurar-checksum-erroneo.webp)
 
-*Es el comando del paso 3 con un checksum erróneo. La salida «Restore failed; inspect the isolated destination…» y el código de salida 1 indican que no se ha restaurado. Comprueba el archivo y su checksum por un canal confiable antes de repetir.*
+*Es el comando del paso 3 con un checksum erróneo y una base nueva, `quenda_recuperada_2`. La salida «Restore failed; inspect the isolated destination…» recuerda que nunca se sustituye una base existente y que un destino recién creado queda cerrado hasta revisarlo; el código de salida 1 indica que no se ha restaurado. Comprueba el archivo y su checksum por un canal confiable antes de repetir.*
 
 #### El checkpoint no coincide
 

@@ -16,7 +16,7 @@ import {
   TargetField,
 } from "./fields";
 import { PrivacyForm } from "./form";
-import { type ActionResult, period } from "./model";
+import { type ActionResult, conflictReason, period } from "./model";
 
 const value = (d: FormData, k: string) => textField(d, k).trim();
 const action = (d: FormData) => ({
@@ -274,7 +274,7 @@ export function ReleaseHold() {
 }
 export function IndividualAction() {
   const s = usePrivacyScope();
-  const { t } = usePreferences();
+  const { t, locale } = usePreferences();
   const [category, setCategory] = useState("");
   const [result, setResult] = useState<ActionResult>();
   return (
@@ -306,7 +306,8 @@ export function IndividualAction() {
           </p>
           {result.reason && (
             <p>
-              {t("Motivo registrado", "Motivo rexistrado")}: {result.reason}
+              {t("Motivo registrado", "Motivo rexistrado")}:{" "}
+              {conflictReason(result.reason, locale)}
             </p>
           )}
         </section>

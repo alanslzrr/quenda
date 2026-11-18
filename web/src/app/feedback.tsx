@@ -47,7 +47,12 @@ export function Failure({
   const { t } = usePreferences();
   const client = useQueryClient();
   const location = useLocation();
-  const expired = error instanceof ApiError && error.status === 401;
+  // On the sign-in page a 401 means wrong credentials or code, not a lost
+  // session: offering to sign in again there would only repeat the page.
+  const expired =
+    error instanceof ApiError &&
+    error.status === 401 &&
+    !location.pathname.startsWith("/acceso");
   const reauthenticate = useContext(ReauthenticationContext);
   const notice = useContext(ReauthenticationNoticeContext);
   const registration = useId();

@@ -152,6 +152,7 @@ export function StaffInvite({
   );
   const [generation, setGeneration] = useState(0);
   const [created, setCreated] = useState(false);
+  const [roleDeadline, setRoleDeadline] = useState("");
   const actualKind = replacement ? "manager" : kind;
   const invalid = () =>
     new ApiError(
@@ -245,6 +246,7 @@ export function StaffInvite({
           setCreated(true);
           if (!replacement) {
             setPermissions([]);
+            setRoleDeadline("");
             setGeneration((x) => x + 1);
           }
           onSaved?.();
@@ -289,12 +291,18 @@ export function StaffInvite({
             "Permiso válido hasta (opcional)",
             "Permiso válido ata (opcional)",
           )}
+          onValueChange={setRoleDeadline}
         />
         <p>
-          {t(
-            "Sin fecha de permiso: no caduca automáticamente, pero puede revocarse. El plazo para aceptar es independiente.",
-            "Sen data de permiso: non caduca automaticamente, pero pode revogarse. O prazo para aceptar é independente.",
-          )}
+          {roleDeadline
+            ? t(
+                "El permiso caduca automáticamente en la fecha indicada y puede revocarse antes. El plazo para aceptar es independiente.",
+                "O permiso caduca automaticamente na data indicada e pode revogarse antes. O prazo para aceptar é independente.",
+              )
+            : t(
+                "Sin fecha de permiso: no caduca automáticamente, pero puede revocarse. El plazo para aceptar es independiente.",
+                "Sen data de permiso: non caduca automaticamente, pero pode revogarse. O prazo para aceptar é independente.",
+              )}
         </p>
         {actualKind === "manager" ? (
           <PermissionEditor value={permissions} onChange={setPermissions} />

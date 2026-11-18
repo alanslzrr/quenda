@@ -1904,13 +1904,32 @@ test("reservation confirmation validates real calendars and commits every effect
                   ).rows[0].n,
                   1,
                 );
-                const reservation = /Reserva: ([0-9a-f-]+)/.exec(
-                  message.text,
-                )?.[1];
-                const revision = Number(
-                  /Revisión: (\d+)/.exec(message.text)?.[1],
+                // The message carries the short reference and the place; the
+                // leased event tells which revision is being sent.
+                const leased = (
+                  await migration.query(
+                    `SELECT e.reservation_id,e.revision,m.name AS municipality,f.name AS facility,r.name AS unit
+                    FROM domain.reservation_email q JOIN domain.reservation_event e ON (e.tenant_id,e.id)=(q.tenant_id,q.event_id)
+                    JOIN domain.municipality m ON m.id=e.tenant_id
+                    JOIN domain.reservable_unit r ON (r.tenant_id,r.id)=(e.tenant_id,(e.after_state->>'unitId')::uuid)
+                    JOIN domain.facility f ON (f.tenant_id,f.id)=(r.tenant_id,r.facility_id)
+                    WHERE q.lease_token IS NOT NULL`,
+                  )
+                ).rows[0];
+                const reservation: string = leased.reservation_id;
+                const revision: number = leased.revision;
+                assert.ok(
+                  message.text.includes(
+                    `Referencia: ${reservation.slice(0, 8).toUpperCase()}\n`,
+                  ),
                 );
-                assert.ok(reservation);
+                for (const line of [
+                  `Municipio: ${leased.municipality}`,
+                  `Instalación: ${leased.facility}`,
+                  `Espacio: ${leased.unit}`,
+                ])
+                  assert.ok(message.text.includes(line));
+                assert.ok(message.text.includes(`/${reservation}`));
                 assert.equal(revision, (revisions.get(reservation) ?? 0) + 1);
                 revisions.set(reservation, revision);
               },
@@ -1992,6 +2011,7 @@ test("reservation confirmation validates real calendars and commits every effect
           await readFile(join(mailDir, files[0] as string), "utf8"),
         );
         assert.match(message.text, /Data do evento/);
+        assert.match(message.text, /^Espazo: .+$/m);
         assert.match(message.to, /@example.test$/);
         await migration.query(
           "UPDATE domain.reservation_email SET accepted_at=NULL,next_attempt_at=now()-interval '1 second' WHERE tenant_id=$1 AND event_id=$2",

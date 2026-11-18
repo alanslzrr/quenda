@@ -341,7 +341,9 @@ test("CU-04 mantener catálogo y calendario", async ({ page, browser }) => {
   await collide.getByRole("button", { name: "Crear bloqueo" }).click();
   const refused = collide.getByRole("alert");
   await expect(refused).toBeVisible();
+  // Tall, so that the «Nuevo bloqueo» heading is not cut under the top bar.
   await snap(cu, page, "bloqueo-con-reservas", {
+    tall: true,
     target: refused,
     fullPage: true,
   });

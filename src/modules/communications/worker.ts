@@ -105,6 +105,9 @@ export async function processReservationEmail(
       timezone: string;
       unitId: string;
       pendingUsageRulesVersion?: number | null;
+      municipalityName?: string | null;
+      facilityName?: string | null;
+      unitName?: string | null;
     };
   }>("SELECT * FROM domain.claim_reservation_email($1,$2)", [
     options.leaseSeconds,
@@ -134,6 +137,9 @@ export async function processReservationEmail(
           unitId: job.after_state.unitId,
           pendingUsageRulesVersion:
             job.after_state.pendingUsageRulesVersion ?? null,
+          municipalityName: job.after_state.municipalityName ?? null,
+          facilityName: job.after_state.facilityName ?? null,
+          unitName: job.after_state.unitName ?? null,
         },
       ),
     );

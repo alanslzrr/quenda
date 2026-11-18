@@ -165,7 +165,8 @@ test("CU-21 ejecutar una actuación individual de privacidad", async ({
   });
   await expect(notice).toBeVisible();
   const verify = notice.getByRole("button", { name: "Verificar acceso" });
-  await cu.shot(page, "verificacion-caducada", { target: verify });
+  // The whole form, so that the data already entered shows under the notice.
+  await tallShot(cu, page, "verificacion-caducada", { target: verify });
   await verify.click();
   const dialog = page.getByRole("dialog", { name: "Verificar acceso" });
   await dialog
