@@ -9,10 +9,13 @@ export function Deadline({
   name,
   label,
   required = false,
+  onValueChange,
 }: {
   name: string;
   label: string;
   required?: boolean;
+  /** The local date and time as entered, empty while unset. */
+  onValueChange?: (value: string) => void;
 }) {
   const { t } = usePreferences();
   const [value, setValue] = useState("");
@@ -42,6 +45,7 @@ export function Deadline({
         onValueChange={(next) => {
           setValue(next);
           setChoice("");
+          onValueChange?.(next);
         }}
       />
       <input type="hidden" name={name} value={utc} />
