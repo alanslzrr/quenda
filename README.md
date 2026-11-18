@@ -17,6 +17,7 @@
 </p>
 
 <p align="center">
+  <a href="#presentación">Presentación</a> ·
   <a href="#funcionalidades">Funcionalidades</a> ·
   <a href="#arquitectura">Arquitectura</a> ·
   <a href="#puesta-en-marcha">Puesta en marcha</a> ·
@@ -26,6 +27,14 @@
 </p>
 
 ---
+
+## Presentación
+
+<p align="center">
+  <a href="docs/media/quenda-presentacion.mp4"><img src="docs/media/quenda-presentacion.jpg" width="880" alt="Vídeo de presentación de Quenda: reserva ciudadana, gestión, analítica, configuración e identidad municipal y modelos de despliegue"></a>
+</p>
+
+Recorrido de dos minutos grabado sobre la aplicación real con los datos de demostración: la reserva ciudadana hasta el código de acceso, la agenda y la analítica municipal, la configuración de condiciones, horarios y permisos, la identidad de cada municipio y los dos modelos de despliegue. [Ver el vídeo](docs/media/quenda-presentacion.mp4) (MP4, 1080p).
 
 ## Visión general
 
@@ -186,6 +195,8 @@ La integración continua de GitHub Actions ejecuta en cada pull request las comp
 | [Desarrollo y pruebas](docs/11_desarrollo.md) | Entorno local, aplicación web y comprobaciones |
 | [Despliegue y operación](docs/12_operacion.md) | Imágenes, despliegue, workers, métricas, copias y recuperación |
 | [Despliegue en la nube](docs/13_despliegue_nube.md) | Infraestructura por nube, validación local con emuladores, publicación por SSH y demostración |
+
+Los casos de uso también se explican paso a paso, con capturas de pantalla, en guías por perfil: [Ciudadanía](docs/guias/ciudadania.md), [Personal municipal](docs/guias/personal-municipal.md), [Operación de plataforma](docs/guias/plataforma.md) y [Privacidad y operación](docs/guias/privacidad-operacion.md).
 
 El contrato OpenAPI se genera sin base de datos con `pnpm --silent openapi`.
 
