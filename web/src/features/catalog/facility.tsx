@@ -7,6 +7,7 @@ import { useMunicipality, usePublicAppearance } from "../../app/branding";
 import { Failure, Loading } from "../../app/feedback";
 import { LinkButton } from "../../app/link-button";
 import { usePreferences } from "../../app/preferences-provider";
+import { compareText } from "../../ui/lib/intl-cache.ts";
 import styles from "./booking.module.css";
 import { durationLabel } from "./dates";
 import { FacilityDetails } from "./facility-details";
@@ -121,7 +122,7 @@ export function FacilityPage() {
       </div>
     );
   const items = units.items.toSorted((a, b) =>
-    a.name.localeCompare(b.name, locale),
+    compareText(a.name, b.name, locale),
   );
   const lengths = (unit: UnitChoice) =>
     unit.minimumMinutes === unit.maximumMinutes
