@@ -58,11 +58,12 @@ export const test = base.extend({
 });
 export { expect };
 
+// Close to the element so that the box never covers a neighbouring label.
 const highlightStyle = {
   outline: "3px solid #d9480f",
-  outlineOffset: "3px",
+  outlineOffset: "2px",
   borderRadius: "6px",
-  boxShadow: "0 0 0 9px rgb(217 72 15 / 0.18)",
+  boxShadow: "0 0 0 5px rgb(217 72 15 / 0.18)",
 };
 
 type ShotOptions = {
@@ -105,6 +106,21 @@ export class Capture {
     const { target } = options;
     if (target) {
       await target.scrollIntoViewIfNeeded();
+      // A sticky header or a floating bar may still cover part of the
+      // element: bring it to the middle of its scroll area instead.
+      const moved = await target.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const x = box.left + Math.min(box.width / 2, 40);
+        const free = (y: number) => {
+          if (y < 0 || y >= innerHeight) return true;
+          const hit = document.elementFromPoint(x, y);
+          return !hit || element.contains(hit) || hit.contains(element);
+        };
+        if (free(box.top + 2) && free(box.bottom - 2)) return false;
+        element.scrollIntoView({ block: "center", inline: "nearest" });
+        return true;
+      });
+      if (moved) await settle(page);
       await target.evaluate((element, style) => {
         const node = element as HTMLElement;
         node.dataset.captureStyle = node.getAttribute("style") ?? "";
@@ -200,9 +216,15 @@ export function displayUrl(raw: string) {
   return `${displayOrigin}${path}${query.length ? `?${query.join("&")}` : ""}`;
 }
 
-/** Waits for pending requests, fonts and transitions to finish. */
+/** Waits for pending requests, loading placeholders, fonts and transitions. */
 export async function settle(page: Page) {
   await page.waitForLoadState("networkidle").catch(() => {});
+  // Sections load on their own: wait until no «Cargando…» placeholder shows.
+  await expect(
+    page.locator('[role="status"]').filter({ hasText: /^Cargando conten/ }),
+  )
+    .toHaveCount(0, { timeout: 10000 })
+    .catch(() => {});
   // Routes load lazily: wait until the page has its heading, then for the
   // requests that heading's view started.
   await page
@@ -219,6 +241,15 @@ export async function settle(page: Page) {
         .map((animation) => animation.finished.catch(() => {})),
     );
   });
+  // Script-driven transitions (fades, highlights sweeping across a message)
+  // run outside the animation list: give them time to end.
+  await page.waitForTimeout(450);
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
 }
 
 export async function signIn(page: Page, role: keyof typeof roles) {
