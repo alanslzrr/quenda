@@ -114,11 +114,11 @@ smtp = {
 }
 ```
 
-La contraseña es la clave de API y se entrega con `quenda smtp-password`; basta una clave restringida a enviar correo. El remitente debe pertenecer al dominio verificado en el proveedor. En Resend, la verificación del dominio publica tres registros en el DNS del remitente: un `TXT` DKIM en `resend._domainkey.<dominio>` y, en `send.<dominio>`, un `MX` y un `TXT` SPF para los rebotes. Mientras el dominio no esté verificado, el proveedor rechaza los envíos y el worker los reintenta hasta agotarlos (`EMAIL_QUEUE_ATTENTION`). DMARC en el dominio raíz es recomendable pero lo decide quien gestiona ese dominio.
+La contraseña es la clave de API y se entrega con `quenda smtp-password`; basta una clave restringida a enviar correo. El remitente debe pertenecer al dominio verificado en el proveedor. En Resend, la verificación del dominio publica tres registros en el DNS del remitente: un `TXT` DKIM en `resend._domainkey.<dominio>` y, en `send.<dominio>`, un `MX` y un `TXT` SPF para los rebotes. Mientras el dominio no esté verificado, el proveedor rechaza los envíos y el worker los reintenta hasta agotarlos (`EMAIL_QUEUE_ATTENTION` para los correos de reservas e `INVITATION_EMAIL_QUEUE_ATTENTION` para los avisos de invitación). DMARC en el dominio raíz es recomendable pero lo decide quien gestiona ese dominio.
 
 ## Demostración
 
-`pnpm deploy:host ubuntu@IP --demo` construye además la imagen del sembrador, que no forma parte del artefacto publicado, y la ejecuta una sola vez si la instalación no tiene cuentas ni municipios. Detiene el worker de correo mientras siembra y marca como ya atendidos los correos de las reservas sembradas, para que nada se envíe a las direcciones `*.demo.test`.
+`pnpm deploy:host ubuntu@IP --demo` construye además la imagen del sembrador, que no forma parte del artefacto publicado, y la ejecuta una sola vez si la instalación no tiene cuentas ni municipios. Detiene el worker de correo mientras siembra marca como ya atendidos los correos de las reservas sembradas y elimina los avisos de invitación encolados, para que nada se envíe a las direcciones `*.demo.test`.
 
 El conjunto de datos ([test/demo/cloud.ts](../test/demo/cloud.ts)) parte del de la demostración local y añade:
 

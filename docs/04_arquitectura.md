@@ -71,7 +71,7 @@ La reubicación administrativa separa la referencia de normas aceptadas de la ob
 
 ## ADR-07 Outbox y worker
 
-La transacción de reserva guarda los eventos pendientes en una outbox. Un worker del mismo producto los procesa y registra los intentos de envío. Puede ejecutarse separado de la API sin duplicar reglas ni código.
+La transacción de reserva guarda los eventos pendientes en una outbox, y la que crea una invitación de autoridad encola su aviso en una cola propia. Un worker del mismo producto procesa ambas y registra los intentos de envío. Puede ejecutarse separado de la API sin duplicar reglas ni código.
 
 **Justificación:** conserva los avisos ante fallos del canal y permite confirmar reservas sin esperar al correo. No requiere un broker de mensajes. [Patrón outbox](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html).
 
