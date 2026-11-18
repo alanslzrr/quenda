@@ -89,6 +89,8 @@ React Router y TanStack Query cubren funciones que Vite no incluye. Los comandos
 
 La aplicación web reside en `web/`, con compilación y dependencias separadas del backend. Los componentes, estilos, helpers y fuentes son archivos locales; no dependen de otra biblioteca privada ni de su directorio de desarrollo. Las pantallas se cargan por ruta.
 
+Fechas, números y ordenaciones dependientes del idioma se generan en `web/src/ui/lib/intl-cache.ts`, que además reutiliza los formateadores. Algunos navegadores, como Chrome, no incluyen datos regionales gallegos y, al pedir `gl`, devuelven formatos genéricos («2024 M03», «1,234.5») o castellanos. En ese caso el módulo utiliza los datos del castellano, con el mismo orden y separadores, y aplica las formas gallegas de CLDR: nombres de meses y días, «de» ante el mes abreviado, agrupación desde cuatro cifras, notación compacta y ordenación. Si el navegador tiene datos gallegos, los usa directamente. Una prueba unitaria impide usar `Intl` o `toLocale*` fuera de ese módulo.
+
 Las consultas privadas identifican cuenta y ámbito municipal en su clave de caché. Cerrar sesión cancela las consultas y retira los datos privados. Las mutaciones no reintentan automáticamente ni presentan una reserva como confirmada antes de la respuesta del servidor.
 
 Los comandos de reserva y bloqueo conservan en `sessionStorage` la cuenta, ruta, clave idempotente y contenido enviados hasta conocer el resultado. Solo se recuperan mediante una acción expresa y dentro de la retención publicada por la API; después se consulta el estado actual. El cierre de sesión retira esta información.
