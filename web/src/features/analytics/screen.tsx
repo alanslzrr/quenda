@@ -11,6 +11,7 @@ import { useSession } from "../../app/session";
 import { Button } from "../../ui/button/button";
 import { Combobox } from "../../ui/combobox/combobox";
 import { DateRangePicker } from "../../ui/date-range-picker/date-range-picker";
+import { dateTimeFormat } from "../../ui/lib/intl-cache.ts";
 import { Skeleton } from "../../ui/skeleton/skeleton";
 import { ManagementPage } from "../municipal/page";
 import { Denied, endpoint, useMunicipality } from "../municipal/shared";
@@ -330,8 +331,8 @@ function Report({
             {current.isPlaceholderData
               ? t("Actualizando…", "Actualizando…")
               : t(
-                  `${periodName(period, "es")} · datos a las ${new Date(data.asOf).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`,
-                  `${periodName(period, "gl")} · datos ás ${new Date(data.asOf).toLocaleTimeString(["gl-ES", "es-ES"], { hour: "2-digit", minute: "2-digit" })}`,
+                  `${periodName(period, "es")} · datos a las ${dateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(new Date(data.asOf))}`,
+                  `${periodName(period, "gl")} · datos ás ${dateTimeFormat(["gl-ES", "es-ES"], { hour: "2-digit", minute: "2-digit" }).format(new Date(data.asOf))}`,
                 )}
           </p>
           {current.isError && (
