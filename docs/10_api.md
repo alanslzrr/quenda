@@ -325,6 +325,8 @@ Ambos endpoints exigen administrador municipal y MFA reciente. El comando exige 
 
 `GET /api/me/preferences` consulta la preferencia de la cuenta autenticada. `PUT /api/me/preferences`, con `Origin` autorizado, recibe únicamente `{ "locale": "gl" }`, `{ "locale": "es" }` o `{ "locale": null }`. El valor nulo utiliza `EMAIL_LOCALE` del worker. No permite consultar ni modificar otra cuenta.
 
+`GET /api/me/theme` y `PUT /api/me/theme` hacen lo mismo con el modo de color personal: `{ "theme": "light" }`, `"dark"`, `"system"` (sigue al sistema) o `null`, que aplica el modo predeterminado del municipio o el claro de Quenda. No cambia la apariencia municipal ni el idioma y responde con `Cache-Control: no-store`.
+
 Cada correo guarda la preferencia del titular al generarse el evento, también cuando la operación la realiza personal municipal. Cambiar la preferencia no altera correos ya pendientes. El worker utiliza ese idioma guardado y solo recurre a su configuración cuando no existe una elección del titular.
 
 ## Indicadores, análisis y exportación
@@ -385,6 +387,8 @@ Ambos archivos pueden validarse con herramientas independientes compatibles con 
 ### Revisión y entrega de informes mensuales
 
 `GET /api/municipalities/{tenantId}/report-agreements` lista los convenios cuyo informe puede solicitar el municipio. Exige `REPORT_READ` municipal y MFA; un permiso limitado a unidades no basta. Incluye cada convenio con una versión `ACTIVADO` con informes agregados en la que participa el municipio y devuelve solo `agreementId`, `name` y `version`, la última de esas versiones. No incluye otros participantes, unidades, meses, métricas ni revisiones. Páginas de 20 ordenadas por convenio; `after` recibe el último `agreementId`. Usa `Cache-Control: no-store`. Figurar en la lista no garantiza que un mes sea publicable.
+
+`GET /api/municipalities/{tenantId}/agreements/{agreementId}/review-options` permite al administrador participante con MFA reciente elegir qué revisar: devuelve, por mes, la última revisión preparada (`month`, `revision`) y los municipios participantes (`id`, `name`), sin métricas, estado de supresión ni directorio de destinatarios. Páginas ordenadas por mes; `after=AAAA-MM` pide la siguiente. Usa `Cache-Control: no-store`.
 
 Base: `/api/municipalities/{tenantId}/agreements/{agreementId}/reports/{AAAA-MM}`.
 
