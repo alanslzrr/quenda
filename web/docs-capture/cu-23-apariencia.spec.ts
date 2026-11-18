@@ -207,7 +207,8 @@ test("CU-23 configurar la apariencia pública", async ({ page, browser }) => {
     "Recuperamos los cambios que no llegaste a guardar.",
   );
   await expect(recovered).toBeVisible();
-  await snap(cu, page, "borrador-recuperado", { target: recovered });
+  // Tall, so that the floating bar rests below the last section.
+  await snap(cu, page, "borrador-recuperado", { tall: true, target: recovered });
 
   // Alternativa: la verificación en dos pasos ya no es reciente al guardar.
   const email = (await account(roles.partner)).email;
