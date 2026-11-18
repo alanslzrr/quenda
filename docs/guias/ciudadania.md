@@ -1,6 +1,6 @@
 # Guía de casos de uso · Ciudadanía
 
-Esta guía es para cualquier persona que quiera reservar una instalación deportiva municipal con Quenda: consultar qué está libre, crear una cuenta, reservar, cambiar o cancelar una reserva, seguir sus avisos y gestionar sus datos personales. Cada apartado explica un caso de uso paso a paso y qué hacer cuando algo no sale como se espera. En las imágenes, el recuadro naranja señala dónde hay que pulsar o escribir.
+Esta guía es para cualquier persona que quiera reservar una instalación deportiva municipal con Quenda: consultar qué está libre, crear una cuenta, reservar, cambiar o cancelar una reserva, seguir sus avisos y gestionar sus datos personales. Cada apartado explica un caso de uso paso a paso y qué hacer cuando algo no sale como se espera. En las imágenes, el recuadro naranja señala dónde hay que pulsar o escribir, o el mensaje o resultado que hay que comprobar.
 
 ## Índice
 
@@ -50,7 +50,7 @@ Sirve para encontrar un espacio (una pista, una sala, un campo) y una hora libre
 
 5. **Elige el día en el calendario.** Pulsa el día que quieras. Los días anteriores a hoy aparecen en gris y no se pueden elegir.
 
-   ![Calendario de noviembre abierto con un día recuadrado](../capturas/cu-01/05-elegir-dia.webp)
+   ![Calendario del mes abierto con el día de hoy relleno en oscuro y otro día recuadrado](../capturas/cu-01/05-elegir-dia.webp)
 
    *El día de hoy aparece relleno en oscuro y el recuadro marca el día elegido. Al pulsarlo, el calendario se cierra y la lista de horarios se actualiza.*
 
@@ -64,7 +64,7 @@ Sirve para encontrar un espacio (una pista, una sala, un campo) y una hora libre
 
    ![Horarios libres de 1 h 30 min del día elegido con la primera franja recuadrada](../capturas/cu-01/07-horarios-libres.webp)
 
-   *A la derecha de «Horarios libres» se repiten el día y la duración elegidos. El recuadro marca la primera franja; al pie se avisa de que, al elegir una hora, Quenda pedirá acceder o crear una cuenta.*
+   *A la derecha de «Horarios libres» se repiten el día y la duración elegidos. El recuadro marca la primera franja.*
 
 8. **Continúa hacia la reserva.** Si no has iniciado sesión, Quenda te pide acceder o crear una cuenta y después te devuelve a la reserva que estabas eligiendo (sigue en [CU-02](#cu-02--crear-una-reserva)).
 
@@ -72,11 +72,11 @@ Sirve para encontrar un espacio (una pista, una sala, un campo) y una hora libre
 
    *Se abre el formulario de acceso. Si ya tienes cuenta, escribe tu correo y contraseña; si no, el recuadro marca «Crear una cuenta» ([CU-07](#cu-07--crear-una-cuenta-y-utilizar-un-servicio-municipal)).*
 
-### Si algo no sale como se espera
+### Otras formas de hacerlo
 
-#### Te importa más la hora que la instalación
+#### Buscar primero por día y hora
 
-Puedes ver a la vez los horarios libres de todas las instalaciones del municipio.
+Si te importa más la hora que la instalación, puedes elegir el municipio y después el día y la duración, y ver a la vez los horarios libres de todos sus espacios.
 
 ![Página «Elige una instalación» con el botón «Buscar por día y hora» recuadrado](../capturas/cu-01/09-buscar-por-hora.webp)
 
@@ -84,7 +84,9 @@ Puedes ver a la vez los horarios libres de todas las instalaciones del municipio
 
 ![Página «Buscar por día y hora» con los campos Día, Duración e Instalación y los horarios agrupados por espacio](../capturas/cu-01/10-horarios-de-todas-las-instalaciones.webp)
 
-*La búsqueda tiene tres campos: Día, Duración e Instalación (recuadrado, con «Todas las instalaciones»). Los horarios libres aparecen agrupados por instalación y espacio, con un enlace «Ver los … horarios» cuando hay más de los que caben.*
+*La búsqueda tiene tres campos: Día, Duración e Instalación (recuadrado, con «Todas las instalaciones»). Los horarios libres aparecen agrupados por instalación y espacio, con un enlace «Ver los … horarios» cuando hay más de los que caben. Al pulsar una hora se sigue igual que en el paso 8.*
+
+### Si algo no sale como se espera
 
 #### El día elegido no tiene horas libres
 
@@ -92,15 +94,15 @@ Si el espacio no abre ese día, o ya está todo ocupado, la lista queda vacía. 
 
 ![Sala polivalente un domingo con el mensaje «No quedan horarios libres de 30 min este día»](../capturas/cu-01/11-dia-sin-horarios.webp)
 
-*En el recuadro, la sección «Horarios libres» dice «No quedan horarios libres de 30 min este día» y propone probar otro día u otra duración. Debajo, «Próximos horarios libres» ofrece los primeros huecos de los días siguientes, que se pueden pulsar directamente. En el ejemplo, la sala no abre los domingos.*
+*En la sección «Horarios libres», el recuadro marca el mensaje «No quedan horarios libres de 30 min este día», que propone probar otro día u otra duración. Debajo, «Próximos horarios libres» ofrece los primeros huecos de los días siguientes, que se pueden pulsar directamente. En el ejemplo, la sala no abre los domingos.*
 
 #### No puedes elegir un día lejano
 
 Cada espacio solo admite reservas con cierta antelación. Los días posteriores aparecen en gris en el calendario y no se pueden pulsar.
 
-![Calendario de diciembre con los últimos días en gris y uno de ellos recuadrado](../capturas/cu-01/12-dia-fuera-de-plazo.webp)
+![Calendario con los días fuera del plazo de antelación en gris y uno de ellos recuadrado](../capturas/cu-01/12-dia-fuera-de-plazo.webp)
 
-*En diciembre, los días a partir de cierta fecha aparecen en gris. El día recuadrado no se puede elegir porque queda fuera del plazo de antelación.*
+*En el calendario, los días que quedan más allá del plazo de antelación aparecen en gris. El día recuadrado es uno de ellos y no se puede elegir.*
 
 #### La instalación no tiene espacios reservables
 
@@ -127,13 +129,13 @@ Un espacio retirado, incompleto o sin normas válidas no se ofrece, aunque tenga
 - Cuando un servicio de Quenda reúne muchos municipios, la primera página ofrece una búsqueda. Una página de resultados sin coincidencias no significa que no haya más: puedes seguir buscando entre los restantes.
 - En los días de cambio de hora, las horas que no existen no se ofrecen y las que se repiten se distinguen por su diferencia con la hora universal.
 
-#### Consultar desde el móvil
+### También desde el móvil
 
-En el móvil el recorrido es el mismo, con la cabecera y el calendario adaptados a la pantalla.
+Quenda también se ve bien en el teléfono: los mismos pasos funcionan igual en una pantalla pequeña, con la cabecera y el calendario adaptados. Estas capturas muestran la consulta en un móvil.
 
 ![Cabecera del móvil con «Acceder», «Ajustes» (recuadrado) y el botón «Reservar» en una fila propia](../capturas/cu-01/16-movil-cabecera.webp)
 
-*Sin sesión, la cabecera muestra junto al símbolo de Quenda el logo y el nombre abreviado del municipio, «Acceder» y «Ajustes» (recuadrado); «Reservar» ocupa una fila propia. La barra de pasos se reduce a números con el nombre del paso actual debajo.*
+*Sin sesión, la cabecera muestra junto al símbolo de Quenda el logo y el nombre del municipio, recortado para que quepa («Concel…»), «Acceder» y «Ajustes» (recuadrado); «Reservar» ocupa una fila propia. La barra de pasos se reduce a números con el nombre del paso actual debajo.*
 
 ![Menú «Ajustes» abierto en el móvil con idiomas y apariencia](../capturas/cu-01/17-movil-menu-ajustes.webp)
 
@@ -173,9 +175,9 @@ Sirve para reservar un espacio completo durante un intervalo. Lo hace la persona
 
 3. **Revisa los datos y las condiciones.** Hasta que confirmes no hay nada reservado.
 
-   ![Página «Revisa tu reserva» con los cinco pasos completados, las condiciones de cancelación y el resumen de la reserva](../capturas/cu-02/03-revisar-reserva.webp)
+   ![Página «Revisa tu reserva» con cuatro pasos completados, el quinto en curso, las condiciones de cancelación y el resumen de la reserva](../capturas/cu-02/03-revisar-reserva.webp)
 
-   *Los cinco pasos aparecen completados. A la izquierda, «Cancelación» indica hasta cuándo podrás cancelar o cambiar la reserva; a la derecha, el resumen muestra municipio, instalación, espacio, fecha, horario y duración. «Cambiar día u hora» permite volver atrás.*
+   *Los cuatro primeros pasos aparecen completados y el quinto, «Revisar y confirmar», es el actual. A la izquierda, «Cancelación» indica hasta cuándo podrás cancelar o cambiar la reserva; a la derecha, el resumen muestra municipio, instalación, espacio, fecha, horario y duración. «Cambiar día u hora» permite volver atrás.*
 
 4. **Acepta las normas de uso.** Lee las normas del municipio y marca la casilla de aceptación. Si pulsas «Confirmar reserva» sin marcarla, la reserva no se confirma.
 
@@ -247,7 +249,9 @@ Si el ayuntamiento publica normas o condiciones nuevas mientras estás en la pá
 
 Un fallo al enviar el correo no anula la reserva: sigue confirmada y aparece en «Mis reservas» y en «Avisos».
 
-#### Reservar desde el móvil
+### También desde el móvil
+
+Quenda también se ve bien en el teléfono: la reserva se hace con los mismos pasos, con la página adaptada a una pantalla pequeña. Estas capturas muestran la reserva en un móvil.
 
 ![Calendario en el móvil con sesión iniciada y un día recuadrado](../capturas/cu-02/14-movil-calendario.webp)
 
@@ -313,9 +317,9 @@ Sirve para cambiar el día, la hora o el espacio de una reserva futura, o para c
 
    *La página vuelve a «Reserva confirmada» con el nuevo horario en el resumen y el plazo de cancelación actualizado. La referencia no cambia.*
 
-### Si algo no sale como se espera
+### Otras formas de hacerlo
 
-#### Quieres cancelar la reserva
+#### Cancelar la reserva
 
 Cancelar libera el espacio para otras personas y no exige aceptar normas nuevas. Pulsa «Cancelar reserva» en la página de la reserva y confirma.
 
@@ -327,13 +331,15 @@ Cancelar libera el espacio para otras personas y no exige aceptar normas nuevas.
 
 *El título pasa a «Reserva cancelada» y «Cancelación y cambios» dice que el horario ha quedado libre. La reserva sigue en tu historial con sus normas aceptadas.*
 
+### Si algo no sale como se espera
+
 #### La reserva cambió en otra pestaña o en otro dispositivo
 
 Si la reserva se modificó después de abrirla (por ejemplo, desde el móvil), Quenda no aplica un cambio basado en datos antiguos.
 
 ![Revisión del cambio con el mensaje «La reserva ha cambiado. Consulta su estado actual antes de continuar.»](../capturas/cu-03/09-reserva-cambiada-entretanto.webp)
 
-*El mensaje recuadrado, sobre «Confirmar el cambio», pide consultar el estado actual. Vuelve a abrir la reserva desde «Mis reservas» y repite el cambio si sigue siendo necesario.*
+*El mensaje recuadrado aparece en la parte superior de la revisión y pide consultar el estado actual. Vuelve a abrir la reserva desde «Mis reservas» y repite el cambio si sigue siendo necesario.*
 
 Si sucede al cancelar, la cancelación no se aplica y la página de la reserva se actualiza con sus datos actuales. Cierra el diálogo con «Mantener reserva», revisa el horario y vuelve a cancelar si lo sigues necesitando.
 
@@ -341,7 +347,7 @@ Si sucede al cancelar, la cancelación no se aplica y la página de la reserva s
 
 ![Revisión del cambio con el mensaje «Este horario ya no está libre. Elige otro horario.»](../capturas/cu-03/10-nuevo-horario-ocupado.webp)
 
-*El mensaje recuadrado aparece arriba de la revisión. Tu reserva anterior se conserva tal como estaba; vuelve con «Cambiar horario» para elegir otra franja.*
+*El mensaje recuadrado aparece en la parte superior de la revisión. Tu reserva anterior se conserva tal como estaba; vuelve con «Cambiar horario» para elegir otra franja.*
 
 #### Ha pasado el plazo para cancelar o cambiar
 
@@ -359,7 +365,7 @@ Antes del inicio y con un motivo, el personal municipal autorizado puede cancela
 
 ![Lista de avisos con «Reserva cancelada» marcada como «Cambio hecho por la administración» y su motivo, recuadrada](../capturas/cu-03/12-aviso-intervencion-municipal.webp)
 
-*El aviso recuadrado muestra «Cambio hecho por la administración», el nombre de la persona y el motivo («Competición escolar no complexo»). A la derecha se indica hace cuánto se produjo, y el punto rojo marca que todavía no se ha leído. Los avisos anteriores se cargan con «Ver más avisos», al final de la lista.*
+*El aviso recuadrado muestra «Cambio hecho por la administración», el nombre de la persona que lo hizo y el motivo tal como lo escribió el personal del ayuntamiento, en gallego («Competición escolar no complexo»). A la derecha se indica hace cuánto se produjo, y el punto rojo marca que todavía no se ha leído.*
 
 ![Página «Reserva cancelada» abierta desde el aviso](../capturas/cu-03/13-reserva-cancelada-por-el-ayuntamiento.webp)
 
@@ -485,9 +491,9 @@ Sirve para ver todas tus reservas, pasadas y futuras, y la situación actual de 
 
 3. **Consulta una reserva.** Al abrirla, se ven su estado, el registro de llegada si lo hubo y las normas aceptadas.
 
-   ![Página «Reserva finalizada» con el aviso sobre asistencia y las normas aceptadas](../capturas/cu-08/04-detalle-finalizada.webp)
+   ![Página «Reserva finalizada» con la llegada registrada, el aviso sobre asistencia y las normas aceptadas](../capturas/cu-08/04-detalle-finalizada.webp)
 
-   *«Cancelación y cambios» aclara que el horario ya ha pasado y que el estado «Finalizada» no acredita la asistencia; debajo están las normas aceptadas con su fecha. Cuando el personal ha registrado tu llegada, la página la muestra en «Acceso a la instalación».*
+   *En «Acceso a la instalación» se lee «Llegada registrada» con la fecha y la hora en que el personal registró tu llegada. «Cancelación y cambios» aclara que el horario ya ha pasado y que el estado «Finalizada» no acredita la asistencia; debajo están las normas aceptadas con su fecha.*
 
    ![Página «Reserva cancelada» con el texto «La reserva está cancelada y el horario ha quedado libre.»](../capturas/cu-08/05-detalle-cancelada.webp)
 
@@ -499,15 +505,17 @@ Sirve para ver todas tus reservas, pasadas y futuras, y la situación actual de 
 
    *Al final de cada bloque aparece «Ver más reservas», recuadrado.*
 
+### Otras formas de hacerlo
+
+#### Consulta del personal municipal
+
+El personal del ayuntamiento consulta las reservas de su ámbito desde la gestión municipal y solo ve las incluidas en sus permisos. Nunca ve tu historial en otros municipios.
+
 ### Si algo no sale como se espera
 
 #### Una reserva antigua no tiene normas aceptadas
 
 Si la reserva es anterior al registro de aceptaciones, verás «No consta una aceptación registrada». Solo describe que falta esa evidencia: el estado de la reserva no cambia.
-
-#### Personal municipal
-
-El personal del ayuntamiento consulta las reservas de su ámbito desde la gestión municipal y solo ve las incluidas en sus permisos. Nunca ve tu historial en otros municipios.
 
 ### Resultado
 
@@ -555,15 +563,9 @@ Sirve para entrar con tu cuenta y para salir cuando terminas. Lo hace cualquier 
 
    *Tras cerrar la sesión vuelves al inicio y la cabecera muestra de nuevo «Acceder». La sesión cerrada ya no sirve para ninguna otra petición.*
 
-### Si algo no sale como se espera
+### Otras formas de hacerlo
 
-#### El correo o la contraseña no son correctos
-
-![Formulario de acceso con el mensaje «Correo o contraseña incorrectos.»](../capturas/cu-09/07-credenciales-invalidas.webp)
-
-*El mensaje recuadrado no dice cuál de los dos datos falla. Revísalos y vuelve a intentarlo, o usa «He olvidado mi contraseña».*
-
-#### Tu cuenta tiene verificación en dos pasos
+#### Entrar con verificación en dos pasos
 
 Las cuentas con permisos de gestión, y las que la activan voluntariamente, piden después un código de seis cifras de su aplicación de autenticación.
 
@@ -579,13 +581,23 @@ Las cuentas con permisos de gestión, y las que la activan voluntariamente, pide
 
 *Con la verificación completada se abre la cuenta. Las cuentas de gestión ven además «Gestión» en la cabecera.*
 
-Si el código no es correcto, no se inicia la sesión:
+Mientras la cuenta conserve permisos de gestión no se puede desactivar la verificación en dos pasos.
+
+### Si algo no sale como se espera
+
+#### El correo o la contraseña no son correctos
+
+![Formulario de acceso con el mensaje «Correo o contraseña incorrectos.»](../capturas/cu-09/07-credenciales-invalidas.webp)
+
+*El mensaje recuadrado no dice cuál de los dos datos falla. Revísalos y vuelve a intentarlo, o usa «He olvidado mi contraseña».*
+
+#### El código de verificación no es correcto
+
+Si el código no es correcto, no se inicia la sesión.
 
 ![Mensaje «El código no es válido.» bajo el campo del código](../capturas/cu-09/11-codigo-incorrecto.webp)
 
 *El mensaje recuadrado aparece bajo el código escrito. Escribe el código que muestre en ese momento tu aplicación y vuelve a pulsar «Verificar».*
-
-Mientras la cuenta conserve permisos de gestión no se puede desactivar la verificación en dos pasos.
 
 #### Has olvidado la contraseña
 
@@ -635,11 +647,11 @@ Sirve para enterarte de que una reserva se ha confirmado, modificado o cancelado
 
 Una vez confirmada la operación, Quenda registra el aviso en la web al momento y envía el correo. Que el servidor de correo acepte el mensaje no garantiza que llegue a tu buzón; el aviso de la web está siempre disponible.
 
-1. **Recibes el correo.** Describe el evento, su fecha y el horario, con un enlace a la reserva.
+1. **Recibes el correo.** Describe el evento, el lugar y el horario de la reserva, con un enlace a ella.
 
-   ![Correo «Quenda — Reserva confirmada» con reserva, revisión, fecha del evento, inicio, fin y enlace](../capturas/cu-11/01-correo-de-confirmacion.webp)
+   ![Correo «Quenda — Reserva confirmada» con la referencia, el municipio, la instalación, el espacio, el inicio, el fin, la fecha del evento y el enlace](../capturas/cu-11/01-correo-de-confirmacion.webp)
 
-   *El correo indica el evento («Reserva confirmada»), la referencia, la revisión, cuándo ocurrió, el inicio y el fin con su zona horaria. Advierte de que la reserva puede haber cambiado después y enlaza a «Consultar el estado actual».*
+   *El correo indica el evento («Reserva confirmada») y la referencia, la misma que muestra la página de la reserva. Después nombra el municipio, la instalación y el espacio, el inicio y el fin en la hora del municipio (CET es la hora peninsular de invierno) y cuándo ocurrió el evento. Advierte de que la reserva puede haber cambiado después y enlaza a «Consultar el estado actual».*
 
 2. **Mira los avisos en la web.** El punto rojo en «Ajustes» indica que hay avisos sin leer.
 
@@ -663,11 +675,11 @@ Una vez confirmada la operación, Quenda registra el aviso en la web al momento 
 
    *La página muestra el estado actual de la reserva, que puede ser distinto del que describía el aviso si hubo cambios posteriores.*
 
-5. **Cada cambio genera su propio aviso.** Si la reserva se cancela o se modifica después, llega otro correo con su revisión.
+5. **Cada cambio genera su propio aviso.** Si la reserva se cancela o se modifica después, llega otro correo.
 
-   ![Correo «Quenda — Reserva cancelada» con la revisión 2](../capturas/cu-11/06-correo-de-cancelacion.webp)
+   ![Correo «Quenda — Reserva cancelada» con la misma referencia y el mismo espacio](../capturas/cu-11/06-correo-de-cancelacion.webp)
 
-   *El correo de cancelación tiene el mismo formato, con «Reserva cancelada», la revisión 2 y el enlace a la misma reserva.*
+   *El correo de cancelación tiene el mismo formato, con «Reserva cancelada», la misma referencia y el mismo espacio, y el enlace a la misma reserva.*
 
 6. **Marca los avisos como leídos.**
 
@@ -715,7 +727,7 @@ Sirve para mantener al día tu nombre, tus preferencias de idioma y apariencia, 
 
    ![«Preferencias de tu cuenta» con el selector de apariencia recuadrado](../capturas/cu-13/03-preferencias.webp)
 
-   *«Idioma» ofrece Castellano y Galego. «Apariencia», recuadrada, permite seguir el tema del municipio, el del sistema, o fijar claro u oscuro.*
+   *En «Idioma» está elegido «Castellano»; el desplegable permite cambiarlo a «Galego». «Apariencia», recuadrada, permite seguir el tema del municipio, el del sistema, o fijar claro u oscuro.*
 
    ![Menú «Ajustes» abierto con idiomas y modos de apariencia](../capturas/cu-13/04-menu-ajustes.webp)
 
@@ -725,11 +737,11 @@ Sirve para mantener al día tu nombre, tus preferencias de idioma y apariencia, 
 
    ![Nuevo correo y contraseña escritos con «Solicitar cambio de correo» recuadrado](../capturas/cu-13/05-solicitar-cambio-de-correo.webp)
 
-   *El texto superior recuerda que hay que autorizar el cambio desde el correo actual, verificar el nuevo y que al completarlo se cerrarán todas tus sesiones.*
+   *El texto superior recuerda que hay que autorizar el cambio desde el correo actual, verificar el nuevo y que al completarlo se cerrarán todas tus sesiones. Al pie, «Identificador de cuenta, por si te lo pide soporte» muestra el código interno de tu cuenta: no hace falta para nada de este caso, solo para identificarla si contactas con el equipo que opera Quenda.*
 
    ![Mensaje «Revisa tu correo actual para autorizar la solicitud.»](../capturas/cu-13/06-revisa-tu-correo-actual.webp)
 
-   *El aviso recuadrado indica el siguiente paso: abrir el buzón actual.*
+   *El aviso recuadrado indica el siguiente paso: abrir el buzón actual. Al pie sigue el identificador de cuenta para soporte.*
 
 4. **Autoriza desde tu correo actual.**
 
@@ -771,7 +783,7 @@ Sirve para mantener al día tu nombre, tus preferencias de idioma y apariencia, 
 
 ![Mensaje «Confirma tu contraseña actual para realizar esta operación.»](../capturas/cu-13/14-contrasena-incorrecta.webp)
 
-*Al pedir un nuevo cambio con una contraseña equivocada, el mensaje recuadrado aparece bajo los campos y el cambio no se solicita. Escribe tu contraseña actual y vuelve a pulsar «Solicitar cambio de correo».*
+*Al pedir un nuevo cambio con una contraseña equivocada, el mensaje recuadrado aparece bajo los campos y el cambio no se solicita. Escribe tu contraseña actual y vuelve a pulsar «Solicitar cambio de correo». El identificador de cuenta del pie es el mismo que antes del cambio de correo: la cuenta sigue siendo la misma.*
 
 #### El enlace caduca o la cuenta cambia entretanto
 
@@ -797,7 +809,7 @@ Sirve para desactivar voluntariamente tu cuenta en todo el servicio de Quenda. L
 
    ![Apartado «Dar de baja la cuenta» con su título recuadrado, el campo de contraseña y la casilla de confirmación](../capturas/cu-14/01-seccion-de-baja.webp)
 
-   *El texto recuerda que la baja afecta a toda la instancia, cierra sesiones y retira permisos, y que no puedes darte de baja con reservas futuras o en curso. Debajo están «Contraseña actual», la casilla «Quiero desactivar mi cuenta global» y «Confirmar baja de cuenta».*
+   *El texto recuerda que la baja afecta a todo el servicio de Quenda, cierra sesiones y retira permisos, y que no puedes darte de baja con reservas futuras o en curso. Debajo están «Contraseña actual», la casilla «Quiero desactivar mi cuenta global» y «Confirmar baja de cuenta».*
 
 2. **Confirma la baja.** Escribe tu contraseña, marca la casilla y pulsa «Confirmar baja de cuenta».
 
@@ -882,7 +894,7 @@ Sirve para recuperar el acceso a una cuenta que diste de baja voluntariamente. L
 
    ![«Preferencias de tu cuenta» tras entrar con la cuenta reactivada](../capturas/cu-15/07-sesion-nueva.webp)
 
-   *La cuenta vuelve a funcionar con normalidad.*
+   *Es la misma cuenta de antes, con su correo al pie de «Mi cuenta». Vuelve a funcionar con normalidad para reservar; como no tenía permisos de gestión, la cabecera no muestra «Gestión».*
 
 ### Si algo no sale como se espera
 
@@ -914,7 +926,7 @@ Sirve para descargar una copia de los datos de tu cuenta que Quenda puede entreg
 
 ### Paso a paso
 
-1. **Descarga tus datos.** En «Mi cuenta» › «Privacidad y baja», pulsa «Descargar datos personales». Quenda prepara el archivo `quenda-personal-data.json` con los datos accesibles de tu cuenta en toda la instancia.
+1. **Descarga tus datos.** En «Mi cuenta» › «Privacidad y baja», pulsa «Descargar datos personales». Quenda prepara el archivo `quenda-personal-data.json` con los datos accesibles de tu cuenta en todo el servicio de Quenda.
 
    ![«Privacidad y baja de cuenta» con el botón «Descargar datos personales» recuadrado](../capturas/cu-19/01-descargar-datos.webp)
 
@@ -924,13 +936,19 @@ Sirve para descargar una copia de los datos de tu cuenta que Quenda puede entreg
 
    ![Principio del archivo quenda-personal-data.json con su formato, alcance y la sección «completeness»](../capturas/cu-19/02-alcance-de-la-copia.webp)
 
-   *«scope» con «SELF» indica que la copia es de tu propia cuenta. En «completeness», «status: PARTIAL» avisa de que es parcial; «reviewRequired» enumera lo que necesita revisión antes de entregarse (texto libre e información de terceros, otras evidencias y el contexto del responsable), «excludedSecurityMaterial» lo que nunca se entrega (contraseñas, claves de sesión y secretos del segundo factor) y «administrativeChannel» cómo pedir el resto. Al final, «records» reúne todos tus registros (aquí, abreviado).*
+   *«scope» con «SELF» indica que la copia es de tu propia cuenta. En «completeness», «status: PARTIAL» avisa de que es parcial; «reviewRequired» enumera lo que necesita revisión antes de entregarse (texto libre e información de terceros, otras evidencias, la información del responsable y el contexto de conservación legal), «excludedSecurityMaterial» lo que nunca se entrega (contraseñas, claves de sesión y de verificación, y secretos y códigos de recuperación del segundo factor) y «administrativeChannel» cómo pedir el resto. Al final, «records» reúne todos tus registros (aquí, abreviado).*
 
 3. **Consulta tus registros.** Cada registro de «records» indica su categoría, su tipo y sus datos.
 
    ![Fragmento de «records» con un registro de ejemplo de cada categoría](../capturas/cu-19/03-registros-por-categoria.webp)
 
-   *El fragmento muestra un registro de cada categoría, abreviado: «AUTHENTICATION» (accesos y seguridad), «COMMUNICATIONS» (avisos y correos), «IDENTITY» (tu nombre, tu correo y tus preferencias), «MUNICIPAL_PROFILE» (cada municipio donde tienes relación) y «RESERVATIONS» (tus reservas y sus datos asociados; aquí, lo que una reserva consume dentro de un convenio, con su horario y su espacio). Los puntos suspensivos señalan lo que se ha omitido.*
+   *El fragmento muestra un registro de cada categoría, abreviado: «AUTHENTICATION» (accesos y seguridad), «COMMUNICATIONS» (avisos y correos), «IDENTITY» (tu nombre, tu correo y tus preferencias), «MUNICIPAL_PROFILE» (cada municipio donde tienes relación) y «RESERVATIONS» (tus reservas y sus datos asociados; aquí, lo que una reserva consume dentro de un convenio, con su fin y su espacio, que en el archivo aparece como un código interno en «unitId»). Los puntos suspensivos señalan lo que se ha omitido.*
+
+### Otras formas de hacerlo
+
+#### Te atiende el personal del ayuntamiento
+
+El personal con permisos de privacidad de un municipio prepara solo los datos de ese municipio, con su propia verificación y motivo. El permiso global de la plataforma cubre la identidad y la seguridad de la cuenta, no los historiales municipales.
 
 ### Si algo no sale como se espera
 
@@ -941,10 +959,6 @@ La información adicional, o una respuesta formal al derecho de acceso, se pide 
 #### Tus datos superan el volumen admitido
 
 Quenda no entrega nunca un archivo recortado: si la copia es demasiado grande, debe prepararla la administración.
-
-#### Te atiende el personal del ayuntamiento
-
-El personal con permisos de privacidad de un municipio prepara solo los datos de ese municipio, con su propia verificación y motivo. El permiso global de la plataforma cubre la identidad y la seguridad de la cuenta, no los historiales municipales.
 
 ### Resultado
 
