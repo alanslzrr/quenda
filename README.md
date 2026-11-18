@@ -31,10 +31,10 @@
 ## Presentación
 
 <p align="center">
-  <a href="docs/media/quenda-presentacion.mp4"><img src="docs/media/quenda-presentacion.jpg" width="880" alt="Vídeo de presentación de Quenda: reserva ciudadana, gestión, analítica, configuración e identidad municipal y modelos de despliegue"></a>
+  <a href="docs/media/quenda-presentacion.mp4"><img src="docs/media/quenda-presentacion.webp" width="880" alt="Presentación de Quenda en movimiento: reserva ciudadana, gestión, analítica, configuración e identidad municipal y modelos de despliegue"></a>
 </p>
 
-Recorrido de dos minutos grabado sobre la aplicación real con los datos de demostración: la reserva ciudadana hasta el código de acceso, la agenda y la analítica municipal, la configuración de condiciones, horarios y permisos, la identidad de cada municipio y los dos modelos de despliegue. [Ver el vídeo](docs/media/quenda-presentacion.mp4) (MP4, 1080p).
+Recorrido de dos minutos grabado sobre la aplicación real con los datos de demostración: la reserva ciudadana hasta el código de acceso, la agenda y la analítica municipal, la configuración de condiciones, horarios y permisos, la identidad de cada municipio y los dos modelos de despliegue. La animación reproduce la presentación completa sin sonido; [el vídeo con música](docs/media/quenda-presentacion.mp4) está en MP4 (1080p, 9,7 MB).
 
 ## Visión general
 
