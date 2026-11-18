@@ -1,3 +1,4 @@
+import { monthName } from "./model";
 import { useState } from "react";
 import { Failure, Loading } from "../../app/feedback";
 import { usePreferences } from "../../app/preferences-provider";
@@ -18,7 +19,7 @@ type ReviewOption = {
 };
 export function ReviewFields({ agreement }: { agreement: string }) {
   const m = useMunicipality();
-  const { t } = usePreferences();
+  const { t, locale } = usePreferences();
   const [month, setMonth] = useState("");
   const [recipient, setRecipient] = useState(m.id);
   const query = useMunicipalPages<ReviewOption>(
@@ -40,7 +41,7 @@ export function ReviewFields({ agreement }: { agreement: string }) {
         placeholder={t("Selecciona un mes", "Selecciona un mes")}
         options={rows.map((row) => ({
           value: row.month,
-          label: `${row.month} · ${t("revisión", "revisión")} ${row.revision}`,
+          label: `${monthName(row.month, locale)} · ${t("revisión", "revisión")} ${row.revision}`,
         }))}
       />
       {query.isPending ? (
