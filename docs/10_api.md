@@ -18,9 +18,9 @@ Los errores responden `{ "error": { "code", "message" }, "requestId" }`. `messag
 | `AGREEMENT_STATE_CONFLICT` | El estado del convenio no admite la operación: versión que no puede aprobarse, activarse o suspenderse, aprobaciones o vigencia insuficientes, unidades no coincidentes o ya vinculadas, o restricción con adscripciones. | Recargar y revisar versión, aprobaciones y vigencia. |
 | `ROLE_ALREADY_ACTIVE` | La dirección ya tiene una invitación de operador pendiente, la cuenta que acepta ya es operadora o ya es administradora al aceptar la invitación. | Recargar para ver su estado. |
 | `MUNICIPALITY_ALREADY_INITIALIZED` | Se sustituye la invitación inicial de un municipio que ya tuvo administrador. | Usar la recuperación si no queda ningún responsable habilitado. |
-| `ADMINISTRATOR_RECOVERY_UNAVAILABLE` | Se recupera un municipio con administrador habilitado o sin alta inicial completada, o el destinatario no está habilitado. | Recargar para ver su estado. |
+| `ADMINISTRATOR_RECOVERY_UNAVAILABLE` | Se recupera un municipio con administrador habilitado o sin alta inicial completada. | Recargar para ver su estado. |
 | `EMAIL_ADDRESS_UNAVAILABLE` | La dirección ya no puede asignarse al confirmar el cambio de correo. | Solicitar el cambio con otra dirección. |
-| `CONFLICT` | Casos residuales: contención que agota los reintentos de serialización, una carrera al consumir un código de respaldo, transiciones históricas contradictorias o la publicación de una unidad sin calendario por API. | Recargar para ver el estado actual y repetir si procede. |
+| `CONFLICT` | Casos residuales: contención que agota los reintentos de serialización, una carrera al consumir un código de respaldo, transiciones históricas contradictorias, la publicación de una unidad sin calendario por API, una revisión mensual de riesgo que incumple las restricciones del convenio o unas normas de uso importadas con el catálogo que no quedan como primera versión. | Recargar para ver el estado actual y repetir si procede. |
 
 La auditoría de accesos rechazados registra todos estos códigos con el resultado `CONFLICT`.
 
