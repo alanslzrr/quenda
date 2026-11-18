@@ -216,17 +216,21 @@ export function Layout() {
               "Instalaciones deportivas municipales",
               "Instalacións deportivas municipais",
             )}
-            <nav
-              className={styles.legalLinks}
-              aria-label={t("Información legal", "Información legal")}
-            >
-              {kinds.map((kind) => (
-                <Link key={kind} to={noticePath(kind, tenantId)}>
-                  {kindShort[kind][locale === "gl" ? 1 : 0]}
-                </Link>
-              ))}
-              <Link to="/proyecto">{t("Sobre Quenda", "Sobre Quenda")}</Link>
-            </nav>
+            <div className={styles.footerLinks}>
+              <nav
+                className={styles.legalLinks}
+                aria-label={t("Información legal", "Información legal")}
+              >
+                {kinds.map((kind) => (
+                  <Link key={kind} to={noticePath(kind, tenantId)}>
+                    {kindShort[kind][locale === "gl" ? 1 : 0]}
+                  </Link>
+                ))}
+              </nav>
+              <Link className={styles.about} to="/proyecto">
+                {t("Sobre Quenda", "Sobre Quenda")}
+              </Link>
+            </div>
           </footer>
         )}
       </div>
