@@ -208,7 +208,10 @@ test("CU-23 configurar la apariencia pública", async ({ page, browser }) => {
   );
   await expect(recovered).toBeVisible();
   // Tall, so that the floating bar rests below the last section.
-  await snap(cu, page, "borrador-recuperado", { tall: true, target: recovered });
+  await snap(cu, page, "borrador-recuperado", {
+    tall: true,
+    target: recovered,
+  });
 
   // Alternativa: la verificación en dos pasos ya no es reciente al guardar.
   const email = (await account(roles.partner)).email;
