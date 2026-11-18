@@ -120,8 +120,23 @@ test("two municipalities approve exact units, activate, accredit, revoke, suspen
         exact: true,
       })
       .click();
-    await page.getByLabel("Municipio 2", { exact: true }).fill(b.tenant);
-    await page
+    // Participants and units read by name; identifiers stay inside the
+    // collapsed «Identificador técnico» of each participant.
+    const own = page.getByRole("group", { name: "Participante 1" });
+    await expect(
+      own.getByRole("listitem").filter({ hasText: "Pista 1" }),
+    ).toBeVisible();
+    await expect(own.getByText(a.tenant)).toBeHidden();
+    const partner = page.getByRole("group", { name: "Participante 2" });
+    await partner
+      .getByRole("button", { name: /^Identificador técnico/ })
+      .click();
+    await partner
+      .getByLabel(
+        /^(?:Identificador del municipio 2|Identificador do municipio 2)$/,
+      )
+      .fill(b.tenant);
+    await partner
       .getByLabel(
         /^(?:Unidades: un identificador por línea · 2|Unidades: un identificador por liña · 2)$/,
         { exact: true },
