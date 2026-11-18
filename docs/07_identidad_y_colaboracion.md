@@ -54,7 +54,7 @@ El usuario actualiza sus campos permitidos sin modificar identificadores ni evid
 
 Los enlaces son de un solo uso, caducan y quedan vinculados a la cuenta, solicitud y credenciales. Cambiar contraseña, factores, correo o estado de cuenta invalida las comprobaciones anteriores.
 
-Las invitaciones municipales pendientes se dirigen a una dirección, no a una cuenta. Tras el cambio, la cuenta deja de ver y poder aceptar las invitaciones dirigidas a su correo anterior y pasa a ver las dirigidas al nuevo. Las ya aceptadas permanecen vinculadas a la cuenta. El correo no se sustituye mientras falte una confirmación. Solicitar un cambio a una dirección ya ocupada sigue la misma secuencia y respuesta: la comprobación de unicidad solo se comunica después de acreditar control de ambos correos.
+Las invitaciones de autoridad pendientes —municipales, de operador y de privacidad global— se dirigen a una dirección, no a una cuenta. Tras el cambio, la cuenta deja de ver y poder aceptar las invitaciones dirigidas a su correo anterior y pasa a ver las dirigidas al nuevo. Las ya aceptadas permanecen vinculadas a la cuenta. El correo no se sustituye mientras falte una confirmación. Solicitar un cambio a una dirección ya ocupada sigue la misma secuencia y respuesta: la comprobación de unicidad solo se comunica después de acreditar control de ambos correos.
 
 Si el usuario perdió acceso al correo anterior, una intervención operativa controlada comprueba su identidad y registra responsable, evidencia y motivo. El usuario debe verificar el nuevo correo y sus credenciales; la intervención no acepta esos controles en su nombre. Ningún permiso municipal permite cambiar unilateralmente el correo global.
 
