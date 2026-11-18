@@ -23,6 +23,9 @@ import {
 test.afterAll(closeSql);
 
 const target = "quenda_recuperada";
+// The rejected restore names a destination of its own, so that it never reads
+// as the one restored in step 3.
+const unchecked = "quenda_recuperada_2";
 const shown = "/directorio-privado";
 
 test("CU-22 recuperar una instancia sin rehabilitar datos restringidos", async ({
@@ -136,9 +139,9 @@ test("CU-22 recuperar una instancia sin rehabilitar datos restringidos", async (
       RESTORE_ADMIN_DATABASE_URL: databases.administration,
     };
     const rejected = await command(
-      ["scripts/restore.ts", dump, wrong, target],
+      ["scripts/restore.ts", dump, wrong, unchecked],
       restoreEnv,
-      `pnpm -s db:restore ${shown}/quenda-copia.dump ${wrong} ${target}`,
+      `pnpm -s db:restore ${shown}/quenda-copia.dump ${wrong} ${unchecked}`,
       redact,
     );
     expect(rejected.code).not.toBe(0);
@@ -166,6 +169,11 @@ test("CU-22 recuperar una instancia sin rehabilitar datos restringidos", async (
       psql,
     );
     expect(closed.code).not.toBe(0);
+    // The database server of this machine is shown by a neutral name.
+    closed.output = closed.output.replace(
+      /"(?:127\.0\.0\.1|localhost|::1)", port \d+/g,
+      '"db.interno", port 5432',
+    );
     shots.push(["destino-cerrado", closed]);
 
     // Paso 5: la copia antigua conserva el perfil suprimido después de la copia.
@@ -247,6 +255,7 @@ test("CU-22 recuperar una instancia sin rehabilitar datos restringidos", async (
     });
     await admin.connect();
     await admin.query(`DROP DATABASE IF EXISTS ${target}`);
+    await admin.query(`DROP DATABASE IF EXISTS ${unchecked}`);
     await admin.end();
     await rm(directory, { recursive: true, force: true });
   }

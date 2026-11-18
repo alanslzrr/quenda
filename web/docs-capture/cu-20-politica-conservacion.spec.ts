@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+import path from "node:path";
 import type { Page } from "@playwright/test";
 import { access, Capture, expect, test } from "./capture";
 import {
@@ -136,15 +138,17 @@ test("CU-20 aplicar una política de conservación", async ({
   // Paso 4: el worker ejecuta los vencimientos (proceso de segundo plano).
   const { databases, mail } = await access();
   const origin = test.info().project.use.baseURL as string;
+  // The compiled worker, as the production service runs it.
+  execFileSync("pnpm", ["-s", "build"], { cwd: path.resolve("..") });
   const worker = await command(
-    ["src/email-worker.ts", "--once"],
+    ["dist/email-worker.js", "--once"],
     {
       WORKER_DATABASE_URL: databases.worker,
       EMAIL_LOCALE: "es",
       AUTH_ORIGIN: origin,
       LOCAL_MAIL_DIR: mail,
     },
-    "pnpm -s worker:local --once",
+    "node dist/email-worker.js --once",
   );
   expect(worker.code).toBe(0);
   expect(worker.output).toContain(
@@ -160,7 +164,7 @@ test("CU-20 aplicar una política de conservación", async ({
   // The conflict card itself: the innermost card that names the reason.
   const conflict = page
     .locator("section, article, li")
-    .filter({ hasText: "LEGAL_HOLD" })
+    .filter({ hasText: "Hay una excepción de conservación activa" })
     .filter({ hasText: carme.accountId })
     .last();
   await expect(conflict).toBeVisible();
@@ -214,7 +218,8 @@ test("CU-20 aplicar una política de conservación", async ({
   await choose(page, "Alcance de la excepción", "Un interesado");
   await page
     .getByLabel("Identificador de la cuenta")
-    .fill("cuenta-que-no-existe");
+    // Shaped like a real account identifier; no account has it.
+    .fill("Q7mWc2RkT9vXbN4pLs8dHe3JyA6uFz1G");
   await page
     .getByLabel("Referencia de autorización", { exact: true })
     .fill("Requerimiento 12/2026");
