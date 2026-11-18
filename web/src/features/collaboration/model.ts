@@ -1,3 +1,4 @@
+import { dateTimeFormat, isTimeZone } from "../../ui/lib/intl-cache.ts";
 import { localInstants } from "../municipal/local-instants.ts";
 export type Participant = {
   tenantId: string;
@@ -71,7 +72,7 @@ export function validParticipants(items: Participant[], own: string) {
 }
 export function civilValue(instant: string, timeZone: string) {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", {
+    dateTimeFormat("en-CA", {
       timeZone,
       year: "numeric",
       month: "2-digit",
@@ -110,12 +111,7 @@ export function civilOptions(value: string, zone: string) {
   }
 }
 export function validZone(zone: string) {
-  try {
-    new Intl.DateTimeFormat("en", { timeZone: zone }).format();
-    return !/^[+-]/.test(zone);
-  } catch {
-    return false;
-  }
+  return isTimeZone(zone);
 }
 export const agreementPath = (tenant: string, id?: string, version?: number) =>
   `/administracion/${tenant}/convenios${id && version ? `/${id}/versiones/${version}` : ""}`;
